@@ -6,7 +6,7 @@ use crate::agent::agent_trait::Agent;
 use crate::agent::impls::basic_agent::BasicAgent;
 use crate::agent::models::AgentDefinition;
 use crate::tools::tool_registry::ToolRegistry;
-use crate::agent::core::prompt_builder::PromptBuilder;
+// use crate::agent::core::prompt_builder::PromptBuilder; // Deprecated
 use crate::agent::core::response_parser::ResponseParser;
 
 pub struct AgentManager {
@@ -33,9 +33,9 @@ impl AgentManager {
     }
 
     pub fn create_agent(&self, definition: AgentDefinition) -> Result<Box<dyn Agent>> {
-        let prompt_builder = PromptBuilder::new(self.project_root.clone());
+        // let prompt_builder = PromptBuilder::new(self.project_root.clone()); // Deprecated
         let response_parser = ResponseParser::new();
-        let agent = BasicAgent::new(definition, self.tool_registry.clone(), prompt_builder, response_parser)?;
+        let agent = BasicAgent::new(definition, self.tool_registry.clone(), response_parser)?;
         Ok(Box::new(agent))
     }
 }

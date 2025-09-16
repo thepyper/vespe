@@ -5,26 +5,23 @@ use tracing::info;
 
 use crate::agent::agent_trait::Agent;
 use crate::agent::models::AgentDefinition;
-use crate::llm::llm_client::{GenericLlmClient, LlmClient};
-use crate::llm::models::ChatMessage;
+use crate::llm::llm_adapter::{LlmAdapter, LlmClient, ChatMessage, LlmResponse}; // Updated LLM client
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
 use crate::config::MalformedJsonHandling;
-use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
-    llm_client: GenericLlmClient,
+    llm_client: LlmAdapter, // Changed to LlmAdapter
     tool_registry: ToolRegistry,
-    prompt_builder: PromptBuilder,
     response_parser: ResponseParser,
 }
 
 impl BasicAgent {
-    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, prompt_builder: PromptBuilder, response_parser: ResponseParser) -> Result<Self> {
-        let llm_client = GenericLlmClient::new(definition.llm_config.clone())?;
-        Ok(Self { definition, llm_client, tool_registry, prompt_builder, response_parser })
+    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, response_parser: ResponseParser) -> Result<Self> {
+        let llm_client = LlmAdapter::new(definition.llm_config.clone())?;
+        Ok(Self { definition, llm_client, tool_registry, response_parser })
     }
 }
 
@@ -37,14 +34,11 @@ impl Agent for BasicAgent {
     async fn execute(&self, input: &str) -> Result<String> {
         info!("Agent '{}' executing with input: '{}'", self.name(), input);
 
-        let tool_prompt = self.prompt_builder.build_system_prompt(&self.definition, &self.tool_registry).await?;
-
         let mut messages = vec![
-            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 
-        let mut response = self.llm_client.generate_response(messages.clone()).await?;
+        let mut response = self.llm_client.generate_response(messages.clone(), Some(&self.tool_registry)).await?;
         let mut final_response_parts = Vec::new();
 
         // Loop for tool calls
@@ -66,7 +60,7 @@ impl Agent for BasicAgent {
                         messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
-                        response = self.llm_client.generate_response(messages.clone()).await?;
+                        response = self.llm_client.generate_response(messages.clone(), Some(&self.tool_registry)).await?;
                         
                         // Explicitly extract and report transformed_text for echo tool
                         if tool_call.name == "echo" {
@@ -104,20 +98,21 @@ impl Agent for BasicAgent {
     }
 }
 
-fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
-    // Try to parse as a Vec<AgentAction>
-    if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
-        return Ok(actions);
-    }
+// This function is no longer needed here as parsing is handled by ResponseParser
+// fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
+//     // Try to parse as a Vec<AgentAction>
+//     if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
+//         return Ok(actions);
+//     }
 
-    // If parsing fails, handle based on configuration
-    match handling {
-        MalformedJsonHandling::TreatAsText => {
-            info!("Malformed JSON, treating as text: {}", response_content);
-            Ok(vec![AgentAction::TextResponse { content: response_content.to_string() }])
-        },
-        MalformedJsonHandling::Error => {
-            Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
-        },
-    }
-}
+//     // If parsing fails, handle based on configuration
+//     match handling {
+//         MalformedJsonHandling::TreatAsText => {
+//             info!("Malformed JSON, treating as text: {}", response_content);
+//             Ok(vec![AgentAction::TextResponse { content: response_content.to_string() }])
+//         },
+//         MalformedJsonHandling::Error => {
+//             Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
+//         },
+//     }
+// }

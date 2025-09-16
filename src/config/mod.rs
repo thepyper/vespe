@@ -4,7 +4,7 @@ use tokio::fs;
 
 pub mod models;
 
-pub use models::{GlobalConfig, LlmConfig};
+pub use models::{GlobalConfig, LlmConfig, MalformedJsonHandling};
 
 pub async fn load_global_config() -> Result<GlobalConfig> {
     // For now, provide a hardcoded default. In a real scenario, this would

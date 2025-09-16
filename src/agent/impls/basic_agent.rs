@@ -9,7 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::{AgentAction, ToolCall};
-use crate::config::models::{LlmConfig, MalformedJsonHandling};
+use crate::config::models::MalformedJsonHandling;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
@@ -34,7 +34,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nYour response should be a JSON object representing an action or a response. It must have a \"tool_call\" key for tool calls, or \"text_response\" for direct text, or \"thought\" for internal thoughts. If you use a tool, the \"tool_call\" object must contain \"name\" (string) and \"args\" (object). If you have multiple actions, respond with a JSON array of these objects.\n",
+                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object where the key is \"tool_call\" and its value is an object with \"name\" (string) and \"args\" (object).",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {
@@ -55,12 +55,12 @@ impl Agent for BasicAgent {
         let tool_prompt = self.get_tool_prompt();
 
         let mut messages = vec![
-            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },
+            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. If you use a tool, always report its output to the user.\n{}", tool_prompt) },
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 
         let mut response = self.llm_client.generate_response(messages.clone()).await?;
-        let mut final_response_content = String::new();
+        let mut final_response_parts = Vec::new();
 
         // Loop for tool calls
         for _ in 0..5 { // Max 5 tool calls to prevent infinite loops
@@ -80,13 +80,14 @@ impl Agent for BasicAgent {
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
                         response = self.llm_client.generate_response(messages.clone()).await?;
-                        final_response_content = format!("Tool output: {}\nLLM response: {}", tool_output_str, response.content);
+                        final_response_parts.push(format!("Tool output: {}", tool_output_str));
                     },
                     AgentAction::TextResponse { content } => {
-                        final_response_content = content;
+                        final_response_parts.push(content);
                     },
                     AgentAction::Thought { content } => {
                         info!("Agent '{}' thought: {}", self.name(), content);
+                        final_response_parts.push(format!("Thought: {}", content));
                     },
                 }
             }
@@ -96,6 +97,7 @@ impl Agent for BasicAgent {
             }
         }
 
+        let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)
     }
@@ -122,4 +124,4 @@ fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) 
             Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
         },
     }
-}
+}}

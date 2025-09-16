@@ -22,10 +22,23 @@ impl Tool for EchoTool {
             "properties": {
                 "text": {
                     "type": "string",
-                    "description": "The string to echo back and transform."
+                    "description": "The string to echo back."
                 }
             },
             "required": ["text"]
+        }"#
+    }
+
+    fn output_schema(&self) -> &str {
+        r#"{
+            "type": "object",
+            "properties": {
+                "transformed_text": {
+                    "type": "string",
+                    "description": "The input string transformed into lowercase, capitalized, and uppercase, separated by asterisks."
+                }
+            },
+            "required": ["transformed_text"]
         }"#
     }
 

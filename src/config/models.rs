@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::agent::models::AgentDefinition;
+
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MalformedJsonHandling {

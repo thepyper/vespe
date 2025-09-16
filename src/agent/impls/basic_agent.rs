@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use serde_json::Value;
 use tracing::info;
@@ -9,6 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::{AgentAction, ToolCall};
+use crate::config::MalformedJsonHandling;
 
 pub struct BasicAgent {
     definition: AgentDefinition,

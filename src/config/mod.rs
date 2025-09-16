@@ -16,6 +16,7 @@ pub async fn load_global_config() -> Result<GlobalConfig> {
             api_key: None, // Should be loaded from env or secret manager
             temperature: 0.7,
             max_tokens: 512,
+            on_malformed_json: MalformedJsonHandling::default(),
         },
     })
 }

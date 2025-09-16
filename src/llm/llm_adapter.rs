@@ -4,11 +4,10 @@ use std::path::PathBuf;
 use tracing::info;
 use serde_json::Value;
 
-use llm::{ // Removed glob import
+use llm:: // Removed glob import
     inference::{InferenceRequest, InferenceResponse, InferenceSessionConfig, InferenceParameters, InferenceFeedback},
     Model, // Only Model trait remains
-    Mirostat,
-};
+;
 use rand::thread_rng;
 
 use crate::tools::tool_registry::ToolRegistry;
@@ -52,7 +51,7 @@ impl LlmAdapter {
             &model_path,
             Default::default(), // Assuming a default config for loading
             None, // No progress callback
-        )?; 
+        )?;
 
         Ok(Self { model, config })
     }
@@ -91,7 +90,7 @@ impl LlmClient for LlmAdapter {
 
         session.infer(
             self.model.as_ref(),
-            &mut thread_rng(),
+            &mut rand::thread_rng(),
             &llm::inference::InferenceRequest {
                 prompt: prompt_string.into(),
                 parameters: &llm::inference::InferenceParameters::default(),
@@ -107,9 +106,6 @@ impl LlmClient for LlmAdapter {
                 top_p: 0.95,
                 temperature: self.config.temperature,
                 bias_tokens: None,
-                mirostat: llm::Mirostat::V0,
-                mirostat_tau: 5.0,
-                mirostat_eta: 0.1,
                 log_softmax: false,
                 grammar: None,
                 path_session_cache: None,

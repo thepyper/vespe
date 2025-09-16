@@ -1,20 +1,27 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_json::Value;
+use std::path::PathBuf;
+use tokio::fs;
 
 use crate::agent::models::AgentDefinition;
 use crate::tools::tool_registry::ToolRegistry;
 
 pub struct PromptBuilder {
-    // Potentially store common prompt parts or templates here
+    project_root: PathBuf,
 }
 
 impl PromptBuilder {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(project_root: PathBuf) -> Self {
+        Self { project_root }
     }
 
-    pub fn build_system_prompt(&self, agent_definition: &AgentDefinition, tool_registry: &ToolRegistry) -> String {
-        let tool_prompt = if let Some(tool_names) = &agent_definition.tools {
+    pub async fn build_system_prompt(&self, agent_definition: &AgentDefinition, tool_registry: &ToolRegistry) -> Result<String> {
+        let prompt_path = self.project_root.join(".vespe").join("prompts").join("system_prompt_template.txt");
+        let template_content = fs::read_to_string(&prompt_path)
+            .await
+            .with_context(|| format!("Failed to read system prompt template from {:?}", prompt_path))?;
+
+        let tool_prompt_part = if let Some(tool_names) = &agent_definition.tools {
             let available_tools: Vec<Value> = tool_registry.get_tool_metadata().into_iter()
                 .filter(|tool_meta| tool_names.iter().any(|name| name == tool_meta["name"].as_str().unwrap_or("")))
                 .collect();
@@ -31,6 +38,6 @@ impl PromptBuilder {
             String::new()
         };
 
-        format!("You are a helpful AI assistant. If you use a tool, always report its output to the user.\n{}", tool_prompt)
+        Ok(template_content.replace("{}", &tool_prompt_part))
     }
 }

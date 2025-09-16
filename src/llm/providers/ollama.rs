@@ -23,21 +23,23 @@ impl OllamaClient {
         let model = &self.config.model_id;
         let url = "http://localhost:11434/api/chat"; // Default Ollama API endpoint
 
-        info!("Sending request to Ollama model: {}", model);
+        let payload = json!({ 
+            "model": model,
+            "messages": messages,
+            "stream": false,
+            "temperature": self.config.temperature,
+        });
+
+        info!("Ollama Request Payload: {}", serde_json::to_string_pretty(&payload).unwrap_or_default());
 
         let response = self.client.post(url)
-            .json(&json!({ 
-                "model": model,
-                "messages": messages,
-                "stream": false,
-                "temperature": self.config.temperature,
-            }))
+            .json(&payload)
             .send()
             .await
             .context("Failed to send request to Ollama")?;
 
         let response_text = response.text().await.context("Failed to get response text from Ollama")?;
-        info!("Ollama raw response: {}", response_text);
+        info!("Ollama Raw Response: {}", response_text);
 
         let json_response: serde_json::Value = serde_json::from_str(&response_text)
             .context("Failed to parse Ollama response JSON")?;

@@ -1,0 +1,10 @@
+{
+  "name": "my_agent",
+  "llm_config": {
+    "provider": "openai",
+    "model_id": "gpt-4o-mini",
+    "api_key": "YOUR_OPENAI_API_KEY", 
+    "temperature": 0.7,
+    "max_tokens": 512
+  }
+}

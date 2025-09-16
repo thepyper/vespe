@@ -32,7 +32,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object like this:\n{{\"tool_call\": {{ \"name\": \"tool_name\", \"args\": {{...}} }}}}}",
+                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object where the key is \"tool_call\" and its value is an object with \"name\" (string) and \"args\" (object).",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {

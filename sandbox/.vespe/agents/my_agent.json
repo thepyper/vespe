@@ -2,7 +2,7 @@
   "name": "my_agent",
   "llm_config": {
     "provider": "ollama",
-    "model_id": "llama3", 
+    "model_id": "llama3.1:8b", 
     "temperature": 0.7,
     "max_tokens": 512
   }

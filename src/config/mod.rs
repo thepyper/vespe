@@ -2,7 +2,9 @@ use anyhow::{Context, Result};
 use std::path::PathBuf;
 use tokio::fs;
 
-use crate::config::models::{GlobalConfig, LlmConfig};
+pub mod models;
+
+pub use models::{GlobalConfig, LlmConfig};
 
 pub async fn load_global_config() -> Result<GlobalConfig> {
     // For now, provide a hardcoded default. In a real scenario, this would

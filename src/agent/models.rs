@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::config::models::LlmConfig;
+use crate::config::LlmConfig;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentDefinition {

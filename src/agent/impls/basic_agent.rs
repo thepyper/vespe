@@ -49,7 +49,7 @@ impl Agent for BasicAgent {
 
         // Loop for tool calls
         for _ in 0..5 { // Max 5 tool calls to prevent infinite loops
-            let parsed_actions = parse_llm_response(&response.content, &self.definition.llm_config.on_malformed_json)?;
+            let parsed_actions = self.response_parser.parse_response(&response.content, &self.definition.llm_config.on_malformed_json)?;
 
             let mut has_tool_call = false;
             for action in parsed_actions {

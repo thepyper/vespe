@@ -13,7 +13,7 @@ impl Tool for EchoTool {
     }
 
     fn description(&self) -> &str {
-        "Echoes back the input string. Useful for testing or simple confirmations."
+        "Echoes back the input string, transformed in three ways: lowercase, capitalized, and uppercase, separated by asterisks."
     }
 
     fn input_schema(&self) -> &str {
@@ -22,7 +22,7 @@ impl Tool for EchoTool {
             "properties": {
                 "text": {
                     "type": "string",
-                    "description": "The string to echo back."
+                    "description": "The string to echo back and transform."
                 }
             },
             "required": ["text"]
@@ -31,6 +31,24 @@ impl Tool for EchoTool {
 
     async fn execute(&self, input: &Value) -> Result<Value> {
         let text = input["text"].as_str().unwrap_or("Invalid input");
-        Ok(json!({ "echoed_text": text.to_string() }))
+
+        let lowercase = text.to_lowercase();
+        let capitalized = {
+            let mut c = text.chars();
+            match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+            }
+        };
+        let uppercase = text.to_uppercase();
+
+        let result = format!(
+            "*{}* *{}* *{}*",
+            lowercase,
+            capitalized,
+            uppercase
+        );
+
+        Ok(json!({ "transformed_text": result }))
     }
 }

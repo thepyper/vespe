@@ -9,7 +9,9 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
-use crate::config::models::MalformedJsonHandling;
+use crate::config::MalformedJsonHandling;
+use crate::agent::core::prompt_builder::PromptBuilder;
+use crate::agent::core::response_parser::ResponseParser;
 
 pub struct BasicAgent {
     definition: AgentDefinition,

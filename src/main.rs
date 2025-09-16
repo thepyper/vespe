@@ -60,16 +60,20 @@ fn import_users(args_json: &str) -> Result<usize, Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    
+    // Get Ollama server URL from environment variable or use default localhost
+    let base_url = std::env::var("OLLAMA_URL").unwrap_or("http://127.0.0.1:11434".into());
+    
     let llm = LLMBuilder::new()
-        .backend(LLMBackend::OpenAI)
-        .api_key(std::env::var("OPENAI_API_KEY")?)
-        .model("gpt-4o")
+        .backend(LLMBackend::Ollama) // Use Ollama as the LLM backend
+        .base_url(base_url) // Set the Ollama server URL
+        .model("llama3.1:8b")
         .function(import_users_tool())
         .tool_choice(ToolChoice::Any)
         .build()?;
 
     let mut messages = vec![ChatMessage::user()
-        .content("Please import Alice <alice@example.com> and Bob <bob@example.com>.")
+        .content("You can use tool 'import_users' to import users. You MUST respond ONLY with a JSON raw string. Format is {'type':'tool', 'name': 'import_users'} Please import Alice <alice@example.com> and Bob <bob@example.com>.")
         .build()];
 
     let first_resp = llm.chat(&messages).await?;

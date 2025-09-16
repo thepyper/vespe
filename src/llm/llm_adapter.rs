@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use std::path::PathBuf;
 use tracing::info;
+use serde_json::Value;
 
 use llm::{
     InferenceRequest,
@@ -11,6 +12,8 @@ use llm::{
     Model,
     load_progress_callback,
 };
+
+use crate::tools::tool_registry::ToolRegistry; // Import ToolRegistry
 
 // Re-define ChatMessage and LlmResponse for internal use within the adapter,
 // or adapt to llm crate's internal types if they are exposed.
@@ -29,7 +32,7 @@ pub struct LlmResponse {
 // This trait will be implemented by our LlmAdapter
 #[async_trait]
 pub trait LlmClient {
-    async fn generate_response(&self, messages: Vec<ChatMessage>) -> Result<LlmResponse>;
+    async fn generate_response(&self, messages: Vec<ChatMessage>, tool_registry: Option<&ToolRegistry>) -> Result<LlmResponse>;
 }
 
 pub struct LlmAdapter {
@@ -60,14 +63,32 @@ impl LlmAdapter {
 
 #[async_trait]
 impl LlmClient for LlmAdapter {
-    async fn generate_response(&self, messages: Vec<ChatMessage>) -> Result<LlmResponse> {
+    async fn generate_response(&self, messages: Vec<ChatMessage>, tool_registry: Option<&ToolRegistry>) -> Result<LlmResponse> {
         let mut session = self.model.start_session(InferenceSessionConfig::default());
 
-        // Convert ChatMessage to a single prompt string for the llm crate
-        let prompt_string = messages.iter()
-            .map(|msg| format!( "{}: {}", msg.role, msg.content))
-            .collect::<Vec<String>>()
-            .join("\n");
+        let mut prompt_parts = Vec::new();
+
+        // Add system prompt part
+        prompt_parts.push(format!("System: You are a helpful AI assistant."));
+
+        // Add tool definitions if available
+        if let Some(registry) = tool_registry {
+            let available_tools: Vec<Value> = registry.get_tool_metadata();
+            if !available_tools.is_empty() {
+                prompt_parts.push(format!(
+                    "Available tools:\n{}\n\nTo use a tool, respond with a JSON object where the key is \"tool_call\" and its value is an object with \"name\" (string) and \"args\" (object).",
+                    serde_json::to_string_pretty(&available_tools).unwrap_or_default()
+                ));
+            }
+        }
+
+        // Add chat messages
+        for msg in messages {
+            prompt_parts.push(format!("{}: {}", msg.role, msg.content));
+        }
+
+        let prompt_string = prompt_parts.join("\n");
+
 
         let mut response_text = String::new();
 

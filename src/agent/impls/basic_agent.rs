@@ -18,13 +18,12 @@ pub struct BasicAgent {
     llm_client: GenericLlmClient,
     tool_registry: ToolRegistry,
     prompt_builder: PromptBuilder,
-    response_parser: ResponseParser,
 }
 
 impl BasicAgent {
     pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, prompt_builder: PromptBuilder, response_parser: ResponseParser) -> Result<Self> {
         let llm_client = GenericLlmClient::new(definition.llm_config.clone())?;
-        Ok(Self { definition, llm_client, tool_registry, prompt_prompt_builder, response_parser })
+        Ok(Self { definition, llm_client, tool_registry, prompt_builder, response_parser })
     }
 }
 
@@ -37,7 +36,7 @@ impl Agent for BasicAgent {
     async fn execute(&self, input: &str) -> Result<String> {
         info!("Agent '{}' executing with input: '{}'", self.name(), input);
 
-        let tool_prompt = self.prompt_builder.build_system_prompt(&self.definition, &self.tool_registry);
+        let tool_prompt = self.prompt_builder.build_system_prompt(&self.definition, &self.tool_registry).await?;
 
         let mut messages = vec![
             ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },

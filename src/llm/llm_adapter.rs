@@ -4,15 +4,10 @@ use std::path::PathBuf;
 use tracing::info;
 use serde_json::Value;
 
-use llm::{
-    inference::{InferenceRequest, InferenceResponse, InferenceSessionConfig, InferenceParameters, InferenceFeedback},
-    model::{Model, KnownModel, ModelArchitecture, TokenizerSource},
-    load_progress_callback,
-    Mirostat,
-};
-use rand::thread_rng; // Add rand crate
+use llm::*;
+use rand::thread_rng;
 
-use crate::tools::tool_registry::ToolRegistry; // Import ToolRegistry
+use crate::tools::tool_registry::ToolRegistry;
 
 // Re-define ChatMessage and LlmResponse for internal use within the adapter,
 // or adapt to llm crate's internal types if they are exposed.
@@ -36,7 +31,7 @@ pub trait LlmClient {
 
 pub struct LlmAdapter {
     // The actual llm crate model instance
-    model: Box<dyn Model>,
+    model: Box<dyn llm::Model>, // Explicitly qualify Model
     // Configuration for the LLM
     config: crate::config::LlmConfig,
 }
@@ -49,11 +44,11 @@ impl LlmAdapter {
         let model_path = PathBuf::from("./path/to/your/model/llama-7b-q4_0.bin"); // Placeholder
 
         let model = llm::load_dynamic(
-            Some(llm::ModelArchitecture::Llama), // This should be dynamic based on config
+            Some(llm::ModelArchitecture::Llama), // Explicitly qualify ModelArchitecture
             &model_path,
-            llm::TokenizerSource::Embedded,
+            llm::TokenizerSource::Embedded, // Explicitly qualify TokenizerSource
             Default::default(),
-            load_progress_callback,
+            llm::load_progress_callback, // Explicitly qualify load_progress_callback
         )?;
 
         Ok(Self { model, config })
@@ -63,7 +58,7 @@ impl LlmAdapter {
 #[async_trait]
 impl LlmClient for LlmAdapter {
     async fn generate_response(&self, messages: Vec<ChatMessage>, tool_registry: Option<&ToolRegistry>) -> Result<LlmResponse> {
-        let mut session = self.model.start_session(InferenceSessionConfig::default());
+        let mut session = self.model.start_session(llm::InferenceSessionConfig::default()); // Explicitly qualify InferenceSessionConfig
 
         let mut prompt_parts = Vec::new();
 
@@ -93,10 +88,10 @@ impl LlmClient for LlmAdapter {
 
         session.infer(
             self.model.as_ref(),
-            &mut thread_rng(), // Use thread_rng from rand crate
-            &InferenceRequest {
+            &mut thread_rng(),
+            &llm::InferenceRequest {
                 prompt: prompt_string.into(),
-                parameters: &InferenceParameters::default(),
+                parameters: &llm::InferenceParameters::default(),
                 play_back_previous_tokens: false,
                 repetition_penalty_last_n: 64,
                 repetition_penalty_sustain_n: 64,
@@ -109,7 +104,7 @@ impl LlmClient for LlmAdapter {
                 top_p: 0.95,
                 temperature: self.config.temperature,
                 bias_tokens: None,
-                mirostat: Mirostat::V0,
+                mirostat: llm::Mirostat::V0,
                 mirostat_tau: 5.0,
                 mirostat_eta: 0.1,
                 log_softmax: false,
@@ -118,11 +113,11 @@ impl LlmClient for LlmAdapter {
                 token_callback: None,
             },
             &mut |r| match r {
-                InferenceResponse::PromptToken(t) | InferenceResponse::InferredToken(t) => {
+                llm::InferenceResponse::PromptToken(t) | llm::InferenceResponse::InferredToken(t) => {
                     response_text.push_str(&t);
-                    Ok(InferenceFeedback::Continue)
+                    Ok(llm::InferenceFeedback::Continue)
                 }
-                _ => Ok(InferenceFeedback::Continue), // Handle other response types
+                _ => Ok(llm::InferenceFeedback::Continue), // Handle other response types
             },
         )?;
 

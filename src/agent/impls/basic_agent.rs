@@ -9,7 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
-
+use crate::config::MalformedJsonHandling;
 use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
 
@@ -58,10 +58,7 @@ impl Agent for BasicAgent {
                 match action {
                     AgentAction::ToolCall(tool_call) => {
                         has_tool_call = true;
-                        final_response_parts.push(format!("[TOOL_CALL]: {}
-```json
-{}
-```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
+                        final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
 
                         let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args).await?;
                         let tool_output_str = serde_json::to_string_pretty(&tool_output)?;

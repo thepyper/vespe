@@ -8,6 +8,7 @@ use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
+use crate::agent::actions::{AgentAction, ToolCall};
 
 pub struct BasicAgent {
     definition: AgentDefinition,
@@ -32,7 +33,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object where the key is \"tool_call\" and its value is an object with \"name\" (string) and \"args\" (object).",
+                "\n\nAvailable tools:\n{}\n\nYour response should be a JSON object representing an action or a response. It must have a \"tool_call\" key for tool calls, or \"text_response\" for direct text, or \"thought\" for internal thoughts. If you use a tool, the \"tool_call\" object must contain \"name\" (string) and \"args\" (object). If you have multiple actions, respond with a JSON array of these objects.\n",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {
@@ -53,41 +54,71 @@ impl Agent for BasicAgent {
         let tool_prompt = self.get_tool_prompt();
 
         let mut messages = vec![
-            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. If you use a tool, always report its output to the user.\n{}", tool_prompt) },
+            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 
         let mut response = self.llm_client.generate_response(messages.clone()).await?;
-        let mut final_response_content = response.content.clone();
+        let mut final_response_content = String::new();
 
         // Loop for tool calls
         for _ in 0..5 { // Max 5 tool calls to prevent infinite loops
-            if let Ok(tool_call) = serde_json::from_str::<Value>(&response.content)
-                .and_then(|v| Ok(v["tool_call"].clone()))
-            {
-                if tool_call.is_object() {
-                    let tool_name = tool_call["name"].as_str().context("Tool call missing name")?;
-                    let tool_args = tool_call["args"].clone();
+            let parsed_actions = parse_llm_response(&response.content, &self.definition.llm_config.on_malformed_json)?;
 
-                    info!("Agent '{}' calling tool: {} with args: {}", self.name(), tool_name, tool_args);
+            let mut has_tool_call = false;
+            for action in parsed_actions {
+                match action {
+                    AgentAction::ToolCall(tool_call) => {
+                        has_tool_call = true;
+                        info!("Agent '{}' calling tool: {} with args: {:?}", self.name(), tool_call.name, tool_call.args);
 
-                    let tool_output = self.tool_registry.execute_tool(tool_name, &tool_args).await?;
-                    let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
+                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args).await?;
+                        let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
 
-                    messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
-                    messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
+                        messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
+                        messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
-                    response = self.llm_client.generate_response(messages.clone()).await?;
-                    final_response_content = format!("Tool output: {}\nLLM response: {}", tool_output_str, response.content);
-                } else {
-                    break; // Not a valid tool call format
+                        response = self.llm_client.generate_response(messages.clone()).await?;
+                        final_response_content = format!("Tool output: {}\nLLM response: {}", tool_output_str, response.content);
+                    },
+                    AgentAction::TextResponse { content } => {
+                        final_response_content = content;
+                    },
+                    AgentAction::Thought { content } => {
+                        info!("Agent '{}' thought: {}", self.name(), content);
+                    },
                 }
-            } else {
-                break; // No tool call detected
+            }
+
+            if !has_tool_call {
+                break; // No tool call detected, or all actions processed
             }
         }
 
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)
+    }
+}
+
+fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
+    // Try to parse as a Vec<AgentAction>
+    if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
+        return Ok(actions);
+    }
+
+    // Try to parse as a single AgentAction
+    if let Ok(action) = serde_json::from_str::<AgentAction>(response_content) {
+        return Ok(vec![action]);
+    }
+
+    // If parsing fails, handle based on configuration
+    match handling {
+        MalformedJsonHandling::TreatAsText => {
+            info!("Malformed JSON, treating as text: {}", response_content);
+            Ok(vec![AgentAction::TextResponse { content: response_content.to_string() }])
+        },
+        MalformedJsonHandling::Error => {
+            Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
+        },
     }
 }

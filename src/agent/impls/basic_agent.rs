@@ -92,8 +92,6 @@ impl Agent for BasicAgent {
                             } else {
                                 final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
                             }
-                        } else {
-                            final_response_parts.push(format!("Tool output: {}", tool_output_str));
                         }
                     },
                     AgentAction::TextResponse { content } => {
@@ -121,11 +119,6 @@ fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) 
     // Try to parse as a Vec<AgentAction>
     if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
         return Ok(actions);
-    }
-
-    // Try to parse as a single AgentAction
-    if let Ok(action) = serde_json::from_str::<AgentAction>(response_content) {
-        return Ok(vec![action]);
     }
 
     // If parsing fails, handle based on configuration

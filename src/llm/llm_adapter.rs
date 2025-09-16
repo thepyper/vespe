@@ -5,13 +5,12 @@ use tracing::info;
 use serde_json::Value;
 
 use llm::{
-    InferenceRequest,
-    InferenceResponse,
-    InferenceSessionConfig,
-    KnownModel,
-    Model,
+    inference::{InferenceRequest, InferenceResponse, InferenceSessionConfig, InferenceParameters, InferenceFeedback},
+    model::{Model, KnownModel, ModelArchitecture, TokenizerSource},
     load_progress_callback,
+    Mirostat,
 };
+use rand::thread_rng; // Add rand crate
 
 use crate::tools::tool_registry::ToolRegistry; // Import ToolRegistry
 
@@ -94,10 +93,10 @@ impl LlmClient for LlmAdapter {
 
         session.infer(
             self.model.as_ref(),
-            &mut rand::thread_rng(),
+            &mut thread_rng(), // Use thread_rng from rand crate
             &InferenceRequest {
                 prompt: prompt_string.into(),
-                parameters: &llm::InferenceParameters::default(),
+                parameters: &InferenceParameters::default(),
                 play_back_previous_tokens: false,
                 repetition_penalty_last_n: 64,
                 repetition_penalty_sustain_n: 64,
@@ -110,7 +109,7 @@ impl LlmClient for LlmAdapter {
                 top_p: 0.95,
                 temperature: self.config.temperature,
                 bias_tokens: None,
-                mirostat: llm::Mirostat::V0,
+                mirostat: Mirostat::V0,
                 mirostat_tau: 5.0,
                 mirostat_eta: 0.1,
                 log_softmax: false,
@@ -121,9 +120,9 @@ impl LlmClient for LlmAdapter {
             &mut |r| match r {
                 InferenceResponse::PromptToken(t) | InferenceResponse::InferredToken(t) => {
                     response_text.push_str(&t);
-                    Ok(llm::InferenceFeedback::Continue)
+                    Ok(InferenceFeedback::Continue)
                 }
-                _ => Ok(llm::InferenceFeedback::Continue), // Handle other response types
+                _ => Ok(InferenceFeedback::Continue), // Handle other response types
             },
         )?;
 

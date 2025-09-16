@@ -9,7 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
-use crate::config::MalformedJsonHandling;
+
 use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
 
@@ -99,5 +99,7 @@ impl Agent for BasicAgent {
         let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)
+    }
+}final_response_content)
     }
 }

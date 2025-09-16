@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
 use tokio::fs;
+use tracing::info;
 
 use crate::tools::tool_trait::Tool;
 
@@ -53,6 +54,8 @@ impl Tool for ReadFileTool {
         let content = fs::read_to_string(&full_path)
             .await
             .with_context(|| format!("Failed to read file from path: {:?}", full_path))?;
+
+        info!("ReadFileTool: Successfully read file {:?} ({} bytes)", full_path, content.len());
 
         Ok(json!({ "content": content }))
     }

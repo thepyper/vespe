@@ -22,7 +22,7 @@ pub async fn run() -> Result<()> {
 
     // Initialize ToolRegistry and register tools
     let mut tool_registry = ToolRegistry::new();
-    tool_registry.register_tool(Box::new(EchoTool));
+    tool_registry.register_tool(Arc::new(EchoTool));
 
     match cli.command {
         cli::commands::Commands::Chat { agent_name, message } => {

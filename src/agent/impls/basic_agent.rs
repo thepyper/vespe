@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
 use tracing::info;
@@ -24,7 +24,7 @@ impl BasicAgent {
     fn get_tool_prompt(&self) -> String {
         if let Some(tool_names) = &self.definition.tools {
             let available_tools: Vec<Value> = self.tool_registry.get_tool_metadata().into_iter()
-                .filter(|tool_meta| tool_names.contains(tool_meta["name"].as_str().unwrap_or("")))
+                .filter(|tool_meta| tool_names.iter().any(|name| name == tool_meta["name"].as_str().unwrap_or("")))
                 .collect();
 
             if available_tools.is_empty() {
@@ -32,7 +32,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object like this:\n{{\"tool_call\": {{"name": \"tool_name\", \"args\": {{...}}}}}}",
+                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object like this:\n{{\"tool_call\": {{'name': \"tool_name\", 'args': {{...}}}}}}",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {

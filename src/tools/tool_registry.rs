@@ -1,11 +1,13 @@
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use std::sync::Arc;
 use serde_json::Value;
 
 use crate::tools::tool_trait::Tool;
 
+#[derive(Clone)]
 pub struct ToolRegistry {
-    tools: HashMap<String, Box<dyn Tool + Send + Sync>>,
+    tools: HashMap<String, Arc<dyn Tool + Send + Sync>>,
 }
 
 impl ToolRegistry {
@@ -15,7 +17,7 @@ impl ToolRegistry {
         }
     }
 
-    pub fn register_tool(&mut self, tool: Box<dyn Tool + Send + Sync>) {
+    pub fn register_tool(&mut self, tool: Arc<dyn Tool + Send + Sync>) {
         self.tools.insert(tool.name().to_string(), tool);
     }
 

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use serde_json::Value;
 use tracing::info;
@@ -34,7 +34,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object where the key is \"tool_call\" and its value is an object with \"name\" (string) and \"args\" (object).",
+                "\n\nAvailable tools:\n{}\n\nYour response MUST be a JSON array of objects. Each object represents an action or a response. Each object MUST have a \"type\" field. Valid types are:\n- \"tool_call\": {{ \"name\": \"tool_name\", \"args\": {{...}} }}\n- \"text_response\": {{ \"content\": \"your text here\" }}\n- \"thought\": {{ \"content\": \"your thought here\" }}\nIf you have only one action, still wrap it in an array.\n",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {
@@ -55,7 +55,7 @@ impl Agent for BasicAgent {
         let tool_prompt = self.get_tool_prompt();
 
         let mut messages = vec![
-            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. If you use a tool, always report its output to the user.\n{}", tool_prompt) },
+            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 

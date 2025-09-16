@@ -10,40 +10,19 @@ use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
 use crate::config::MalformedJsonHandling;
+use crate::agent::core::prompt_builder::PromptBuilder;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
     llm_client: GenericLlmClient,
     tool_registry: ToolRegistry,
+    prompt_builder: PromptBuilder,
 }
 
 impl BasicAgent {
-    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry) -> Result<Self> {
+    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, prompt_builder: PromptBuilder) -> Result<Self> {
         let llm_client = GenericLlmClient::new(definition.llm_config.clone())?;
-        Ok(Self { definition, llm_client, tool_registry })
-    }
-
-    fn get_tool_prompt(&self) -> String {
-        if let Some(tool_names) = &self.definition.tools {
-            let available_tools: Vec<Value> = self.tool_registry.get_tool_metadata().into_iter()
-                .filter(|tool_meta| tool_names.iter().any(|name| name == tool_meta["name"].as_str().unwrap_or("")))
-                .collect();
-
-            if available_tools.is_empty() {
-                return String::new();
-            }
-
-            format!(
-                "\n\nAvailable tools:\n{}\n\nYour response MUST be a JSON array of objects. Each object represents an action or a response. Each object MUST have a \"type\" field. Valid types are:\n- \"tool_call\": {{ \"name\": \"tool_name\", \"args\": {{...}} }}\n- \"text_response\": {{ \"content\": \"your text here\" }}\n- \"thought\": {{ \"content\": \"your thought here\" }}\n\nExample of a multi-action response:\n```json\n[
-  {{\"type\": \"thought\", \"content\": \"I need to use the echo tool.\"}},
-  {{\"type\": \"tool_call\", \"name\": \"echo\", \"args\": {{ \"text\": \"Hello World\" }}}},
-  {{\"type\": \"text_response\", \"content\": \"I have executed the echo tool.\"}}
-]\n```\nIf you have only one action, still wrap it in an array.\n",
-                serde_json::to_string_pretty(&available_tools).unwrap_or_default()
-            )
-        } else {
-            String::new()
-        }
+        Ok(Self { definition, llm_client, tool_registry, prompt_builder })
     }
 }
 
@@ -56,7 +35,7 @@ impl Agent for BasicAgent {
     async fn execute(&self, input: &str) -> Result<String> {
         info!("Agent '{}' executing with input: '{}'", self.name(), input);
 
-        let tool_prompt = self.get_tool_prompt();
+        let tool_prompt = self.prompt_builder.build_system_prompt(&self.definition, &self.tool_registry);
 
         let mut messages = vec![
             ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },
@@ -75,7 +54,7 @@ impl Agent for BasicAgent {
                 match action {
                     AgentAction::ToolCall(tool_call) => {
                         has_tool_call = true;
-                        info!("Agent '{}' calling tool: {} with args: {:?}", self.name(), tool_call.name, tool_call.args);
+                        final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
 
                         let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args).await?;
                         let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
@@ -96,6 +75,8 @@ impl Agent for BasicAgent {
                             } else {
                                 final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
                             }
+                        } else {
+                            final_response_parts.push(format!("Tool output: {}", tool_output_str));
                         }
                     },
                     AgentAction::TextResponse { content } => {

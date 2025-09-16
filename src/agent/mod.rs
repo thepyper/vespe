@@ -3,3 +3,4 @@ pub mod agent_trait;
 pub mod models;
 pub mod impls;
 pub mod actions;
+pub mod core;

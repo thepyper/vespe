@@ -4,10 +4,8 @@ use std::path::PathBuf;
 use tracing::info;
 use serde_json::Value;
 
-use llm:: // Removed glob import
-    inference::{InferenceRequest, InferenceResponse, InferenceSessionConfig, InferenceParameters, InferenceFeedback},
-    Model, // Only Model trait remains
-;
+use llm::{Model};
+use llm::inference;
 use rand::thread_rng;
 
 use crate::tools::tool_registry::ToolRegistry;
@@ -60,7 +58,7 @@ impl LlmAdapter {
 #[async_trait]
 impl LlmClient for LlmAdapter {
     async fn generate_response(&self, messages: Vec<ChatMessage>, tool_registry: Option<&ToolRegistry>) -> Result<LlmResponse> {
-        let mut session = self.model.start_session(llm::inference::InferenceSessionConfig::default()); // Explicitly qualify InferenceSessionConfig
+        let mut session = self.model.start_session(inference::InferenceSessionConfig::default()); // Use inference::
 
         let mut prompt_parts = Vec::new();
 
@@ -91,9 +89,9 @@ impl LlmClient for LlmAdapter {
         session.infer(
             self.model.as_ref(),
             &mut rand::thread_rng(),
-            &llm::inference::InferenceRequest {
+            &inference::InferenceRequest {
                 prompt: prompt_string.into(),
-                parameters: &llm::inference::InferenceParameters::default(),
+                parameters: &inference::InferenceParameters::default(),
                 play_back_previous_tokens: false,
                 repetition_penalty_last_n: 64,
                 repetition_penalty_sustain_n: 64,
@@ -112,11 +110,11 @@ impl LlmClient for LlmAdapter {
                 token_callback: None,
             },
             &mut |r| match r {
-                llm::inference::InferenceResponse::PromptToken(t) | llm::inference::InferenceResponse::InferredToken(t) => {
+                inference::InferenceResponse::PromptToken(t) | inference::InferenceResponse::InferredToken(t) => {
                     response_text.push_str(&t);
-                    Ok(llm::inference::InferenceFeedback::Continue)
+                    Ok(inference::InferenceFeedback::Continue)
                 }
-                _ => Ok(llm::inference::InferenceFeedback::Continue), // Handle other response types
+                _ => Ok(inference::InferenceFeedback::Continue), // Handle other response types
             },
         )?;
 

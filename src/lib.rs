@@ -14,7 +14,7 @@ pub async fn run() -> Result<()> {
     let cli = cli::commands::Cli::parse();
 
     let global_config = config::load_global_config().await?;
-    let final_config = config::load_project_config(global_config).await?;
+    let _final_config = config::load_project_config(global_config).await?;
 
     match cli.command {
         cli::commands::Commands::Chat { agent_name, message } => {

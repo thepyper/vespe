@@ -1,5 +1,5 @@
 use anyhow::Result;
-use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::{fmt, filter::EnvFilter};
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 use tracing::info;
 use clap::Parser;
+use std::sync::Arc;
 
 pub mod agent;
 pub mod cli;

@@ -9,7 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
-
+use crate::config::MalformedJsonHandling;
 use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
 
@@ -114,10 +114,6 @@ fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) 
         },
         MalformedJsonHandling::Error => {
             Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
-        },
-    }
-}
-se_content))
         },
     }
 }

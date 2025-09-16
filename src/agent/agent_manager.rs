@@ -5,14 +5,16 @@ use tokio::fs;
 use crate::agent::agent_trait::Agent;
 use crate::agent::impls::basic_agent::BasicAgent;
 use crate::agent::models::AgentDefinition;
+use crate::tools::tool_registry::ToolRegistry;
 
 pub struct AgentManager {
     project_root: PathBuf,
+    tool_registry: ToolRegistry,
 }
 
 impl AgentManager {
-    pub fn new(project_root: PathBuf) -> Self {
-        Self { project_root }
+    pub fn new(project_root: PathBuf, tool_registry: ToolRegistry) -> Self {
+        Self { project_root, tool_registry }
     }
 
     pub async fn load_agent_definition(&self, name: &str) -> Result<AgentDefinition> {
@@ -29,7 +31,7 @@ impl AgentManager {
     }
 
     pub fn create_agent(&self, definition: AgentDefinition) -> Result<Box<dyn Agent>> {
-        let agent = BasicAgent::new(definition)?;
+        let agent = BasicAgent::new(definition, self.tool_registry.clone())?;
         Ok(Box::new(agent))
     }
 }

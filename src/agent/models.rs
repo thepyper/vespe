@@ -6,5 +6,5 @@ use crate::config::LlmConfig;
 pub struct AgentDefinition {
     pub name: String,
     pub llm_config: LlmConfig,
-    // Add other agent-specific fields as needed later
+    pub tools: Option<Vec<String>>, // List of tool names this agent can use
 }

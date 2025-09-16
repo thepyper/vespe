@@ -535,3 +535,4 @@
 
 
   
+cargo run -- chat my_agent "please read file 'test2.txt', then summarize it, then pass the summary to echo tool"

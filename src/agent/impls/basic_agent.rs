@@ -36,7 +36,7 @@ impl BasicAgent {
             format!(
                 "\n\nAvailable tools:\n{}\n\nYour response MUST be a JSON array of objects. Each object represents an action or a response. Each object MUST have a \"type\" field. Valid types are:\n- \"tool_call\": {{ \"name\": \"tool_name\", \"args\": {{...}} }}\n- \"text_response\": {{ \"content\": \"your text here\" }}\n- \"thought\": {{ \"content\": \"your thought here\" }}\n\nExample of a multi-action response:\n```json\n[
   {{\"type\": \"thought\", \"content\": \"I need to use the echo tool.\"}},
-  {{\"type\": \"tool_call\", \"name\": \"echo\", \"args\": {{"text": \"Hello World\"}}}},
+  {{\"type\": \"tool_call\", \"name\": \"echo\", \"args\": {{ \"text\": \"Hello World\" }}}},
   {{\"type\": \"text_response\", \"content\": \"I have executed the echo tool.\"}}
 ]\n```\nIf you have only one action, still wrap it in an array.\n",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()

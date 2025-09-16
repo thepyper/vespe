@@ -9,9 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
-
-use crate::agent::core::prompt_builder::PromptBuilder;
-use crate::agent::core::response_parser::ResponseParser;
+use crate::config::MalformedJsonHandling;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
@@ -49,7 +47,7 @@ impl Agent for BasicAgent {
 
         // Loop for tool calls
         for _ in 0..5 { // Max 5 tool calls to prevent infinite loops
-            let parsed_actions = self.response_parser.parse_response(&response.content, &self.definition.llm_config.on_malformed_json)?;
+            let parsed_actions = parse_llm_response(&response.content, &self.definition.llm_config.on_malformed_json)?;
 
             let mut has_tool_call = false;
             for action in parsed_actions {
@@ -100,6 +98,22 @@ impl Agent for BasicAgent {
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)
     }
-}final_response_content)
+}
+
+fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
+    // Try to parse as a Vec<AgentAction>
+    if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
+        return Ok(actions);
+    }
+
+    // If parsing fails, handle based on configuration
+    match handling {
+        MalformedJsonHandling::TreatAsText => {
+            info!("Malformed JSON, treating as text: {}", response_content);
+            Ok(vec![AgentAction::TextResponse { content: response_content.to_string() }])
+        },
+        MalformedJsonHandling::Error => {
+            Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
+        },
     }
 }

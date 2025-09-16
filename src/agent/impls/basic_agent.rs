@@ -32,7 +32,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object like this:\n{{\"tool_call\": {{"name": \"tool_name\", \"args\": {{...}}}}}}",
+                "\n\nAvailable tools:\n{{}}\n\nTo use a tool, respond with a JSON object like this:\n{{\"tool_call\": {{ \"name\": \"tool_name\", \"args\": {{...}} }}}}}",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {
@@ -78,7 +78,7 @@ impl Agent for BasicAgent {
                     messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
                     response = self.llm_client.generate_response(messages.clone()).await?;
-                    final_response_content = format!("Tool output: {}\nLLM response: {}", tool_output_str, response.content);
+                    final_response_content = format!("Tool output: {{}}\nLLM response: {{}}", tool_output_str, response.content);
                 } else {
                     break; // Not a valid tool call format
                 }

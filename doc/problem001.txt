@@ -1,0 +1,13 @@
+
+c:\Proj\xxx\025_006.Vespe\vespe>cargo run -- chat my_agent "please read file test.txt, then summarize it, then pass the summary to echo tool"
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running `target\debug\vespe.exe chat my_agent "please read file test.txt, then summarize it, then pass the summary to echo tool"`
+Agent my_agent: [RESPONSE]: [
+  {"type": "tool_call", "name": "read_file", "args": {"path": "test.txt"}},
+  {"type": "text_response", "content": "File content: \n (will be displayed here)"},
+  {"type": "thought", "content": "Now, I need to summarize the file content."},
+  {"type": "tool_call", "name": "echo", "args": {"text": "(summary of test.txt)" }},
+  {"type": "text_response", "content": "I have passed the summary to the echo tool."}
+]
+
+Note: Since the actual output of the "read_file" and "echo" tools will be used as inputs for other actions, I'll display placeholder responses.

@@ -9,6 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
+use crate::config::models::MalformedJsonHandling;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
@@ -91,8 +92,6 @@ impl Agent for BasicAgent {
                             } else {
                                 final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
                             }
-                        } else {
-                            final_response_parts.push(format!("Tool output: {}", tool_output_str));
                         }
                     },
                     AgentAction::TextResponse { content } => {

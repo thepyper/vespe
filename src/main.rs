@@ -1,43 +1,106 @@
-// Import required modules from the LLM library for OpenAI integration
-use llm::{
-    builder::{FunctionBuilder, LLMBackend, LLMBuilder, ParamBuilder},
-    chat::ChatMessage, // Chat-related structures
-};
+//! End-to-end example showing a realistic tool-use cycle:
+//! 1. The user asks to import users.
+//! 2. The model replies with a `tool_use` call.
+//! 3. We execute the function on our side (mock).
+//! 4. We send back a `tool_result` message.
+//! 5. The model produces a final confirmation message.
+
+use llm::builder::{FunctionBuilder, LLMBackend, LLMBuilder};
+use llm::chat::{ChatMessage, ToolChoice};
+use llm::{FunctionCall, ToolCall};
+use serde::Deserialize;
+use serde_json::json;
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+struct User {
+    name: String,
+    emails: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImportUsersArgs {
+    users: Vec<User>,
+}
+
+fn import_users_tool() -> FunctionBuilder {
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "users": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string" },
+                        "emails": {
+                            "type": "array",
+                            "items": { "type": "string", "format": "email" }
+                        }
+                    },
+                    "required": ["name", "emails"],
+                    "additionalProperties": false
+                }
+            }
+        },
+        "required": ["users"],
+        "additionalProperties": false
+    });
+
+    FunctionBuilder::new("import_users")
+        .description("Bulk-import a list of users with their email addresses.")
+        .json_schema(schema)
+}
+
+fn import_users(args_json: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let args: ImportUsersArgs = serde_json::from_str(args_json)?;
+    println!("[server] imported {} users", args.users.len());
+    Ok(args.users.len())
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Get OpenAI API key from environment variable or use test key as fallback
-    //let api_key = std::env::var("OPENAI_API_KEY").unwrap_or("sk-TESTKEY".into());
-    let base_url = std::env::var("OLLAMA_URL").unwrap_or("http://127.0.0.1:11434".into());
-    
-    // Initialize and configure the LLM client
     let llm = LLMBuilder::new()
-        .backend(LLMBackend::Ollama) // Use OpenAI as the LLM provider
-        .base_url(base_url) // Set the Ollama server URL
-        .model("llama3.1:8b")
-        .max_tokens(512) // Limit response length
-        .temperature(0.7) // Control response randomness (0.0-1.0)
-        .function(
-            FunctionBuilder::new("weather_function")
-                .description("Use this tool to get the weather in a specific city")
-                .param(
-                    ParamBuilder::new("url")
-                        .type_of("string")
-                        .description("The url to get the weather from for the city"),
-                )
-                .required(vec!["url".to_string()]),
-        )
-        .build()
-        .expect("Failed to build LLM");
+        .backend(LLMBackend::OpenAI)
+        .api_key(std::env::var("OPENAI_API_KEY")?)
+        .model("gpt-4o")
+        .function(import_users_tool())
+        .tool_choice(ToolChoice::Any)
+        .build()?;
 
-    // Prepare conversation history with example messages
-    let messages = vec![ChatMessage::user().content("You are a weather assistant. What is the weather in Tokyo? Use the tools that you have available").build()];
+    let mut messages = vec![ChatMessage::user()
+        .content("Please import Alice <alice@example.com> and Bob <bob@example.com>.")
+        .build()];
 
-    // Send chat request and handle the response
-    // this returns the response as a string. The tool call is also returned as a serialized string. We can deserialize if needed.
-    match llm.chat_with_tools(&messages, llm.tools()).await {
-        Ok(text) => println!("Chat response:\n{text}"),
-        Err(e) => eprintln!("Chat error: {e}"),
+    let first_resp = llm.chat(&messages).await?;
+    println!("[assistant] {first_resp}");
+
+    if let Some(tool_calls) = first_resp.tool_calls() {
+        let mut tool_results = Vec::new();
+        for call in &tool_calls {
+            match import_users(&call.function.arguments) {
+                Ok(count) => {
+                    // Prepare a ToolResult conveying success.
+                    tool_results.push(ToolCall {
+                        id: call.id.clone(),
+                        call_type: "function".into(),
+                        function: FunctionCall {
+                            name: call.function.name.clone(),
+                            arguments: json!({ "status": "ok", "imported": count }).to_string(),
+                        },
+                    });
+                }
+                Err(e) => {
+                    eprintln!("[server] import failed: {e}");
+                }
+            }
+        }
+
+        messages.push(ChatMessage::assistant().tool_use(tool_calls).build());
+        messages.push(ChatMessage::assistant().tool_result(tool_results).build());
+
+        let final_resp = llm.chat(&messages).await?;
+        println!("[assistant] {final_resp}");
     }
 
     Ok(())

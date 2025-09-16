@@ -34,11 +34,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nYour response MUST be a JSON array of objects. Each object represents an action or a response. Each object MUST have a \"type\" field. Valid types are:\n- \"tool_call\": {{ \"name\": \"tool_name\", \"args\": {{...}} }}\n- \"text_response\": {{ \"content\": \"your text here\" }}\n- \"thought\": {{ \"content\": \"your thought here\" }}\n\nExample of a multi-action response:\n```json\n[
-  {{\"type\": \"thought\", \"content\": \"I need to use the echo tool.\"}},
-  {{\"type\": \"tool_call\", \"name\": \"echo\", \"args\": {{ \"text\": \"Hello World\" }}}},
-  {{\"type\": \"text_response\", \"content\": \"I have executed the echo tool.\"}}
-]\n```\nIf you have only one action, still wrap it in an array.\n",
+                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object where the key is \"tool_call\" and its value is an object with \"name\" (string) and \"args\" (object).",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {
@@ -75,7 +71,7 @@ impl Agent for BasicAgent {
                 match action {
                     AgentAction::ToolCall(tool_call) => {
                         has_tool_call = true;
-                        info!("Agent '{}' calling tool: {} with args: {:?}", self.name(), tool_call.name, tool_call.args);
+                        final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
 
                         let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args).await?;
                         let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
@@ -89,13 +85,15 @@ impl Agent for BasicAgent {
                         if tool_call.name == "echo" {
                             if let Ok(output_val) = serde_json::from_str::<Value>(&tool_output_str) {
                                 if let Some(transformed_text) = output_val["transformed_text"].as_str() {
-                                    final_response_parts.push(format!("Echo Tool Output: {}", transformed_text));
+                                    final_response_parts.push(format!("[TOOL_OUTPUT]: {}", transformed_text));
                                 } else {
-                                    final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
+                                    final_response_parts.push(format!("[TOOL_OUTPUT]: (raw) {}", tool_output_str));
                                 }
                             } else {
-                                final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
+                                final_response_parts.push(format!("[TOOL_OUTPUT]: (raw) {}", tool_output_str));
                             }
+                        } else {
+                            final_response_parts.push(format!("[TOOL_OUTPUT]: {}", tool_output_str));
                         }
                     },
                     AgentAction::TextResponse { content } => {

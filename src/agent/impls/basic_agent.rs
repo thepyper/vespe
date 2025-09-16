@@ -58,6 +58,7 @@ impl Agent for BasicAgent {
         ];
 
         let mut response = self.llm_client.generate_response(messages.clone()).await?;
+        let mut last_tool_output: Option<String> = None;
 
         // Loop for tool calls
         for _ in 0..5 { // Max 5 tool calls to prevent infinite loops
@@ -71,9 +72,10 @@ impl Agent for BasicAgent {
                     info!("Agent '{}' calling tool: {} with args: {}", self.name(), tool_name, tool_args);
 
                     let tool_output = self.tool_registry.execute_tool(tool_name, &tool_args).await?;
+                    last_tool_output = Some(serde_json::to_string_pretty(&tool_output)?);
 
                     messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
-                    messages.push(ChatMessage { role: "tool".to_string(), content: serde_json::to_string(&tool_output)? });
+                    messages.push(ChatMessage { role: "tool".to_string(), content: last_tool_output.clone().unwrap_or_default() });
 
                     response = self.llm_client.generate_response(messages.clone()).await?;
                 } else {
@@ -84,7 +86,13 @@ impl Agent for BasicAgent {
             }
         }
 
-        info!("Agent '{}' received final response: '{}'", self.name(), response.content);
-        Ok(response.content)
+        let final_response_content = if let Some(output) = last_tool_output {
+            format!("Tool output: {}\nLLM response: {}", output, response.content)
+        } else {
+            response.content
+        };
+
+        info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
+        Ok(final_response_content)
     }
 }

@@ -8,8 +8,7 @@ use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
-use crate::agent::actions::{AgentAction, ToolCall};
-use crate::config::models::{LlmConfig, MalformedJsonHandling};
+use crate::agent::actions::AgentAction;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
@@ -80,7 +79,21 @@ impl Agent for BasicAgent {
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
                         response = self.llm_client.generate_response(messages.clone()).await?;
-                        final_response_parts.push(format!("Tool output: {}", tool_output_str));
+                        
+                        // Explicitly extract and report transformed_text for echo tool
+                        if tool_call.name == "echo" {
+                            if let Ok(output_val) = serde_json::from_str::<Value>(&tool_output_str) {
+                                if let Some(transformed_text) = output_val["transformed_text"].as_str() {
+                                    final_response_parts.push(format!("Echo Tool Output: {}", transformed_text));
+                                } else {
+                                    final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
+                                }
+                            } else {
+                                final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
+                            }
+                        } else {
+                            final_response_parts.push(format!("Tool output: {}", tool_output_str));
+                        }
                     },
                     AgentAction::TextResponse { content } => {
                         final_response_parts.push(content);

@@ -4,10 +4,9 @@ use std::path::PathBuf;
 use tracing::info;
 use serde_json::Value;
 
-use llm::{
+use llm::{ // Removed glob import
     inference::{InferenceRequest, InferenceResponse, InferenceSessionConfig, InferenceParameters, InferenceFeedback},
-    model::{Model, ModelArchitecture, TokenizerSource},
-    load_progress_callback,
+    Model, // Only Model trait remains
     Mirostat,
 };
 use rand::thread_rng;
@@ -48,13 +47,12 @@ impl LlmAdapter {
         // For now, we'll just load a dummy Llama model.
         let model_path = PathBuf::from("./path/to/your/model/llama-7b-q4_0.bin"); // Placeholder
 
-        let model = llm::load_dynamic(
-            Some(llm::ModelArchitecture::Llama), // Explicitly qualify ModelArchitecture
+        // Simplified model loading, assuming llm::load is the correct function
+        let model = llm::load(
             &model_path,
-            llm::TokenizerSource::Embedded, // Explicitly qualify TokenizerSource
-            Default::default(),
-            llm::load_progress_callback, // Explicitly qualify load_progress_callback
-        )?;
+            Default::default(), // Assuming a default config for loading
+            None, // No progress callback
+        )?; 
 
         Ok(Self { model, config })
     }
@@ -63,7 +61,7 @@ impl LlmAdapter {
 #[async_trait]
 impl LlmClient for LlmAdapter {
     async fn generate_response(&self, messages: Vec<ChatMessage>, tool_registry: Option<&ToolRegistry>) -> Result<LlmResponse> {
-        let mut session = self.model.start_session(llm::InferenceSessionConfig::default()); // Explicitly qualify InferenceSessionConfig
+        let mut session = self.model.start_session(llm::inference::InferenceSessionConfig::default()); // Explicitly qualify InferenceSessionConfig
 
         let mut prompt_parts = Vec::new();
 

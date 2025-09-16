@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use serde_json::Value;
 use tracing::info;
@@ -18,6 +18,7 @@ pub struct BasicAgent {
     llm_client: GenericLlmClient,
     tool_registry: ToolRegistry,
     prompt_builder: PromptBuilder,
+    response_parser: ResponseParser,
 }
 
 impl BasicAgent {

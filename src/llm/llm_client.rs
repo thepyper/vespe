@@ -5,6 +5,7 @@ use tracing::error;
 use crate::config::models::LlmConfig;
 use crate::llm::models::{ChatMessage, LlmResponse};
 use crate::llm::providers::openai::OpenAiClient;
+use crate::llm::providers::ollama::OllamaClient;
 
 #[async_trait]
 pub trait LlmClient {
@@ -14,7 +15,7 @@ pub trait LlmClient {
 pub struct GenericLlmClient {
     config: LlmConfig,
     openai_client: Option<OpenAiClient>,
-    // Add other provider clients here
+    ollama_client: Option<OllamaClient>,
 }
 
 impl GenericLlmClient {
@@ -25,9 +26,13 @@ impl GenericLlmClient {
             None
         };
 
-        // Add other provider initializations here
+        let ollama_client = if config.provider == "ollama" {
+            Some(OllamaClient::new(config.clone()))
+        } else {
+            None
+        };
 
-        if openai_client.is_none() {
+        if openai_client.is_none() && ollama_client.is_none() {
             error!("Unsupported LLM provider: {}", config.provider);
             return Err(anyhow!("Unsupported LLM provider: {}", config.provider));
         }
@@ -35,6 +40,7 @@ impl GenericLlmClient {
         Ok(Self {
             config,
             openai_client,
+            ollama_client,
         })
     }
 }
@@ -50,7 +56,13 @@ impl LlmClient for GenericLlmClient {
                     Err(anyhow!("OpenAI client not initialized"))
                 }
             }
-            // Add other provider matches here
+            "ollama" => {
+                if let Some(client) = &self.ollama_client {
+                    client.generate_response(messages).await
+                } else {
+                    Err(anyhow!("Ollama client not initialized"))
+                }
+            }
             _ => Err(anyhow!("Unsupported LLM provider: {}", self.config.provider)),
         }
     }

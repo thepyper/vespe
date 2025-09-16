@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::agent::models::AgentDefinition;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LlmConfig {
     pub provider: String,
@@ -14,13 +16,6 @@ pub struct LlmConfig {
 
 fn default_temperature() -> f32 { 0.7 }
 fn default_max_tokens() -> u32 { 512 }
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AgentDefinition {
-    pub name: String,
-    pub llm_config: LlmConfig,
-    // Add other agent-specific fields as needed later
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GlobalConfig {

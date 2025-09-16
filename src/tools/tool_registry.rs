@@ -27,6 +27,7 @@ impl ToolRegistry {
                 "name": tool.name(),
                 "description": tool.description(),
                 "input_schema": serde_json::from_str::<Value>(tool.input_schema()).unwrap_or_default(),
+                "output_schema": serde_json::from_str::<Value>(tool.output_schema()).unwrap_or_default(),
             })
         }).collect()
     }

@@ -12,6 +12,7 @@ pub mod tools;
 
 use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;
+use crate::tools::impls::read_file_tool::ReadFileTool;
 
 pub async fn run() -> Result<()> {
     info!("Vespe application started.");
@@ -24,6 +25,7 @@ pub async fn run() -> Result<()> {
     // Initialize ToolRegistry and register tools
     let mut tool_registry = ToolRegistry::new();
     tool_registry.register_tool(Arc::new(EchoTool));
+    tool_registry.register_tool(Arc::new(ReadFileTool));
 
     match cli.command {
         cli::commands::Commands::Chat { agent_name, message } => {

@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use tracing::error;
 
-use crate::config::models::LlmConfig;
+use crate::config::LlmConfig;
 use crate::llm::models::{ChatMessage, LlmResponse};
 use crate::llm::providers::openai::OpenAiClient;
 use crate::llm::providers::ollama::OllamaClient;

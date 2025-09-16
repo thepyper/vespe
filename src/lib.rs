@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::path::PathBuf;
 use tracing::info;
+use clap::Parser;
 
 pub mod agent;
 pub mod cli;

@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde_json::json;
 use tracing::info;
 
-use crate::config::models::LlmConfig;
+use crate::config::LlmConfig;
 use crate::llm::models::{ChatMessage, LlmResponse};
 
 pub struct OllamaClient {

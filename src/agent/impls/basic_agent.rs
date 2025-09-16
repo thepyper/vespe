@@ -32,7 +32,7 @@ impl BasicAgent {
             }
 
             format!(
-                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object like this:\n{{\"tool_call\": {{'name': \"tool_name\", 'args': {{...}}}}}}",
+                "\n\nAvailable tools:\n{}\n\nTo use a tool, respond with a JSON object like this:\n{{\"tool_call\": {{"name": \"tool_name\", \"args\": {{...}}}}}}",
                 serde_json::to_string_pretty(&available_tools).unwrap_or_default()
             )
         } else {
@@ -53,12 +53,12 @@ impl Agent for BasicAgent {
         let tool_prompt = self.get_tool_prompt();
 
         let mut messages = vec![
-            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },
+            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. If you use a tool, always report its output to the user.\n{}", tool_prompt) },
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 
         let mut response = self.llm_client.generate_response(messages.clone()).await?;
-        let mut last_tool_output: Option<String> = None;
+        let mut final_response_content = response.content.clone();
 
         // Loop for tool calls
         for _ in 0..5 { // Max 5 tool calls to prevent infinite loops
@@ -72,12 +72,13 @@ impl Agent for BasicAgent {
                     info!("Agent '{}' calling tool: {} with args: {}", self.name(), tool_name, tool_args);
 
                     let tool_output = self.tool_registry.execute_tool(tool_name, &tool_args).await?;
-                    last_tool_output = Some(serde_json::to_string_pretty(&tool_output)?);
+                    let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
 
                     messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
-                    messages.push(ChatMessage { role: "tool".to_string(), content: last_tool_output.clone().unwrap_or_default() });
+                    messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
                     response = self.llm_client.generate_response(messages.clone()).await?;
+                    final_response_content = format!("Tool output: {}\nLLM response: {}", tool_output_str, response.content);
                 } else {
                     break; // Not a valid tool call format
                 }
@@ -85,12 +86,6 @@ impl Agent for BasicAgent {
                 break; // No tool call detected
             }
         }
-
-        let final_response_content = if let Some(output) = last_tool_output {
-            format!("Tool output: {}\nLLM response: {}", output, response.content)
-        } else {
-            response.content
-        };
 
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)

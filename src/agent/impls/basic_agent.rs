@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::Value;
 use tracing::info;
@@ -9,7 +9,7 @@ use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
-use crate::config::MalformedJsonHandling;
+
 use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
 
@@ -97,23 +97,5 @@ impl Agent for BasicAgent {
         let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)
-    }
-}
-
-fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
-    // Try to parse as a Vec<AgentAction>
-    if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
-        return Ok(actions);
-    }
-
-    // If parsing fails, handle based on configuration
-    match handling {
-        MalformedJsonHandling::TreatAsText => {
-            info!("Malformed JSON, treating as text: {}", response_content);
-            Ok(vec![AgentAction::TextResponse { content: response_content.to_string() }])
-        },
-        MalformedJsonHandling::Error => {
-            Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
-        },
     }
 }

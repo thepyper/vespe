@@ -13,9 +13,10 @@ use crate::prompt_templating::PromptTemplater;
 pub struct AgentManager {
     project_root: PathBuf,
     tool_registry: ToolRegistry,
+    prompt_templater: PromptTemplater<'static>, // Use 'static lifetime for PromptTemplater
 }
 
-impl<'a> AgentManager<'a> {
+impl AgentManager {
     pub fn new(project_root: PathBuf, tool_registry: ToolRegistry) -> Result<Self> {
         let prompt_templater = PromptTemplater::new(project_root.join(".vespe").join("prompts"))?;
         Ok(Self { project_root, tool_registry, prompt_templater })

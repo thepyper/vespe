@@ -1,47 +1,48 @@
 use anyhow::{anyhow, Result};
 use crate::config::models::LlmConfig;
-use crate::llm::models::{ChatMessage, LlmResponse};
+use crate::llm::models::LlmResponse; // LlmResponse is still used for raw content
+use crate::llm::markdown_policy::MarkdownPolicy;
+use crate::llm::messages::{Message, AssistantContent};
 use llm::builder::{LLMBackend, LLMBuilder};
-use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType};
+use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType}; // Still needed for the underlying LLM crate
 use tracing::info;
 
-pub async fn generate_response(
-    config: &LlmConfig,
-    messages: Vec<ChatMessage>,
-) -> Result<LlmResponse> {
-    let backend = match config.provider.as_str() {
-        "openai" => LLMBackend::OpenAI,
-        "ollama" => LLMBackend::Ollama,
-        _ => return Err(anyhow!("Unsupported LLM provider: {}", config.provider)),
-    };
+pub struct LlmClient {
+    config: LlmConfig,
+    markdown_policy: Box<dyn MarkdownPolicy>,
+}
 
-    let llm = LLMBuilder::new()
-        .backend(backend)
-        .api_key(config.api_key.clone().unwrap_or_default())
-        .model(config.model_id.clone())
-        .build()?;
+impl LlmClient {
+    pub fn new(config: LlmConfig, markdown_policy: Box<dyn MarkdownPolicy>) -> Self {
+        Self { config, markdown_policy }
+    } 
 
-    info!("LLM Query:\n{:#?}", messages);
+    pub async fn generate_response(&self, messages: &[Message]) -> Result<Vec<AssistantContent>> {
+        let backend = match self.config.provider.as_str() {
+            "openai" => LLMBackend::OpenAI,
+            "ollama" => LLMBackend::Ollama,
+            _ => return Err(anyhow!("Unsupported LLM provider: {}", self.config.provider)),
+        };
 
-    let chat_messages: Vec<LlmChatMessage> = messages
-        .into_iter()
-        .map(|msg| LlmChatMessage {
-            role: match msg.role.as_str() {
-                "user" => ChatRole::User,
-                "assistant" => ChatRole::Assistant,
-                "system" => ChatRole::User, // FIXME
-                _ => ChatRole::User,
-            },
-            content: msg.content,
-            message_type: MessageType::Text,
-        })
-        .collect();
+        let llm = LLMBuilder::new()
+            .backend(backend)
+            .api_key(self.config.api_key.clone().unwrap_or_default())
+            .model(self.config.model_id.clone())
+            .build()?;
 
-    let response = llm.chat(&chat_messages).await?;
-    let response_content = response.to_string();
-    info!("LLM Response:\n{}", response_content);
+        info!("LLM Query (internal messages):\n{:#?}", messages);
 
-    Ok(LlmResponse {
-        content: response_content,
-    })
+        let chat_messages = self.markdown_policy.format_query(messages)?;
+
+        info!("LLM Query (formatted for LLM):\n{:#?}", chat_messages);
+
+        let response = llm.chat(&chat_messages).await?;
+        let response_content = response.to_string();
+        info!("LLM Raw Response:\n{}", response_content);
+
+        let parsed_response = self.markdown_policy.parse_response(&response_content)?;
+        info!("LLM Parsed Response:\n{:#?}", parsed_response);
+
+        Ok(parsed_response)
+    }
 }

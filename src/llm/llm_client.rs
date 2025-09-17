@@ -20,6 +20,8 @@ pub async fn generate_response(
         .model(config.model_id.clone())
         .build()?;
 
+    logger.log_llm_query(&messages);
+
     let chat_messages: Vec<LlmChatMessage> = messages
         .into_iter()
         .map(|msg| LlmChatMessage {
@@ -35,8 +37,10 @@ pub async fn generate_response(
         .collect();
 
     let response = llm.chat(&chat_messages).await?;
+    let response_content = response.to_string();
+    logger.log_llm_response(&response_content);
 
     Ok(LlmResponse {
-        content: response.to_string(),
+        content: response_content,
     })
 }

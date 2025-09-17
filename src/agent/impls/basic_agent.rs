@@ -30,7 +30,7 @@ impl BasicAgent {
         messages: &mut Vec<ChatMessage>,
         response: &mut LlmResponse,
         final_response_parts: &mut Vec<String>,
-        logger: &mut Logger,
+        mut logger: &mut Logger,
     ) -> Result<()> {
         // Loop for tool calls
         for iteration_count in 0..5 { // Max 5 tool calls to prevent infinite loops
@@ -45,13 +45,13 @@ impl BasicAgent {
                         has_tool_call = true;
                         final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
 
-                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args, logger).await?;
+                                                                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args, &mut logger).await?;
                         let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
 
                         messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
-                        *response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone(), logger).await?;
+                        *response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone(), &mut logger).await?;
                         
                         // Explicitly extract and report transformed_text for echo tool
                         if tool_call.name == "echo" {

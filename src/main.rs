@@ -4,6 +4,7 @@ use tracing_subscriber::prelude::*;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use clap::Parser;
 use std::path::PathBuf;
+use tracing::info;
 
 use vespe::cli::commands::{Cli, Commands};
 use vespe::project_root::{self, is_project_root};
@@ -60,6 +61,8 @@ async fn main() -> Result<()> {
         .with(file_layer)
         .with(stdout_layer)
         .init();
+
+    info!("Project root at {}", project_root.display());
 
     // Call the main run function from the library
     vespe::run(project_root, cli.command).await

@@ -15,6 +15,66 @@ impl JsonMarkdownPolicy {
     pub fn new() -> Self {
         Self {}
     }
+
+    fn format_tool_output(tool_output: &crate::llm::messages::ToolOutput) -> Result<String> {
+        let formatted_result = Self::format_result_by_tool_type(&tool_output.tool_name, &tool_output.output)?;
+        
+        Ok(format!(
+            "```tool_result\n{{\n  \"tool\": \"{}\",\n  \"call_id\": \"{}\",\n  \"result\": {}\n}}\n```",
+            tool_output.tool_name,
+            tool_output.call_id.as_deref().unwrap_or("unknown"),
+            formatted_result
+        ))
+    }
+
+    fn format_result_by_tool_type(tool_name: &str, result: &serde_json::Value) -> Result<String> {
+        match tool_name {
+            "web_search" => {
+                // Estrai e formatta risultati di ricerca in modo leggibile
+                if let Some(results) = result.get("results").and_then(|r| r.as_array()) {
+                    let formatted_results: Vec<String> = results.iter()
+                        .take(3) // Limita a primi 3 risultati
+                        .filter_map(|r| {
+                            let title = r.get("title")?.as_str()?;
+                            let snippet = r.get("snippet")?.as_str()?;
+                            Some(format!("- **{}**: {}", title, snippet))
+                        })
+                        .collect();
+                    Ok(serde_json::to_value(formatted_results.join("\\n"))?)
+                } else {
+                    Ok(result.clone())
+                }
+            },
+            "code_execution" => {
+                // Formatta output di codice con stdout/stderr separati
+                if let Some(stdout) = result.get("stdout") {
+                    let stderr = result.get("stderr").unwrap_or(&serde_json::Value::Null);
+                    let formatted = serde_json::json!({
+                        "stdout": stdout,
+                        "stderr": stderr,
+                        "formatted": format!("Output: {}", stdout.as_str().unwrap_or(""))
+                    });
+                    Ok(formatted)
+                } else {
+                    Ok(result.clone())
+                }
+            },
+            "file_read" => {
+                // Tronca file lunghi
+                if let Some(content) = result.get("content").and_then(|c| c.as_str()) {
+                    let truncated = if content.len() > 1000 {
+                        format!("{}... [truncated, {} chars total]", &content[..1000], content.len())
+                    } else {
+                        content.to_string()
+                    };
+                    Ok(serde_json::to_value(truncated)?)
+                } else {
+                    Ok(result.clone())
+                }
+            },
+            _ => Ok(result.clone()) // Default: passa il JSON così com'è
+        }
+    }
 }
 
 impl MarkdownPolicy for JsonMarkdownPolicy {
@@ -206,9 +266,10 @@ This code demonstrates the solution because..."#.to_string()
                     });
                 },
                 Message::Tool(tool_output) => {
+                    let formatted_output = Self::format_tool_output(tool_output)?;
                     llm_chat_messages.push(LlmChatMessage {
                         role: ChatRole::User,
-                        content: format!("Tool output: {}", serde_json::to_string(&tool_output.output)?),
+                        content: formatted_output,
                         message_type: MessageType::Text,
                     });
                 },
@@ -226,6 +287,54 @@ pub struct XmlMarkdownPolicy;
 impl XmlMarkdownPolicy {
     pub fn new() -> Self {
         Self {}
+    }
+
+    fn format_tool_output(tool_output: &crate::llm::messages::ToolOutput) -> Result<String> {
+        let formatted_result = Self::format_result_by_tool_type(&tool_output.tool_name, &tool_output.output)?;
+        
+        Ok(format!(
+            "<tool_result>\n<tool_name>{}</tool_name>\n<call_id>{}</call_id>\n<result>\n{}\n</result>\n</tool_result>",
+            tool_output.tool_name,
+            tool_output.call_id.as_deref().unwrap_or("unknown"),
+            serde_json::to_string_pretty(&formatted_result)?
+        ))
+    }
+
+    fn format_result_by_tool_type(tool_name: &str, result: &serde_json::Value) -> Result<serde_json::Value> {
+        // Stessa logica del JSON policy ma ritorna Value per consistency
+        match tool_name {
+            "web_search" => {
+                if let Some(results) = result.get("results").and_then(|r| r.as_array()) {
+                    let formatted: Vec<serde_json::Value> = results.iter()
+                        .take(3)
+                        .filter_map(|r| {
+                            let title = r.get("title")?.as_str()?;
+                            let snippet = r.get("snippet")?.as_str()?;
+                            Some(serde_json::json!({
+                                "title": title,
+                                "snippet": snippet,
+                                "display": format!("{}: {}", title, snippet)
+                            }))
+                        })
+                        .collect();
+                    Ok(serde_json::json!({"search_results": formatted}))
+                } else {
+                    Ok(result.clone())
+                }
+            },
+            "code_execution" => {
+                if let Some(stdout) = result.get("stdout") {
+                    Ok(serde_json::json!({
+                        "execution_output": stdout,
+                        "errors": result.get("stderr"),
+                        "status": "completed"
+                    }))
+                } else {
+                    Ok(result.clone())
+                }
+            },
+            _ => Ok(result.clone())
+        }
     }
 }
 
@@ -416,6 +525,59 @@ pub struct SectionsMarkdownPolicy;
 impl SectionsMarkdownPolicy {
     pub fn new() -> Self {
         Self {}
+    }
+
+    fn format_tool_output(tool_output: &crate::llm::messages::ToolOutput) -> Result<String> {
+        let formatted_result = Self::format_result_by_tool_type(&tool_output.tool_name, &tool_output.output)?;
+        
+        Ok(format!(
+            "## 🔧 Tool Result: {}\n**Call ID:** {}\n**Output:**\n```json\n{}\n```",
+            tool_output.tool_name,
+            tool_output.call_id.as_deref().unwrap_or("unknown"),
+            serde_json::to_string_pretty(&formatted_result)?
+        ))
+    }
+
+    fn format_result_by_tool_type(tool_name: &str, result: &serde_json::Value) -> Result<serde_json::Value> {
+        match tool_name {
+            "web_search" => {
+                if let Some(results) = result.get("results").and_then(|r| r.as_array()) {
+                    let summary = format!("Found {} results", results.len());
+                    let top_results: Vec<_> = results.iter()
+                        .take(3)
+                        .filter_map(|r| {
+                            Some(format!("• {}: {}", 
+                                r.get("title")?.as_str()?,
+                                r.get("snippet")?.as_str()?.chars().take(100).collect::<String>()
+                            ))
+                        })
+                        .collect();
+                    
+                    Ok(serde_json::json!({
+                        "summary": summary,
+                        "top_results": top_results,
+                        "total_found": results.len()
+                    }))
+                } else {
+                    Ok(result.clone())
+                }
+            },
+            "code_execution" => {
+                let status = if result.get("stderr").is_some() && 
+                    !result.get("stderr").unwrap().as_str().unwrap_or("").is_empty() {
+                    "⚠️ Completed with warnings"
+                } else {
+                    "✅ Completed successfully"
+                };
+                
+                Ok(serde_json::json!({
+                    "status": status,
+                    "output": result.get("stdout"),
+                    "errors": result.get("stderr")
+                }))
+            },
+            _ => Ok(result.clone())
+        }
     }
 }
 
@@ -661,9 +823,10 @@ def well_designed_function(param: str) -> str:
                     });
                 },
                 Message::Tool(tool_output) => {
+                    let formatted_output = Self::format_tool_output(tool_output)?;
                     llm_chat_messages.push(LlmChatMessage {
                         role: ChatRole::User,
-                        content: format!("## 🔧 Tool Output\n{}", serde_json::to_string_pretty(&tool_output.output)?),
+                        content: formatted_output,
                         message_type: MessageType::Text,
                     });
                 },

@@ -22,7 +22,7 @@ pub async fn generate_response(
         .model(config.model_id.clone())
         .build()?;
 
-    logger.log_llm_query(&messages);
+    info!("LLM Query:\n{:#?}", messages);
 
     let chat_messages: Vec<LlmChatMessage> = messages
         .into_iter()
@@ -40,7 +40,7 @@ pub async fn generate_response(
 
     let response = llm.chat(&chat_messages).await?;
     let response_content = response.to_string();
-    logger.log_llm_response(&response_content);
+    info!("LLM Response:\n{}", response_content);
 
     Ok(LlmResponse {
         content: response_content,

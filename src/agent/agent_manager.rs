@@ -33,9 +33,16 @@ impl AgentManager {
     }
 
     pub fn create_agent(&self, definition: AgentDefinition) -> Result<Box<dyn Agent>> {
-        let prompt_builder = PromptBuilder::new(self.project_root.clone());
+        let prompt_builder = PromptBuilder::new(self.prompt_templater.clone());
         let response_parser = ResponseParser::new();
         let agent = BasicAgent::new(definition, self.tool_registry.clone(), prompt_builder, response_parser)?;
+        Ok(Box::new(agent))
+    }
+}
+       Ok(Box::new(agent))
+    }
+}
+_registry.clone(), prompt_builder, response_parser)?;
         Ok(Box::new(agent))
     }
 }

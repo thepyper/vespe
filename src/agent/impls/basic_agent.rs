@@ -103,7 +103,7 @@ impl Agent for BasicAgent {
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 
-        let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone(), &mut logger).await?;
+        let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
         let mut final_response_parts = Vec::new();
 
         self._handle_tool_calls(&mut messages, &mut response, &mut final_response_parts, &mut logger).await?;

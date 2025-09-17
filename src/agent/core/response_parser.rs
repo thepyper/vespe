@@ -12,8 +12,9 @@ impl ResponseParser {
     }
 
     pub fn parse_response(&self, response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
+        let trimmed_content = trim_markdown_code_blocks(response_content);
         // Try to parse as a Vec<AgentAction>
-        if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
+        if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(trimmed_content) {
             return Ok(actions);
         }
 

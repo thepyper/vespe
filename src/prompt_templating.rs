@@ -4,6 +4,7 @@ use serde_json::Value;
 use std::path::PathBuf;
 use std::fs;
 
+#[derive(Clone)]
 pub struct PromptTemplater<'a> {
     handlebars: Handlebars<'a>,
     template_dir: PathBuf,

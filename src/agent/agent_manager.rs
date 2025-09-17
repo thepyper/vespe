@@ -14,9 +14,10 @@ pub struct AgentManager {
     tool_registry: ToolRegistry,
 }
 
-impl AgentManager {
-    pub fn new(project_root: PathBuf, tool_registry: ToolRegistry) -> Self {
-        Self { project_root, tool_registry }
+impl<'a> AgentManager<'a> {
+    pub fn new(project_root: PathBuf, tool_registry: ToolRegistry) -> Result<Self> {
+        let prompt_templater = PromptTemplater::new(project_root.join(".vespe").join("prompts"))?;
+        Ok(Self { project_root, tool_registry, prompt_templater })
     }
 
     pub async fn load_agent_definition(&self, name: &str) -> Result<AgentDefinition> {

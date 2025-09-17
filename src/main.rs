@@ -3,7 +3,6 @@ use tracing_subscriber::{fmt, filter::EnvFilter, Layer, Registry};
 use tracing_subscriber::prelude::*;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use clap::Parser;
-use std::path::PathBuf;
 
 use vespe::cli::commands::Cli;
 use vespe::project_root;

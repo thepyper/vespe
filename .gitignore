@@ -19,4 +19,6 @@ target/
 # Added by cargo
 
 /target
-vespe.log
+
+# Ignore test environment
+/sandbox

@@ -19,14 +19,12 @@ use crate::tools::impls::read_file_tool::ReadFileTool;
 
 use crate::prompt_templating::PromptTemplater;
 
-pub async fn run(project_root: PathBuf) -> Result<()> {
+pub async fn run(project_root: PathBuf, command: cli::commands::Commands) -> Result<()> {
     println!("╔═══════════════════════════════════════════════════════╗");
     println!("║ Vespe - Version {}                                    ║", env!("CARGO_PKG_VERSION"));
     println!("║ Copyright (c) ThePyper                                  ║");
     println!("╚═══════════════════════════════════════════════════════╝");
     info!("Vespe application started.");
-
-    let cli = cli::commands::Cli::parse();
 
     let global_config = config::load_global_config().await?;
     let _final_config = config::load_project_config(global_config).await?;
@@ -39,7 +37,7 @@ pub async fn run(project_root: PathBuf) -> Result<()> {
     tool_registry.register_tool(Arc::new(EchoTool));
     tool_registry.register_tool(Arc::new(ReadFileTool));
 
-    match cli.command {
+    match command {
         cli::commands::Commands::Chat { agent_name, message } => {
             info!("Chat command received for agent: {}, message: {}", agent_name, message);
 
@@ -49,6 +47,15 @@ pub async fn run(project_root: PathBuf) -> Result<()> {
 
             let response = agent.execute(&message).await?;
             println!("Agent {}: {}", agent.name(), response);
+        },
+        cli::commands::Commands::Init { path } => {
+            let target_dir = if let Some(p) = path {
+                p
+            } else {
+                std::env::current_dir()? // Use current directory if no path is specified
+            };
+            project_root::initialize_project_root(&target_dir)?;
+            println!("Vespe project initialized at: {}", target_dir.display());
         }
     }
 

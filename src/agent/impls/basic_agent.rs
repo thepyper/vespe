@@ -106,7 +106,7 @@ impl Agent for BasicAgent {
         data.insert("markdown_instructions".to_string(), Value::String(markdown_instructions));
         // Add other agent-specific data from self.definition as needed
 
-        let system_prompt = self.prompt_templater.render_prompt("system_prompt", &Value::Object(data)).await?; // Assuming render_prompt is async
+        let system_prompt = self.prompt_templater.render_prompt("system_prompt", &Value::Object(data))?;
 
         let mut messages = vec![
             Message::System(system_prompt),

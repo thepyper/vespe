@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use crate::config::models::LlmConfig;
-use crate::llm::models::LlmResponse; // LlmResponse is still used for raw content
 use crate::llm::markdown_policy::MarkdownPolicy;
 use crate::llm::messages::{Message, AssistantContent};
 use llm::builder::{LLMBackend, LLMBuilder};
@@ -15,7 +14,11 @@ pub struct LlmClient {
 impl LlmClient {
     pub fn new(config: LlmConfig, markdown_policy: Box<dyn MarkdownPolicy>) -> Self {
         Self { config, markdown_policy }
-    } 
+    }
+
+    pub fn markdown_policy(&self) -> &Box<dyn MarkdownPolicy> {
+        &self.markdown_policy
+    }
 
     pub async fn generate_response(&self, messages: &[Message]) -> Result<Vec<AssistantContent>> {
         let backend = match self.config.provider.as_str() {

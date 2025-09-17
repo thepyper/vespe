@@ -3,6 +3,8 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
+    #[arg(long, default_value = "sandbox")]
+    pub project_root: String,
     #[command(subcommand)]
     pub command: Commands,
 }

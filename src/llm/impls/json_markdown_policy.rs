@@ -47,6 +47,10 @@ YOU MUST NOT include any other markdown code blocks (e.g., ````json`, ````python
 
     fn parse_response(&self, response: &str) -> Result<Vec<AssistantContent>> {
         use regex::Regex;
+        use html_escape::decode_html_entities;
+
+        let unescaped_response = decode_html_entities(response).to_string();
+
         let mut parsed_content = Vec::new();
         let mut last_index = 0;
 
@@ -54,13 +58,13 @@ YOU MUST NOT include any other markdown code blocks (e.g., ````json`, ````python
         let thought_re = Regex::new(r"```thought\n([\s\S]*?)\n```")?;
 
         // Find all tool_code blocks
-        for mat in tool_code_re.find_iter(response) {
+        for mat in tool_code_re.find_iter(&unescaped_response) {
             let start = mat.start();
             let end = mat.end();
 
             // Add any preceding plain text
             if start > last_index {
-                let text = response[last_index..start].trim();
+                let text = unescaped_response[last_index..start].trim();
                 if !text.is_empty() {
                     parsed_content.push(AssistantContent::Text(text.to_string()));
                 }
@@ -80,7 +84,7 @@ YOU MUST NOT include any other markdown code blocks (e.g., ````json`, ````python
         // This approach assumes tool_code blocks take precedence or are distinct.
         // A more robust solution might involve a single pass with a combined regex or a state machine.
         // For simplicity, I'll re-process the remaining text for thoughts.
-        let remaining_response = &response[last_index..];
+        let remaining_response = &unescaped_response[last_index..];
         let mut current_thought_last_index = 0;
 
         for mat in thought_re.find_iter(remaining_response) {
@@ -111,8 +115,8 @@ YOU MUST NOT include any other markdown code blocks (e.g., ````json`, ````python
         }
 
         // Add any remaining plain text after all blocks
-        if last_index < response.len() {
-            let text = response[last_index..].trim();
+        if last_index < unescaped_response.len() {
+            let text = unescaped_response[last_index..].trim();
             if !text.is_empty() {
                 parsed_content.push(AssistantContent::Text(text.to_string()));
             }
@@ -125,9 +129,9 @@ YOU MUST NOT include any other markdown code blocks (e.g., ````json`, ````python
         }
 
 
-        if parsed_content.is_empty() && !response.trim().is_empty() {
+        if parsed_content.is_empty() && !unescaped_response.trim().is_empty() {
             // If no structured content was found, but there was a response, treat as plain text
-            parsed_content.push(AssistantContent::Text(response.to_string()));
+            parsed_content.push(AssistantContent::Text(unescaped_response.to_string()));
         }
 
 

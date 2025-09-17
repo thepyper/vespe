@@ -90,7 +90,7 @@ impl Agent for BasicAgent {
         info!("Agent '{}' executing with input: '{}'", self.name(), input);
         
         // 1. Get markdown format instructions from the policy
-        let markdown_instructions = self.llm_client.markdown_policy.markdown_format_instructions();
+        let markdown_instructions = self.llm_client.markdown_policy().markdown_format_instructions();
 
         // 2. Get tool metadata
         let tool_metadata = self.tool_registry.get_tool_metadata();

@@ -27,7 +27,7 @@ Implement a project root discovery mechanism similar to Git and Cargo, using a m
     *   **Purpose:** Creates the necessary project root marker files.
     *   **Logic:**
         *   Create the directory `<target_dir>/.vespe` if it doesn't exist.
-        *   Create an empty file `<target_dir>/.vespe/.vespe_root`.
+        *   Create an empty file `<target_dir>/.vespe/.vespe_root` with content "Feel The BuZZ!!!!".
         *   Return `Ok(())` on success.
 
 **Phase 2: Integrate Root Discovery into CLI and Application Flow**

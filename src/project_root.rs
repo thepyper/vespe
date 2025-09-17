@@ -34,10 +34,14 @@ pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
     }
 
     // Then, check if target_dir is a subdirectory of an existing Vespe project
-    if let Some(parent) = absolute_target_dir.parent() {
-        if let Ok(existing_root) = find_project_root(parent) {
-            return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", existing_root.display()));
+    let mut current_parent = absolute_target_dir.parent();
+    while let Some(parent) = current_parent {
+        let parent_vespe_dir = parent.join(VESPE_DIR);
+        let parent_vespe_root_marker = parent_vespe_dir.join(VESPE_ROOT_MARKER);
+        if parent_vespe_root_marker.exists() {
+            return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", parent.display()));
         }
+        current_parent = parent.parent();
     }
 
     fs::create_dir_all(&vespe_dir)?;

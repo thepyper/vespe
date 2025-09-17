@@ -11,6 +11,7 @@ pub mod llm;
 pub mod tools;
 
 pub mod prompt_templating;
+pub mod project_root;
 
 use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;
@@ -31,7 +32,7 @@ pub async fn run(project_root: PathBuf) -> Result<()> {
     let _final_config = config::load_project_config(global_config).await?;
 
     // Initialize PromptTemplater
-    let prompt_templater = PromptTemplater::new(project_root.join("sandbox").join(".vespe").join("prompts"))?;
+    let prompt_templater = PromptTemplater::new(project_root.join(".vespe").join("prompts"))?;
 
     // Initialize ToolRegistry and register tools
     let mut tool_registry = ToolRegistry::new();

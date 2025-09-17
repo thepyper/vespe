@@ -4,6 +4,7 @@ use std::sync::Arc;
 use serde_json::Value;
 
 use crate::tools::tool_trait::Tool;
+use crate::logging::Logger;
 
 #[derive(Clone)]
 pub struct ToolRegistry {
@@ -32,7 +33,7 @@ impl ToolRegistry {
         }).collect()
     }
 
-    pub async fn execute_tool(&self, tool_name: &str, input: &Value) -> Result<Value> {
+    pub async fn execute_tool(&self, tool_name: &str, input: &Value, logger: &mut Logger) -> Result<Value> {
         logger.log_tool_call(tool_name, input);
         let tool = self.tools.get(tool_name)
             .ok_or_else(|| anyhow!("Tool '{}' not found in registry", tool_name))?;

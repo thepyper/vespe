@@ -6,13 +6,15 @@ use tokio::fs;
 use crate::agent::models::AgentDefinition;
 use crate::tools::tool_registry::ToolRegistry;
 
-pub struct PromptBuilder {
-    project_root: PathBuf,
+use crate::prompt_templating::PromptTemplater;
+
+pub struct PromptBuilder<'a> {
+    prompt_templater: PromptTemplater<'a>,
 }
 
-impl PromptBuilder {
-    pub fn new(project_root: PathBuf) -> Self {
-        Self { project_root }
+impl<'a> PromptBuilder<'a> {
+    pub fn new(prompt_templater: PromptTemplater<'a>) -> Self {
+        Self { prompt_templater }
     }
 
     pub async fn build_system_prompt(&self, agent_definition: &AgentDefinition, tool_registry: &ToolRegistry) -> Result<String> {

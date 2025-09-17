@@ -7,7 +7,7 @@ use crate::agent::models::AgentDefinition;
 use crate::tools::tool_registry::ToolRegistry;
 
 pub struct PromptBuilder {
-    project_root: PathBuf,
+    prompt_templater: PromptTemplater,
 }
 
 impl PromptBuilder {
@@ -40,4 +40,6 @@ impl PromptBuilder {
 
         Ok(template_content.replace("{}", &tool_prompt_part))
     }
+}
+}
 }

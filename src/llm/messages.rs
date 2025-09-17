@@ -15,7 +15,7 @@ pub enum AssistantContent {
     ToolCall(ToolCall),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ToolCall {
     pub name: String,
     pub arguments: Value,

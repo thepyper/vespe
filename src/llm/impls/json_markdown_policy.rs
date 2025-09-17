@@ -1,9 +1,7 @@
 use anyhow::Result;
-use serde_json::Value;
 
 use crate::llm::markdown_policy::MarkdownPolicy;
 use crate::llm::messages::{Message, AssistantContent, ToolCall};
-use crate::agent::core::text_utils::trim_markdown_code_blocks;
 use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType};
 
 pub struct JsonMarkdownPolicy;

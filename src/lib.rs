@@ -9,6 +9,7 @@ pub mod cli;
 pub mod config;
 pub mod llm;
 pub mod tools;
+pub mod logging;
 
 use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;

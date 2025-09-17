@@ -49,10 +49,11 @@ pub fn initialize_project_root(target_dir: &Path, current_project_root: Option<&
         if parent_vespe_root_marker.exists() {
             println!("    Found existing root marker in parent: {}", parent.display());
             // If an existing root is found, check if it's the current project's root
-            if let Some(current_root) = current_project_root {
+            if let Some(current_root_path) = current_project_root {
                 let canonical_parent = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
-                println!("      Comparing canonical_parent ({}) with current_root ({})", canonical_parent.display(), current_root.display());
-                if canonical_parent == current_root {
+                let canonical_current_root = current_root_path.canonicalize().unwrap_or_else(|_| current_root_path.to_path_buf());
+                println!("      Comparing canonical_parent ({}) with canonical_current_root ({})", canonical_parent.display(), canonical_current_root.display());
+                if canonical_parent == canonical_current_root {
                     // This is the current project's root, so it's okay
                     println!("      Parent is current_root. Continuing upwards.");
                     current_parent = parent.parent();

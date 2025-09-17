@@ -1,0 +1,26 @@
+## Plan: Prevent Handlebars from HTML Escaping LLM Prompts
+
+### Problem Statement:
+The LLM's raw responses contain HTML escaped characters (e.g., `&#x60;` for backticks, `&quot;` for double quotes), leading to parsing issues. This was observed in `doc/problem002.txt`.
+
+### Diagnosis:
+Handlebars, by default, HTML-escapes content rendered within `{{...}}` tags to prevent XSS vulnerabilities. This escaping is likely applied to the `markdown_instructions` and `tool_prompt` variables, causing the LLM to receive escaped input. The LLM's subsequent response then reflects this escaped input.
+
+### Proposed Solution:
+Instruct Handlebars to output the `markdown_instructions` and `tool_prompt` variables without HTML escaping, as their content is intended for an LLM and not for direct rendering in a web browser.
+
+### Detailed Plan:
+
+1.  **Modify `system_prompt.hbs`:**
+    *   Change `{{markdown_instructions}}` to `{{{markdown_instructions}}}` (triple curly braces).
+    *   Change `{{tool_prompt}}` to `{{{tool_prompt}}}` (triple curly braces).
+    *   The triple curly braces `{{{...}}}` in Handlebars explicitly tell the engine to render the content as raw, unescaped HTML.
+
+2.  **Verification:**
+    *   Re-run the scenario that generated `doc/problem002.txt`.
+    *   Verify that the `LLM Raw Response` no longer contains HTML escaped characters.
+    *   Verify that the `LLM Parsed Response` correctly extracts `tool_code` and `thought` blocks.
+    *   Ensure that the LLM's behavior improves due to receiving unescaped, correct instructions.
+
+### Git Tracking:
+*   Each logical step will be committed separately.

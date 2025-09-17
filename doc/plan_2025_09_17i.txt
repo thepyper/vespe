@@ -1,0 +1,183 @@
+# Revised Plan: Refactoring LLM Markdown Policy Abstraction
+
+## Objective
+To abstract the LLM markdown policy into a flexible and extensible `Trait`, allowing for easy switching and testing of different markdown formats for LLM interaction. This refactoring will replace the existing `PromptBuilder` and `ResponseParser` components with a unified `MarkdownPolicy` abstraction.
+
+## Motivation
+*   The current markdown policy is hardcoded and spread across `PromptBuilder` and `ResponseParser`, limiting flexibility and making it difficult to adapt to new LLM requirements or experiment with different interaction styles.
+*   There is a need to easily experiment with different markdown policies to find the most effective one for guiding the LLM and parsing its responses.
+*   Improve maintainability and testability of LLM interaction logic by centralizing policy definition within a single trait.
+*   Decouple the internal message representation from LLM-specific formatting concerns, using a neutral `Message` enum.
+
+## Key Concepts
+*   **`MarkdownPolicy` Trait:** A Rust trait that defines the interface for handling markdown policies, including methods for generating system prompts, parsing LLM responses, and formatting queries.
+*   **`Message` Enum:** A neutral, internal representation of messages exchanged with the LLM. This enum will encapsulate different types of messages (system, user, assistant, tool output) and will replace `llm::models::ChatMessage`.
+*   **`AssistantContent` Enum:** An enum specifically for representing the various types of content that an assistant (LLM) might generate within a single message (e.g., plain text, internal thoughts, tool calls). This will effectively replace `agent::actions::AgentAction` for parsed LLM responses.
+*   **`ToolCall` Struct:** A data structure to represent a call to an external tool, including the tool's name and its arguments (as `serde_json::Value`).
+*   **`ToolOutput` Struct:** A data structure to represent the output received from an external tool after it has been executed (as `serde_json::Value`).
+
+## Phased Approach
+
+### Phase 1: Define Core Data Structures (`Message`, `AssistantContent`, `ToolCall`, `ToolOutput`)
+
+1.  **Create `src/llm/messages.rs`:**
+    *   This new file will be dedicated to housing the core data structures that represent messages and their content.
+2.  **Define `Message` Enum:**
+    *   `pub enum Message {`
+    *   `    System(String),`
+    *   `    User(String),`
+    *   `    Assistant(Vec<AssistantContent>),`
+    *   `    Tool(ToolOutput),`
+    *   `}`
+    *   This enum will serve as the universal internal representation of communication turns, replacing `llm::models::ChatMessage`.
+3.  **Define `AssistantContent` Enum:**
+    *   `pub enum AssistantContent {`
+    *   `    Text(String),`
+    *   `    Thought(String),`
+    *   `    ToolCall(ToolCall),`
+    *   `}`
+    *   This enum allows an assistant's response to be composed of multiple distinct parts, effectively replacing `agent::actions::AgentAction` for parsed LLM responses.
+4.  **Define `ToolCall` Struct:**
+    *   `pub struct ToolCall {`
+    *   `    pub name: String,`
+    *   `    pub arguments: serde_json::Value, // Changed from String to serde_json::Value`
+    *   `}`
+    *   This struct captures the essential information for invoking a tool, aligning with `Tool::execute` input.
+5.  **Define `ToolOutput` Struct:**
+    *   `pub struct ToolOutput {`
+    *   `    pub tool_name: String,`
+    *   `    pub output: serde_json::Value, // Changed from String to serde_json::Value`
+    *   `}`
+    *   This struct stores the result of a tool's execution, aligning with `Tool::execute` output.
+6.  **Add necessary `use` statements and `pub` visibility** to ensure these structures are accessible throughout the `llm` module and potentially beyond.
+7.  **Update `src/llm/mod.rs`:** Add `pub mod messages;` to export the contents of the new `messages.rs` file.
+
+### Phase 2: Define `MarkdownPolicy` Trait
+
+1.  **Create `src/llm/markdown_policy.rs`:**
+    *   This new file will contain the definition of the `MarkdownPolicy` trait.
+2.  **Define `MarkdownPolicy` Trait:**
+    ```rust
+    use super::messages::{Message, AssistantContent, ToolCall, ToolOutput}; // Adjust path as needed
+    use anyhow::Result;
+    use crate::tools::tool_registry::ToolRegistry;
+    use crate::prompt_templating::PromptTemplater;
+    use crate::agent::models::AgentDefinition;
+    use serde_json::Value;
+
+    pub trait MarkdownPolicy: Send + Sync {
+        /// Returns the markdown prompt string to be included in the system prompt.
+        /// This prompt instructs the LLM on the expected markdown format for its responses.
+        /// It will leverage the PromptTemplater and ToolRegistry to build the prompt.
+        fn markdown_prompt(&self, agent_definition: &AgentDefinition, tool_registry: &ToolRegistry, prompt_templater: &PromptTemplater) -> Result<String>;
+
+        /// Parses the raw LLM response string into a vector of internal `AssistantContent` enums.
+        /// This method is responsible for interpreting the LLM's markdown output.
+        /// Returns an error if parsing fails or the response does not conform to the policy.
+        fn parse_response(&self, response: &str) -> Result<Vec<AssistantContent>>;
+
+        /// Formats a vector of internal `Message` enums into a vector of `llm::chat::ChatMessage`
+        /// suitable for the underlying LLM client.
+        fn format_query(&self, messages: &[Message]) -> Result<Vec<llm::chat::ChatMessage>>;
+    }
+    ```
+3.  **Add necessary `use` statements** within `markdown_policy.rs` to bring `Message`, `AssistantContent`, `ToolCall`, `ToolOutput`, `ToolRegistry`, `PromptTemplater`, `AgentDefinition`, and `Value` into scope.
+4.  **Update `src/llm/mod.rs`:** Add `pub mod markdown_policy;` to export the new trait.
+
+### Phase 3: Implement a Basic `DefaultMarkdownPolicy`
+
+1.  **Create `src/llm/impls/default_markdown_policy.rs`:**
+    *   This file will contain the concrete implementation of the `MarkdownPolicy` trait for the current, default markdown format.
+2.  **Define `DefaultMarkdownPolicy` struct:**
+    *   It will likely be a unit struct or hold any configuration specific to this default policy.
+3.  **Implement `MarkdownPolicy` for `DefaultMarkdownPolicy`:**
+    *   **`markdown_prompt()`:** This method will replicate the logic currently found in `agent::core::prompt_builder::PromptBuilder::build_system_prompt`. It will use the provided `PromptTemplater` and `ToolRegistry` to construct the system prompt, including tool metadata.
+    *   **`parse_response()`:** This method will replicate the parsing logic currently found in `agent::core::response_parser::ResponseParser::parse_response`. It will use `agent::core::text_utils::trim_markdown_code_blocks` and attempt to deserialize the content into a structure that maps to `Vec<AssistantContent>`. It will handle malformed JSON as per the existing `MalformedJsonHandling` configuration.
+    *   **`format_query()`:** This method will convert a `Vec<Message>` into a `Vec<llm::chat::ChatMessage>` (from the external `llm` crate). It will correctly map `Message::System`, `Message::User`, `Message::Assistant`, and `Message::Tool` to the appropriate `llm::chat::ChatRole` and `content`. This will also address the `FIXME` regarding system messages.
+4.  **Update `src/llm/impls/mod.rs`:** Add `pub mod default_markdown_policy;` to export the new implementation.
+
+### Phase 4: Integrate `MarkdownPolicy` into `LlmClient`
+
+1.  **Modify `src/llm/llm_client.rs`:**
+    *   **Update `LlmClient` struct:** The `LlmClient` struct will be modified to hold an instance of `Box<dyn MarkdownPolicy>`. This allows for dynamic dispatch and easy swapping of policies at runtime.
+        ```rust
+        use super::markdown_policy::MarkdownPolicy; // Adjust path
+        use super::messages::{Message, AssistantContent}; // Adjust path
+        // ... other uses
+        pub struct LlmClient {
+            // ... existing fields
+            markdown_policy: Box<dyn MarkdownPolicy>,
+        }
+        ```
+    *   **Update `new` constructor:** The `new` constructor for `LlmClient` should now accept an instance of `Box<dyn MarkdownPolicy>`.
+        ```rust
+        pub fn new(/* ... existing params, */ markdown_policy: Box<dyn MarkdownPolicy>) -> Self {
+            // ...
+            LlmClient {
+                // ...
+                markdown_policy,
+            }
+        }
+        ```
+    *   **Refactor `generate_response` function:**
+        *   Change its signature to accept `&[Message]` and return `Result<Vec<AssistantContent>>` (or `Result<Message::Assistant>`).
+        *   Inside `generate_response`, use `self.markdown_policy.format_query(&messages)` to convert the input `Vec<Message>` into the format expected by the underlying `llm` crate.
+        *   After receiving the raw `response_content` from the LLM, use `self.markdown_policy.parse_response(&response_content)` to convert it into `Vec<AssistantContent>`.
+
+### Phase 5: Update Agent Components and Call Sites
+
+1.  **Modify `src/agent/impls/basic_agent.rs`:**
+    *   **Update `BasicAgent` struct:** Remove `prompt_builder: PromptBuilder` and `response_parser: ResponseParser`. Instead, add `llm_client: LlmClient` (or a reference to it).
+    *   **Update `new` constructor:** Adjust the constructor to accept `LlmClient` instead of `PromptBuilder` and `ResponseParser`.
+    *   **Refactor `execute()` method:**
+        *   The system prompt generation will now be handled by `LlmClient` internally via `markdown_policy.markdown_prompt`. The `BasicAgent` will pass the `AgentDefinition`, `ToolRegistry`, and `PromptTemplater` to the `LlmClient` (or the `LlmClient` will hold these if they are needed for `markdown_prompt`). A more streamlined approach would be for `LlmClient` to take `AgentDefinition`, `ToolRegistry`, and `PromptTemplater` in its `new` method, and then `generate_response` would take `&[Message]` and the `AgentDefinition` to build the system prompt internally.
+        *   The `messages` vector will now use the new `Message` enum.
+        *   Call `self.llm_client.generate_response(&messages, &self.definition)` (or similar) to get the LLM's response as `Vec<AssistantContent>`.
+    *   **Refactor `_handle_tool_calls()` method:**
+        *   This method will now directly receive `Vec<AssistantContent>` from the `LlmClient`'s response.
+        *   The parsing logic (`self.response_parser.parse_response`) will be removed.
+        *   The loop will iterate over `AssistantContent` variants (`Text`, `Thought`, `ToolCall`) instead of `AgentAction`.
+        *   When a `ToolCall` is encountered, use `self.tool_registry.execute_tool()` with `tool_call.arguments` (which is now `serde_json::Value`).
+        *   When re-prompting the LLM after a tool call, construct new `Message`s (including `Message::Tool` for tool output) and pass them to `self.llm_client.generate_response()`.
+
+2.  **Modify `src/agent/agent_manager.rs`:**
+    *   **Update `create_agent` method:** This method will be responsible for creating the `LlmClient` with the chosen `MarkdownPolicy` and passing it to the `BasicAgent`.
+        *   It will instantiate `DefaultMarkdownPolicy` and box it.
+        *   It will create the `LlmClient` instance, passing the `Box<dyn MarkdownPolicy>`, `AgentDefinition`, `ToolRegistry`, and `PromptTemplater`.
+        *   It will then create `BasicAgent` with the `LlmClient`.
+
+3.  **Remove `src/agent/core/prompt_builder.rs` and `src/agent/core/response_parser.rs`:** These files will become obsolete and should be deleted.
+4.  **Remove `src/agent/actions.rs`:** The `AgentAction` enum will be replaced by `AssistantContent` and can be removed.
+5.  **Update `src/llm/models.rs`:** Remove the `ChatMessage` struct as it's replaced by `llm::messages::Message`.
+6.  **Update `src/agent/core/mod.rs` and `src/llm/mod.rs`:** Remove references to the deleted modules.
+
+### Phase 6: Comprehensive Testing
+
+1.  **Create Unit Tests:**
+    *   **For `src/llm/messages.rs`:** Test serialization/deserialization if applicable.
+    *   **For `src/llm/impls/default_markdown_policy.rs`:**
+        *   Test `markdown_prompt` with various `AgentDefinition` and `ToolRegistry` states to ensure correct system prompt generation.
+        *   Test `parse_response` with a wide range of valid and invalid LLM response strings. This should include responses containing `ToolCall`s, `Thought`s, plain `Text`, and various combinations, as well as malformed responses to ensure robust error handling. Ensure `ToolCall` arguments are correctly parsed into `serde_json::Value`.
+        *   Test `format_query` with diverse `Vec<Message>` inputs to verify correct conversion to `Vec<llm::chat::ChatMessage>` and proper role mapping.
+    *   **For `src/llm/llm_client.rs`:** Ensure the `LlmClient` correctly uses the injected `MarkdownPolicy` for all LLM interactions, including system prompt generation, query formatting, and response parsing.
+    *   **For `src/agent/impls/basic_agent.rs`:** Test the `execute` method and `_handle_tool_calls` to ensure the agent correctly processes LLM responses, executes tools, and manages the conversation flow using the new `Message` and `AssistantContent` enums.
+2.  **Run Integration Tests:** Execute all existing integration tests to ensure that the refactoring has not introduced any regressions or broken existing functionality.
+
+### Phase 7: Cleanup and Documentation
+
+1.  **Remove old hardcoded markdown logic:** Systematically identify and remove all remnants of the previous hardcoded markdown formatting and parsing logic from `LlmClient`, `PromptBuilder`, `ResponseParser`, and any other affected modules.
+2.  **Update comments and documentation:**
+    *   Add clear comments to the `MarkdownPolicy` trait, `Message` enums, and `ToolCall`/`ToolOutput` structs.
+    *   Update the `LlmClient` and `BasicAgent` documentation to reflect their dependency on `MarkdownPolicy`.
+    *   Provide guidance on how to implement new `MarkdownPolicy` instances.
+3.  **Review code for idiomatic Rust:** Ensure the newly written and refactored code adheres to Rust best practices, style guides, and idiomatic patterns.
+
+## Rollback Plan
+*   In the event that any phase introduces critical errors that cannot be quickly resolved, the project will be reverted to the previous stable commit using Git. Regular commits after each successful sub-phase are highly recommended.
+
+## Success Criteria
+*   The application compiles and runs without any errors.
+*   All existing functionality related to LLM interaction works precisely as it did before the refactoring.
+*   New `MarkdownPolicy` implementations can be easily added and swapped into the `LlmClient` without modifying core LLM interaction logic.
+*   All newly created unit tests and existing integration tests pass successfully, demonstrating the correctness and robustness of the refactored code.
+*   The codebase is cleaner, more modular, and easier to maintain and extend.

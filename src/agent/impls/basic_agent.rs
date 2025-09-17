@@ -13,15 +13,15 @@ use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
 use crate::logging::Logger;
 
-pub struct BasicAgent {
+pub struct BasicAgent<'a> {
     definition: AgentDefinition,
     tool_registry: ToolRegistry,
-    prompt_builder: PromptBuilder,
+    prompt_builder: PromptBuilder<'a>,
     response_parser: ResponseParser,
 }
 
-impl BasicAgent {
-    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, prompt_builder: PromptBuilder, response_parser: ResponseParser) -> Result<Self> {
+impl<'a> BasicAgent<'a> {
+    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, prompt_builder: PromptBuilder<'a>, response_parser: ResponseParser) -> Result<Self> {
         Ok(Self { definition, tool_registry, prompt_builder, response_parser })
     }
 

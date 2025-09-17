@@ -1,0 +1,75 @@
+## Plan: Implement Project Root Discovery and Initialization
+
+### Problem Statement:
+Currently, the project root is determined solely by the initial execution directory or a hardcoded path. This lacks flexibility and a robust mechanism for identifying the project's base directory, especially when running commands from subdirectories.
+
+### Proposed Solution:
+Implement a project root discovery mechanism similar to Git and Cargo, using a marker file within a hidden directory. Introduce an `init` command to set up a new project root and allow command-line override for the project root.
+
+### Detailed Plan:
+
+**Phase 1: Define Project Root Discovery Logic**
+
+1.  **Create `src/project_root.rs` module:**
+    *   This module will contain functions related to project root detection and initialization.
+    *   Add `pub mod project_root;` to `src/lib.rs`.
+
+2.  **Implement `find_project_root(start_dir: &Path) -> Result<PathBuf>` in `src/project_root.rs`:**
+    *   **Purpose:** Searches upwards from `start_dir` for the project root.
+    *   **Logic:**
+        *   Start from `start_dir`.
+        *   In each directory, check if `<current_dir>/.vespe/.vespe_root` exists.
+        *   If it exists, return `<current_dir>` as the project root.
+        *   If not, move to the parent directory and repeat.
+        *   If the file system root is reached without finding the marker, return an error (e.g., `anyhow!("Project root not found.")`).
+
+3.  **Implement `initialize_project_root(target_dir: &Path) -> Result<()>` in `src/project_root.rs`:**
+    *   **Purpose:** Creates the necessary project root marker files.
+    *   **Logic:**
+        *   Create the directory `<target_dir>/.vespe` if it doesn't exist.
+        *   Create an empty file `<target_dir>/.vespe/.vespe_root`.
+        *   Return `Ok(())` on success.
+
+**Phase 2: Integrate Root Discovery into CLI and Application Flow**
+
+1.  **Modify `src/cli/commands.rs`:**
+    *   **Update `Cli` struct:**
+        *   Add `#[arg(long, global = true, help = "Specify the project root directory")]`
+        *   Add `pub project_root: Option<PathBuf>,`
+    *   **Add `Init` command:**
+        *   Add `Init { #[arg(help = "Initializes the current directory as a Vespe project root")] path: Option<PathBuf>, }` to the `Commands` enum.
+
+2.  **Modify `src/main.rs`:**
+    *   **Determine `project_root`:**
+        *   Get the `cli` arguments.
+        *   If `cli.project_root` is `Some(path)`, use that as the `project_root`.
+        *   Else, call `project_root::find_project_root(&std::env::current_dir()?)?` to discover the root.
+        *   Pass this determined `project_root` to `vespe::run`.
+
+3.  **Modify `src/lib.rs`:**
+    *   **Handle `Init` command:**
+        *   In the `match cli.command` block, add a new arm for `cli::commands::Commands::Init { path }`.
+        *   If `path` is `Some(p)`, use `p` as the target directory for initialization.
+        *   Else, use `std::env::current_dir()?` as the target.
+        *   Call `project_root::initialize_project_root(&target_dir)?`.
+        *   Print a success message.
+    *   Ensure all existing uses of `project_root` (e.g., for `PromptTemplater` initialization) correctly use the `project_root` determined in `main.rs`.
+
+**Phase 3: Verification**
+
+1.  **Compile the project:** Ensure no compilation errors.
+2.  **Test `init` command:**
+    *   Run `cargo run init` in an empty directory.
+    *   Verify `.vespe` directory and `.vespe_root` file are created.
+3.  **Test root discovery:**
+    *   Run a command (e.g., `cargo run chat ...`) from a subdirectory of a Vespe project.
+    *   Verify that the correct project root is identified.
+4.  **Test command-line override:**
+    *   Run a command with `--project-root <path/to/root>` from any directory.
+    *   Verify that the specified root is used.
+
+### Dependencies:
+*   No new external crates are expected for this feature. `std::path::PathBuf`, `std::fs`, `std::env` will be sufficient.
+
+### Git Tracking:
+*   Each logical step (e.g., creating `project_root.rs`, modifying `commands.rs`, updating `main.rs`, updating `lib.rs`) will be committed separately for clear progress tracking.

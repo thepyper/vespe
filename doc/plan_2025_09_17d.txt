@@ -19,6 +19,7 @@ This plan outlines the steps to replace the current prompt generation logic with
     - The `PromptTemplater` will hold an instance of `handlebars::Handlebars`.
     - It will have a method `render_prompt(template_name: &str, data: &serde_json::Value) -> Result<String>` to render a specific template with provided data.
     - It will load prompt templates from a designated directory (e.g., `prompts/`).
+    - **IMPORTANT:** No lifetime parameters should be used for `PromptTemplater` or its methods. The `handlebars::Handlebars` instance should be owned by `PromptTemplater`.
 
 ## 3. Refactor Prompt Generation in `PromptBuilder`
 
@@ -27,6 +28,7 @@ This plan outlines the steps to replace the current prompt generation logic with
     1. Remove the existing string formatting logic for system prompts.
     2. Import and use the `PromptTemplater` to render the system prompt.
     3. The `PromptBuilder` will need to be initialized with a `PromptTemplater` instance.
+    - **IMPORTANT:** No lifetime parameters should be used for `PromptBuilder` or its methods.
 
 ## 4. Update Agent Initialization
 
@@ -34,6 +36,7 @@ This plan outlines the steps to replace the current prompt generation logic with
 - **Actions:**
     1. In `AgentManager::new`, initialize the `PromptTemplater`.
     2. Pass the `PromptTemplater` instance to `BasicAgent::new`.
+    - **IMPORTANT:** No lifetime parameters should be used for `AgentManager` or `BasicAgent`.
 
 ## 5. Migrate Existing Prompts to Handlebars Templates
 

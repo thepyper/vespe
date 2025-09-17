@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
         } else {
             current_dir.clone()
         };
-        project_root::initialize_project_root(&target_dir, current_project_root.as_ref().map(|p| p.as_path()))?;
+        project_root::initialize_project_root(&target_dir)?;
         println!("Vespe project initialized at: {}", target_dir.display());
         return Ok(());
     }

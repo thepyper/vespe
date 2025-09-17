@@ -5,7 +5,6 @@ use tracing::info;
 
 use crate::agent::agent_trait::Agent;
 use crate::agent::models::AgentDefinition;
-use crate::llm::llm_client::{GenericLlmClient, LlmClient};
 use crate::llm::models::ChatMessage;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
@@ -15,7 +14,6 @@ use crate::agent::core::response_parser::ResponseParser;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
-    llm_client: GenericLlmClient,
     tool_registry: ToolRegistry,
     prompt_builder: PromptBuilder,
     response_parser: ResponseParser,
@@ -23,8 +21,7 @@ pub struct BasicAgent {
 
 impl BasicAgent {
     pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, prompt_builder: PromptBuilder, response_parser: ResponseParser) -> Result<Self> {
-        let llm_client = GenericLlmClient::new(definition.llm_config.clone())?;
-        Ok(Self { definition, llm_client, tool_registry, prompt_builder, response_parser })
+        Ok(Self { definition, tool_registry, prompt_builder, response_parser })
     }
 }
 
@@ -44,7 +41,7 @@ impl Agent for BasicAgent {
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 
-        let mut response = self.llm_client.generate_response(messages.clone()).await?;
+        let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
         let mut final_response_parts = Vec::new();
 
         // Loop for tool calls
@@ -66,7 +63,7 @@ impl Agent for BasicAgent {
                         messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
-                        response = self.llm_client.generate_response(messages.clone()).await?;
+                        response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
                         
                         // Explicitly extract and report transformed_text for echo tool
                         if tool_call.name == "echo" {

@@ -1,0 +1,34 @@
+# Plan for Improving Response Parsing
+
+This plan outlines the steps to improve the parsing of LLM responses by handling markdown code blocks.
+
+## 1. Create a Text Utilities Module
+
+- **Action:** Create a new file `src/agent/core/text_utils.rs`.
+- **Content:** This file will contain a new public function `trim_markdown_code_blocks(text: &str) -> &str`.
+- **Details:**
+    - The function will take a string slice and return a trimmed string slice.
+    - It will remove the following markdown code block delimiters:
+        - ```json
+...
+```
+        - ```
+...
+```
+
+## 2. Update the Response Parser
+
+- **File to modify:** `src/agent/core/response_parser.rs`
+- **Actions:**
+    1. Import the new `trim_markdown_code_blocks` function.
+    2. In the `parse_response` function, call `trim_markdown_code_blocks` on the `response_content` before attempting to parse it as JSON.
+
+## 3. Update Core Module
+
+- **File to modify:** `src/agent/core/mod.rs`
+- **Action:** Add `pub mod text_utils;` to make the new module available.
+
+## 4. Verification
+
+- **Action:** Build the project using `cargo build` to ensure the changes are correctly implemented and the project compiles successfully.
+

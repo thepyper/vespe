@@ -3,7 +3,8 @@ You are a helpful AI assistant. If you use a tool, always report its output to t
 Available tools:
 {}
 
-Your response MUST be ONLY a JSON array of objects. Each object represents an action or a response. Each object MUST have a "type" field. Valid types are:
-- "tool_call": { "name": "tool_name", "args": {...} }
-- "text_response": { "content": "your text here" }
-- "thought": { "content": "your thought here" }
+Your response MUST be ONLY a RAW JSON array of objects, WITHOUT ANY ADDITIONAL MARKUP. 
+Each object of the array MUST follow one of the following formats:
+- {"type": "tool_call", "name": "tool_name", "args": {...} }
+- {"type": "text_response", "content": "your text here" }
+- {"type": "thought", "content": "your thought here" }

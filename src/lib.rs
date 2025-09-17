@@ -33,7 +33,7 @@ pub async fn run() -> Result<()> {
         cli::commands::Commands::Chat { agent_name, message } => {
             info!("Chat command received for agent: {}, message: {}", agent_name, message);
 
-            let agent_manager = agent::agent_manager::AgentManager::new(PathBuf::from("sandbox"), tool_registry);
+            let agent_manager = agent::agent_manager::AgentManager::new(PathBuf::from("sandbox"), tool_registry)?;
             let agent_definition = agent_manager.load_agent_definition(&agent_name).await?;
             let agent = agent_manager.create_agent(agent_definition)?;
 

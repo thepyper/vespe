@@ -14,11 +14,8 @@ impl JsonMarkdownPolicy {
 
 impl MarkdownPolicy for JsonMarkdownPolicy {
     fn markdown_format_instructions(&self) -> String {
-        r#"YOUR RESPONSE MUST BE FORMATTED USING MARKDOWN.
-YOU MUST ONLY USE THE FOLLOWING STRUCTURES:
-
-1.  TOOL CALLS: When you need to call a tool, you MUST use a JSON code block with the language identifier `tool_code`.
-    Example:
+        r#"YOUR RESPONSE MUST FOLLOW STRICTLY THE FOLLOWING GUIDELINES:
+1.  TOOL CALLS: When you need to call a tool, you MUST use a VALID JSON code block with the language identifier `tool_code`, as in the following example:
     ```tool_code
     {
       "name": "tool_name",
@@ -26,22 +23,15 @@ YOU MUST ONLY USE THE FOLLOWING STRUCTURES:
         "arg1": "value1"
       }
     }
-    ```
-    YOU MUST ENSURE the JSON is valid and strictly adheres to the tool's schema.
-
-2.  INTERNAL THOUGHTS: If you have an internal thought or reasoning, you MUST use a JSON code block with the language identifier `thought`.
-    Example:
+    ```    
+2.  INTERNAL THOUGHTS: If you have an internal thought or reasoning, you MUST use a VALID JSON code block with the language identifier `thought`, as in the following example:
     ```thought
     {
       "reasoning": "I need to do X because Y"
     }
-    ```
-    YOU MUST ENSURE the JSON is valid and contains a 'reasoning' field.
-
+    ```    
 3.  PLAIN TEXT: All other content MUST be plain text. DO NOT use any other markdown formatting (e.g., bold, italics, lists) for non-tool-call or non-thought content.
-
-YOU MUST NOT combine multiple tool calls or thoughts within a single markdown block. Each tool call or thought MUST be in its own distinct `tool_code` or `thought` block.
-YOU MUST NOT include any other markdown code blocks (e.g., ````json`, ````python`) unless explicitly instructed by a tool.
+YOU MUST NOT combine multiple code blocks.
 "#.to_string()
     }
 

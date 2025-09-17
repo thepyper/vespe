@@ -24,9 +24,14 @@ pub fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
 
 pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
     let vespe_dir = target_dir.join(VESPE_DIR);
+    let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
+
+    if vespe_root_marker.exists() {
+        return Err(anyhow!("Project already initialized at: {}", target_dir.display()));
+    }
+
     fs::create_dir_all(&vespe_dir)?;
 
-    let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
     fs::write(&vespe_root_marker, "Feel The BuZZ!!!!")?;
 
     let vespe_gitignore = vespe_dir.join(".gitignore");

@@ -16,7 +16,7 @@ use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;
 use crate::tools::impls::read_file_tool::ReadFileTool;
 
-pub async fn run() -> Result<()> {
+pub async fn run(project_root: PathBuf) -> Result<()> {
     println!("╔═══════════════════════════════════════════════════════╗");
     println!("║ Vespe - Version {}                                     ", env!("CARGO_PKG_VERSION"));
     println!("║ Copyright (c) ThePyper                                 ");

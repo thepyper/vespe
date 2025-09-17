@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::llm::markdown_policy::MarkdownPolicy;
 use crate::llm::messages::{Message, AssistantContent, ToolCall};
-use crate::agent::core::text_utils::trim_markdown_code_blocks;
+
 use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType};
 
 pub struct JsonMarkdownPolicy;
@@ -14,7 +14,105 @@ impl JsonMarkdownPolicy {
     }
 }
 
-impl MarkdownPolicy for DefaultMarkdownPolicy {
+use anyhow::{Result, Context};
+use serde_json::Value;
+use regex::Regex;
+
+use crate::llm::markdown_policy::MarkdownPolicy;
+use crate::llm::messages::{Message, AssistantContent, ToolCall};
+use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType};
+
+pub struct JsonMarkdownPolicy;
+
+impl JsonMarkdownPolicy {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl MarkdownPolicy for JsonMarkdownPolicy {
+    fn markdown_format_instructions(&self) -> String {
+        r#"Your responses should be formatted using markdown. 
+When you need to call a tool, use a JSON code block with the language identifier `tool_code`.
+Example:
+```tool_code
+{
+  "name": "tool_name",
+  "arguments": {
+    "arg1": "value1"
+  }
+}
+```
+If you have an internal thought, use a JSON code block with the language identifier `thought`.
+Example:
+```thought
+{
+  "reasoning": "I need to do X because Y"
+}
+```
+All other content should be plain text.
+"#.to_string()
+    }
+
+    fn parse_response(&self, response: &str) -> Result<Vec<AssistantContent>> {
+        let mut result = Vec::new();
+        let mut last_index = 0;
+
+        // Regex to find markdown code blocks with specific language identifiers
+        let re = Regex::new(r"```(tool_code|thought)
+(.*?)```")?;
+
+        for mat in re.find_iter(response) {
+            let start = mat.start();
+            let end = mat.end();
+
+            // Add any preceding plain text
+            if start > last_index {
+                let text = &response[last_index..start];
+                if !text.trim().is_empty() {
+                    result.push(AssistantContent::Text(text.to_string()));
+                }
+            }
+
+            let block_content = mat.as_str();
+            let captures = re.captures(block_content).unwrap(); // Unwrap is safe due to find_iter
+            let lang_id = captures.get(1).unwrap().as_str();
+            let json_str = captures.get(2).unwrap().as_str();
+
+            match lang_id {
+                "tool_code" => {
+                    let tool_call: ToolCall = serde_json::from_str(json_str)
+                        .context(format!("Failed to parse tool_code JSON: {}", json_str))?;
+                    result.push(AssistantContent::ToolCall(tool_call));
+                }
+                "thought" => {
+                    // Assuming thought content is a simple string for now, or a JSON object with a "content" field
+                    let thought_value: Value = serde_json::from_str(json_str)
+                        .context(format!("Failed to parse thought JSON: {}", json_str))?;
+                    if let Some(content) = thought_value["content"].as_str() {
+                        result.push(AssistantContent::Thought(content.to_string()));
+                    } else {
+                        result.push(AssistantContent::Thought(json_str.to_string())); // Fallback to raw JSON string
+                    }
+                }
+                _ => {
+                    // Should not happen due to regex
+                    result.push(AssistantContent::Text(block_content.to_string()));
+                }
+            }
+            last_index = end;
+        }
+
+        // Add any remaining plain text
+        if last_index < response.len() {
+            let text = &response[last_index..];
+            if !text.trim().is_empty() {
+                result.push(AssistantContent::Text(text.to_string()));
+            }
+        }
+
+        Ok(result)
+    }
     fn markdown_format_instructions(&self) -> String {
         r#"Your responses should be formatted using markdown. 
 When you need to call a tool, use a JSON code block with the language identifier `tool_code`.

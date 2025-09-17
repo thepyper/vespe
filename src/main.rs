@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use tracing_subscriber::{fmt, filter::EnvFilter, Layer, Registry};
 use tracing_subscriber::prelude::*;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -12,22 +12,27 @@ use vespe::project_root;
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    let current_dir = std::env::current_dir()?;
+    let current_project_root = project_root::find_project_root(&current_dir);
+
     // Handle Init command separately, as it doesn't require an existing project root
     if let Commands::Init { path } = &cli.command {
         let target_dir = if let Some(p) = path {
             p.clone()
         } else {
-            std::env::current_dir()? // Use current directory if no path is specified
+            current_dir.clone()
         };
-        project_root::initialize_project_root(&target_dir)?;
+        project_root::initialize_project_root(&target_dir, current_project_root.as_ref().map(|p| p.as_path()))?;
         println!("Vespe project initialized at: {}", target_dir.display());
         return Ok(());
     }
 
     let project_root = if let Some(path) = cli.project_root {
         path
+    } else if let Some(root) = current_project_root {
+        root
     } else {
-        project_root::find_project_root(&std::env::current_dir()?)?
+        return Err(anyhow!("Project root not found. Please run 'vespe init' or specify --project-root."));
     };
 
     // Initialize logging

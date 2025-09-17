@@ -23,16 +23,18 @@ pub fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
 }
 
 pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
+    let absolute_target_dir = target_dir.canonicalize().map_err(|e| anyhow!("Failed to canonicalize target directory {}: {}", target_dir.display(), e))?;
+
     // Check if target_dir is already inside an existing Vespe project
-    if let Ok(existing_root) = find_project_root(target_dir) {
+    if let Ok(existing_root) = find_project_root(&absolute_target_dir) {
         return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", existing_root.display()));
     }
 
-    let vespe_dir = target_dir.join(VESPE_DIR);
+    let vespe_dir = absolute_target_dir.join(VESPE_DIR);
     let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
 
     if vespe_root_marker.exists() {
-        return Err(anyhow!("Project already initialized at: {}", target_dir.display()));
+        return Err(anyhow!("Project already initialized at: {}", absolute_target_dir.display()));
     }
 
     fs::create_dir_all(&vespe_dir)?;

@@ -84,7 +84,7 @@ All other content should be plain text.
             match msg {
                 Message::System(content) => {
                     llm_chat_messages.push(LlmChatMessage {
-                        role: ChatRole::System,
+                        role: ChatRole::User,
                         content: content.clone(),
                         message_type: MessageType::Text,
                     });
@@ -118,7 +118,7 @@ All other content should be plain text.
                 },
                 Message::Tool(tool_output) => {
                     llm_chat_messages.push(LlmChatMessage {
-                        role: ChatRole::Tool, // Assuming the underlying LLM crate supports a Tool role
+                        role: ChatRole::User, // Mapped to User role as there's no specific Tool role
                         content: serde_json::to_string(&tool_output.output)?,
                         message_type: MessageType::Text,
                     });

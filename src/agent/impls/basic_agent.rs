@@ -5,60 +5,53 @@ use tracing::info;
 
 use crate::agent::agent_trait::Agent;
 use crate::agent::models::AgentDefinition;
-use crate::llm::models::{ChatMessage, LlmResponse};
+use crate::llm::llm_client::LlmClient;
+use crate::llm::messages::{Message, AssistantContent, ToolCall, ToolOutput};
 use crate::tools::tool_registry::ToolRegistry;
-use crate::agent::actions::AgentAction;
-use crate::config::MalformedJsonHandling;
-use crate::agent::core::prompt_builder::PromptBuilder;
-use crate::agent::core::response_parser::ResponseParser;
+use crate::prompt_templating::PromptTemplater;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
     tool_registry: ToolRegistry,
-    prompt_builder: PromptBuilder,
-    response_parser: ResponseParser,
+    llm_client: LlmClient,
+    prompt_templater: PromptTemplater,
 }
 
 impl BasicAgent {
-    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, prompt_builder: PromptBuilder, response_parser: ResponseParser) -> Result<Self> {
-        Ok(Self { definition, tool_registry, prompt_builder, response_parser })
+    pub fn new(definition: AgentDefinition, tool_registry: ToolRegistry, llm_client: LlmClient, prompt_templater: PromptTemplater) -> Result<Self> {
+        Ok(Self { definition, tool_registry, llm_client, prompt_templater })
     }
 
     async fn _handle_tool_calls(
         &self,
-        messages: &mut Vec<ChatMessage>,
-        response: &mut LlmResponse,
+        messages: &mut Vec<Message>,
+        initial_assistant_content: Vec<AssistantContent>,
         final_response_parts: &mut Vec<String>,
     ) -> Result<()> {
+        let mut current_assistant_content = initial_assistant_content;
+
         // Loop for tool calls
         for iteration_count in 0..5 { // Max 5 tool calls to prevent infinite loops
             info!("Agent '{}' - Iteration {}", self.name(), iteration_count);
 
-            let parsed_actions = self.response_parser.parse_response(&response.content, &self.definition.llm_config.on_malformed_json)?;
+            messages.push(Message::Assistant(current_assistant_content.clone()));
 
             let mut has_tool_call = false;
-            for action in parsed_actions {
-                match action {
-                    AgentAction::ToolCall(tool_call) => {
+            for content_part in &current_assistant_content {
+                match content_part {
+                    AssistantContent::ToolCall(tool_call) => {
                         has_tool_call = true;
-                        final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
+                        final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call.arguments)?));
 
-                                                                                                let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args).await?;
-                        let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
+                        let tool_output_value = self.tool_registry.execute_tool(&tool_call.name, &tool_call.arguments).await?;
+                        let tool_output_str = serde_json::to_string_pretty(&tool_output_value)?;
 
-                        messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
-                        messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
+                        messages.push(Message::Tool(ToolOutput { tool_name: tool_call.name.clone(), output: tool_output_value.clone() }));
 
-                        *response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
-                        
                         // Explicitly extract and report transformed_text for echo tool
                         if tool_call.name == "echo" {
-                            if let Ok(output_val) = serde_json::from_str::<Value>(&tool_output_str) {
-                                if let Some(transformed_text) = output_val["transformed_text"].as_str() {
-                                    final_response_parts.push(format!("Echo Tool Output: {}", transformed_text));
-                                } else {
-                                    final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
-                                }
+                            if let Some(transformed_text) = tool_output_value["transformed_text"].as_str() {
+                                final_response_parts.push(format!("Echo Tool Output: {}", transformed_text));
                             } else {
                                 final_response_parts.push(format!("Echo Tool Output (raw): {}", tool_output_str));
                             }
@@ -66,10 +59,10 @@ impl BasicAgent {
                             final_response_parts.push(format!("Tool output: {}", tool_output_str));
                         }
                     },
-                    AgentAction::TextResponse { content } => {
-                        final_response_parts.push(format!("[RESPONSE]: {}", content));
+                    AssistantContent::Text(content) => {
+                        final_response_parts.push(content.clone());
                     },
-                    AgentAction::Thought { content } => {
+                    AssistantContent::Thought(content) => {
                         info!("Agent '{}' thought: {}", self.name(), content);
                         final_response_parts.push(format!("[THOUGHT]: {}", content));
                     },
@@ -79,6 +72,9 @@ impl BasicAgent {
             if !has_tool_call {
                 break; // No tool call detected, or all actions processed
             }
+
+            // If there were tool calls, get a new response from the LLM
+            current_assistant_content = self.llm_client.generate_response(messages).await?;
         }
         Ok(())
     }
@@ -93,40 +89,37 @@ impl Agent for BasicAgent {
     async fn execute(&self, input: &str) -> Result<String> {
         info!("Agent '{}' executing with input: '{}'", self.name(), input);
         
-        let tool_prompt = self.prompt_builder.build_system_prompt(&self.definition, &self.tool_registry).await?;
+        // 1. Get markdown format instructions from the policy
+        let markdown_instructions = self.llm_client.markdown_policy.markdown_format_instructions();
+
+        // 2. Get tool metadata
+        let tool_metadata = self.tool_registry.get_tool_metadata();
+        let tool_prompt_part = if tool_metadata.is_empty() {
+            String::new()
+        } else {
+            serde_json::to_string_pretty(&tool_metadata).unwrap_or_default()
+        };
+
+        // 3. Combine with agent-specific instructions using PromptTemplater
+        let mut data = serde_json::Map::new();
+        data.insert("tool_prompt".to_string(), Value::String(tool_prompt_part));
+        data.insert("markdown_instructions".to_string(), Value::String(markdown_instructions));
+        // Add other agent-specific data from self.definition as needed
+
+        let system_prompt = self.prompt_templater.render_prompt("system_prompt", &Value::Object(data)).await?; // Assuming render_prompt is async
 
         let mut messages = vec![
-            ChatMessage { role: "system".to_string(), content: format!("You are a helpful AI assistant. {}\n", tool_prompt) },
-            ChatMessage { role: "user".to_string(), content: input.to_string() },
+            Message::System(system_prompt),
+            Message::User(input.to_string()),
         ];
 
-        let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
+        let initial_assistant_content = self.llm_client.generate_response(&messages).await?;
         let mut final_response_parts = Vec::new();
 
-        self._handle_tool_calls(&mut messages, &mut response, &mut final_response_parts).await?;
+        self._handle_tool_calls(&mut messages, initial_assistant_content, &mut final_response_parts).await?;
 
         let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)
     }
 }
-
-/*
-fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
-    // Try to parse as a Vec<AgentAction>
-    if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
-        return Ok(actions);
-    }
-
-    // If parsing fails, handle based on configuration
-    match handling {
-        MalformedJsonHandling::TreatAsText => {
-            info!("Malformed JSON, treating as text: {}", response_content);
-            Ok(vec![AgentAction::TextResponse { content: response_content.to_string() }])
-        },
-        MalformedJsonHandling::Error => {
-            Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
-        },
-    }
-}
-*/

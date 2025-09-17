@@ -1,0 +1,34 @@
+// src/llm/tool_types.rs
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToolType {
+    WebSearch,
+    CodeExecution,
+    FileRead,
+    Echo,
+    // Aggiungere qui altri tool che necessitano di formattazione specifica
+    Unknown,
+}
+
+impl From<&str> for ToolType {
+    fn from(s: &str) -> Self {
+        match s {
+            "web_search" => ToolType::WebSearch,
+            "code_execution" => ToolType::CodeExecution,
+            "file_read" => ToolType::FileRead,
+            "echo" => ToolType::Echo,
+            _ => ToolType::Unknown,
+        }
+    }
+}
+
+impl ToString for ToolType {
+    fn to_string(&self) -> String {
+        match self {
+            ToolType::WebSearch => "web_search".to_string(),
+            ToolType::CodeExecution => "code_execution".to_string(),
+            ToolType::FileRead => "file_read".to_string(),
+            ToolType::Echo => "echo".to_string(),
+            ToolType::Unknown => "unknown_tool".to_string(), // Valore di default per tool sconosciuti
+        }
+    }
+}

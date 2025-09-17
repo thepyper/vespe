@@ -6,11 +6,17 @@ use clap::Parser;
 use std::path::PathBuf;
 
 use vespe::cli::commands::Cli;
+use vespe::project_root;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let project_root = PathBuf::from(cli.project_root);
+
+    let project_root = if let Some(path) = cli.project_root {
+        path
+    } else {
+        project_root::find_project_root(&std::env::current_dir()?)?
+    };
 
     // Initialize logging
     let log_dir = project_root.join(".vespe").join("log");
@@ -34,5 +40,5 @@ async fn main() -> Result<()> {
         .init();
 
     // Call the main run function from the library
-    vespe::run(project_root).await
+    vespe::run(project_root, cli.command).await
 }

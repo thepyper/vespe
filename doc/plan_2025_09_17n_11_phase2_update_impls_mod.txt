@@ -1,0 +1,15 @@
+#### 2.4. Aggiornamento del File `src/llm/impls/mod.rs`
+
+*   **Azione**: Modificare `src/llm/impls/mod.rs`.
+*   **Contenuto**:
+    ```rust
+    // src/llm/impls/mod.rs
+    pub mod basic_agent; // Mantenere gli agenti esistenti
+    pub mod json_policy;
+    pub mod xml_policy;
+    pub mod sections_policy;
+    // Rimuovere: pub mod various_markdown_policy;
+    ```
+*   **Motivazione**: Aggiorna la struttura del modulo per riflettere i nuovi file.
+
+**CONTINUA NEL FILE: `doc/plan_2025_09_17n_12_phase2_delete_various.txt`**

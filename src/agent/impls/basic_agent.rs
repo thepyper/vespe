@@ -106,10 +106,13 @@ impl<'a> Agent for BasicAgent<'a> {
         let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone(), &mut logger).await?;
         let mut final_response_parts = Vec::new();
 
-        self._handle_tool_calls(&mut messages, &mut response, &mut final_response_parts, &mut logger).await?;
+        self._handle_tool_calls(self.name(), &mut messages, &mut response, &mut final_response_parts, &mut logger).await?;
 
         let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
         Ok(final_response_content)
+    }
+}
+nt)
     }
 }

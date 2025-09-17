@@ -10,7 +10,7 @@ To abstract the LLM markdown policy into a flexible and extensible `Trait`, allo
 *   Decouple the internal message representation from LLM-specific formatting concerns, using a neutral `Message` enum.
 
 ## Key Concepts
-*   **`MarkdownPolicy` Trait:** A Rust trait that defines the interface for handling markdown policies, including methods for generating system prompts, parsing LLM responses, and formatting queries.
+*   **`MarkdownPolicy` Trait:** A Rust trait that defines the interface for handling markdown formatting instructions, parsing LLM responses, and formatting queries.
 *   **`Message` Enum:** A neutral, internal representation of messages exchanged with the LLM. This enum will encapsulate different types of messages (system, user, assistant, tool output) and will replace `llm::models::ChatMessage`.
 *   **`AssistantContent` Enum:** An enum specifically for representing the various types of content that an assistant (LLM) might generate within a single message (e.g., plain text, internal thoughts, tool calls). This will effectively replace `agent::actions::AgentAction` for parsed LLM responses.
 *   **`ToolCall` Struct:** A data structure to represent a call to an external tool, including the tool's name and its arguments (as `serde_json::Value`).
@@ -60,16 +60,12 @@ To abstract the LLM markdown policy into a flexible and extensible `Trait`, allo
     ```rust
     use super::messages::{Message, AssistantContent, ToolCall, ToolOutput}; // Adjust path as needed
     use anyhow::Result;
-    use crate::tools::tool_registry::ToolRegistry;
-    use crate::prompt_templating::PromptTemplater;
-    use crate::agent::models::AgentDefinition;
     use serde_json::Value;
 
     pub trait MarkdownPolicy: Send + Sync {
-        /// Returns the markdown prompt string to be included in the system prompt.
-        /// This prompt instructs the LLM on the expected markdown format for its responses.
-        /// It will leverage the PromptTemplater and ToolRegistry to build the prompt.
-        fn markdown_prompt(&self, agent_definition: &AgentDefinition, tool_registry: &ToolRegistry, prompt_templater: &PromptTemplater) -> Result<String>;
+        /// Returns a string containing instructions for the LLM on the expected markdown format
+        /// for its responses (e.g., how to format tool calls, thoughts, and text).
+        fn markdown_format_instructions(&self) -> String;
 
         /// Parses the raw LLM response string into a vector of internal `AssistantContent` enums.
         /// This method is responsible for interpreting the LLM's markdown output.
@@ -81,7 +77,7 @@ To abstract the LLM markdown policy into a flexible and extensible `Trait`, allo
         fn format_query(&self, messages: &[Message]) -> Result<Vec<llm::chat::ChatMessage>>;
     }
     ```
-3.  **Add necessary `use` statements** within `markdown_policy.rs` to bring `Message`, `AssistantContent`, `ToolCall`, `ToolOutput`, `ToolRegistry`, `PromptTemplater`, `AgentDefinition`, and `Value` into scope.
+3.  **Add necessary `use` statements** within `markdown_policy.rs` to bring `Message`, `AssistantContent`, `ToolCall`, `ToolOutput`, and `Value` into scope.
 4.  **Update `src/llm/mod.rs`:** Add `pub mod markdown_policy;` to export the new trait.
 
 ### Phase 3: Implement a Basic `DefaultMarkdownPolicy`
@@ -91,9 +87,9 @@ To abstract the LLM markdown policy into a flexible and extensible `Trait`, allo
 2.  **Define `DefaultMarkdownPolicy` struct:**
     *   It will likely be a unit struct or hold any configuration specific to this default policy.
 3.  **Implement `MarkdownPolicy` for `DefaultMarkdownPolicy`:**
-    *   **`markdown_prompt()`:** This method will replicate the logic currently found in `agent::core::prompt_builder::PromptBuilder::build_system_prompt`. It will use the provided `PromptTemplater` and `ToolRegistry` to construct the system prompt, including tool metadata.
+    *   **`markdown_format_instructions()`:** This method will return a string that clearly defines the expected markdown format for `ToolCall`s (e.g., using specific code blocks or markers), `Thought`s (e.g., using specific markdown for internal reasoning), and `Text` segments. This string will be a part of the overall system prompt.
     *   **`parse_response()`:** This method will replicate the parsing logic currently found in `agent::core::response_parser::ResponseParser::parse_response`. It will use `agent::core::text_utils::trim_markdown_code_blocks` and attempt to deserialize the content into a structure that maps to `Vec<AssistantContent>`. It will handle malformed JSON as per the existing `MalformedJsonHandling` configuration.
-    *   **`format_query()`:** This method will convert a `Vec<Message>` into a `Vec<llm::chat::ChatMessage>` (from the external `llm` crate). It will correctly map `Message::System`, `Message::User`, `Message::Assistant`, and `Message::Tool` to the appropriate `llm::chat::ChatRole` and `content`. This will also address the `FIXME` regarding system messages.
+    *   **`format_query()`:** This method will convert a `Vec<Message>` (containing `System`, `User`, `Assistant`, `Tool` messages) into a `Vec<llm::chat::ChatMessage>` (from the external `llm` crate). It will correctly map `Message::System`, `Message::User`, `Message::Assistant`, and `Message::Tool` to the appropriate `llm::chat::ChatRole` and `content`. This will also address the `FIXME` regarding system messages.
 4.  **Update `src/llm/impls/mod.rs`:** Add `pub mod default_markdown_policy;` to export the new implementation.
 
 ### Phase 4: Integrate `MarkdownPolicy` into `LlmClient`
@@ -127,12 +123,16 @@ To abstract the LLM markdown policy into a flexible and extensible `Trait`, allo
 ### Phase 5: Update Agent Components and Call Sites
 
 1.  **Modify `src/agent/impls/basic_agent.rs`:**
-    *   **Update `BasicAgent` struct:** Remove `prompt_builder: PromptBuilder` and `response_parser: ResponseParser`. Instead, add `llm_client: LlmClient` (or a reference to it).
-    *   **Update `new` constructor:** Adjust the constructor to accept `LlmClient` instead of `PromptBuilder` and `ResponseParser`.
+    *   **Update `BasicAgent` struct:** Remove `prompt_builder: PromptBuilder` and `response_parser: ResponseParser`. Instead, add `llm_client: LlmClient` (or a reference to it), and retain `prompt_templater: PromptTemplater`, `tool_registry: ToolRegistry`, and `definition: AgentDefinition` for constructing the full system prompt.
+    *   **Update `new` constructor:** Adjust the constructor to accept `LlmClient`, `PromptTemplater`, `ToolRegistry`, and `AgentDefinition`.
     *   **Refactor `execute()` method:**
-        *   The system prompt generation will now be handled by `LlmClient` internally via `markdown_policy.markdown_prompt`. The `BasicAgent` will pass the `AgentDefinition`, `ToolRegistry`, and `PromptTemplater` to the `LlmClient` (or the `LlmClient` will hold these if they are needed for `markdown_prompt`). A more streamlined approach would be for `LlmClient` to take `AgentDefinition`, `ToolRegistry`, and `PromptTemplater` in its `new` method, and then `generate_response` would take `&[Message]` and the `AgentDefinition` to build the system prompt internally.
+        *   **Constructing the full system prompt:** This will now happen within `BasicAgent::execute`. It will involve:
+            1.  Getting markdown instructions: `self.llm_client.markdown_policy.markdown_format_instructions()`.
+            2.  Getting tool metadata: `self.tool_registry.get_tool_metadata()`.
+            3.  Getting agent-specific instructions (from `self.definition`).
+            4.  Using `self.prompt_templater` to combine these parts into the final system prompt string. This will replace the call to `self.prompt_builder.build_system_prompt()`.
         *   The `messages` vector will now use the new `Message` enum.
-        *   Call `self.llm_client.generate_response(&messages, &self.definition)` (or similar) to get the LLM's response as `Vec<AssistantContent>`.
+        *   Call `self.llm_client.generate_response(&messages)` to get the LLM's response as `Vec<AssistantContent>`.
     *   **Refactor `_handle_tool_calls()` method:**
         *   This method will now directly receive `Vec<AssistantContent>` from the `LlmClient`'s response.
         *   The parsing logic (`self.response_parser.parse_response`) will be removed.
@@ -141,10 +141,10 @@ To abstract the LLM markdown policy into a flexible and extensible `Trait`, allo
         *   When re-prompting the LLM after a tool call, construct new `Message`s (including `Message::Tool` for tool output) and pass them to `self.llm_client.generate_response()`.
 
 2.  **Modify `src/agent/agent_manager.rs`:**
-    *   **Update `create_agent` method:** This method will be responsible for creating the `LlmClient` with the chosen `MarkdownPolicy` and passing it to the `BasicAgent`.
+    *   **Update `create_agent` method:** This method will be responsible for creating the `LlmClient` with the chosen `MarkdownPolicy` and passing it, along with `PromptTemplater`, `ToolRegistry`, and `AgentDefinition`, to the `BasicAgent`.
         *   It will instantiate `DefaultMarkdownPolicy` and box it.
-        *   It will create the `LlmClient` instance, passing the `Box<dyn MarkdownPolicy>`, `AgentDefinition`, `ToolRegistry`, and `PromptTemplater`.
-        *   It will then create `BasicAgent` with the `LlmClient`.
+        *   It will create the `LlmClient` instance, passing the `Box<dyn MarkdownPolicy>`.
+        *   It will then create `BasicAgent` with the `LlmClient`, `PromptTemplater`, `ToolRegistry`, and `AgentDefinition`.
 
 3.  **Remove `src/agent/core/prompt_builder.rs` and `src/agent/core/response_parser.rs`:** These files will become obsolete and should be deleted.
 4.  **Remove `src/agent/actions.rs`:** The `AgentAction` enum will be replaced by `AssistantContent` and can be removed.
@@ -156,11 +156,11 @@ To abstract the LLM markdown policy into a flexible and extensible `Trait`, allo
 1.  **Create Unit Tests:**
     *   **For `src/llm/messages.rs`:** Test serialization/deserialization if applicable.
     *   **For `src/llm/impls/default_markdown_policy.rs`:**
-        *   Test `markdown_prompt` with various `AgentDefinition` and `ToolRegistry` states to ensure correct system prompt generation.
+        *   Test `markdown_format_instructions` to ensure it returns the expected instructional string.
         *   Test `parse_response` with a wide range of valid and invalid LLM response strings. This should include responses containing `ToolCall`s, `Thought`s, plain `Text`, and various combinations, as well as malformed responses to ensure robust error handling. Ensure `ToolCall` arguments are correctly parsed into `serde_json::Value`.
         *   Test `format_query` with diverse `Vec<Message>` inputs to verify correct conversion to `Vec<llm::chat::ChatMessage>` and proper role mapping.
-    *   **For `src/llm/llm_client.rs`:** Ensure the `LlmClient` correctly uses the injected `MarkdownPolicy` for all LLM interactions, including system prompt generation, query formatting, and response parsing.
-    *   **For `src/agent/impls/basic_agent.rs`:** Test the `execute` method and `_handle_tool_calls` to ensure the agent correctly processes LLM responses, executes tools, and manages the conversation flow using the new `Message` and `AssistantContent` enums.
+    *   **For `src/llm/llm_client.rs`:** Ensure the `LlmClient` correctly uses the injected `MarkdownPolicy` for all LLM interactions, including query formatting, and response parsing.
+    *   **For `src/agent/impls/basic_agent.rs`:** Test the `execute` method and `_handle_tool_calls` to ensure the agent correctly constructs the full system prompt, processes LLM responses, executes tools, and manages the conversation flow using the new `Message` and `AssistantContent` enums.
 2.  **Run Integration Tests:** Execute all existing integration tests to ensure that the refactoring has not introduced any regressions or broken existing functionality.
 
 ### Phase 7: Cleanup and Documentation

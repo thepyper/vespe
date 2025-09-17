@@ -3,10 +3,12 @@ use crate::config::models::LlmConfig;
 use crate::llm::models::{ChatMessage, LlmResponse};
 use llm::builder::{LLMBackend, LLMBuilder};
 use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType};
+use crate::logging::Logger;
 
 pub async fn generate_response(
     config: &LlmConfig,
     messages: Vec<ChatMessage>,
+    logger: &mut Logger,
 ) -> Result<LlmResponse> {
     let backend = match config.provider.as_str() {
         "openai" => LLMBackend::OpenAI,

@@ -34,11 +34,11 @@ impl ToolRegistry {
     }
 
     pub async fn execute_tool(&self, tool_name: &str, input: &Value, logger: &mut Logger) -> Result<Value> {
-        logger.log_tool_call(tool_name, input);
+        info!("Tool Call: {}({:#?})", tool_name, input);
         let tool = self.tools.get(tool_name)
             .ok_or_else(|| anyhow!("Tool '{}' not found in registry", tool_name))?;
         let output = tool.execute(input).await?;
-        logger.log_tool_return(tool_name, &output);
+        info!("Tool Return [{}]:\n{:#?}", tool_name, output);
         Ok(output)
     }
 }

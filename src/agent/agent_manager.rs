@@ -6,9 +6,9 @@ use crate::agent::agent_trait::Agent;
 use crate::agent::impls::basic_agent::BasicAgent;
 use crate::agent::models::AgentDefinition;
 use crate::tools::tool_registry::ToolRegistry;
-use crate::agent::core::prompt_builder::PromptBuilder;
-use crate::agent::core::response_parser::ResponseParser;
 use crate::prompt_templating::PromptTemplater;
+use crate::llm::llm_client::LlmClient;
+use crate::llm::impls::default_markdown_policy::DefaultMarkdownPolicy;
 
 pub struct AgentManager {
     project_root: PathBuf,
@@ -35,9 +35,9 @@ impl AgentManager {
     }
 
     pub fn create_agent(&self, definition: AgentDefinition) -> Result<Box<dyn Agent>> {
-        let prompt_builder = PromptBuilder::new(self.prompt_templater.clone());
-        let response_parser = ResponseParser::new();
-        let agent = BasicAgent::new(definition, self.tool_registry.clone(), prompt_builder, response_parser)?;
+        let markdown_policy = Box::new(DefaultMarkdownPolicy::new());
+        let llm_client = LlmClient::new(definition.llm_config.clone(), markdown_policy);
+        let agent = BasicAgent::new(definition, self.tool_registry.clone(), llm_client, self.prompt_templater.clone())?;
         Ok(Box::new(agent))
     }
 }

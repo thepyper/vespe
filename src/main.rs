@@ -3,13 +3,26 @@ use tracing_subscriber::{fmt, filter::EnvFilter, Layer, Registry};
 use tracing_subscriber::prelude::*;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use clap::Parser;
+use std::path::PathBuf;
 
-use vespe::cli::commands::Cli;
+use vespe::cli::commands::{Cli, Commands};
 use vespe::project_root;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // Handle Init command separately, as it doesn't require an existing project root
+    if let Commands::Init { path } = &cli.command {
+        let target_dir = if let Some(p) = path {
+            p.clone()
+        } else {
+            std::env::current_dir()? // Use current directory if no path is specified
+        };
+        project_root::initialize_project_root(&target_dir)?;
+        println!("Vespe project initialized at: {}", target_dir.display());
+        return Ok(());
+    }
 
     let project_root = if let Some(path) = cli.project_root {
         path

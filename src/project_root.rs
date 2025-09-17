@@ -29,5 +29,8 @@ pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
     let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
     fs::write(&vespe_root_marker, "Feel The BuZZ!!!!")?;
 
+    let vespe_gitignore = vespe_dir.join(".gitignore");
+    fs::write(&vespe_gitignore, "log/")?;
+
     Ok(())
 }

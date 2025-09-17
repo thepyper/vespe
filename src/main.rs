@@ -2,6 +2,10 @@ use anyhow::Result;
 use tracing_subscriber::{fmt, filter::EnvFilter, Layer, Registry};
 use tracing_subscriber::prelude::*;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use clap::Parser;
+use std::path::PathBuf;
+
+use vespe::cli::commands::Cli;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -25,4 +29,10 @@ async fn main() -> Result<()> {
 
     // Call the main run function from the library
     vespe::run().await
+}
+ .with(stdout_layer)
+        .init();
+
+    // Call the main run function from the library
+    vespe::run(project_root).await
 }

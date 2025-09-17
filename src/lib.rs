@@ -53,7 +53,7 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands) -> Res
             } else {
                 std::env::current_dir()? // Use current directory if no path is specified
             };
-            project_root::initialize_project_root(&target_dir)?;
+            project_root::initialize_project_root(&target_dir, None)?;
             println!("Vespe project initialized at: {}", target_dir.display());
         }
     }

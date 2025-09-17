@@ -1,4 +1,5 @@
 use anyhow::Result;
+use html_escape;
 
 use crate::llm::markdown_policy::MarkdownPolicy;
 use crate::llm::messages::{Message, AssistantContent, ToolCall};

@@ -23,6 +23,11 @@ pub fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
 }
 
 pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
+    // Check if target_dir is already inside an existing Vespe project
+    if let Ok(existing_root) = find_project_root(target_dir) {
+        return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", existing_root.display()));
+    }
+
     let vespe_dir = target_dir.join(VESPE_DIR);
     let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
 

@@ -5,7 +5,8 @@ use tracing::info;
 
 use crate::agent::agent_trait::Agent;
 use crate::agent::models::AgentDefinition;
-use crate::llm::models::ChatMessage;
+use crate::llm::models::{ChatMessage, LlmResponse};                                                                                                              │
+use crate::logging::Logger;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::actions::AgentAction;
 use crate::config::MalformedJsonHandling;
@@ -33,6 +34,7 @@ impl Agent for BasicAgent {
 
     async fn execute(&self, input: &str) -> Result<String> {
         info!("Agent '{}' executing with input: '{}'", self.name(), input);
+	let mut logger = Logger::new("vespe.log");
 
         let tool_prompt = self.prompt_builder.build_system_prompt(&self.definition, &self.tool_registry).await?;
 
@@ -41,8 +43,8 @@ impl Agent for BasicAgent {
             ChatMessage { role: "user".to_string(), content: input.to_string() },
         ];
 
-        let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
-        let mut final_response_parts = Vec::new();
+        let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone(), &mut logger).await?;
+	let mut final_response_parts = Vec::new();
 
         self._handle_tool_calls(&mut messages, &mut response, &mut final_response_parts, &mut logger).await?;
     }
@@ -67,8 +69,8 @@ impl Agent for BasicAgent {
                         has_tool_call = true;
                         final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
 
-                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args, logger).await?;
-                        let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
+                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args, &mut logger).await?;
+			let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
 
                         messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
@@ -104,8 +106,7 @@ impl Agent for BasicAgent {
                 break; // No tool call detected, or all actions processed
             }
         }
-        Ok(())
-    }
+
 
         let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);

@@ -1,6 +1,5 @@
-use super::messages::{Message, AssistantContent, ToolCall, ToolOutput};
+use super::messages::{Message, AssistantContent};
 use anyhow::Result;
-use serde_json::Value;
 
 pub trait MarkdownPolicy: Send + Sync {
     /// Returns a string containing instructions for the LLM on the expected markdown format

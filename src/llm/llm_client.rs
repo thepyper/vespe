@@ -3,7 +3,6 @@ use crate::config::models::LlmConfig;
 use crate::llm::markdown_policy::MarkdownPolicy;
 use crate::llm::messages::{Message, AssistantContent};
 use llm::builder::{LLMBackend, LLMBuilder};
-use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType}; // Still needed for the underlying LLM crate
 use tracing::info;
 
 pub struct LlmClient {
@@ -20,7 +19,8 @@ impl LlmClient {
         &self.markdown_policy
     }
 
-    pub async fn generate_response(&self, messages: &[Message]) -> Result<Vec<AssistantContent>> {
+    pub async fn generate_response(&self, messages: &[
+Message]) -> Result<Vec<AssistantContent>> {
         let backend = match self.config.provider.as_str() {
             "openai" => LLMBackend::OpenAI,
             "ollama" => LLMBackend::Ollama,

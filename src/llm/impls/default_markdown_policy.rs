@@ -1,9 +1,8 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use serde_json::Value;
 
 use crate::llm::markdown_policy::MarkdownPolicy;
-use crate::llm::messages::{Message, AssistantContent, ToolCall, ToolOutput};
-use crate::config::MalformedJsonHandling;
+use crate::llm::messages::{Message, AssistantContent, ToolCall};
 use crate::agent::core::text_utils::trim_markdown_code_blocks;
 use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType};
 
@@ -105,8 +104,7 @@ All other content should be plain text.
                                 assistant_content_str.push_str(&format!("```thought\n{{\"content\": \"{}\"}}\n```", thought));
                             },
                             AssistantContent::ToolCall(tool_call) => {
-                                assistant_content_str.push_str(&format!("```tool_code\n{{\"name\": \"{}\", \"arguments\": {}}}
-```", tool_call.name, serde_json::to_string(&tool_call.arguments)?));
+                                assistant_content_str.push_str(&format!("```tool_code\n{{\"name\": \"{}\", \"arguments\": {}}}\n```", tool_call.name, serde_json::to_string(&tool_call.arguments)?));
                             },
                         }
                     }

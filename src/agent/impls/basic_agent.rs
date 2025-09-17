@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::Value;
 use tracing::info;
@@ -6,7 +6,7 @@ use tracing::info;
 use crate::agent::agent_trait::Agent;
 use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::LlmClient;
-use crate::llm::messages::{Message, AssistantContent, ToolCall, ToolOutput};
+use crate::llm::messages::{Message, AssistantContent, ToolOutput};
 use crate::tools::tool_registry::ToolRegistry;
 use crate::prompt_templating::PromptTemplater;
 

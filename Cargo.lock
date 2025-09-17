@@ -2548,6 +2548,7 @@ dependencies = [
  "clap",
  "handlebars",
  "llm",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

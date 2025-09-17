@@ -1,5 +1,7 @@
-use super::messages::{Message, AssistantContent};
+use crate::llm::policy_types::PolicyType; // Aggiungere questo use
+use crate::llm::messages::{Message, AssistantContent, ToolCall, ToolOutput}; // Assicurarsi che ToolOutput sia importato
 use anyhow::Result;
+use llm::chat::{ChatMessage as LlmChatMessage}; // Assicurarsi che LlmChatMessage sia importato
 
 pub trait MarkdownPolicy: Send + Sync {
     /// Returns a string containing instructions for the LLM on the expected markdown format
@@ -14,4 +16,5 @@ pub trait MarkdownPolicy: Send + Sync {
     /// Formats a vector of internal `Message` enums into a vector of `llm::chat::ChatMessage`
     /// suitable for the underlying LLM client.
     fn format_query(&self, messages: &[Message]) -> Result<Vec<llm::chat::ChatMessage>>;
+    fn get_policy_type(&self) -> PolicyType; // Nuovo metodo
 }

@@ -8,6 +8,7 @@ use crate::agent::models::AgentDefinition;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
+use crate::prompt_templating::PromptTemplater;
 
 pub struct AgentManager {
     project_root: PathBuf,

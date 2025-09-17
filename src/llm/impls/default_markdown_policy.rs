@@ -40,12 +40,91 @@ All other content should be plain text.
     }
 
     fn parse_response(&self, response: &str) -> Result<Vec<AssistantContent>> {
-        // This will be implemented in a later step, replicating ResponseParser logic
-        Err(anyhow!("Not yet implemented"))
+        let trimmed_content = trim_markdown_code_blocks(response);
+
+        // Define a temporary enum for deserialization that mirrors AgentAction
+        #[derive(Debug, serde::Deserialize)]
+        #[serde(untagged)] // Allows deserialization of different types from a single enum
+        enum AgentActionDeserializer {
+            ToolCall { name: String, args: Value },
+            TextResponse { content: String },
+            Thought { content: String },
+        }
+
+        // Try to parse as a Vec<AgentActionDeserializer>
+        if let Ok(actions_deserialized) = serde_json::from_str::<Vec<AgentActionDeserializer>>(trimmed_content) {
+            let actions: Vec<AssistantContent> = actions_deserialized.into_iter().map(|action| {
+                match action {
+                    AgentActionDeserializer::ToolCall { name, args } => AssistantContent::ToolCall(ToolCall { name, arguments: args }),
+                    AgentActionDeserializer::TextResponse { content } => AssistantContent::Text(content),
+                    AgentActionDeserializer::Thought { content } => AssistantContent::Thought(content),
+                }
+            }).collect();
+            return Ok(actions);
+        }
+
+        // If parsing as Vec<AgentActionDeserializer> fails, try parsing as a single AgentActionDeserializer
+        if let Ok(action_deserialized) = serde_json::from_str::<AgentActionDeserializer>(trimmed_content) {
+            let action = match action_deserialized {
+                AgentActionDeserializer::ToolCall { name, args } => AssistantContent::ToolCall(ToolCall { name, arguments: args }),
+                AgentActionDeserializer::TextResponse { content } => AssistantContent::Text(content),
+                AgentActionDeserializer::Thought { content } => AssistantContent::Thought(content),
+            };
+            return Ok(vec![action]);
+        }
+
+        // If all structured parsing fails, treat as plain text
+        Ok(vec![AssistantContent::Text(response.to_string())])
     }
 
     fn format_query(&self, messages: &[Message]) -> Result<Vec<LlmChatMessage>> {
-        // This will be implemented in a later step, replicating ChatMessage mapping logic
-        Err(anyhow!("Not yet implemented"))
+        let mut llm_chat_messages = Vec::new();
+
+        for msg in messages {
+            match msg {
+                Message::System(content) => {
+                    llm_chat_messages.push(LlmChatMessage {
+                        role: ChatRole::System,
+                        content: content.clone(),
+                        message_type: MessageType::Text,
+                    });
+                },
+                Message::User(content) => {
+                    llm_chat_messages.push(LlmChatMessage {
+                        role: ChatRole::User,
+                        content: content.clone(),
+                        message_type: MessageType::Text,
+                    });
+                },
+                Message::Assistant(content_parts) => {
+                    let mut assistant_content_str = String::new();
+                    for part in content_parts {
+                        match part {
+                            AssistantContent::Text(text) => assistant_content_str.push_str(text),
+                            AssistantContent::Thought(thought) => {
+                                assistant_content_str.push_str(&format!("```thought\n{{\"content\": \"{}\"}}\n```", thought));
+                            },
+                            AssistantContent::ToolCall(tool_call) => {
+                                assistant_content_str.push_str(&format!("```tool_code\n{{\"name\": \"{}\", \"arguments\": {}}}
+```", tool_call.name, serde_json::to_string(&tool_call.arguments)?));
+                            },
+                        }
+                    }
+                    llm_chat_messages.push(LlmChatMessage {
+                        role: ChatRole::Assistant,
+                        content: assistant_content_str,
+                        message_type: MessageType::Text,
+                    });
+                },
+                Message::Tool(tool_output) => {
+                    llm_chat_messages.push(LlmChatMessage {
+                        role: ChatRole::Tool, // Assuming the underlying LLM crate supports a Tool role
+                        content: serde_json::to_string(&tool_output.output)?,
+                        message_type: MessageType::Text,
+                    });
+                },
+            }
+        }
+        Ok(llm_chat_messages)
     }
 }

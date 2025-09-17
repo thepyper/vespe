@@ -11,7 +11,6 @@ use crate::agent::actions::AgentAction;
 use crate::config::MalformedJsonHandling;
 use crate::agent::core::prompt_builder::PromptBuilder;
 use crate::agent::core::response_parser::ResponseParser;
-use crate::logging::Logger;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
@@ -30,7 +29,6 @@ impl BasicAgent {
         messages: &mut Vec<ChatMessage>,
         response: &mut LlmResponse,
         final_response_parts: &mut Vec<String>,
-        mut logger: &mut Logger,
     ) -> Result<()> {
         // Loop for tool calls
         for iteration_count in 0..5 { // Max 5 tool calls to prevent infinite loops
@@ -51,7 +49,7 @@ impl BasicAgent {
                         messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
-                        *response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone(), &mut logger).await?;
+                        *response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
                         
                         // Explicitly extract and report transformed_text for echo tool
                         if tool_call.name == "echo" {
@@ -94,8 +92,7 @@ impl Agent for BasicAgent {
 
     async fn execute(&self, input: &str) -> Result<String> {
         info!("Agent '{}' executing with input: '{}'", self.name(), input);
-        let mut logger = Logger::new("vespe.log");
-
+        
         let tool_prompt = self.prompt_builder.build_system_prompt(&self.definition, &self.tool_registry).await?;
 
         let mut messages = vec![
@@ -106,7 +103,7 @@ impl Agent for BasicAgent {
         let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
         let mut final_response_parts = Vec::new();
 
-        self._handle_tool_calls(&mut messages, &mut response, &mut final_response_parts, &mut logger).await?;
+        self._handle_tool_calls(&mut messages, &mut response, &mut final_response_parts).await?;
 
         let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);
@@ -114,6 +111,7 @@ impl Agent for BasicAgent {
     }
 }
 
+/*
 fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) -> Result<Vec<AgentAction>> {
     // Try to parse as a Vec<AgentAction>
     if let Ok(actions) = serde_json::from_str::<Vec<AgentAction>>(response_content) {
@@ -131,3 +129,4 @@ fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) 
         },
     }
 }
+*/

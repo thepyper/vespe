@@ -24,30 +24,17 @@ pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-pub fn initialize_project_root(target_dir: &Path, current_project_root: Option<&Path>) -> Result<()> {
+pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
     let absolute_target_dir = target_dir.canonicalize().map_err(|e| anyhow!("Failed to canonicalize target directory {}: {}", target_dir.display(), e))?;
 
-    println!("initialize_project_root: absolute_target_dir = {}", absolute_target_dir.display());
-    if let Some(root) = current_project_root {
-        println!("initialize_project_root: current_project_root = {}", root.display());
-    } else {
-        println!("initialize_project_root: current_project_root = None");
-    }
-
-    // First, check if the target_dir itself is already initialized
-    if is_project_root(&absolute_target_dir) {
-        return Err(anyhow!("Project already initialized at: {}", absolute_target_dir.display()));
-    }
-
-    // Then, check if target_dir is a subdirectory of an existing Vespe project
-    if let Some(dir) = find_project_root(&absolute_target_dir) {
-            println!("    Returning error: Nested project detected. Existing root: {}", dir.display());
-            return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", dir.display()));
+    // Check if target_dir is already part of an existing Vespe project
+    if let Some(found_root) = find_project_root(&absolute_target_dir) {
+        return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", found_root.display()));
     }
 
     let vespe_dir = absolute_target_dir.join(VESPE_DIR);
     let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
-    
+
     fs::create_dir_all(&vespe_dir)?;
 
     fs::write(&vespe_root_marker, "Feel The BuZZ!!!!")?;

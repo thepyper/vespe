@@ -44,6 +44,16 @@ impl Agent for BasicAgent {
         let mut response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
         let mut final_response_parts = Vec::new();
 
+        self._handle_tool_calls(&mut messages, &mut response, &mut final_response_parts, &mut logger).await?;
+    }
+
+    async fn _handle_tool_calls(
+        &self,
+        messages: &mut Vec<ChatMessage>,
+        response: &mut LlmResponse,
+        final_response_parts: &mut Vec<String>,
+        logger: &mut Logger,
+    ) -> Result<()> {
         // Loop for tool calls
         for iteration_count in 0..5 { // Max 5 tool calls to prevent infinite loops
             info!("Agent '{}' - Iteration {}", self.name(), iteration_count);
@@ -57,13 +67,13 @@ impl Agent for BasicAgent {
                         has_tool_call = true;
                         final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
 
-                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args).await?;
+                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args, logger).await?;
                         let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
 
                         messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
                         messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
 
-                        response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone()).await?;
+                        *response = crate::llm::llm_client::generate_response(&self.definition.llm_config, messages.clone(), logger).await?;
                         
                         // Explicitly extract and report transformed_text for echo tool
                         if tool_call.name == "echo" {
@@ -94,6 +104,8 @@ impl Agent for BasicAgent {
                 break; // No tool call detected, or all actions processed
             }
         }
+        Ok(())
+    }
 
         let final_response_content = final_response_parts.join("\n");
         info!("Agent '{}' received final response: '{}'", self.name(), final_response_content);

@@ -39,38 +39,92 @@ All other content should be plain text.
     }
 
     fn parse_response(&self, response: &str) -> Result<Vec<AssistantContent>> {
-        let trimmed_content = trim_markdown_code_blocks(response);
+        use regex::Regex;
+        let mut parsed_content = Vec::new();
+        let mut last_index = 0;
 
-        #[derive(Debug, serde::Deserialize)]
-        #[serde(untagged)]
-        enum AgentActionDeserializer {
-            ToolCall { name: String, args: Value },
-            TextResponse { content: String },
-            Thought { content: String },
-        }
+        let tool_code_re = Regex::new(r"```tool_code\n([\s\S]*?)\n```")?;
+        let thought_re = Regex::new(r"```thought\n([\s\S]*?)\n```")?;
 
-        if let Ok(actions_deserialized) = serde_json::from_str::<Vec<AgentActionDeserializer>>(trimmed_content) {
-            let actions: Vec<AssistantContent> = actions_deserialized.into_iter().map(|action| {
-                match action {
-                    AgentActionDeserializer::ToolCall { name, args } => AssistantContent::ToolCall(ToolCall { name, arguments: args }),
-                    AgentActionDeserializer::TextResponse { content } => AssistantContent::Text(content),
-                    AgentActionDeserializer::Thought { content } => AssistantContent::Thought(content),
+        // Find all tool_code blocks
+        for mat in tool_code_re.find_iter(response) {
+            let start = mat.start();
+            let end = mat.end();
+
+            // Add any preceding plain text
+            if start > last_index {
+                let text = response[last_index..start].trim();
+                if !text.is_empty() {
+                    parsed_content.push(AssistantContent::Text(text.to_string()));
                 }
-            }).collect();
-            return Ok(actions);
+            }
+
+            let json_str = mat.as_str();
+            let json_str = json_str.strip_prefix("```tool_code\n").unwrap_or(json_str);
+            let json_str = json_str.strip_suffix("\n```").unwrap_or(json_str);
+
+            let tool_call: ToolCall = serde_json::from_str(json_str)
+                .map_err(|e| anyhow::anyhow!("Failed to parse tool_code JSON: {}. Original: {}", e, json_str))?;
+            parsed_content.push(AssistantContent::ToolCall(tool_call));
+            last_index = end;
         }
 
-        if let Ok(action_deserialized) = serde_json::from_str::<AgentActionDeserializer>(trimmed_content) {
-            let action = match action_deserialized {
-                AgentActionDeserializer::ToolCall { name, args } => AssistantContent::ToolCall(ToolCall { name, arguments: args }),
-                AgentActionDeserializer::TextResponse { content } => AssistantContent::Text(content),
-                AgentActionDeserializer::Thought { content } => AssistantContent::Thought(content),
-            };
-            return Ok(vec![action]);
+        // Find all thought blocks (only in the remaining part of the response)
+        // This approach assumes tool_code blocks take precedence or are distinct.
+        // A more robust solution might involve a single pass with a combined regex or a state machine.
+        // For simplicity, I'll re-process the remaining text for thoughts.
+        let remaining_response = &response[last_index..];
+        let mut current_thought_last_index = 0;
+
+        for mat in thought_re.find_iter(remaining_response) {
+            let start = mat.start();
+            let end = mat.end();
+
+            // Add any preceding plain text within the remaining_response
+            if start > current_thought_last_index {
+                let text = remaining_response[current_thought_last_index..start].trim();
+                if !text.is_empty() {
+                    parsed_content.push(AssistantContent::Text(text.to_string()));
+                }
+            }
+
+            let json_str = mat.as_str();
+            let json_str = json_str.strip_prefix("```thought\n").unwrap_or(json_str);
+            let json_str = json_str.strip_suffix("\n```").unwrap_or(json_str);
+
+            // Thoughts are expected to be a JSON object with a "content" field
+            #[derive(Debug, serde::Deserialize)]
+            struct ThoughtContent {
+                content: String,
+            }
+            let thought_obj: ThoughtContent = serde_json::from_str(json_str)
+                .map_err(|e| anyhow::anyhow!("Failed to parse thought JSON: {}. Original: {}", e, json_str))?;
+            parsed_content.push(AssistantContent::Thought(thought_obj.content));
+            current_thought_last_index = end;
         }
 
-        // If parsing as structured JSON fails, it's an error for JsonMarkdownPolicy
-        Err(anyhow::anyhow!("Failed to parse LLM response as structured JSON: {}", response))
+        // Add any remaining plain text after all blocks
+        if last_index < response.len() {
+            let text = response[last_index..].trim();
+            if !text.is_empty() {
+                parsed_content.push(AssistantContent::Text(text.to_string()));
+            }
+        }
+        if current_thought_last_index < remaining_response.len() {
+            let text = remaining_response[current_thought_last_index..].trim();
+            if !text.is_empty() {
+                parsed_content.push(AssistantContent::Text(text.to_string()));
+            }
+        }
+
+
+        if parsed_content.is_empty() && !response.trim().is_empty() {
+            // If no structured content was found, but there was a response, treat as plain text
+            parsed_content.push(AssistantContent::Text(response.to_string()));
+        }
+
+
+        Ok(parsed_content)
     }
 
     fn format_query(&self, messages: &[Message]) -> Result<Vec<LlmChatMessage>> {

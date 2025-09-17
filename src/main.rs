@@ -6,7 +6,7 @@ use clap::Parser;
 use std::path::PathBuf;
 
 use vespe::cli::commands::{Cli, Commands};
-use vespe::project_root;
+use vespe::project_root::{self, is_project_root};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,6 +34,11 @@ async fn main() -> Result<()> {
     } else {
         return Err(anyhow!("Project root not found. Please run 'vespe init' or specify --project-root."));
     };
+    
+    // Check if it actually is a root
+    if !is_project_root(&project_root) {
+        return Err(anyhow!("Not a vespe project."));
+    }
 
     // Initialize logging
     let log_dir = project_root.join(".vespe").join("log");

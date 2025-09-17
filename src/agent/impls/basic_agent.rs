@@ -87,7 +87,7 @@ impl BasicAgent {
 }
 
 #[async_trait]
-impl Agent for BasicAgent {
+impl<'a> Agent for BasicAgent<'a> {
     fn name(&self) -> &str {
         &self.definition.name
     }
@@ -129,5 +129,8 @@ fn parse_llm_response(response_content: &str, handling: &MalformedJsonHandling) 
         MalformedJsonHandling::Error => {
             Err(anyhow!("LLM response is not valid JSON or does not match expected action format: {}", response_content))
         },
+    }
+}
+ },
     }
 }

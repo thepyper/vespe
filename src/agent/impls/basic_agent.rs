@@ -45,7 +45,7 @@ impl BasicAgent {
                         has_tool_call = true;
                         final_response_parts.push(format!("[TOOL_CALL]: {}\n```json\n{}\n```", tool_call.name, serde_json::to_string_pretty(&tool_call)?));
 
-                                                                        let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args, &mut logger).await?;
+                                                                                                let tool_output = self.tool_registry.execute_tool(&tool_call.name, &tool_call.args).await?;
                         let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
 
                         messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });

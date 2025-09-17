@@ -5,7 +5,7 @@ use std::fs;
 const VESPE_DIR: &str = ".vespe";
 const VESPE_ROOT_MARKER: &str = ".vespe_root";
 
-pub fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
+pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
     let mut current_dir = Some(start_dir);
 
     while let Some(dir) = current_dir {
@@ -13,16 +13,16 @@ pub fn find_project_root(start_dir: &Path) -> Result<PathBuf> {
         let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
 
         if vespe_root_marker.exists() {
-            return Ok(dir.to_path_buf());
+            return Some(dir.to_path_buf());
         }
 
         current_dir = dir.parent();
     }
 
-    Err(anyhow!("Project root not found starting from: {}", start_dir.display()))
+    None
 }
 
-pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
+pub fn initialize_project_root(target_dir: &Path, current_project_root: Option<&Path>) -> Result<()> {
     let absolute_target_dir = target_dir.canonicalize().map_err(|e| anyhow!("Failed to canonicalize target directory {}: {}", target_dir.display(), e))?;
 
     let vespe_dir = absolute_target_dir.join(VESPE_DIR);
@@ -39,6 +39,14 @@ pub fn initialize_project_root(target_dir: &Path) -> Result<()> {
         let parent_vespe_dir = parent.join(VESPE_DIR);
         let parent_vespe_root_marker = parent_vespe_dir.join(VESPE_ROOT_MARKER);
         if parent_vespe_root_marker.exists() {
+            // If an existing root is found, check if it's the current project's root
+            if let Some(current_root) = current_project_root {
+                if parent == current_root {
+                    // This is the current project's root, so it's okay
+                    current_parent = parent.parent();
+                    continue;
+                }
+            }
             return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", parent.display()));
         }
         current_parent = parent.parent();

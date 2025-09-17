@@ -17,8 +17,7 @@ pub struct AgentManager {
 }
 
 impl AgentManager {
-    pub fn new(project_root: PathBuf, tool_registry: ToolRegistry) -> Result<Self> {
-        let prompt_templater = PromptTemplater::new(project_root.join(".vespe").join("prompts"))?;
+    pub fn new(project_root: PathBuf, tool_registry: ToolRegistry, prompt_templater: PromptTemplater) -> Result<Self> {
         Ok(Self { project_root, tool_registry, prompt_templater })
     }
 

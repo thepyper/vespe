@@ -25,6 +25,13 @@ pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
 pub fn initialize_project_root(target_dir: &Path, current_project_root: Option<&Path>) -> Result<()> {
     let absolute_target_dir = target_dir.canonicalize().map_err(|e| anyhow!("Failed to canonicalize target directory {}: {}", target_dir.display(), e))?;
 
+    println!("initialize_project_root: absolute_target_dir = {}", absolute_target_dir.display());
+    if let Some(root) = current_project_root {
+        println!("initialize_project_root: current_project_root = {}", root.display());
+    } else {
+        println!("initialize_project_root: current_project_root = None");
+    }
+
     let vespe_dir = absolute_target_dir.join(VESPE_DIR);
     let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
 
@@ -36,17 +43,23 @@ pub fn initialize_project_root(target_dir: &Path, current_project_root: Option<&
     // Then, check if target_dir is a subdirectory of an existing Vespe project
     let mut current_parent = absolute_target_dir.parent();
     while let Some(parent) = current_parent {
+        println!("  Checking parent: {}", parent.display());
         let parent_vespe_dir = parent.join(VESPE_DIR);
         let parent_vespe_root_marker = parent_vespe_dir.join(VESPE_ROOT_MARKER);
         if parent_vespe_root_marker.exists() {
+            println!("    Found existing root marker in parent: {}", parent.display());
             // If an existing root is found, check if it's the current project's root
             if let Some(current_root) = current_project_root {
-                if parent == current_root {
+                let canonical_parent = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
+                println!("      Comparing canonical_parent ({}) with current_root ({})", canonical_parent.display(), current_root.display());
+                if canonical_parent == current_root {
                     // This is the current project's root, so it's okay
+                    println!("      Parent is current_root. Continuing upwards.");
                     current_parent = parent.parent();
                     continue;
                 }
             }
+            println!("    Returning error: Nested project detected. Existing root: {}", parent.display());
             return Err(anyhow!("Cannot initialize a Vespe project inside an existing project. Existing root: {}", parent.display()));
         }
         current_parent = parent.parent();

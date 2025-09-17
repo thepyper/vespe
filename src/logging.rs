@@ -29,7 +29,8 @@ impl Logger {
 
     pub fn log_tool_call(&mut self, tool_name: &str, args: &serde_json::Value) {
         let args_str = serde_json::to_string_pretty(args).unwrap_or_else(|_| "Failed to serialize args".to_string());
-        self.log(&format!("Tool Call: {}(\n)", tool_name, args_str));
+        self.log(&format!("Tool Call: {}({})
+", tool_name, args_str));
     }
 
     pub fn log_tool_return(&mut self, tool_name: &str, output: &serde_json::Value) {

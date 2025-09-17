@@ -6,9 +6,9 @@ use crate::llm::messages::{Message, AssistantContent, ToolCall};
 use crate::agent::core::text_utils::trim_markdown_code_blocks;
 use llm::chat::{ChatMessage as LlmChatMessage, ChatRole, MessageType};
 
-pub struct DefaultMarkdownPolicy;
+pub struct JsonMarkdownPolicy;
 
-impl DefaultMarkdownPolicy {
+impl JsonMarkdownPolicy {
     pub fn new() -> Self {
         Self {}
     }

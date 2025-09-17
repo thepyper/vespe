@@ -35,7 +35,7 @@ impl AgentManager {
     }
 
     pub fn create_agent(&self, definition: AgentDefinition) -> Result<Box<dyn Agent>> {
-        let markdown_policy = Box::new(DefaultMarkdownPolicy::new());
+        let markdown_policy = Box::new(JsonMarkdownPolicy::new());
         let llm_client = LlmClient::new(definition.llm_config.clone(), markdown_policy);
         let agent = BasicAgent::new(definition, self.tool_registry.clone(), llm_client, self.prompt_templater.clone())?;
         Ok(Box::new(agent))

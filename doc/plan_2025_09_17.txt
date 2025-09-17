@@ -1,0 +1,50 @@
+# Plan for Replacing Custom LLM Providers with the `llm` Crate
+
+This plan outlines the steps to replace the current custom LLM provider implementation in `src/llm/providers` with the `llm` crate (version 1.3.4).
+
+## 1. Update Dependencies
+
+- **Action:** Add the `llm` crate to the `Cargo.toml` file.
+- **Details:**
+  ```toml
+  [dependencies]
+  # ... other dependencies
+  llm = "1.3.4"
+  ```
+
+## 2. Refactor the LLM Client
+
+- **File to modify:** `src/llm/llm_client.rs`
+- **Actions:**
+    1. Remove the `LlmClient` trait.
+    2. Remove the `GenericLlmClient` struct and its `impl` block.
+    3. Create a new public async function `generate_response(config: &LlmConfig, messages: Vec<ChatMessage>) -> Result<LlmResponse>`.
+    4. Inside this function, use the `llm` crate's functionality to:
+        - Instantiate a client for the provider specified in `config.provider` (e.g., "openai" or "ollama").
+        - Map our `ChatMessage` struct to the `llm` crate's message format.
+        - Execute a chat request.
+        - Map the response from the `llm` crate back to our `LlmResponse` struct.
+
+## 3. Update the Basic Agent
+
+- **File to modify:** `src/agent/impls/basic_agent.rs`
+- **Actions:**
+    1. Remove the `llm_client` field from the `BasicAgent` struct.
+    2. Update the `BasicAgent::new` function to remove the initialization of `llm_client`.
+    3. In the `BasicAgent::execute` method, replace the call to `self.llm_client.generate_response(...)` with a call to the new `llm::llm_client::generate_response(&self.definition.llm_config, messages).await`.
+
+## 4. Remove Obsolete Code
+
+- **Action:** Delete the entire `src/llm/providers` directory. This includes:
+    - `src/llm/providers/mod.rs`
+    - `src/llm/providers/openai.rs`
+    - `src/llm/providers/ollama.rs`
+
+## 5. Verification and Testing
+
+- **Action:** Manually test the implementation after the code changes are complete.
+- **Steps:**
+    1. Build the project using `cargo build`.
+    2. Run the application using the `chat` command for an agent configured with OpenAI.
+    3. Run the application using the `chat` command for an agent configured with Ollama.
+    4. Verify that the agent responds as expected for both providers.

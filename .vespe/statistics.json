@@ -1,0 +1,6 @@
+{
+  "parser_usage": {},
+  "llm_invocations": {
+    "ollama::gemma3:1b": 1
+  }
+}

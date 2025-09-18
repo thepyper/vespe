@@ -1,0 +1,99 @@
+# Piano di Implementazione Statistiche Fading - 2025-09-18e
+
+L'obiettivo di questo piano è aggiungere due nuove metriche alle statistiche esistenti: `fading_count` e `fading_usage_count`. Queste metriche si comporteranno in modo simile ai campi esistenti (`llm_invocations` e `parser_usage`), ma con un meccanismo di "fading" (decadimento): quando il `fading_llm_invocations` per una specifica coppia provider/modello supera un valore soglia (es. 100.0), sia il `fading_llm_invocations` che *tutte* le `fading_parser_usage` per quella coppia provider/modello verranno divise per due.
+
+Si integrerà anche una semplificazione della struttura dati delle statistiche, raggruppando i campi correlati in struct annidate per migliorare l'organizzazione e la leggibilità.
+
+## Fase 1: Aggiornamento del Modello Dati Statistiche
+
+1.  **Modifica di `src/statistics/models.rs`:**
+    *   Definire le nuove struct `LlmStats` e `ParserStats`.
+        ```rust
+        use std::collections::HashMap;
+        use serde::{Serialize, Deserialize};
+        use crate::llm::parsing::match_source::ParserSource;
+
+        #[derive(Debug, Default, Serialize, Deserialize)]
+        pub struct LlmStats {
+            pub invocations: u64,
+            pub fading_invocations: f64,
+        }
+
+        #[derive(Debug, Default, Serialize, Deserialize)]
+        pub struct ParserStats {
+            pub usage: u64,
+            pub fading_usage: f64,
+        }
+
+        #[derive(Debug, Default, Serialize, Deserialize)]
+        pub struct UsageStatistics {
+            pub llm_stats: HashMap<String, LlmStats>, // "{Provider}::{Model}" -> LlmStats
+            pub parser_stats: HashMap<String, HashMap<ParserSource, ParserStats>>, // "{Provider}::{Model}" -> ParserSource -> ParserStats
+        }
+        ```
+
+## Fase 2: Integrazione della Logica di Fading nella Raccolta delle Statistiche
+
+1.  **Modifica di `src/llm/parsing/mod.rs` (funzione `parse_response`):**
+    *   **Aggiornamento delle Statistiche LLM e Trigger di Fading:**
+        *   All'inizio della funzione `parse_response`, dopo aver ottenuto il lock sulle statistiche e aver calcolato `llm_key`:
+            *   Ottenere un riferimento mutabile all'entry `LlmStats` per la `llm_key`.
+            *   Incrementare `invocations` (u64) di `1`.
+            *   Incrementare `fading_invocations` (f64) di `1.0`.
+            *   **Implementare il singolo trigger di fading:** Se `fading_invocations` per la `llm_key` supera `100.0`:
+                *   Dividere `fading_invocations` per `2.0`.
+                *   Iterare attraverso *tutte* le voci `ParserSource` sotto quella `llm_key` in `parser_stats` e dividere i loro `fading_usage` per `2.0`.
+        ```rust
+        // ... all'inizio della funzione parse_response
+        let mut stats = global_stats.lock().await;
+        let llm_key = format!("{}::{}", provider, model_id);
+
+        let llm_entry = stats.llm_stats.entry(llm_key.clone()).or_default();
+        llm_entry.invocations += 1;
+        llm_entry.fading_invocations += 1.0;
+
+        // Logica di fading: se il conteggio LLM supera la soglia, dimezza tutto
+        if llm_entry.fading_invocations > 100.0 {
+            llm_entry.fading_invocations /= 2.0;
+            // Dimezza anche tutte le statistiche di parser_usage per questa llm_key
+            if let Some(parser_map) = stats.parser_stats.get_mut(&llm_key) {
+                for (_, parser_stats) in parser_map.iter_mut() {
+                    parser_stats.fading_usage /= 2.0;
+                }
+            }
+        }
+        drop(stats); // Rilascia il lock presto
+        ```
+    *   **Aggiornamento delle Statistiche di Utilizzo del Parser:**
+        *   All'interno del loop di parsing, quando un `SnippetMatch` viene trovato e il suo `source` viene inserito nel `HashSet` locale:
+            *   Ottenere un riferimento mutabile all'entry `ParserStats` per la `llm_key` e `ParserSource`.
+            *   Incrementare `usage` (u64) di `1`.
+            *   Incrementare `fading_usage` (f64) di `1.0`.
+            *   **Nessun trigger di fading separato qui.** Il fading è gestito dal trigger `fading_llm_invocations` come descritto sopra.
+        ```rust
+        // ... all'interno del blocco `if let Some(m) = find_first_match_in_text(&text, parsers)`
+        if let Some(m) = find_first_match_in_text(&text, parsers) {
+            used_parsers.insert(m.source.clone());
+            let mut stats = global_stats.lock().await;
+            let llm_key = format!("{}::{}", provider, model_id);
+
+            let parser_entry = stats.parser_stats.entry(llm_key.clone())
+                .or_default()
+                .entry(m.source.clone())
+                .or_default();
+            parser_entry.usage += 1;
+            parser_entry.fading_usage += 1.0;
+
+            drop(stats); // Rilascia il lock presto
+            // ... resto della logica di suddivisione
+        }
+        ```
+
+## Fase 3: Aggiornamento della Logica di Persistenza (Implicito)
+
+*   Poiché le nuove struct `LlmStats` e `ParserStats` implementano `serde::Serialize` e `serde::Deserialize`, la logica di persistenza in `src/statistics/mod.rs` dovrebbe gestire automaticamente i nuovi campi. Non sono necessarie modifiche esplicite in questa fase.
+
+## Fase 4: Verifica e Test
+
+1.  **Compilazione:** Eseguire `cargo check` per assicurarsi che tutte le modifiche siano sintatticamente corrette e che il progetto compili senza errori.
+2.  **Test di Runtime:** Eseguire l'applicazione e verificare che il file `statistics.json` venga creato/aggiornato correttamente e che i conteggi di fading si comportino come previsto dopo diverse interazioni con gli agenti e gli LLM.

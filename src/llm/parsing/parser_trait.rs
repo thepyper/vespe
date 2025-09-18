@@ -2,7 +2,7 @@ use crate::llm::messages::AssistantContent;
 use crate::llm::parsing::match_source::ParserSource;
 
 // Represents a match found by the parser in the text
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SnippetMatch<'a> {
     pub start: usize,
     pub end: usize,

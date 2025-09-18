@@ -16,29 +16,20 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
 
 ## Fase 1: Definizione dei Tipi e Trait per il Nuovo Parsing
 
-**Obiettivo:** Creare le fondamenta del nuovo sistema di parsing.
+**Obiettivo:** Creare le fondamenta del nuovo sistema di parsing, utilizzando i tipi di dato esistenti.
 
 1.  **Nuovo Modulo:** Creare un nuovo modulo `src/llm/parsing/`.
-2.  **Tipi Base (`src/llm/parsing/types.rs`):**
-    *   Definire l'enum `ParsedContent` che rappresenterà i blocchi di contenuto parsati. Sarà simile all'attuale `AssistantContent` ma focalizzato sul parsing.
-        ```rust
-        pub enum ParsedContent {
-            Text(String),
-            // Usiamo direttamente ToolCall per rappresentare dati strutturati
-            ToolCall(ToolCall), 
-            Thought(String),
-        }
-        ```
+2.  **Tipi Base:** Non è necessario definire nuovi tipi. Useremo direttamente `crate::llm::messages::AssistantContent` come struttura dati per i blocchi di contenuto parsati.
 3.  **Trait del Parser (`src/llm/parsing/parser_trait.rs`):**
     *   Definire il `trait SnippetParser`.
         ```rust
-        use crate::llm::parsing::types::ParsedContent;
+        use crate::llm::messages::AssistantContent;
 
         // Rappresenta un match trovato dal parser nel testo
         pub struct SnippetMatch<'a> {
             pub start: usize,
             pub end: usize,
-            pub content: ParsedContent,
+            pub content: AssistantContent,
             // Il testo originale che ha generato il match
             pub original_text: &'a str, 
         }
@@ -52,22 +43,22 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
     *   Implementare la funzione `parse_response`. Questa funzione conterrà il loop principale che itera sui blocchi di testo e applica i parser secondo la logica specificata:
         
         **Logica di Parsing Dettagliata:**
-        1.  Inizializza una lista di blocchi di contenuto con un singolo elemento: `[ParsedContent::Text(risposta_completa_llm)]`.
+        1.  Inizializza una lista di blocchi di contenuto con un singolo elemento: `[AssistantContent::Text(risposta_completa_llm)]`.
         2.  Inizia un ciclo `loop` che continua finché non avvengono più suddivisioni.
         3.  All'interno del ciclo, si itera sulla lista di blocchi. Per ogni blocco:
             a. Se il blocco non è `Text`, viene ignorato e mantenuto per la prossima iterazione.
             b. Se il blocco è `Text`, si prova ad applicare in sequenza tutti i parser disponibili.
         4.  Il **primo parser** che trova un **match valido** "vince". A questo punto:
-            a. Il blocco `Text` originale viene sostituito da tre nuovi blocchi: un `Text` per la parte PRE-match, il `ParsedContent` per lo SNIPPET, e un `Text` per la parte POST-match. (Le parti PRE e POST vengono aggiunte solo se non sono stringhe vuote).
+            a. Il blocco `Text` originale viene sostituito da tre nuovi blocchi: un `Text` per la parte PRE-match, l'`AssistantContent` per lo SNIPPET, e un `Text` per la parte POST-match. (Le parti PRE e POST vengono aggiunte solo se non sono stringhe vuote).
             b. L'iterazione interna sui blocchi si interrompe immediatamente.
             c. Il ciclo `loop` principale ricomincia dall'inizio con la nuova lista di blocchi modificata.
         5.  Se un'intera iterazione su tutti i blocchi `Text` si completa senza che nessun parser trovi un match, il ciclo `loop` principale termina.
-        6.  La funzione restituisce la lista finale di blocchi `ParsedContent`.
+        6.  La funzione restituisce la lista finale di blocchi `AssistantContent`.
 
         ```rust
         // Pseudocodice della logica
-        fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> Vec<ParsedContent> {
-            let mut blocks: Vec<ParsedContent> = vec![ParsedContent::Text(response.to_string())];
+        fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> Vec<AssistantContent> {
+            let mut blocks: Vec<AssistantContent> = vec![AssistantContent::Text(response.to_string())];
 
             loop {
                 let mut split_occurred = false;
@@ -75,7 +66,7 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
                 let mut blocks_iter = blocks.into_iter();
 
                 while let Some(block) = blocks_iter.next() {
-                    if let ParsedContent::Text(text) = block {
+                    if let AssistantContent::Text(text) = block {
                         // Cerca il primo match possibile con uno qualsiasi dei parser
                         let first_match = find_first_match_in_text(&text, parsers);
 
@@ -83,14 +74,14 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
                             // Split!
                             let pre_text = &text[..m.start];
                             if !pre_text.is_empty() {
-                                next_blocks.push(ParsedContent::Text(pre_text.to_string()));
+                                next_blocks.push(AssistantContent::Text(pre_text.to_string()));
                             }
                             
                             next_blocks.push(m.content);
 
                             let post_text = &text[m.end..];
                             if !post_text.is_empty() {
-                                next_blocks.push(ParsedContent::Text(post_text.to_string()));
+                                next_blocks.push(AssistantContent::Text(post_text.to_string()));
                             }
 
                             // Aggiungi i blocchi rimanenti e ricomincia il ciclo principale
@@ -99,7 +90,7 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
                             break; // Esce dal 'while let' per ricominciare il 'loop'
                         } else {
                             // Nessun match, mantieni il blocco
-                            next_blocks.push(ParsedContent::Text(text));
+                            next_blocks.push(AssistantContent::Text(text));
                         }
                     } else {
                         // Non è Text, mantieni il blocco
@@ -125,12 +116,12 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
     *   Creare `JsonSnippetParser`.
     *   Implementare il `trait SnippetParser`.
     *   Userà una regex per trovare blocchi di codice JSON, sia racchiusi in ```json ... ```, sia "nudi" (che iniziano con `{` o `[` e finiscono con `}` o `]`). Il parsing del JSON dovrà essere robusto per gestire JSON incompleti o malformati.
-    *   Il `ParsedContent` risultante sarà di tipo `ToolCall`.
+    *   L'`AssistantContent` risultante sarà di tipo `ToolCall`.
 2.  **XML Parser (`src/llm/parsing/xml_parser.rs`):**
     *   Creare `XmlSnippetParser`.
     *   Implementare il `trait SnippetParser`.
     *   Userà una regex per trovare blocchi XML, ad esempio `<tool_call>...</tool_call>`.
-    *   Anche qui, il `ParsedContent` sarà `ToolCall`.
+    *   Anche qui, l'`AssistantContent` sarà `ToolCall`.
 
 ## Fase 3: Integrazione del Nuovo Sistema di Parsing
 
@@ -140,7 +131,7 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
     *   Rimuovere ogni riferimento a `MarkdownPolicy`.
     *   `LlmClient` ora avrà un `Vec<Box<dyn SnippetParser>>`.
     *   Il metodo `generate_response` non userà più `policy.parse_response`, ma chiamerà la nuova funzione `parsing::parse_response`, passando la stringa grezza dell'LLM e la lista dei suoi parser.
-    *   Il metodo `generate_response` restituirà `Vec<ParsedContent>`.
+    *   Il metodo `generate_response` restituirà `Vec<AssistantContent>`.
 2.  **Gestione Formattazione Query:**
     *   Creare un nuovo modulo/struttura semplice (es. `src/llm/query_formatter.rs`) che si occupi solo di trasformare la lista di `Message` in una stringa per l'LLM. Questa logica può essere estratta da una delle vecchie policy.
 3.  **Aggiornare `AgentManager`:**
@@ -151,7 +142,7 @@ L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approcci
 **Obiettivo:** Assicurarsi che l'agente possa utilizzare l'output del nuovo sistema di parsing.
 
 1.  **Aggiornare `BasicAgent`:**
-    *   Il metodo `execute` (o un suo helper) ora riceverà `Vec<ParsedContent>` dal `LlmClient`.
-    *   L'agente dovrà iterare su questa lista. Quando incontra un `ParsedContent::ToolCall`, dovrà usare il `ToolRegistry` per eseguirlo.
+    *   Il metodo `execute` (o un suo helper) ora riceverà `Vec<AssistantContent>` dal `LlmClient`.
+    *   L'agente dovrà iterare su questa lista. Quando incontra un `AssistantContent::ToolCall`, dovrà usare il `ToolRegistry` per eseguirlo.
     *   La logica del ciclo di conversazione (LLM -> Tool -> LLM) dovrà essere adattata per gestire questa nuova struttura dati.
 2.  **Test:** Verificare che il flusso end-to-end (dal comando `chat` all'esecuzione di un tool e alla risposta finale) funzioni correttamente.

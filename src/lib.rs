@@ -8,6 +8,7 @@ pub mod cli;
 pub mod config;
 pub mod llm;
 pub mod tools;
+pub mod statistics;
 
 pub mod prompt_templating;
 pub mod project_root;

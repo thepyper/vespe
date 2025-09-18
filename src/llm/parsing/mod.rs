@@ -1,5 +1,5 @@
 use crate::llm::messages::AssistantContent;
-use crate::llm::parsing::parser_trait::SnippetParser;
+use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 use std::collections::HashSet;
 use crate::llm::parsing::match_source::ParserSource;
 use std::sync::Arc;

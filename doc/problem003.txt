@@ -1,0 +1,16 @@
+```json
+{
+  "tool_code": {
+    "name": "echo",
+    "arguments": {
+      "text": "Hello, there! Let's create a fortune and then a bad word."
+    }
+  },
+  "tool_code": {
+    "name": "read_file",
+    "arguments": {
+      "path": "fortune.txt"
+    }
+  }
+}
+```

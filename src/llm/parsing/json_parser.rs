@@ -66,13 +66,11 @@ impl FencedJsonParser {
                         }
                     }
                 }
-            }
-        }
-        matches
-    }
-}}
+			}
+		}
+		matches
+	}
 
-impl SnippetParser for FencedJsonParser {
     fn find_matches<'a>(&self, text: &'a str) -> Vec<SnippetMatch<'a>> {
         FencedJsonParser::find_fenced_json(text)
     }

@@ -2548,6 +2548,7 @@ dependencies = [
  "clap",
  "handlebars",
  "llm",
+ "once_cell",
  "regex",
  "reqwest",
  "serde",

@@ -2,6 +2,8 @@ use crate::llm::messages::AssistantContent;
 use crate::llm::parsing::parser_trait::SnippetParser;
 
 pub mod parser_trait;
+pub mod json_parser;
+pub mod xml_parser;
 
 /// Finds the first match from any of the provided parsers in the text.
 /// This is a helper function for the main parsing loop.

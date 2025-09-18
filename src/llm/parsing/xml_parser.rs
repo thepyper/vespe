@@ -3,12 +3,13 @@ use regex::Regex;
 use serde_json::Value;
 
 use crate::llm::messages::{AssistantContent, ToolCall};
+use crate::llm::parsing::match_source::{ParserSource, XmlMatchMode};
 use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 
 // This regex is designed to find XML-like <tool_call> blocks.
 // It assumes the content within the block is JSON.
 static XML_TOOL_CALL_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"(?s)<tool_call>\s*(?P<json>\{.*?\})\s*</tool_call>"#).unwrap());
+    Lazy::new(|| Regex::new(r#"(?s)<tool_call>\s*(?P<json>\{{.*?\}})\s*</tool_call>"#).unwrap());
 
 pub struct XmlSnippetParser;
 
@@ -27,6 +28,7 @@ impl SnippetParser for XmlSnippetParser {
                         start: full_match.start(),
                         end: full_match.end(),
                         content: AssistantContent::ToolCall(tool_call),
+                        source: ParserSource::Xml(XmlMatchMode::ToolCallTag),
                         original_text: full_match.as_str(),
                     }
                 })

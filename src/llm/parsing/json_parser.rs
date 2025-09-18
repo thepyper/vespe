@@ -3,6 +3,7 @@ use regex::Regex;
 use serde_json::Value;
 
 use crate::llm::messages::{AssistantContent, ToolCall};
+use crate::llm::parsing::match_source::{JsonMatchMode, ParserSource};
 use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 
 // Regex to find fenced JSON blocks, e.g., ```json
@@ -34,12 +35,22 @@ impl JsonSnippetParser {
                 let end_index = start_index + stream.byte_offset();
                 let tool_call = ToolCall {
                     name: "".to_string(),
-                    arguments: value,
+                    arguments: value.clone(), // Clone value for the match_mode check
                 };
+
+                let match_mode = if value.is_object() {
+                    JsonMatchMode::RawObject
+                } else if value.is_array() {
+                    JsonMatchMode::RawArray
+                } else {
+                    return None; // Should not happen if we only look for { or [
+                };
+
                 Some(SnippetMatch {
                     start: start_index,
                     end: end_index,
                     content: AssistantContent::ToolCall(tool_call),
+                    source: ParserSource::Json(match_mode),
                     original_text: &text[start_index..end_index],
                 })
             }
@@ -66,6 +77,7 @@ impl JsonSnippetParser {
                 start: start_marker_pos,
                 end: content_end + FENCED_CODE_BLOCK_END.len(),
                 content: AssistantContent::ToolCall(tool_call),
+                source: ParserSource::Json(JsonMatchMode::FencedCodeBlock),
                 original_text: &text[start_marker_pos..content_end + FENCED_CODE_BLOCK_END.len()],
             })
         } else {

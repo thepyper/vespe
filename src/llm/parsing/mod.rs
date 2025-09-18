@@ -8,7 +8,7 @@ use crate::statistics::models::{UsageStatistics, ModelStats, ParserStats};
 
 pub mod parser_trait;
 pub use crate::llm::parsing::json_parser::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
-pub mod xml_parser;
+pub use crate::llm::parsing::xml_parser::{FencedXmlParser, ToolCodeXmlParser};
 pub mod match_source;
 
 /// Finds the first match from any of the provided parsers in the text.

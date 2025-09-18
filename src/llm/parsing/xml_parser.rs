@@ -11,28 +11,70 @@ use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 static XML_TOOL_CALL_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"(?s)<tool_call>\s*(?P<json>\{.*?\})\s*</tool_call>"#).unwrap());
 
-pub struct XmlSnippetParser;
+pub struct FencedXmlParser;
 
-impl SnippetParser for XmlSnippetParser {
+impl FencedXmlParser {
+    /// Finds the first fenced XML block and extracts its content.
+    fn find_fenced_xml<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
+        let start_marker_pos = text.find(FENCED_CODE_BLOCK_START)?;
+        let content_start = start_marker_pos + FENCED_CODE_BLOCK_START.len();
+
+        let end_marker_pos = text[content_start..].find(FENCED_CODE_BLOCK_END)?;
+        let content_end = content_start + end_marker_pos;
+
+        let xml_content = &text[content_start..content_end];
+
+        if let Ok(tool_call) = from_str::<ToolCall>(xml_content) {
+            Some(SnippetMatch {
+                start: start_marker_pos,
+                end: content_end + FENCED_CODE_BLOCK_END.len(),
+                content: AssistantContent::ToolCall(tool_call),
+                source: ParserSource::Xml(XmlMatchMode::FencedCodeBlock),
+                original_text: &text[start_marker_pos..content_end + FENCED_CODE_BLOCK_END.len()],
+            })
+        } else {
+            None
+        }
+    }
+}
+
+impl SnippetParser for FencedXmlParser {
     fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
-        XML_TOOL_CALL_REGEX.captures(text).and_then(|captures| {
-            captures.name("json").and_then(|json_match| {
-                serde_json::from_str::<Value>(json_match.as_str()).ok().map(|value| {
-                    let tool_call = ToolCall {
-                        // The name is often inside the JSON for this format
-                        name: value["name"].as_str().unwrap_or("").to_string(),
-                        arguments: value["arguments"].clone(),
-                    };
-                    let full_match = captures.get(0).unwrap();
-                    SnippetMatch {
+        FencedXmlParser::find_fenced_xml(text)
+    }
+}
+
+pub struct ToolCodeXmlParser;
+
+impl ToolCodeXmlParser {
+    /// Finds the first <tool_code>...</tool_code> block and extracts its content.
+    fn find_tool_code_xml<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
+        if let Some(captures) = TOOL_CODE_REGEX.captures(text) {
+            if let Some(full_match) = captures.get(0) {
+                let xml_content = captures.get(1)?.as_str(); // Content inside <tool_code>
+
+                if let Ok(tool_call) = from_str::<ToolCall>(xml_content) {
+                    Some(SnippetMatch {
                         start: full_match.start(),
                         end: full_match.end(),
                         content: AssistantContent::ToolCall(tool_call),
-                        source: ParserSource::Xml(XmlMatchMode::ToolCallTag),
+                        source: ParserSource::Xml(XmlMatchMode::ToolCodeBlock),
                         original_text: full_match.as_str(),
-                    }
-                })
-            })
-        })
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+impl SnippetParser for ToolCodeXmlParser {
+    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
+        ToolCodeXmlParser::find_tool_code_xml(text)
     }
 }

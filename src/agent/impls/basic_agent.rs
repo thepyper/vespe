@@ -52,11 +52,9 @@ impl BasicAgent {
         let mut final_text_response = String::new();
 
         for iteration_count in 0..5 {
-            // Max 5 tool calls to prevent infinite loops
             info!("Agent '{}' - Iteration {}", self.name(), iteration_count);
 
-            messages.push(Message::Assistant(current_assistant_content.clone()));
-
+            let mut assistant_messages_for_llm = Vec::new();
             let mut has_tool_call = false;
             let mut text_parts = Vec::new();
 
@@ -65,6 +63,7 @@ impl BasicAgent {
                     AssistantContent::ToolCall(tool_call) => {
                         has_tool_call = true;
                         info!("Executing tool: {}", tool_call.name);
+                        assistant_messages_for_llm.push(AssistantContent::ToolCall(tool_call.clone()));
 
                         let tool_output_value = self
                             .tool_registry
@@ -81,8 +80,13 @@ impl BasicAgent {
                     }
                     AssistantContent::Thought(thought) => {
                         info!("Agent '{}' thought: {}", self.name(), thought);
+                        assistant_messages_for_llm.push(AssistantContent::Thought(thought.clone()));
                     }
                 }
+            }
+
+            if !assistant_messages_for_llm.is_empty() {
+                messages.push(Message::Assistant(assistant_messages_for_llm));
             }
 
             final_text_response = text_parts.join("\n");
@@ -91,7 +95,6 @@ impl BasicAgent {
                 break; // No tool calls, so we have our final answer.
             }
 
-            // If there were tool calls, get a new response from the LLM
             current_assistant_content = self.llm_client.generate_response(messages).await?;
         }
 

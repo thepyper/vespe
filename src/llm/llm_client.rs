@@ -42,7 +42,22 @@ impl LlmClient {
             match m {
                 Message::System(s) => ChatMessage::user().content(s.clone()).build(),
                 Message::User(s) => ChatMessage::user().content(s.clone()).build(),
-                Message::Assistant(contents) => ChatMessage::assistant().content(contents.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join(" ")).build(),
+                Message::Assistant(contents) => ChatMessage::assistant().content(
+                    contents.iter().map(|c| {
+                        match c {
+                            AssistantContent::Text(s) => s.clone(),
+                            AssistantContent::Thought(s) => format!("Thought: {}", s),
+                            AssistantContent::ToolCall(tool_call) => {
+                                serde_json::to_string(&serde_json::json!({
+                                    "tool_code": {
+                                        "name": tool_call.name,
+                                        "arguments": tool_call.arguments,
+                                    }
+                                })).unwrap_or_default()
+                            }
+                        }
+                    }).collect::<Vec<String>>().join("\n")
+                ).build(),
                 Message::Tool(output) => ChatMessage::user().content(format!("Tool output for '{}':{}", output.tool_name, output.output)).build(),
             }
         }).collect();

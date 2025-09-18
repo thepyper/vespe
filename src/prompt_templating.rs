@@ -27,10 +27,12 @@ impl PromptTemplater {
 
     pub async fn render_system_prompt(&self, agent_name: &str, tool_prompt: &str, markup_policy: &dyn MarkupPolicy) -> Result<String> {
         let markup_instructions = markup_policy.get_markup_instructions();
+        let tool_invocation_preamble = markup_policy.get_tool_invocation_preamble();
         let data = json!({
             "agent_name": agent_name,
             "tool_prompt": tool_prompt,
             "markup_instructions": markup_instructions,
+            "tool_invocation_preamble": tool_invocation_preamble,
             // Add other context variables here if needed
         });
         let handlebars = self.handlebars.lock().await;

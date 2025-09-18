@@ -1,0 +1,16 @@
+use crate::llm::messages::AssistantContent;
+
+// Represents a match found by the parser in the text
+#[derive(Debug)]
+pub struct SnippetMatch<'a> {
+    pub start: usize,
+    pub end: usize,
+    pub content: AssistantContent,
+    // The original text that generated the match
+    pub original_text: &'a str,
+}
+
+pub trait SnippetParser: Send + Sync {
+    // Finds the *first* valid match in the given text
+    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>>;
+}

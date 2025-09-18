@@ -13,29 +13,34 @@ use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::statistics::models::UsageStatistics;
 
+use crate::llm::markup_policy::MarkupPolicy;
+
 pub struct BasicAgent {
-    definition: AgentDefinition,
-    tool_registry: ToolRegistry,
+    name: String,
     llm_client: LlmClient,
+    tool_registry: ToolRegistry,
     prompt_templater: PromptTemplater,
+    markup_policy: Box<dyn MarkupPolicy>,
     stats: Arc<Mutex<UsageStatistics>>,
 }
 
 impl BasicAgent {
     pub fn new(
-        definition: AgentDefinition,
-        tool_registry: ToolRegistry,
+        name: String,
         llm_client: LlmClient,
+        tool_registry: ToolRegistry,
         prompt_templater: PromptTemplater,
+        markup_policy: Box<dyn MarkupPolicy>,
         stats: Arc<Mutex<UsageStatistics>>,
-    ) -> Result<Self> {
-        Ok(Self {
-            definition,
-            tool_registry,
+    ) -> Self {
+        Self {
+            name,
             llm_client,
+            tool_registry,
             prompt_templater,
+            markup_policy,
             stats,
-        })
+        }
     }
 
     /// Handles the agent loop of processing tool calls from the LLM.
@@ -115,9 +120,11 @@ impl Agent for BasicAgent {
         // 2. Build the system prompt using the templater
         let mut data = serde_json::Map::new();
         data.insert("tool_prompt".to_string(), Value::String(tool_prompt_part));
-        let system_prompt = self
-            .prompt_templater
-            .render_prompt("system_prompt", &Value::Object(data))?;
+            let system_prompt = self.prompt_templater.render_system_prompt(
+                self.name(),
+                self.tool_registry.get_tool_prompt(),
+                &*self.markup_policy,
+            )?;
 
         // 3. Initialize the message history
         let mut messages = vec![

@@ -4,7 +4,8 @@ use serde_json::Value;
 use std::path::PathBuf;
 use std::fs;
 
-#[derive(Clone)] // Make it cloneable for easier passing around
+use crate::llm::markup_policy::MarkupPolicy;
+
 pub struct PromptTemplater {
     handlebars: Handlebars<'static>, // Use 'static' lifetime for owned Handlebars instance
     template_dir: PathBuf,
@@ -13,20 +14,8 @@ pub struct PromptTemplater {
 impl PromptTemplater {
     pub fn new(template_dir: PathBuf) -> Result<Self> {
         let mut handlebars = Handlebars::new();
-        handlebars.set_strict_mode(true); // Strict mode for better error detection
-
-        // Register all templates in the template_dir
-        for entry in fs::read_dir(&template_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "hbs") {
-                let template_name = path.file_stem().and_then(|s| s.to_str()).ok_or_else(|| {
-                    anyhow!("Invalid template file name: {}", path.display())
-                })?.to_string();
-                let template_content = fs::read_to_string(&path)?;
-                handlebars.register_template_string(&template_name, template_content)?;
-            }
-        }
+        handlebars.set_strict_mode(true);
+        handlebars.register_template_file("system_prompt", template_dir.join("system_prompt.hbs"))?;
 
         Ok(Self {
             handlebars,
@@ -34,7 +23,14 @@ impl PromptTemplater {
         })
     }
 
-    pub fn render_prompt(&self, template_name: &str, data: &Value) -> Result<String> {
-        self.handlebars.render(template_name, data).map_err(|e| anyhow!("Failed to render template: {}", e))
+    pub fn render_system_prompt(&self, agent_name: &str, markup_policy: &dyn MarkupPolicy) -> Result<String> {
+        let markup_instructions = markup_policy.get_markup_instructions();
+        let data = json!({
+            "agent_name": agent_name,
+            "markup_instructions": markup_instructions,
+            // Add other context variables here if needed
+        });
+        let rendered = self.handlebars.render("system_prompt", &data)?;
+        Ok(rendered)
     }
 }

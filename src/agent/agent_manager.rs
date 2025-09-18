@@ -9,8 +9,8 @@ use crate::agent::impls::basic_agent::BasicAgent;
 use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::LlmClient;
 use crate::llm::parsing::parser_trait::SnippetParser;
-use crate::llm::parsing::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
-use crate::llm::parsing::{FencedXmlParser, ToolCodeXmlParser};
+use crate::llm::markup_policy::MarkupPolicy;
+use crate::llm::impls::markup_policies::JsonMarkupPolicy;
 use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::statistics::models::UsageStatistics;
@@ -59,14 +59,15 @@ impl AgentManager {
         parsers.push(Box::new(FencedXmlParser));
         parsers.push(Box::new(ToolCodeXmlParser));
 
-        let llm_client = LlmClient::new(definition.llm_config.clone(), parsers, self.stats.clone());
-        let agent = BasicAgent::new(
-            definition,
-            self.tool_registry.clone(),
+        let llm_client = LlmClient::new(llm_config, parsers, self.stats.clone());
+        let default_markup_policy = JsonMarkupPolicy;
+
+        Ok(Box::new(BasicAgent::new(
+            agent_definition.name,
             llm_client,
+            self.tool_registry.clone(),
             self.prompt_templater.clone(),
-            self.stats.clone(),
-        )?;
-        Ok(Box::new(agent))
+            Box::new(default_markup_policy),
+        )))
     }
 }

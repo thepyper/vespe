@@ -51,7 +51,8 @@ impl LlmClient {
         info!("LLM Raw Response:
 {}", response_content);
 
-        let parsed_response = parsing::parse_response(&response_content, &self.parsers);
+        let (parsed_response, used_parsers) = parsing::parse_response(&response_content, &self.parsers);
+        info!("Used Parsers: {:#?}", used_parsers);
         info!("LLM Parsed Response:
 {:#?}", parsed_response);
 

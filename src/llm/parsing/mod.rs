@@ -1,5 +1,7 @@
 use crate::llm::messages::AssistantContent;
 use crate::llm::parsing::parser_trait::SnippetParser;
+use std::collections::HashSet;
+use crate::llm::parsing::match_source::ParserSource;
 
 pub mod parser_trait;
 pub mod json_parser;
@@ -21,8 +23,9 @@ fn find_first_match_in_text<'a>(
 /// Parses a raw LLM response string into a vector of `AssistantContent` blocks.
 /// It iteratively applies a list of snippet parsers to find and extract structured content,
 /// leaving the surrounding text as `Text` blocks.
-pub fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> Vec<AssistantContent> {
+pub fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> (Vec<AssistantContent>, HashSet<ParserSource>) {
     let mut blocks: Vec<AssistantContent> = vec![AssistantContent::Text(response.to_string())];
+    let mut used_parsers = HashSet::new();
 
     loop {
         let mut split_occurred = false;
@@ -39,6 +42,7 @@ pub fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> Vec
                     }
 
                     next_blocks.push(m.content);
+                    used_parsers.insert(m.source.clone()); // Record the parser source
 
                     let post_text = &text[m.end..];
                     if !post_text.is_empty() {
@@ -65,5 +69,5 @@ pub fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> Vec
             break; // No splits in a full pass, we are done.
         }
     }
-    blocks
+    (blocks, used_parsers)
 }

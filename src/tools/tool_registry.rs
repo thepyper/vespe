@@ -33,6 +33,20 @@ impl ToolRegistry {
         }).collect()
     }
 
+    pub fn get_tool_prompt(&self) -> String {
+        let mut prompt = String::new();
+        for tool in self.tools.values() {
+            prompt.push_str(&format!(
+                "Tool Name: {}\nDescription: {}\nInput Schema: {}\nOutput Schema: {}\n\n",
+                tool.name(),
+                tool.description(),
+                tool.input_schema(),
+                tool.output_schema()
+            ));
+        }
+        prompt
+    }
+
     pub async fn execute_tool(&self, tool_name: &str, input: &Value) -> Result<Value> {
         info!("Tool Call: {}({:#?})", tool_name, input);
         let tool = self.tools.get(tool_name)

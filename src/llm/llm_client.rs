@@ -36,24 +36,10 @@ impl LlmClient {
         // Convert our internal Message enum to the llm crate's ChatMessage struct
         let chat_messages: Vec<ChatMessage> = messages.iter().map(|m| {
             match m {
-                Message::System(s) => ChatMessage {
-                    role: ChatRole::System,
-                    content: s.clone(),
-                },
-                Message::User(s) => ChatMessage {
-                    role: ChatRole::User,
-                    content: s.clone(),
-                },
-                Message::Assistant(contents) => ChatMessage {
-                    role: ChatRole::Assistant,
-                    content: contents.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join(" "),
-                },
-                Message::Tool(output) => ChatMessage {
-                    // The llm crate doesn't have a Tool role, so we format it as a User message.
-                    role: ChatRole::User,
-                    content: format!("Tool output for '{}':
-{}", output.tool_name, output.output),
-                },
+                Message::System(s) => ChatMessage::user().content(s.clone()).build(),
+                Message::User(s) => ChatMessage::user().content(s.clone()).build(),
+                Message::Assistant(contents) => ChatMessage::assistant().content(contents.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join(" ")).build(),
+                Message::Tool(output) => ChatMessage::user().content(format!("Tool output for '{}':{}", output.tool_name, output.output)).build(),
             }
         }).collect();
 

@@ -22,7 +22,7 @@ impl FencedJsonParser {
         let end_marker_pos = text[content_start..].find(FENCED_CODE_BLOCK_END)?;
         let content_end = content_start + end_marker_pos;
 
-        let json_content = &text[content_start..content_end].trim();
+        let json_content = &text[content_start..content_end];
 
         if let Ok(mut value) = serde_json::from_str::<Value>(json_content) {
             if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
@@ -65,10 +65,9 @@ impl RawJsonObjectParser {
     /// Finds the first valid, raw JSON object in a string.
     fn find_raw_json_object<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
         let first_brace = text.find('{')?;
-        let trimmed_text = &text[first_brace..].trim();
-        let mut stream = serde_json::Deserializer::from_str(trimmed_text).into_iter::<Value>();
+        let mut stream = serde_json::Deserializer::from_str(&text[first_brace..]).into_iter::<Value>();
 
-        if let Some(Ok(mut value)) = stream.next() {
+        if let Ok(mut value) = serde_json::Deserializer::from_str(&text[first_brace..]).into_iter::<Value>().next()? {
             if value.is_object() {
                 if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
                     if let Some(tool_code_map) = tool_code_obj.as_object() {
@@ -114,8 +113,10 @@ impl RawJsonArrayParser {
     /// Finds the first valid, raw JSON array in a string.
     fn find_raw_json_array<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
         let first_bracket = text.find('[')?;
-        let trimmed_text = &text[first_bracket..].trim();
-        let mut stream = serde_json::Deserializer::from_str(trimmed_text).into_iter::<Value>();
+        let mut stream = serde_json::Deserializer::from_str(&text[first_bracket..]).into_iter::<Value>();
+
+        let first_bracket = text.find('[')?;
+        let mut stream = serde_json::Deserializer::from_str(&text[first_bracket..]).into_iter::<Value>();
 
         match stream.next() {
             Some(Ok(mut value)) => {

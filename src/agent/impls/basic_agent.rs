@@ -123,7 +123,7 @@ impl Agent for BasicAgent {
                 self.name(),
                 &self.tool_registry.get_tool_prompt(),
                 &*self.markup_policy,
-            )?;
+            ).await?;
 
         // 3. Initialize the message history
         let mut messages = vec![

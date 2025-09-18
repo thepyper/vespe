@@ -25,7 +25,7 @@ impl PromptTemplater {
         })
     }
 
-    pub fn render_system_prompt(&self, agent_name: &str, tool_prompt: &str, markup_policy: &dyn MarkupPolicy) -> Result<String> {
+    pub async fn render_system_prompt(&self, agent_name: &str, tool_prompt: &str, markup_policy: &dyn MarkupPolicy) -> Result<String> {
         let markup_instructions = markup_policy.get_markup_instructions();
         let data = json!({
             "agent_name": agent_name,
@@ -33,7 +33,7 @@ impl PromptTemplater {
             "markup_instructions": markup_instructions,
             // Add other context variables here if needed
         });
-        let handlebars = self.handlebars.blocking_lock();
+        let handlebars = self.handlebars.lock().await;
         let rendered = handlebars.render("system_prompt", &data)?;
         Ok(rendered)
     }

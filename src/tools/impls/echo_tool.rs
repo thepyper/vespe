@@ -45,15 +45,22 @@ impl Tool for EchoTool {
     async fn execute(&self, input: &Value) -> Result<Value> {
         let text = input["text"].as_str().unwrap_or("Invalid input");
 
-        let lowercase = text.to_lowercase();
+        // Truncate text to 100 characters to prevent overly long LLM responses
+        let truncated_text = if text.len() > 100 {
+            &text[..100]
+        } else {
+            text
+        };
+
+        let lowercase = truncated_text.to_lowercase();
         let capitalized = {
-            let mut c = text.chars();
+            let mut c = truncated_text.chars();
             match c.next() {
                 None => String::new(),
                 Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
             }
         };
-        let uppercase = text.to_uppercase();
+        let uppercase = truncated_text.to_uppercase();
 
         let result = format!(
             "*{}* *{}* *{}*",

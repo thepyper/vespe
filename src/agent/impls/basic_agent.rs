@@ -6,7 +6,6 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::agent::agent_trait::Agent;
-use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::LlmClient;
 use crate::llm::messages::{AssistantContent, Message, ToolOutput};
 use crate::prompt_templating::PromptTemplater;
@@ -103,7 +102,7 @@ impl BasicAgent {
 #[async_trait]
 impl Agent for BasicAgent {
     fn name(&self) -> &str {
-        &self.definition.name
+        &self.name
     }
 
     async fn execute(&self, input: &str) -> Result<String> {
@@ -122,7 +121,7 @@ impl Agent for BasicAgent {
         data.insert("tool_prompt".to_string(), Value::String(tool_prompt_part));
             let system_prompt = self.prompt_templater.render_system_prompt(
                 self.name(),
-                self.tool_registry.get_tool_prompt(),
+                &self.tool_registry.get_tool_prompt(),
                 &*self.markup_policy,
             )?;
 

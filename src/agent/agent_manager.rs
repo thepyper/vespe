@@ -9,7 +9,8 @@ use crate::agent::impls::basic_agent::BasicAgent;
 use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::LlmClient;
 use crate::llm::parsing::parser_trait::SnippetParser;
-use crate::llm::markup_policy::MarkupPolicy;
+use crate::llm::parsing::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
+use crate::llm::parsing::{FencedXmlParser, ToolCodeXmlParser};
 use crate::llm::impls::markup_policies::JsonMarkupPolicy;
 use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
@@ -50,7 +51,7 @@ impl AgentManager {
         Ok(definition)
     }
 
-    pub fn create_agent(&self, definition: AgentDefinition) -> Result<Box<dyn Agent>> {
+    pub fn create_agent(&self, agent_definition: &AgentDefinition) -> Result<Box<dyn Agent>> {
         // Create the default set of parsers
         let mut parsers: Vec<Box<dyn SnippetParser>> = Vec::new();
         parsers.push(Box::new(FencedJsonParser));
@@ -59,15 +60,16 @@ impl AgentManager {
         parsers.push(Box::new(FencedXmlParser));
         parsers.push(Box::new(ToolCodeXmlParser));
 
-        let llm_client = LlmClient::new(llm_config, parsers, self.stats.clone());
+        let llm_client = LlmClient::new(agent_definition.llm_config.clone(), parsers, self.stats.clone());
         let default_markup_policy = JsonMarkupPolicy;
 
         Ok(Box::new(BasicAgent::new(
-            agent_definition.name,
+            agent_definition.name.clone(),
             llm_client,
             self.tool_registry.clone(),
             self.prompt_templater.clone(),
             Box::new(default_markup_policy),
+            self.stats.clone(),
         )))
     }
 }

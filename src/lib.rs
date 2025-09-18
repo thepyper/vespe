@@ -47,7 +47,7 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
 
             let agent_manager = agent::agent_manager::AgentManager::new(project_root, tool_registry, prompt_templater, stats)?;
             let agent_definition = agent_manager.load_agent_definition(&agent_name).await?;
-            let agent = agent_manager.create_agent(agent_definition)?;
+            let agent = agent_manager.create_agent(&agent_definition)?;
 
             let response = agent.execute(&message).await?;
             println!("Agent {}: {}", agent.name(), response);

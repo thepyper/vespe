@@ -1,13 +1,15 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use handlebars::Handlebars;
-use serde_json::Value;
+use serde_json::json;
 use std::path::PathBuf;
-use std::fs;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::llm::markup_policy::MarkupPolicy;
 
+#[derive(Clone)]
 pub struct PromptTemplater {
-    handlebars: Handlebars<'static>, // Use 'static' lifetime for owned Handlebars instance
+    handlebars: Arc<Mutex<Handlebars<'static>>>,
     template_dir: PathBuf,
 }
 
@@ -18,7 +20,7 @@ impl PromptTemplater {
         handlebars.register_template_file("system_prompt", template_dir.join("system_prompt.hbs"))?;
 
         Ok(Self {
-            handlebars,
+            handlebars: Arc::new(Mutex::new(handlebars)),
             template_dir,
         })
     }
@@ -31,7 +33,8 @@ impl PromptTemplater {
             "markup_instructions": markup_instructions,
             // Add other context variables here if needed
         });
-        let rendered = self.handlebars.render("system_prompt", &data)?;
+        let handlebars = self.handlebars.blocking_lock();
+        let rendered = handlebars.render("system_prompt", &data)?;
         Ok(rendered)
     }
 }

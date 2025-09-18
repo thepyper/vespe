@@ -13,6 +13,6 @@ pub struct SnippetMatch<'a> {
 }
 
 pub trait SnippetParser: Send + Sync {
-    // Finds the *first* valid match in the given text
-    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>>;
+    // Finds all valid matches in the given text
+    fn find_matches<'a>(&self, text: &'a str) -> Vec<SnippetMatch<'a>>;
 }

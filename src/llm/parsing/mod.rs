@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use crate::llm::parsing::match_source::ParserSource;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::statistics::models::UsageStatistics;
+use crate::statistics::models::{UsageStatistics, ModelStats, ParserStats};
 
 pub mod parser_trait;
 pub mod json_parser;
@@ -36,11 +36,22 @@ pub async fn parse_response(
     let mut blocks: Vec<AssistantContent> = vec![AssistantContent::Text(response.to_string())];
     let mut used_parsers = HashSet::new();
 
-    // Increment LLM invocation count
+    // Increment LLM invocation count and handle fading
     let mut stats = global_stats.lock().await;
     let llm_key = format!("{}::{}", provider, model_id);
-    *stats.llm_invocations.entry(llm_key.clone()).or_default() += 1;
 
+    let model_entry = stats.model_stats.entry(llm_key.clone()).or_default();
+    model_entry.invocations += 1;
+    model_entry.fading_invocations += 1.0;
+
+    // Logica di fading: se il conteggio LLM supera la soglia, dimezza tutto
+    if model_entry.fading_invocations > 100.0 {
+        model_entry.fading_invocations /= 2.0;
+        // Dimezza anche tutte le statistiche di parser_stats per questa llm_key
+        for (_, parser_stats) in model_entry.parser_stats.iter_mut() {
+            parser_stats.fading_usage /= 2.0;
+        }
+    }
     drop(stats); // Release the lock early
 
     loop {
@@ -63,10 +74,12 @@ pub async fn parse_response(
                     // Update parser usage statistics
                     let mut stats = global_stats.lock().await;
                     let llm_key = format!("{}::{}", provider, model_id);
-                    *stats.parser_usage.entry(llm_key.clone())
-                        .or_default()
-                        .entry(m.source.clone())
-                        .or_default() += 1;
+
+                    let parser_entry = stats.model_stats.entry(llm_key.clone()).or_default()
+                        .parser_stats.entry(m.source.clone()).or_default();
+                    parser_entry.usage += 1;
+                    parser_entry.fading_usage += 1.0;
+
                     drop(stats); // Release the lock early
 
                     let post_text = &text[m.end..];

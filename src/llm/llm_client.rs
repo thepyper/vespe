@@ -1,31 +1,23 @@
 use anyhow::{anyhow, Result};
 use crate::config::models::LlmConfig;
 use crate::llm::messages::{Message, AssistantContent};
+use crate::llm::parsing;
+use crate::llm::parsing::parser_trait::SnippetParser;
 use llm::builder::{LLMBackend, LLMBuilder};
+use llm::chat::{ChatMessage, ChatRole};
 use tracing::info;
-
-// Temporary simple formatter
-fn format_messages_simple(messages: &[Message]) -> String {
-    messages.iter().map(|m| match m {
-        Message::System(s) => format!("System: {}", s),
-        Message::User(s) => format!("User: {}", s),
-        Message::Assistant(contents) => format!("Assistant: {:?}", contents),
-        Message::Tool(output) => format!("Tool Output: {:?}", output),
-    }).collect::<Vec<_>>().join("
-")
-}
 
 pub struct LlmClient {
     config: LlmConfig,
+    parsers: Vec<Box<dyn SnippetParser>>,
 }
 
 impl LlmClient {
-    pub fn new(config: LlmConfig) -> Self {
-        Self { config }
+    pub fn new(config: LlmConfig, parsers: Vec<Box<dyn SnippetParser>>) -> Self {
+        Self { config, parsers }
     }
 
-    pub async fn generate_response(&self, messages: &[
-Message]) -> Result<Vec<AssistantContent>> {
+    pub async fn generate_response(&self, messages: &[Message]) -> Result<Vec<AssistantContent>> {
         let backend = match self.config.provider.as_str() {
             "openai" => LLMBackend::OpenAI,
             "ollama" => LLMBackend::Ollama,
@@ -41,31 +33,40 @@ Message]) -> Result<Vec<AssistantContent>> {
         info!("LLM Query (internal messages):
 {:#?}", messages);
 
-        // The old `format_query` is gone. We'll use a temporary simple formatter.
-        // In the next phases, this will be replaced by `query_formatter.rs`.
-        let chat_history = format_messages_simple(messages);
+        // Convert our internal Message enum to the llm crate's ChatMessage struct
+        let chat_messages: Vec<ChatMessage> = messages.iter().map(|m| {
+            match m {
+                Message::System(s) => ChatMessage {
+                    role: ChatRole::System,
+                    content: s.clone(),
+                },
+                Message::User(s) => ChatMessage {
+                    role: ChatRole::User,
+                    content: s.clone(),
+                },
+                Message::Assistant(contents) => ChatMessage {
+                    role: ChatRole::Assistant,
+                    content: contents.iter().map(|c| format!("{:?}", c)).collect::<Vec<_>>().join(" "),
+                },
+                Message::Tool(output) => ChatMessage {
+                    // The llm crate doesn't have a Tool role, so we format it as a User message.
+                    role: ChatRole::User,
+                    content: format!("Tool output for '{}':
+{}", output.tool_name, output.output),
+                },
+            }
+        }).collect();
 
-        info!("LLM Query (formatted for LLM):
-{:#?}", chat_history);
+        info!("LLM Query (formatted for llm crate):
+{:#?}", chat_messages);
 
-        // The `llm` crate expects a `&[ChatMessage]`. For now, we can't easily build this,
-        // so this part will fail to compile. The goal of phase 0 is to remove old code.
-        // We will fix the compilation in the next phases.
-        // For now, let's assume we can send the raw string and get a raw string back.
-        // This is a placeholder to make the code structure clean.
-        
-        // let response = llm.chat(&chat_messages).await?;
-        // let response_content = response.to_string();
-        
-        // HACK: To make progress, let's pretend the LLM call happens and returns a dummy response.
-        // This will be replaced in the next phases.
-        let response_content = "This is a raw response from the LLM.".to_string();
+        let response = llm.chat(&chat_messages).await?;
+        let response_content = response.to_string();
         info!("LLM Raw Response:
 {}", response_content);
 
-        // The old `parse_response` is gone. We just wrap the raw response in a Text content block.
-        let parsed_response = vec![AssistantContent::Text(response_content)];
-        info!("LLM Parsed Response (raw wrapper):
+        let parsed_response = parsing::parse_response(&response_content, &self.parsers);
+        info!("LLM Parsed Response:
 {:#?}", parsed_response);
 
         Ok(parsed_response)

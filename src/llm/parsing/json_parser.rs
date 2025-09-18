@@ -14,47 +14,62 @@ static FENCED_CODE_BLOCK_END: &str = "```";
 pub struct FencedJsonParser;
 
 impl FencedJsonParser {
-    /// Finds the first fenced JSON block and extracts its content.
-    fn find_fenced_json<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
-        let start_marker_pos = text.find(FENCED_CODE_BLOCK_START)?;
+    /// Finds fenced JSON blocks and extracts their content, handling arrays of tool calls.
+    fn find_fenced_json<'a>(text: &'a str) -> Vec<SnippetMatch<'a>> {
+        let mut matches = Vec::new();
+        let start_marker_pos = text.find(FENCED_CODE_BLOCK_START);
+        if start_marker_pos.is_none() { return matches; }
+        let start_marker_pos = start_marker_pos.unwrap();
+
         let content_start = start_marker_pos + FENCED_CODE_BLOCK_START.len();
 
-        let end_marker_pos = text[content_start..].find(FENCED_CODE_BLOCK_END)?;
-        let content_end = content_start + end_marker_pos;
+        let end_marker_pos = text[content_start..].find(FENCED_CODE_BLOCK_END);
+        if end_marker_pos.is_none() { return matches; }
+        let end_marker_pos = end_marker_pos.unwrap();
 
-        let json_content = &text[content_start..content_end];
+        let json_content_str = &text[content_start..content_start + end_marker_pos].trim();
 
-        if let Ok(mut value) = serde_json::from_str::<Value>(json_content) {
-            if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
+        if let Ok(mut value) = serde_json::from_str::<Value>(json_content_str) {
+            if let Some(arr) = value.as_array_mut() {
+                for item in arr {
+                    if let Some(tool_code_obj) = item.as_object_mut()?.remove("tool_code") {
+                        if let Some(tool_code_map) = tool_code_obj.as_object() {
+                            let name = tool_code_map.get("name")?.as_str()?.to_string();
+                            let arguments = tool_code_map.get("arguments")?.clone();
+
+                            let tool_call = ToolCall { name, arguments };
+                            matches.push(SnippetMatch {
+                                start: start_marker_pos,
+                                end: content_start + end_marker_pos + FENCED_CODE_BLOCK_END.len(),
+                                content: AssistantContent::ToolCall(tool_call),
+                                source: ParserSource::Json(JsonMatchMode::FencedCodeBlock),
+                                original_text: &text[start_marker_pos..content_start + end_marker_pos + FENCED_CODE_BLOCK_END.len()],
+                            });
+                        }
+                    }
+                }
+            } else if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
                 if let Some(tool_code_map) = tool_code_obj.as_object() {
                     let name = tool_code_map.get("name")?.as_str()?.to_string();
                     let arguments = tool_code_map.get("arguments")?.clone();
 
-                    let tool_call = ToolCall {
-                        name,
-                        arguments,
-                    };
-                    Some(SnippetMatch {
+                    let tool_call = ToolCall { name, arguments };
+                    matches.push(SnippetMatch {
                         start: start_marker_pos,
-                        end: content_end + FENCED_CODE_BLOCK_END.len(),
+                        end: content_start + end_marker_pos + FENCED_CODE_BLOCK_END.len(),
                         content: AssistantContent::ToolCall(tool_call),
                         source: ParserSource::Json(JsonMatchMode::FencedCodeBlock),
-                        original_text: &text[start_marker_pos..content_end + FENCED_CODE_BLOCK_END.len()],
-                    })
-                } else {
-                    None
+                        original_text: &text[start_marker_pos..content_start + end_marker_pos + FENCED_CODE_BLOCK_END.len()],
+                    });
                 }
-            } else {
-                None
             }
-        } else {
-            None
         }
+        matches
     }
 }
 
 impl SnippetParser for FencedJsonParser {
-    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
+    fn find_matches<'a>(&self, text: &'a str) -> Vec<SnippetMatch<'a>> {
         FencedJsonParser::find_fenced_json(text)
     }
 }
@@ -65,9 +80,10 @@ impl RawJsonObjectParser {
     /// Finds the first valid, raw JSON object in a string.
     fn find_raw_json_object<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
         let first_brace = text.find('{')?;
-        let mut stream = serde_json::Deserializer::from_str(&text[first_brace..]).into_iter::<Value>();
+        let trimmed_text = &text[first_brace..].trim();
+        let mut stream = serde_json::Deserializer::from_str(trimmed_text).into_iter::<Value>();
 
-        if let Ok(mut value) = serde_json::Deserializer::from_str(&text[first_brace..]).into_iter::<Value>().next()? {
+        if let Some(Ok(mut value)) = stream.next() {
             if value.is_object() {
                 if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
                     if let Some(tool_code_map) = tool_code_obj.as_object() {
@@ -102,8 +118,8 @@ impl RawJsonObjectParser {
 }
 
 impl SnippetParser for RawJsonObjectParser {
-    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
-        RawJsonObjectParser::find_raw_json_object(text)
+    fn find_matches<'a>(&self, text: &'a str) -> Vec<SnippetMatch<'a>> {
+        RawJsonObjectParser::find_raw_json_object(text).into_iter().collect()
     }
 }
 
@@ -113,10 +129,8 @@ impl RawJsonArrayParser {
     /// Finds the first valid, raw JSON array in a string.
     fn find_raw_json_array<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
         let first_bracket = text.find('[')?;
-        let mut stream = serde_json::Deserializer::from_str(&text[first_bracket..]).into_iter::<Value>();
-
-        let first_bracket = text.find('[')?;
-        let mut stream = serde_json::Deserializer::from_str(&text[first_bracket..]).into_iter::<Value>();
+        let trimmed_text = &text[first_bracket..].trim();
+        let mut stream = serde_json::Deserializer::from_str(trimmed_text).into_iter::<Value>();
 
         match stream.next() {
             Some(Ok(mut value)) => {
@@ -141,8 +155,6 @@ impl RawJsonArrayParser {
                         } else {
                             None
                         }
-                    } else {
-                        None
                     }
                 } else {
                     None
@@ -154,7 +166,7 @@ impl RawJsonArrayParser {
 }
 
 impl SnippetParser for RawJsonArrayParser {
-    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
-        RawJsonArrayParser::find_raw_json_array(text)
+    fn find_matches<'a>(&self, text: &'a str) -> Vec<SnippetMatch<'a>> {
+        RawJsonArrayParser::find_raw_json_array(text).into_iter().collect()
     }
 }

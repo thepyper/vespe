@@ -24,4 +24,6 @@ pub enum Commands {
         #[arg(help = "Optional path to initialize as a Vespe project root. Defaults to current directory.")]
         path: Option<PathBuf>,
     },
+    /// Resets all collected statistics by deleting the statistics file
+    ResetStats,
 }

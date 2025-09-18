@@ -5,7 +5,7 @@ use crate::statistics::models::UsageStatistics;
 
 pub mod models;
 
-const STATS_FILE_NAME: &str = "statistics.json";
+pub const STATS_FILE_NAME: &str = "statistics.json";
 
 pub async fn load_statistics(project_root: &Path) -> Result<UsageStatistics> {
     let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);

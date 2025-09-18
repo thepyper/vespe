@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tracing::info;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tokio::fs; // Add this import
 
 pub mod agent;
 pub mod cli;
@@ -18,6 +19,7 @@ use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;
 use crate::tools::impls::read_file_tool::ReadFileTool;
 use crate::statistics::models::UsageStatistics;
+use crate::statistics::STATS_FILE_NAME; // Import STATS_FILE_NAME
 
 use crate::prompt_templating::PromptTemplater;
 
@@ -58,6 +60,15 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
             };
             project_root::initialize_project_root(&target_dir)?;
             println!("Vespe project initialized at: {}", target_dir.display());
+        },
+        cli::commands::Commands::ResetStats => {
+            let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);
+            if stats_path.exists() {
+                fs::remove_file(&stats_path).await?;
+                println!("Statistics file deleted: {}", stats_path.display());
+            } else {
+                println!("No statistics file found at: {}. Nothing to reset.", stats_path.display());
+            }
         }
     }
 

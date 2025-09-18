@@ -9,7 +9,7 @@ use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 // This regex is designed to find XML-like <tool_call> blocks.
 // It assumes the content within the block is JSON.
 static XML_TOOL_CALL_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"(?s)<tool_call>\s*(?P<json>\{{.*?\}})\s*</tool_call>"#).unwrap());
+    Lazy::new(|| Regex::new(r#"(?s)<tool_call>\s*(?P<json>\{.*?\})\s*</tool_call>"#).unwrap());
 
 pub struct XmlSnippetParser;
 

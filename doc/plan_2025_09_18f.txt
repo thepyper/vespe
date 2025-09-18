@@ -1,12 +1,12 @@
 **Piano per la Ristrutturazione dei Parser: Eliminazione delle "Modalità" e Creazione di Parser Distinti**
 
-**Obiettivo:** Ristrutturare l'implementazione dei parser per eliminare il concetto di "modalità" all'interno di un singolo `SnippetParser`. Ogni modalità di parsing diventerà un'istanza `SnippetParser` distinta, consentendo un controllo granulare sull'ordine di esecuzione e migliorando la modularità.
+**Obiettivo:** Ristrutturare l'implementazione dei parser per eliminare il concetto di "modalità" all'interno di un singolo `SnippetParser`. Ogni modalità di parsing diventerà un'istanza `SnippetParser` distinta, consentendo un controllo granulare sull'ordine di esecuzione e migliorando la modularità. Questo refactoring si applicherà a *tutti i parser esistenti* che utilizzano il concetto di "modalità" interna per distinguere diverse forme di parsing.
 
 **Stato Attuale:**
-Attualmente, un `SnippetParser` (es. `JsonSnippetParser`) gestisce internamente diverse "modalità" di parsing (es. 3 diverse forme di JSON). La selezione della modalità è interna al parser stesso.
+Attualmente, alcuni `SnippetParser` (es. `JsonSnippetParser`, `XmlSnippetParser` se applicabile) gestiscono internamente diverse "modalità" di parsing (es. 3 diverse forme di JSON, o diverse forme di XML). La selezione della modalità è interna al parser stesso.
 
 **Stato Desiderato:**
-Invece di un singolo `JsonSnippetParser` con 3 modalità, ci saranno 3 istanze distinte di `SnippetParser` (o struct dedicate), ognuna responsabile di una specifica forma di JSON. Questi nuovi parser implementeranno un tratto comune (`ParserTrait` o simile) e potranno essere ordinati e gestiti indipendentemente.
+Invece di un singolo `SnippetParser` con N modalità, ci saranno N istanze distinte di `SnippetParser` (o struct dedicate), ognuna responsabile di una specifica forma di parsing. Questi nuovi parser implementeranno un tratto comune (`ParserTrait` o simile) e potranno essere ordinati e gestiti indipendentemente.
 
 **Vantaggi Attesi:**
 *   Migliore controllo sull'ordine di esecuzione dei parser.
@@ -16,12 +16,11 @@ Invece di un singolo `JsonSnippetParser` con 3 modalità, ci saranno 3 istanze d
 
 **Piano di Implementazione Generale:**
 
-1.  **Identificazione delle "Modalità" Esistenti:**
-    *   Per ogni `SnippetParser` che attualmente gestisce più modalità di parsing, identificare chiaramente queste modalità distinte.
-    *   Esempio: Per `JsonSnippetParser`, identificare le 3 diverse forme di JSON che attualmente gestisce.
+1.  **Identificazione delle "Modalità" Esistenti (per tutti i parser):**
+    *   Per ogni `SnippetParser` che attualmente gestisce più modalità di parsing (es. `JsonSnippetParser`, `XmlSnippetParser`), identificare chiaramente queste modalità distinte.
 
 2.  **Creazione di Nuove Strutture/Enum per i Parser:**
-    *   Per ogni modalità identificata, creare una nuova `struct` (o un `enum` variant se ha senso raggrupparle logicamente) che rappresenterà un parser specifico per quella modalità.
+    *   Per ogni modalità identificata in *tutti i parser*, creare una nuova `struct` (o un `enum` variant se ha senso raggrupparle logicamente) che rappresenterà un parser specifico per quella modalità.
     *   Queste nuove `struct` incapsuleranno la logica di parsing per una singola modalità.
 
 3.  **Implementazione del `ParserTrait` (o Tratto Equivalente):**
@@ -37,7 +36,7 @@ Invece di un singolo `JsonSnippetParser` con 3 modalità, ci saranno 3 istanze d
 6.  **Garantire il Riutilizzo del Codice:**
     *   Dove possibile, le nuove `struct` di parser dovrebbero invocare funzioni helper o metodi condivisi per evitare la duplicazione di logica di parsing comune.
 
-**Passi Specifici (Esempio per `JsonSnippetParser`):**
+**Passi Specifici (Esempio per `JsonSnippetParser` - da replicare per altri parser):**
 
 1.  **Analisi di `src/llm/parsing/json_parser.rs`:**
     *   Comprendere come le diverse forme di JSON sono attualmente gestite all'interno di questo singolo parser.

@@ -12,7 +12,7 @@ impl MarkupPolicy for JsonMarkupPolicy {
     }
 
     fn get_tool_invocation_preamble(&self) -> String {
-        "You have access to the following tools. To call a tool, respond with a JSON object enclosed in a ```json block, like this:\n```json\n{\n  \"tool_code\": {\n    \"name\": \"tool_name\",\n    \"arguments\": { /* JSON arguments */ }\n  }\n}\n```\nEach tool is described below with its name, description, input schema (JSON), and output schema (JSON):".to_string()
+        "You have access to the following tools. Each tool call must be a separate JSON object within its own ```json block. Do not combine multiple tool calls or mix tool calls with other text within a single ```json block. To call a tool, respond with a JSON object enclosed in a ```json block, like this:\n```json\n{\n  \"tool_code\": {\n    \"name\": \"tool_name\",\n    \"arguments\": { /* JSON arguments */ }\n  }\n}\n```\nEach tool is described below with its name, description, input schema (JSON), and output schema (JSON):".to_string()
     }
 }
 

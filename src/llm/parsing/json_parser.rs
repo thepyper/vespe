@@ -75,7 +75,7 @@ impl FencedJsonParser {
         FencedJsonParser::find_fenced_json(text)
     }
 }
-
+/*
 pub struct RawJsonObjectParser;
 
 impl RawJsonObjectParser {
@@ -179,4 +179,4 @@ impl RawJsonArrayParser {
         }
         matches
     }
-}
+}*/

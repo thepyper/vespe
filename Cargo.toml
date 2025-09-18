@@ -7,6 +7,10 @@ edition = "2021"
 name = "ollama_test_client"
 path = "src/bin/ollama_test_client.rs"
 
+[[bin]]
+name = "ollama_agent_client"
+path = "src/bin/ollama_agent_client.rs"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }

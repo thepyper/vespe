@@ -147,12 +147,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|e| format!("Failed to parse full Ollama response: {}\nRaw response: {}", e, response_text))?;
         
         let mcp_message_content = ollama_full_response.message.content;
-        log_interaction(&args.log_file, &format!("Attempting to parse MCP content:\n{}", mcp_message_content))?;
+        let trimmed_mcp_message_content = mcp_message_content.trim(); // Trim whitespace
+        log_interaction(&args.log_file, &format!("Attempting to parse MCP content:\n{}", trimmed_mcp_message_content))?;
 
-        let mcp_response: MCPResponse = match serde_json::from_str(&mcp_message_content) {
+        let mcp_response: MCPResponse = match serde_json::from_str(trimmed_mcp_message_content) {
             Ok(resp) => resp,
             Err(e) => {
-                log_interaction(&args.log_file, &format!("ERROR: Failed to parse MCP response from message content: {}\nMessage content: {}", e, mcp_message_content))?;
+                log_interaction(&args.log_file, &format!("ERROR: Failed to parse MCP response from message content: {}\nMessage content: {}", e, trimmed_mcp_message_content))?;
                 return Err(format!("Failed to parse MCP response from message content: {}", e).into());
             }
         };

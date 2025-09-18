@@ -135,7 +135,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .send()?;
 
         let response_text = response.text()?;
-        log_interaction(&args.log_file, &format!("Received raw response:\n{}", response_text))?;
+        log_interaction(&args.log_file, &format!("Received raw response (used for parsing):\n{}", response_text))?;
 
         let mcp_response: MCPResponse = match serde_json::from_str(&response_text) {
             Ok(resp) => resp,

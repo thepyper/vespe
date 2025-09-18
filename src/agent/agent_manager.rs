@@ -8,9 +8,8 @@ use crate::agent::agent_trait::Agent;
 use crate::agent::impls::basic_agent::BasicAgent;
 use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::LlmClient;
-use crate::llm::parsing::json_parser::JsonSnippetParser;
-use crate::llm::parsing::parser_trait::SnippetParser;
-use crate::llm::parsing::xml_parser::XmlSnippetParser;
+use crate::llm::parsing::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
+use crate::llm::parsing::{FencedXmlParser, ToolCodeXmlParser};
 use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::statistics::models::UsageStatistics;
@@ -52,10 +51,12 @@ impl AgentManager {
 
     pub fn create_agent(&self, definition: AgentDefinition) -> Result<Box<dyn Agent>> {
         // Create the default set of parsers
-        let parsers: Vec<Box<dyn SnippetParser>> = vec![
-            Box::new(JsonSnippetParser{}),
-            Box::new(XmlSnippetParser{}),
-        ];
+        let mut parsers: Vec<Box<dyn SnippetParser>> = Vec::new();
+        parsers.push(Box::new(FencedJsonParser));
+        parsers.push(Box::new(RawJsonObjectParser));
+        parsers.push(Box::new(RawJsonArrayParser));
+        parsers.push(Box::new(FencedXmlParser));
+        parsers.push(Box::new(ToolCodeXmlParser));
 
         let llm_client = LlmClient::new(definition.llm_config.clone(), parsers, self.stats.clone());
         let agent = BasicAgent::new(

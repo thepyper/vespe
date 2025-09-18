@@ -6,15 +6,19 @@ use crate::llm::parsing::parser_trait::SnippetParser;
 use llm::builder::{LLMBackend, LLMBuilder};
 use llm::chat::ChatMessage;
 use tracing::info;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use crate::statistics::models::UsageStatistics;
 
 pub struct LlmClient {
     config: LlmConfig,
     parsers: Vec<Box<dyn SnippetParser>>,
+    stats: Arc<Mutex<UsageStatistics>>,
 }
 
 impl LlmClient {
-    pub fn new(config: LlmConfig, parsers: Vec<Box<dyn SnippetParser>>) -> Self {
-        Self { config, parsers }
+    pub fn new(config: LlmConfig, parsers: Vec<Box<dyn SnippetParser>>, stats: Arc<Mutex<UsageStatistics>>) -> Self {
+        Self { config, parsers, stats }
     }
 
     pub async fn generate_response(&self, messages: &[Message]) -> Result<Vec<AssistantContent>> {
@@ -51,8 +55,14 @@ impl LlmClient {
         info!("LLM Raw Response:
 {}", response_content);
 
-        let (parsed_response, used_parsers) = parsing::parse_response(&response_content, &self.parsers);
-        info!("Used Parsers: {:#?}", used_parsers);
+        let (parsed_response, _used_parsers) = parsing::parse_response(
+            &response_content,
+            &self.parsers,
+            self.stats.clone(), // Pass the Arc to parse_response
+            &self.config.provider,
+            &self.config.model_id,
+        ).await;
+        // used_parsers is now handled within parse_response
         info!("LLM Parsed Response:
 {:#?}", parsed_response);
 

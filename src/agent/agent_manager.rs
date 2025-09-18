@@ -1,6 +1,8 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use tokio::fs;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::agent::agent_trait::Agent;
 use crate::agent::impls::basic_agent::BasicAgent;
@@ -11,11 +13,13 @@ use crate::llm::parsing::parser_trait::SnippetParser;
 use crate::llm::parsing::xml_parser::XmlSnippetParser;
 use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
+use crate::statistics::models::UsageStatistics;
 
 pub struct AgentManager {
     project_root: PathBuf,
     tool_registry: ToolRegistry,
     prompt_templater: PromptTemplater,
+    stats: Arc<Mutex<UsageStatistics>>,
 }
 
 impl AgentManager {
@@ -23,11 +27,13 @@ impl AgentManager {
         project_root: PathBuf,
         tool_registry: ToolRegistry,
         prompt_templater: PromptTemplater,
+        stats: Arc<Mutex<UsageStatistics>>,
     ) -> Result<Self> {
         Ok(Self {
             project_root,
             tool_registry,
             prompt_templater,
+            stats,
         })
     }
 
@@ -51,12 +57,13 @@ impl AgentManager {
             Box::new(XmlSnippetParser{}),
         ];
 
-        let llm_client = LlmClient::new(definition.llm_config.clone(), parsers);
+        let llm_client = LlmClient::new(definition.llm_config.clone(), parsers, self.stats.clone());
         let agent = BasicAgent::new(
             definition,
             self.tool_registry.clone(),
             llm_client,
             self.prompt_templater.clone(),
+            self.stats.clone(),
         )?;
         Ok(Box::new(agent))
     }

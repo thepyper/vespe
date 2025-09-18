@@ -2,6 +2,8 @@ use anyhow::Result;
 use async_trait::async_trait;
 use serde_json::Value;
 use tracing::info;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::agent::agent_trait::Agent;
 use crate::agent::models::AgentDefinition;
@@ -9,12 +11,14 @@ use crate::llm::llm_client::LlmClient;
 use crate::llm::messages::{AssistantContent, Message, ToolOutput};
 use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
+use crate::statistics::models::UsageStatistics;
 
 pub struct BasicAgent {
     definition: AgentDefinition,
     tool_registry: ToolRegistry,
     llm_client: LlmClient,
     prompt_templater: PromptTemplater,
+    stats: Arc<Mutex<UsageStatistics>>,
 }
 
 impl BasicAgent {
@@ -23,12 +27,14 @@ impl BasicAgent {
         tool_registry: ToolRegistry,
         llm_client: LlmClient,
         prompt_templater: PromptTemplater,
+        stats: Arc<Mutex<UsageStatistics>>,
     ) -> Result<Self> {
         Ok(Self {
             definition,
             tool_registry,
             llm_client,
             prompt_templater,
+            stats,
         })
     }
 

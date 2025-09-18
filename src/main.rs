@@ -5,9 +5,12 @@ use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use clap::Parser;
 use std::path::PathBuf;
 use tracing::info;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use vespe::cli::commands::{Cli, Commands};
 use vespe::project_root::{self, is_project_root};
+use vespe::statistics::{self, models::UsageStatistics};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -64,6 +67,14 @@ async fn main() -> Result<()> {
 
     info!("Project root at {}", project_root.display());
 
+    // Load statistics
+    let stats = Arc::new(Mutex::new(statistics::load_statistics(&project_root).await?));
+
     // Call the main run function from the library
-    vespe::run(project_root, cli.command).await
+    let result = vespe::run(project_root.clone(), cli.command, stats.clone()).await;
+
+    // Save statistics before exiting
+    statistics::save_statistics(&project_root, &*stats.lock().await).await?;
+
+    result
 }

@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 use crate::statistics::models::UsageStatistics;
 
+pub mod models;
+
 const STATS_FILE_NAME: &str = "statistics.json";
 
 pub async fn load_statistics(project_root: &Path) -> Result<UsageStatistics> {

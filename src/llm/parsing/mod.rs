@@ -2,6 +2,9 @@ use crate::llm::messages::AssistantContent;
 use crate::llm::parsing::parser_trait::SnippetParser;
 use std::collections::HashSet;
 use crate::llm::parsing::match_source::ParserSource;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use crate::statistics::models::UsageStatistics;
 
 pub mod parser_trait;
 pub mod json_parser;
@@ -23,9 +26,22 @@ fn find_first_match_in_text<'a>(
 /// Parses a raw LLM response string into a vector of `AssistantContent` blocks.
 /// It iteratively applies a list of snippet parsers to find and extract structured content,
 /// leaving the surrounding text as `Text` blocks.
-pub fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> (Vec<AssistantContent>, HashSet<ParserSource>) {
+pub async fn parse_response(
+    response: &str,
+    parsers: &[Box<dyn SnippetParser>],
+    global_stats: Arc<Mutex<UsageStatistics>>,
+    provider: &str,
+    model_id: &str,
+) -> (Vec<AssistantContent>, HashSet<ParserSource>) {
     let mut blocks: Vec<AssistantContent> = vec![AssistantContent::Text(response.to_string())];
     let mut used_parsers = HashSet::new();
+
+    // Increment LLM invocation count
+    let mut stats = global_stats.lock().await;
+    let llm_key = format!("{}::{}", provider, model_id);
+    *stats.llm_invocations.entry(llm_key.clone()).or_default() += 1;
+
+    drop(stats); // Release the lock early
 
     loop {
         let mut split_occurred = false;
@@ -43,6 +59,15 @@ pub fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> (Ve
 
                     next_blocks.push(m.content);
                     used_parsers.insert(m.source.clone()); // Record the parser source
+
+                    // Update parser usage statistics
+                    let mut stats = global_stats.lock().await;
+                    let llm_key = format!("{}::{}", provider, model_id);
+                    *stats.parser_usage.entry(llm_key.clone())
+                        .or_default()
+                        .entry(m.source.clone())
+                        .or_default() += 1;
+                    drop(stats); // Release the lock early
 
                     let post_text = &text[m.end..];
                     if !post_text.is_empty() {

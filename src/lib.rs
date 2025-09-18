@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 use tracing::info;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub mod agent;
 pub mod cli;
@@ -16,10 +17,11 @@ pub mod project_root;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;
 use crate::tools::impls::read_file_tool::ReadFileTool;
+use crate::statistics::models::UsageStatistics;
 
 use crate::prompt_templating::PromptTemplater;
 
-pub async fn run(project_root: PathBuf, command: cli::commands::Commands) -> Result<()> {
+pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats: Arc<Mutex<UsageStatistics>>) -> Result<()> {
     println!("╔═══════════════════════════════════════════════════════╗");
     println!("║ Vespe - Version {}                                    ║", env!("CARGO_PKG_VERSION"));
     println!("║ Copyright (c) ThePyper                                  ║");
@@ -41,7 +43,7 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands) -> Res
         cli::commands::Commands::Chat { agent_name, message } => {
             info!("Chat command received for agent: {}, message: {}", agent_name, message);
 
-            let agent_manager = agent::agent_manager::AgentManager::new(project_root, tool_registry, prompt_templater)?;
+            let agent_manager = agent::agent_manager::AgentManager::new(project_root, tool_registry, prompt_templater, stats)?;
             let agent_definition = agent_manager.load_agent_definition(&agent_name).await?;
             let agent = agent_manager.create_agent(agent_definition)?;
 

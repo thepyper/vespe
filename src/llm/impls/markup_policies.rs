@@ -12,7 +12,7 @@ impl MarkupPolicy for JsonMarkupPolicy {
     }
 
     fn get_tool_invocation_preamble(&self) -> String {
-        "You have access to the following tools. Each tool call must be a separate JSON object within its own ```json block. Do not combine multiple tool calls or mix tool calls with other text within a single ```json block. To call a tool, respond with a JSON object enclosed in a ```json block, like this:\n```json\n{\n  \"tool_code\": {\n    \"name\": \"tool_name\",\n    \"arguments\": { /* JSON arguments */ }\n  }\n}\n```\nEach tool is described below with its name, description, input schema (JSON), and output schema (JSON):".to_string()
+        "You have access to the following tools. If you need to call multiple tools, respond with a JSON array of tool call objects, where each object contains a \"tool_code\" key. Each tool call object must be a separate element in the array. Do not combine multiple tool calls into a single JSON object. To call a tool, respond with a JSON object enclosed in a ```json block, like this:\n```json\n[\n  {\n    \"tool_code\": {\n      \"name\": \"tool_name\",\n      \"arguments\": { /* JSON arguments */ }\n    }\n  },\n  {\n    \"tool_code\": {\n      \"name\": \"another_tool\",\n      \"arguments\": { /* JSON arguments */ }\n    }\n  }\n]\n```\nIf you only need to call one tool, you can respond with a single JSON object enclosed in a ```json block, like this:\n```json\n{\n  \"tool_code\": {\n    \"name\": \"tool_name\",\n    \"arguments\": { /* JSON arguments */ }\n  }\n}\n```\nEach tool is described below with its name, description, input schema (JSON), and output schema (JSON):".to_string()
     }
 }
 

@@ -42,6 +42,11 @@ struct Message {
     content: String,
 }
 
+#[derive(Deserialize, Debug)]
+struct OllamaFullResponse {
+    message: Message,
+}
+
 // --- MCP Response Parsing Structures ---
 
 #[derive(Deserialize, Debug)]
@@ -135,13 +140,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .send()?;
 
         let response_text = response.text()?;
-        log_interaction(&args.log_file, &format!("Received raw response (used for parsing):\n{}", response_text))?;
+        log_interaction(&args.log_file, &format!("Received raw response:\n{}", response_text))?;
 
-        let mcp_response: MCPResponse = match serde_json::from_str(&response_text) {
+        // First, parse the full Ollama response to extract the message content
+        let ollama_full_response: OllamaFullResponse = serde_json::from_str(&response_text)
+            .map_err(|e| format!("Failed to parse full Ollama response: {}\nRaw response: {}", e, response_text))?;
+        
+        let mcp_message_content = ollama_full_response.message.content;
+        log_interaction(&args.log_file, &format!("Attempting to parse MCP content:\n{}", mcp_message_content))?;
+
+        let mcp_response: MCPResponse = match serde_json::from_str(&mcp_message_content) {
             Ok(resp) => resp,
             Err(e) => {
-                log_interaction(&args.log_file, &format!("ERROR: Failed to parse MCP response: {}\nRaw response: {}", e, response_text))?;
-                return Err(format!("Failed to parse MCP response: {}", e).into());
+                log_interaction(&args.log_file, &format!("ERROR: Failed to parse MCP response from message content: {}\nMessage content: {}", e, mcp_message_content))?;
+                return Err(format!("Failed to parse MCP response from message content: {}", e).into());
             }
         };
 

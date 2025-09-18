@@ -1,0 +1,157 @@
+# Piano di Refactoring del Parsing LLM - 2025-09-18
+
+L'obiettivo è sostituire l'attuale sistema di policy di parsing con un approccio più robusto, flessibile e disaccoppiato, basato su parser "greedy" sequenziali.
+
+## Fase 0: Pulizia e Ripristino a uno Stato Compilabile
+
+**Obiettivo:** Rimuovere le modifiche parziali del piano precedente per tornare a una codebase stabile e compilabile prima di iniziare il nuovo refactoring.
+
+1.  **Analisi:** Esaminare i file del piano `plan_2025_09_17n_*.txt` per identificare tutti i file modificati.
+2.  **Revert/Rimozione:**
+    *   Eliminare i nuovi file introdotti che non sono più necessari (es. `policy_types.rs`, `tool_types.rs`, `tool_output_formatters.rs`).
+    *   Rimuovere le implementazioni delle policy (es. `json_policy.rs`, `xml_policy.rs`, `sections_policy.rs`, `various_markdown_policy.rs`).
+    *   Svuotare o ripristinare `src/llm/impls/mod.rs`.
+    *   Modificare `llm_client.rs` e `agent_manager.rs` per rimuovere i riferimenti al sistema di `MarkdownPolicy`. L'obiettivo è avere un `LlmClient` che per ora restituisce semplicemente la stringa grezza dell'LLM, senza parsing.
+3.  **Compilazione:** Assicurarsi che il progetto compili con successo (`cargo check`) prima di passare alla fase successiva.
+
+## Fase 1: Definizione dei Tipi e Trait per il Nuovo Parsing
+
+**Obiettivo:** Creare le fondamenta del nuovo sistema di parsing.
+
+1.  **Nuovo Modulo:** Creare un nuovo modulo `src/llm/parsing/`.
+2.  **Tipi Base (`src/llm/parsing/types.rs`):**
+    *   Definire l'enum `ParsedContent` che rappresenterà i blocchi di contenuto parsati. Sarà simile all'attuale `AssistantContent` ma focalizzato sul parsing.
+        ```rust
+        pub enum ParsedContent {
+            Text(String),
+            // Usiamo direttamente ToolCall per rappresentare dati strutturati
+            ToolCall(ToolCall), 
+            Thought(String),
+        }
+        ```
+3.  **Trait del Parser (`src/llm/parsing/parser_trait.rs`):**
+    *   Definire il `trait SnippetParser`.
+        ```rust
+        use crate::llm::parsing::types::ParsedContent;
+
+        // Rappresenta un match trovato dal parser nel testo
+        pub struct SnippetMatch<'a> {
+            pub start: usize,
+            pub end: usize,
+            pub content: ParsedContent,
+            // Il testo originale che ha generato il match
+            pub original_text: &'a str, 
+        }
+
+        pub trait SnippetParser: Send + Sync {
+            // Trova il *primo* match valido nel testo fornito
+            fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>>;
+        }
+        ```
+4.  **Logica di Parsing Principale (`src/llm/parsing/mod.rs`):**
+    *   Implementare la funzione `parse_response`. Questa funzione conterrà il loop principale che itera sui blocchi di testo e applica i parser secondo la logica specificata:
+        
+        **Logica di Parsing Dettagliata:**
+        1.  Inizializza una lista di blocchi di contenuto con un singolo elemento: `[ParsedContent::Text(risposta_completa_llm)]`.
+        2.  Inizia un ciclo `loop` che continua finché non avvengono più suddivisioni.
+        3.  All'interno del ciclo, si itera sulla lista di blocchi. Per ogni blocco:
+            a. Se il blocco non è `Text`, viene ignorato e mantenuto per la prossima iterazione.
+            b. Se il blocco è `Text`, si prova ad applicare in sequenza tutti i parser disponibili.
+        4.  Il **primo parser** che trova un **match valido** "vince". A questo punto:
+            a. Il blocco `Text` originale viene sostituito da tre nuovi blocchi: un `Text` per la parte PRE-match, il `ParsedContent` per lo SNIPPET, e un `Text` per la parte POST-match. (Le parti PRE e POST vengono aggiunte solo se non sono stringhe vuote).
+            b. L'iterazione interna sui blocchi si interrompe immediatamente.
+            c. Il ciclo `loop` principale ricomincia dall'inizio con la nuova lista di blocchi modificata.
+        5.  Se un'intera iterazione su tutti i blocchi `Text` si completa senza che nessun parser trovi un match, il ciclo `loop` principale termina.
+        6.  La funzione restituisce la lista finale di blocchi `ParsedContent`.
+
+        ```rust
+        // Pseudocodice della logica
+        fn parse_response(response: &str, parsers: &[Box<dyn SnippetParser>]) -> Vec<ParsedContent> {
+            let mut blocks: Vec<ParsedContent> = vec![ParsedContent::Text(response.to_string())];
+
+            loop {
+                let mut split_occurred = false;
+                let mut next_blocks = Vec::new();
+                let mut blocks_iter = blocks.into_iter();
+
+                while let Some(block) = blocks_iter.next() {
+                    if let ParsedContent::Text(text) = block {
+                        // Cerca il primo match possibile con uno qualsiasi dei parser
+                        let first_match = find_first_match_in_text(&text, parsers);
+
+                        if let Some(m) = first_match {
+                            // Split!
+                            let pre_text = &text[..m.start];
+                            if !pre_text.is_empty() {
+                                next_blocks.push(ParsedContent::Text(pre_text.to_string()));
+                            }
+                            
+                            next_blocks.push(m.content);
+
+                            let post_text = &text[m.end..];
+                            if !post_text.is_empty() {
+                                next_blocks.push(ParsedContent::Text(post_text.to_string()));
+                            }
+
+                            // Aggiungi i blocchi rimanenti e ricomincia il ciclo principale
+                            next_blocks.extend(blocks_iter);
+                            split_occurred = true;
+                            break; // Esce dal 'while let' per ricominciare il 'loop'
+                        } else {
+                            // Nessun match, mantieni il blocco
+                            next_blocks.push(ParsedContent::Text(text));
+                        }
+                    } else {
+                        // Non è Text, mantieni il blocco
+                        next_blocks.push(block);
+                    }
+                }
+
+                blocks = next_blocks;
+
+                if !split_occurred {
+                    break; // Nessuno split in un intero passaggio, fine.
+                }
+            }
+            blocks
+        }
+        ```
+
+## Fase 2: Implementazione dei Parser Concreti
+
+**Obiettivo:** Creare i primi parser specializzati per JSON e XML.
+
+1.  **JSON Parser (`src/llm/parsing/json_parser.rs`):**
+    *   Creare `JsonSnippetParser`.
+    *   Implementare il `trait SnippetParser`.
+    *   Userà una regex per trovare blocchi di codice JSON, sia racchiusi in ```json ... ```, sia "nudi" (che iniziano con `{` o `[` e finiscono con `}` o `]`). Il parsing del JSON dovrà essere robusto per gestire JSON incompleti o malformati.
+    *   Il `ParsedContent` risultante sarà di tipo `ToolCall`.
+2.  **XML Parser (`src/llm/parsing/xml_parser.rs`):**
+    *   Creare `XmlSnippetParser`.
+    *   Implementare il `trait SnippetParser`.
+    *   Userà una regex per trovare blocchi XML, ad esempio `<tool_call>...</tool_call>`.
+    *   Anche qui, il `ParsedContent` sarà `ToolCall`.
+
+## Fase 3: Integrazione del Nuovo Sistema di Parsing
+
+**Obiettivo:** Sostituire completamente il vecchio sistema di `MarkdownPolicy` con la nuova logica.
+
+1.  **Aggiornare `LlmClient`:**
+    *   Rimuovere ogni riferimento a `MarkdownPolicy`.
+    *   `LlmClient` ora avrà un `Vec<Box<dyn SnippetParser>>`.
+    *   Il metodo `generate_response` non userà più `policy.parse_response`, ma chiamerà la nuova funzione `parsing::parse_response`, passando la stringa grezza dell'LLM e la lista dei suoi parser.
+    *   Il metodo `generate_response` restituirà `Vec<ParsedContent>`.
+2.  **Gestione Formattazione Query:**
+    *   Creare un nuovo modulo/struttura semplice (es. `src/llm/query_formatter.rs`) che si occupi solo di trasformare la lista di `Message` in una stringa per l'LLM. Questa logica può essere estratta da una delle vecchie policy.
+3.  **Aggiornare `AgentManager`:**
+    *   Modificare `create_agent` per costruire il `LlmClient` con la lista di parser di default (JSON e XML).
+
+## Fase 4: Adattamento della Logica dell'Agente
+
+**Obiettivo:** Assicurarsi che l'agente possa utilizzare l'output del nuovo sistema di parsing.
+
+1.  **Aggiornare `BasicAgent`:**
+    *   Il metodo `execute` (o un suo helper) ora riceverà `Vec<ParsedContent>` dal `LlmClient`.
+    *   L'agente dovrà iterare su questa lista. Quando incontra un `ParsedContent::ToolCall`, dovrà usare il `ToolRegistry` per eseguirlo.
+    *   La logica del ciclo di conversazione (LLM -> Tool -> LLM) dovrà essere adattata per gestire questa nuova struttura dati.
+2.  **Test:** Verificare che il flusso end-to-end (dal comando `chat` all'esecuzione di un tool e alla risposta finale) funzioni correttamente.

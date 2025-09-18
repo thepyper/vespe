@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 use crate::statistics::models::{UsageStatistics, ModelStats, ParserStats};
 
 pub mod parser_trait;
-pub mod json_parser;
+pub use crate::llm::parsing::json_parser::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
 pub mod xml_parser;
 pub mod match_source;
 

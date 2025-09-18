@@ -13,53 +13,11 @@ use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 static FENCED_CODE_BLOCK_START: &str = "```json";
 static FENCED_CODE_BLOCK_END: &str = "```";
 
-pub struct JsonSnippetParser;
+pub struct FencedJsonParser;
 
-impl JsonSnippetParser {
-    /// Finds the first valid, raw JSON object or array in a string.
-    fn find_raw_json<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
-        let first_brace = text.find('{');
-        let first_bracket = text.find('[');
-
-        let start_index = match (first_brace, first_bracket) {
-            (Some(b), Some(br)) => b.min(br),
-            (Some(b), None) => b,
-            (None, Some(br)) => br,
-            (None, None) => return None,
-        };
-
-        let mut stream = serde_json::Deserializer::from_str(&text[start_index..]).into_iter::<Value>();
-
-        match stream.next() {
-            Some(Ok(value)) => {
-                let end_index = start_index + stream.byte_offset();
-                let tool_call = ToolCall {
-                    name: "".to_string(),
-                    arguments: value.clone(), // Clone value for the match_mode check
-                };
-
-                let match_mode = if value.is_object() {
-                    JsonMatchMode::RawObject
-                } else if value.is_array() {
-                    JsonMatchMode::RawArray
-                } else {
-                    return None; // Should not happen if we only look for { or [
-                };
-
-                Some(SnippetMatch {
-                    start: start_index,
-                    end: end_index,
-                    content: AssistantContent::ToolCall(tool_call),
-                    source: ParserSource::Json(match_mode),
-                    original_text: &text[start_index..end_index],
-                })
-            }
-            _ => None,
-        }
-    }
-
+impl FencedJsonParser {
     /// Finds the first fenced JSON block and extracts its content.
-    fn find_fenced_json<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
+    fn find_fenced_json<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
         let start_marker_pos = text.find(FENCED_CODE_BLOCK_START)?;
         let content_start = start_marker_pos + FENCED_CODE_BLOCK_START.len();
 
@@ -86,14 +44,84 @@ impl JsonSnippetParser {
     }
 }
 
-impl SnippetParser for JsonSnippetParser {
+impl SnippetParser for FencedJsonParser {
     fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
-        // Priority 1: Find a fenced JSON block.
-        if let Some(fenced_match) = self.find_fenced_json(text) {
-            return Some(fenced_match);
-        }
+        FencedJsonParser::find_fenced_json(text)
+    }
+}
 
-        // Priority 2: Find a raw JSON object or array.
-        self.find_raw_json(text)
+pub struct RawJsonObjectParser;
+
+impl RawJsonObjectParser {
+    /// Finds the first valid, raw JSON object in a string.
+    fn find_raw_json_object<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
+        let first_brace = text.find('{')?;
+        let mut stream = serde_json::Deserializer::from_str(&text[first_brace..]).into_iter::<Value>();
+
+        match stream.next() {
+            Some(Ok(value)) => {
+                if value.is_object() {
+                    let end_index = first_brace + stream.byte_offset();
+                    let tool_call = ToolCall {
+                        name: "".to_string(),
+                        arguments: value,
+                    };
+                    Some(SnippetMatch {
+                        start: first_brace,
+                        end: end_index,
+                        content: AssistantContent::ToolCall(tool_call),
+                        source: ParserSource::Json(JsonMatchMode::RawObject),
+                        original_text: &text[first_brace..end_index],
+                    })
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
+impl SnippetParser for RawJsonObjectParser {
+    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
+        RawJsonObjectParser::find_raw_json_object(text)
+    }
+}
+
+pub struct RawJsonArrayParser;
+
+impl RawJsonArrayParser {
+    /// Finds the first valid, raw JSON array in a string.
+    fn find_raw_json_array<'a>(text: &'a str) -> Option<SnippetMatch<'a>> {
+        let first_bracket = text.find('[')?;
+        let mut stream = serde_json::Deserializer::from_str(&text[first_bracket..]).into_iter::<Value>();
+
+        match stream.next() {
+            Some(Ok(value)) => {
+                if value.is_array() {
+                    let end_index = first_bracket + stream.byte_offset();
+                    let tool_call = ToolCall {
+                        name: "".to_string(),
+                        arguments: value,
+                    };
+                    Some(SnippetMatch {
+                        start: first_bracket,
+                        end: end_index,
+                        content: AssistantContent::ToolCall(tool_call),
+                        source: ParserSource::Json(JsonMatchMode::RawArray),
+                        original_text: &text[first_bracket..end_index],
+                    })
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
+impl SnippetParser for RawJsonArrayParser {
+    fn find_first_match<'a>(&self, text: &'a str) -> Option<SnippetMatch<'a>> {
+        RawJsonArrayParser::find_raw_json_array(text)
     }
 }

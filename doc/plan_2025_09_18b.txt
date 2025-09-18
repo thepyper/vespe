@@ -1,0 +1,68 @@
+# Piano di Miglioramento del Parsing LLM - Tracciamento Sorgente e Modalità del Parser - 2025-09-18b
+
+L'obiettivo di questo piano è arricchire le informazioni di `SnippetMatch` per includere dettagli su quale `SnippetParser` ha effettuato il match e con quale specifica modalità. Questo permetterà di raccogliere statistiche più granulari e di gestire la variabilità dell'output degli LLM in modo più sofisticato.
+
+## Approccio Proposto: Enum di Enums
+
+Si propone di utilizzare un approccio a "enum di enums" per rappresentare la sorgente e la modalità del match. Questo offre un buon equilibrio tra type safety, esplicitezza e flessibilità, permettendo di definire modalità specifiche per ogni tipo di parser.
+
+## Fase 1: Definizione dei Nuovi Tipi per la Sorgente del Match
+
+1.  **Creazione del File `src/llm/parsing/match_source.rs`:**
+    *   Questo file conterrà le definizioni degli enum per tracciare la sorgente e la modalità del match.
+    *   **`pub enum ParserSource`:** Un enum principale che identificherà il tipo di parser (es. `Json`, `Xml`). Ogni variante conterrà un enum specifico per le modalità di quel parser.
+        ```rust
+        #[derive(Debug, Clone, PartialEq)]
+        pub enum ParserSource {
+            Json(JsonMatchMode),
+            Xml(XmlMatchMode),
+            // Aggiungere qui altri parser man mano che vengono implementati
+        }
+        ```
+    *   **`pub enum JsonMatchMode`:** Enum specifico per le modalità di match del `JsonSnippetParser`.
+        ```rust
+        #[derive(Debug, Clone, PartialEq)]
+        pub enum JsonMatchMode {
+            FencedCodeBlock, // Match all'interno di un blocco ```json ... ```
+            RawObject,       // Match di un oggetto JSON nudo { ... }
+            RawArray,        // Match di un array JSON nudo [ ... ]
+        }
+        ```
+    *   **`pub enum XmlMatchMode`:** Enum specifico per le modalità di match del `XmlSnippetParser`.
+        ```rust
+        #[derive(Debug, Clone, PartialEq)]
+        pub enum XmlMatchMode {
+            ToolCallTag, // Match all'interno di un tag <tool_call> ... </tool_call>
+        }
+        ```
+
+2.  **Aggiornamento di `src/llm/parsing/mod.rs`:**
+    *   Aggiungere `pub mod match_source;` per rendere il nuovo modulo accessibile.
+
+## Fase 2: Aggiornamento della Struttura `SnippetMatch`
+
+1.  **Modifica di `src/llm/parsing/parser_trait.rs`:**
+    *   Importare il nuovo `ParserSource`.
+    *   Aggiungere un campo `pub source: ParserSource,` alla struct `SnippetMatch`.
+        ```rust
+        // ... (altri campi)
+        pub content: AssistantContent,
+        pub source: ParserSource, // Nuovo campo
+        pub original_text: &'a str,
+        ```
+
+## Fase 3: Aggiornamento delle Implementazioni di `SnippetParser`
+
+1.  **Modifica di `src/llm/parsing/json_parser.rs`:**
+    *   Importare `ParserSource` e `JsonMatchMode`.
+    *   Nel metodo `find_fenced_json`, quando viene trovato un match valido, istanziare `SnippetMatch` con `source: ParserSource::Json(JsonMatchMode::FencedCodeBlock)`.
+    *   Nel metodo `find_raw_json`, quando viene trovato un match valido, istanziare `SnippetMatch` con `source: ParserSource::Json(JsonMatchMode::RawObject)` (o `RawArray` se il match è un array).
+
+2.  **Modifica di `src/llm/parsing/xml_parser.rs`:**
+    *   Importare `ParserSource` e `XmlMatchMode`.
+    *   Nel metodo `find_first_match`, quando viene trovato un match valido, istanziare `SnippetMatch` con `source: ParserSource::Xml(XmlMatchMode::ToolCallTag)`.
+
+## Fase 4: Verifica e Test
+
+1.  **Compilazione:** Eseguire `cargo check` per assicurarsi che tutte le modifiche siano sintatticamente corrette e che il progetto compili senza errori.
+2.  **Test (Manuale/Unitario):** Verificare che il sistema di parsing funzioni come previsto e che il campo `source` in `SnippetMatch` contenga le informazioni corrette. (Questo potrebbe richiedere l'aggiunta di test unitari specifici o l'osservazione del comportamento in runtime tramite logging).

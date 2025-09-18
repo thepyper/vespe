@@ -24,18 +24,29 @@ impl FencedJsonParser {
 
         let json_content = &text[content_start..content_end];
 
-        if let Ok(value) = serde_json::from_str::<Value>(json_content) {
-            let tool_call = ToolCall {
-                name: "".to_string(),
-                arguments: value,
-            };
-            Some(SnippetMatch {
-                start: start_marker_pos,
-                end: content_end + FENCED_CODE_BLOCK_END.len(),
-                content: AssistantContent::ToolCall(tool_call),
-                source: ParserSource::Json(JsonMatchMode::FencedCodeBlock),
-                original_text: &text[start_marker_pos..content_end + FENCED_CODE_BLOCK_END.len()],
-            })
+        if let Ok(mut value) = serde_json::from_str::<Value>(json_content) {
+            if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
+                if let Some(tool_code_map) = tool_code_obj.as_object() {
+                    let name = tool_code_map.get("name")?.as_str()?.to_string();
+                    let arguments = tool_code_map.get("arguments")?.clone();
+
+                    let tool_call = ToolCall {
+                        name,
+                        arguments,
+                    };
+                    Some(SnippetMatch {
+                        start: start_marker_pos,
+                        end: content_end + FENCED_CODE_BLOCK_END.len(),
+                        content: AssistantContent::ToolCall(tool_call),
+                        source: ParserSource::Json(JsonMatchMode::FencedCodeBlock),
+                        original_text: &text[start_marker_pos..content_end + FENCED_CODE_BLOCK_END.len()],
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -56,26 +67,36 @@ impl RawJsonObjectParser {
         let first_brace = text.find('{')?;
         let mut stream = serde_json::Deserializer::from_str(&text[first_brace..]).into_iter::<Value>();
 
-        match stream.next() {
-            Some(Ok(value)) => {
-                if value.is_object() {
-                    let end_index = first_brace + stream.byte_offset();
-                    let tool_call = ToolCall {
-                        name: "".to_string(),
-                        arguments: value,
-                    };
-                    Some(SnippetMatch {
-                        start: first_brace,
-                        end: end_index,
-                        content: AssistantContent::ToolCall(tool_call),
-                        source: ParserSource::Json(JsonMatchMode::RawObject),
-                        original_text: &text[first_brace..end_index],
-                    })
+        if let Ok(mut value) = serde_json::Deserializer::from_str(&text[first_brace..]).into_iter::<Value>().next()? {
+            if value.is_object() {
+                if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
+                    if let Some(tool_code_map) = tool_code_obj.as_object() {
+                        let name = tool_code_map.get("name")?.as_str()?.to_string();
+                        let arguments = tool_code_map.get("arguments")?.clone();
+
+                        let end_index = first_brace + stream.byte_offset();
+                        let tool_call = ToolCall {
+                            name,
+                            arguments,
+                        };
+                        Some(SnippetMatch {
+                            start: first_brace,
+                            end: end_index,
+                            content: AssistantContent::ToolCall(tool_call),
+                            source: ParserSource::Json(JsonMatchMode::RawObject),
+                            original_text: &text[first_brace..end_index],
+                        })
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
+            } else {
+                None
             }
-            _ => None,
+        } else {
+            None
         }
     }
 }
@@ -94,21 +115,35 @@ impl RawJsonArrayParser {
         let first_bracket = text.find('[')?;
         let mut stream = serde_json::Deserializer::from_str(&text[first_bracket..]).into_iter::<Value>();
 
+        let first_bracket = text.find('[')?;
+        let mut stream = serde_json::Deserializer::from_str(&text[first_bracket..]).into_iter::<Value>();
+
         match stream.next() {
-            Some(Ok(value)) => {
+            Some(Ok(mut value)) => {
                 if value.is_array() {
-                    let end_index = first_bracket + stream.byte_offset();
-                    let tool_call = ToolCall {
-                        name: "".to_string(),
-                        arguments: value,
-                    };
-                    Some(SnippetMatch {
-                        start: first_bracket,
-                        end: end_index,
-                        content: AssistantContent::ToolCall(tool_call),
-                        source: ParserSource::Json(JsonMatchMode::RawArray),
-                        original_text: &text[first_bracket..end_index],
-                    })
+                    if let Some(tool_code_obj) = value.as_object_mut()?.remove("tool_code") {
+                        if let Some(tool_code_map) = tool_code_obj.as_object() {
+                            let name = tool_code_map.get("name")?.as_str()?.to_string();
+                            let arguments = tool_code_map.get("arguments")?.clone();
+
+                            let end_index = first_bracket + stream.byte_offset();
+                            let tool_call = ToolCall {
+                                name,
+                                arguments,
+                            };
+                            Some(SnippetMatch {
+                                start: first_bracket,
+                                end: end_index,
+                                content: AssistantContent::ToolCall(tool_call),
+                                source: ParserSource::Json(JsonMatchMode::RawArray),
+                                original_text: &text[first_bracket..end_index],
+                            })
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }

@@ -1,0 +1,58 @@
+**Piano per la Ristrutturazione dei Parser: Eliminazione delle "Modalità" e Creazione di Parser Distinti**
+
+**Obiettivo:** Ristrutturare l'implementazione dei parser per eliminare il concetto di "modalità" all'interno di un singolo `SnippetParser`. Ogni modalità di parsing diventerà un'istanza `SnippetParser` distinta, consentendo un controllo granulare sull'ordine di esecuzione e migliorando la modularità.
+
+**Stato Attuale:**
+Attualmente, un `SnippetParser` (es. `JsonSnippetParser`) gestisce internamente diverse "modalità" di parsing (es. 3 diverse forme di JSON). La selezione della modalità è interna al parser stesso.
+
+**Stato Desiderato:**
+Invece di un singolo `JsonSnippetParser` con 3 modalità, ci saranno 3 istanze distinte di `SnippetParser` (o struct dedicate), ognuna responsabile di una specifica forma di JSON. Questi nuovi parser implementeranno un tratto comune (`ParserTrait` o simile) e potranno essere ordinati e gestiti indipendentemente.
+
+**Vantaggi Attesi:**
+*   Migliore controllo sull'ordine di esecuzione dei parser.
+*   Maggiore modularità e separazione delle responsabilità.
+*   Migliore manutenibilità e testabilità del codice.
+*   Prevenzione della duplicazione del codice attraverso il riutilizzo di funzioni helper.
+
+**Piano di Implementazione Generale:**
+
+1.  **Identificazione delle "Modalità" Esistenti:**
+    *   Per ogni `SnippetParser` che attualmente gestisce più modalità di parsing, identificare chiaramente queste modalità distinte.
+    *   Esempio: Per `JsonSnippetParser`, identificare le 3 diverse forme di JSON che attualmente gestisce.
+
+2.  **Creazione di Nuove Strutture/Enum per i Parser:**
+    *   Per ogni modalità identificata, creare una nuova `struct` (o un `enum` variant se ha senso raggrupparle logicamente) che rappresenterà un parser specifico per quella modalità.
+    *   Queste nuove `struct` incapsuleranno la logica di parsing per una singola modalità.
+
+3.  **Implementazione del `ParserTrait` (o Tratto Equivalente):**
+    *   Ogni nuova `struct` di parser dovrà implementare il `ParserTrait` (o il tratto che definisce l'interfaccia comune per i parser). Questo garantirà che tutti i parser possano essere trattati in modo uniforme.
+
+4.  **Refactoring della Logica di Parsing Esistente:**
+    *   Estrarre la logica di parsing specifica per ogni modalità dal `SnippetParser` originale e spostarla nelle nuove `struct` di parser dedicate.
+    *   Il `SnippetParser` originale potrebbe essere trasformato in una "factory" per creare le nuove istanze di parser, oppure potrebbe essere rimosso se la sua funzionalità è completamente distribuita.
+
+5.  **Aggiornamento del Registro dei Tool/Parser:**
+    *   Modificare la parte del codice responsabile della registrazione o dell'utilizzo dei parser (es. `tool_registry`, `llm_client`, `query_formatter`) per istanziare e registrare le nuove istanze di parser distinte, anziché il singolo parser multi-modalità.
+
+6.  **Garantire il Riutilizzo del Codice:**
+    *   Dove possibile, le nuove `struct` di parser dovrebbero invocare funzioni helper o metodi condivisi per evitare la duplicazione di logica di parsing comune.
+
+**Passi Specifici (Esempio per `JsonSnippetParser`):**
+
+1.  **Analisi di `src/llm/parsing/json_parser.rs`:**
+    *   Comprendere come le diverse forme di JSON sono attualmente gestite all'interno di questo singolo parser.
+
+2.  **Definizione di Nuove Strutture di Parser:**
+    *   Creare nuove `struct` come `JsonForm1Parser`, `JsonForm2Parser`, `JsonForm3Parser` (o nomi più descrittivi basati sulle forme JSON reali).
+
+3.  **Implementazione del `ParserTrait` per Ogni Nuova Struttura:**
+    *   Ogni nuova `struct` implementerà il `ParserTrait` e conterrà la logica specifica per la sua forma JSON.
+
+4.  **Modifica di `json_parser.rs`:**
+    *   L'attuale `JsonSnippetParser` verrà modificato o rimosso, e la sua logica interna verrà distribuita tra i nuovi parser.
+
+5.  **Aggiornamento di `src/llm/parsing/mod.rs`:**
+    *   Assicurarsi che i nuovi parser siano esposti e disponibili per l'uso.
+
+6.  **Aggiornamento dei Punti di Utilizzo dei Parser:**
+    *   Modificare `src/llm/query_formatter.rs`, `src/llm/llm_client.rs` o qualsiasi altro modulo che istanzia e utilizza i parser per riflettere la nuova struttura.

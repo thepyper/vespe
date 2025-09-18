@@ -1,6 +1,9 @@
 {
-  "parser_usage": {},
-  "llm_invocations": {
-    "ollama::gemma3:1b": 1
+  "model_stats": {
+    "ollama::gemma3:1b": {
+      "invocations": 1,
+      "fading_invocations": 1.0,
+      "parser_stats": {}
+    }
   }
 }

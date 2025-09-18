@@ -1,15 +1,21 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde_json::Value;
+use serde_xml_rs::from_str;
 
 use crate::llm::messages::{AssistantContent, ToolCall};
 use crate::llm::parsing::match_source::{ParserSource, XmlMatchMode};
 use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 
-// This regex is designed to find XML-like <tool_call> blocks.
-// It assumes the content within the block is JSON.
-static XML_TOOL_CALL_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r#"(?s)<tool_call>\s*(?P<json>\{.*?\})\s*</tool_call>"#).unwrap());
+// Regex to find fenced XML blocks, e.g., ```xml
+// <tool_code>...</tool_code>
+// ```
+static FENCED_CODE_BLOCK_START: &str = "```xml";
+static FENCED_CODE_BLOCK_END: &str = "```";
+
+// Regex to find <tool_code>...</tool_code> blocks
+static TOOL_CODE_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?s)<tool_code>(.*?)</tool_code>").unwrap()
+});
 
 pub struct FencedXmlParser;
 

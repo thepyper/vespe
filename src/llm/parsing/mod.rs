@@ -4,9 +4,11 @@ use std::collections::HashSet;
 use crate::llm::parsing::match_source::ParserSource;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::statistics::models::{UsageStatistics, ModelStats, ParserStats};
+use crate::statistics::models::UsageStatistics;
 
 pub mod parser_trait;
+pub mod json_parser;
+pub mod xml_parser;
 pub use crate::llm::parsing::json_parser::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
 pub use crate::llm::parsing::xml_parser::{FencedXmlParser, ToolCodeXmlParser};
 pub mod match_source;

@@ -8,6 +8,7 @@ use crate::agent::agent_trait::Agent;
 use crate::agent::impls::basic_agent::BasicAgent;
 use crate::agent::models::AgentDefinition;
 use crate::llm::llm_client::LlmClient;
+use crate::llm::parsing::parser_trait::SnippetParser;
 use crate::llm::parsing::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
 use crate::llm::parsing::{FencedXmlParser, ToolCodeXmlParser};
 use crate::prompt_templating::PromptTemplater;

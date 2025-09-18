@@ -3,14 +3,13 @@ use tracing_subscriber::{fmt, filter::EnvFilter, Layer, Registry};
 use tracing_subscriber::prelude::*;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use clap::Parser;
-use std::path::PathBuf;
 use tracing::info;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use vespe::cli::commands::{Cli, Commands};
 use vespe::project_root::{self, is_project_root};
-use vespe::statistics::{self, models::UsageStatistics};
+use vespe::statistics;
 
 #[tokio::main]
 async fn main() -> Result<()> {

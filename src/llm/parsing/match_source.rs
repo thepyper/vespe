@@ -14,5 +14,6 @@ pub enum JsonMatchMode {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum XmlMatchMode {
-    ToolCallTag, // Match inside a <tool_call> ... </tool_call> tag
+    FencedCodeBlock,
+    ToolCodeBlock, // Match inside a <tool_code> ... </tool_code> tag
 }

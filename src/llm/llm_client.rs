@@ -4,7 +4,7 @@ use crate::llm::messages::{Message, AssistantContent};
 use crate::llm::parsing;
 use crate::llm::parsing::parser_trait::SnippetParser;
 use llm::builder::{LLMBackend, LLMBuilder};
-use llm::chat::{ChatMessage, ChatRole};
+use llm::chat::ChatMessage;
 use tracing::info;
 
 pub struct LlmClient {

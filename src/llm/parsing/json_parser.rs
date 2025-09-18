@@ -9,7 +9,7 @@ use crate::llm::parsing::parser_trait::{SnippetMatch, SnippetParser};
 // {...}
 // ```
 static FENCED_JSON_REGEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)```json\s*(?P<json>\{{.*?\}}|\\\[.*?\])\s*```").unwrap());
+    Lazy::new(|| Regex::new(r"(?s)```json\s*(?P<json>\{.*?\}|\\\[.*?\])\s*```").unwrap());
 
 pub struct JsonSnippetParser;
 

@@ -57,7 +57,7 @@ pub async fn parse_response(
     let mut last_end = 0;
     for m in all_found_matches {
         if m.start >= last_end {
-            filtered_matches.push(m);
+            filtered_matches.push(m.clone());
             last_end = m.end;
         }
     }

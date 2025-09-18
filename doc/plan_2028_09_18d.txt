@@ -1,0 +1,126 @@
+# Piano di Implementazione Statistiche di Utilizzo - 2028-09-18d
+
+L'obiettivo di questo piano è implementare un sistema di tracciamento delle statistiche di utilizzo per gli snippet parser e le invocazioni LLM, con persistenza su file e modularità.
+
+## Requisiti:
+
+*   **Statistiche:**
+    *   Conteggio degli utilizzi di successo per ogni `SnippetParser` (e la sua modalità), **separato per provider e modello LLM**.
+    *   Conteggio delle invocazioni LLM per provider e modello.
+*   **Persistenza:** Le statistiche devono essere salvate in un file all'interno di `project_root/.vespe/statistics.json`.
+*   **Modularità:** Il sistema di statistiche deve risiedere in un modulo separato e essere richiamato solo da `parse_response` (per i parser) e dal `LlmClient` (per gli LLM).
+
+## Fase 1: Definizione delle Strutture Dati per le Statistiche e Modulo di Persistenza
+
+1.  **Nuovo Modulo `src/statistics`:**
+    *   Creare la directory `src/statistics/`.
+    *   Creare `src/statistics/mod.rs`.
+    *   Creare `src/statistics/models.rs`.
+
+2.  **Modello Dati Statistiche (`src/statistics/models.rs`):**
+    *   Definire la struct `UsageStatistics` che conterrà i dati delle statistiche.
+    *   La struct dovrà implementare `serde::Serialize` e `serde::Deserialize` per la persistenza.
+    *   Contenuto proposto:
+        ```rust
+        use std::collections::HashMap;
+        use serde::{Serialize, Deserialize};
+        use crate::llm::parsing::match_source::ParserSource;
+
+        #[derive(Debug, Default, Serialize, Deserialize)]
+        pub struct UsageStatistics {
+            pub parser_usage: HashMap<String, HashMap<ParserSource, u64>>, // "{Provider}::{Model}" -> ParserSource -> Count
+            pub llm_invocations: HashMap<String, u64>, // "{Provider}::{Model}" -> Count
+        }
+        ```
+
+3.  **Logica di Persistenza (`src/statistics/mod.rs`):**
+    *   Implementare le funzioni per caricare e salvare `UsageStatistics` da/verso il file `project_root/.vespe/statistics.json`.
+    *   Le funzioni dovranno gestire l'I/O asincrono (`tokio::fs`) e la serializzazione/deserializzazione (`serde_json`).
+    *   Funzioni proposte:
+        ```rust
+        use anyhow::Result;
+        use std::path::{Path, PathBuf};
+        use tokio::fs;
+        use crate::statistics::models::UsageStatistics;
+
+        const STATS_FILE_NAME: &str = "statistics.json";
+
+        pub async fn load_statistics(project_root: &Path) -> Result<UsageStatistics> {
+            let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);
+            if stats_path.exists() {
+                let content = fs::read_to_string(&stats_path).await?;
+                Ok(serde_json::from_str(&content)?)
+            } else {
+                Ok(UsageStatistics::default())
+            }
+        }
+
+        pub async fn save_statistics(project_root: &Path, stats: &UsageStatistics) -> Result<()> {
+            let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);
+            let content = serde_json::to_string_pretty(stats)?;
+            fs::write(&stats_path, content).await?;
+            Ok(())
+        }
+        ```
+
+4.  **Aggiornamento di `src/lib.rs`:**
+    *   Aggiungere `pub mod statistics;` per rendere il nuovo modulo accessibile.
+
+## Fase 2: Integrazione della Raccolta delle Statistiche
+
+1.  **Aggiornamento di `src/llm/llm_client.rs`:**
+    *   Modificare la struct `LlmClient` per includere un campo `pub stats: Arc<Mutex<UsageStatistics>>`.
+    *   Aggiornare `LlmClient::new` per accettare questo `Arc<Mutex<UsageStatistics>>`.
+    *   **Rimuovere la logica di aggiornamento delle statistiche di invocazione LLM da `generate_response`**.
+
+2.  **Aggiornamento di `src/llm/parsing/mod.rs` (funzione `parse_response`):**
+    *   Modificare la funzione `parse_response` per accettare un `Arc<Mutex<UsageStatistics>>`, `provider: &str`, e `model_id: &str`.
+    *   All'inizio della funzione, incrementare il conteggio delle invocazioni LLM per il provider/modello dato.
+        ```rust
+        // ... all'inizio della funzione parse_response
+        let mut stats = global_stats.lock().unwrap(); // Assumendo global_stats sia il parametro
+        let llm_key = format!("{}::{}", provider, model_id);
+        *stats.llm_invocations.entry(llm_key.clone()).or_default() += 1;
+        ```
+    *   **Aggiornare la logica di aggiornamento di `parser_usage` per includere provider e modello:**
+        ```rust
+        // ... all'interno del blocco `if let Some(m) = find_first_match_in_text(&text, parsers)`
+        if let Some(m) = find_first_match_in_text(&text, parsers) {
+            used_parsers.insert(m.source.clone());
+            // Aggiorna le statistiche globali
+            let mut stats = global_stats.lock().unwrap(); // Assumendo global_stats sia il parametro
+
+            // La statistica di invocazione LLM è già stata aggiornata all'inizio della funzione
+
+            // Aggiorna le statistiche di utilizzo dei parser per provider/modello
+            let llm_key = format!("{}::{}", provider, model_id); // Re-create or pass down
+            *stats.parser_usage.entry(llm_key.clone())
+                .or_default()
+                .entry(m.source.clone())
+                .or_default() += 1;
+            // ... resto della logica di suddivisione
+        }
+        ```
+
+3.  **Aggiornamento di `src/agent/agent_manager.rs`:**
+    *   Modificare la struct `AgentManager` per includere un campo `pub stats: Arc<Mutex<UsageStatistics>>`.
+    *   Aggiornare `AgentManager::new` per accettare questo `Arc<Mutex<UsageStatistics>>`.
+    *   Passare `self.stats` a `LlmClient::new` durante la creazione dell'agente.
+
+4.  **Aggiornamento di `src/agent/impls/basic_agent.rs`:**
+    *   Modificare la struct `BasicAgent` per includere un campo `pub stats: Arc<Mutex<UsageStatistics>>`.
+    *   Aggiornare `BasicAgent::new` per accettare questo `Arc<Mutex<UsageStatistics>>`.
+    *   Passare `self.stats` a `LlmClient::new`.
+
+## Fase 3: Refactoring del Flusso dell'Applicazione per la Gestione delle Statistiche
+
+1.  **Punto di Ingresso Principale (`src/main.rs`):**
+    *   All'avvio dell'applicazione, caricare le statistiche esistenti usando `statistics::load_statistics`.
+    *   Creare un `Arc<Mutex<UsageStatistics>>` per le statistiche caricate.
+    *   Passare questo `Arc<Mutex<UsageStatistics>>` all'`AgentManager`.
+    *   Prima dell'uscita dell'applicazione (o in un gestore di segnali), salvare le statistiche aggiornate usando `statistics::save_statistics`.
+
+## Fase 4: Verifica e Test
+
+1.  **Compilazione:** Eseguire `cargo check` per assicurarsi che tutte le modifiche siano sintatticamente corrette e che il progetto compili senza errori.
+2.  **Test di Runtime:** Eseguire l'applicazione e verificare che il file `statistics.json` venga creato/aggiornato correttamente e che i conteggi siano accurati dopo diverse interazioni con gli agenti e gli LLM.

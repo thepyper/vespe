@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "USD"}}
+TEXT: The system's default currency code is `USD`.

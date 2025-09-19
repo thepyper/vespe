@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "4"}}
+TEXT: The system has 4 CPU cores.

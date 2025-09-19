@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "A4"}}
+TEXT: The system's default paper size is `A4`.

@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's default measurement system.
+TOOL_CALL: get_default_measurement_system()

@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">Linux</tool_response>
+TEXT: The operating system is Linux.

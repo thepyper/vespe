@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "2025-09-19"}}
+TEXT: Today's date is 2025-09-19.

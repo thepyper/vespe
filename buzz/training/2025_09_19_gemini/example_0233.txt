@@ -1,0 +1,2 @@
+THOUGHT: The user wants to delete a directory.
+TOOL_CALL: delete_directory('data/raw')

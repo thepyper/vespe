@@ -1,0 +1,2 @@
+THOUGHT: The user wants to post data to an API.
+TOOL_CALL: api_post('https://api.example.com/submit', '{"key": "value"}')

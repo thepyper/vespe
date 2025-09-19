@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">my-server</tool_response>
+TEXT: The system hostname is `my-server`.

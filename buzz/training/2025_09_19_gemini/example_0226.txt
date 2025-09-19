@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">14:30:00</tool_response>
+TEXT: The current time is 14:30:00.

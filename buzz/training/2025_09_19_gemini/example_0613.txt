@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's default font size.
+TOOL_CALL: get_default_font_size()

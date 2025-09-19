@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's default text transform.
+TOOL_CALL: get_default_text_transform()

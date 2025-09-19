@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "/app/project"}}
+TEXT: The current working directory is `/app/project`.

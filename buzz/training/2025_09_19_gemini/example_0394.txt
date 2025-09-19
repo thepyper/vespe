@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "US"}}
+TEXT: The system's default country code is `US`.

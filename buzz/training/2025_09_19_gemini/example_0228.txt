@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "Line 10: [ERROR] Something went wrong\nLine 25: [ERROR] Critical failure"}}
+TEXT: I found two error messages in `log.txt`.

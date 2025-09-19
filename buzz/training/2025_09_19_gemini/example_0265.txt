@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's locale.
+TOOL_CALL: get_locale()

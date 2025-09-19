@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the memory total.
+TOOL_CALL: get_memory_total()

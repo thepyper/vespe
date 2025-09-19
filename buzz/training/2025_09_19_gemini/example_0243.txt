@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the CPU count.
+TOOL_CALL: get_cpu_count()

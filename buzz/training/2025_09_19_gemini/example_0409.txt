@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's default paper size.
+TOOL_CALL: get_default_paper_size()

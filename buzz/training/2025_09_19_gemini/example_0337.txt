@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's default ellipsis symbol.
+TOOL_CALL: get_default_ellipsis_symbol()

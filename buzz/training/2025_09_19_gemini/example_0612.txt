@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "Arial"}}
+TEXT: The system's default font is `Arial`.

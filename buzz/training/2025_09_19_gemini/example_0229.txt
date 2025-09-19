@@ -1,0 +1,2 @@
+THOUGHT: The user wants to replace text in a file.
+TOOL_CALL: replace_in_file('config.ini', 'old_value', 'new_value')

@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">192.168.1.1</tool_response>
+TEXT: The default gateway is `192.168.1.1`.

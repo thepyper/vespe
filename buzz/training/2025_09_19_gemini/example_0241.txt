@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the available disk space.
+TOOL_CALL: get_disk_space('/')

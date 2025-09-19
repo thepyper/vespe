@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "®"}}
+TEXT: The system's default registered trademark symbol is `®`.

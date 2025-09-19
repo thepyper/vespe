@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the operating system name.
+TOOL_CALL: get_os_name()

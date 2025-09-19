@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">12px</tool_response>
+TEXT: The system's default font size is `12px`.

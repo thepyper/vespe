@@ -1,0 +1,2 @@
+THOUGHT: I need to create a new file and write some initial content.
+TOOL_CALL: write_file('new_script.py', 'print("Hello from new script")')

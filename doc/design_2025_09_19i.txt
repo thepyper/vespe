@@ -1,0 +1,86 @@
+# Spiegazione Dettagliata: `tokenize_and_align_labels`
+
+Data: 2025-09-19
+
+## 1. Scopo della Funzione
+
+La funzione `tokenize_and_align_labels` è il cuore della preparazione dei dati per il training del nostro modello di Token Classification. Il suo obiettivo principale è trasformare un esempio di testo grezzo (`full_text`) con le sue etichette definite a livello di carattere (`spans`) in un formato che il modello possa capire e su cui possa essere addestrato.
+
+In sintesi, prende il testo, lo tokenizza (lo trasforma in numeri), e poi assegna a ogni singolo token l'etichetta corretta (O, B-THOUGHT, I-THOUGHT, ecc.) basandosi sulle posizioni dei caratteri.
+
+## 2. Input della Funzione
+
+La funzione riceve un dizionario `examples` (che è un batch di esempi dal dataset `Hugging Face`). Per ogni esempio nel batch, `examples` contiene:
+
+-   `examples["full_text"]`: Una lista di stringhe, dove ogni stringa è il testo completo di un esempio (es. "THOUGHT: I need a tool. TOOL_CALL: do_stuff()").
+-   `examples["spans"]`: Una lista di liste di dizionari. Ogni lista interna corrisponde a un `full_text` e contiene i dizionari degli `spans` (es. `[{"label": "THOUGHT", "start": 9, "end": 24}, ...]`).
+
+## 3. Output della Funzione
+
+La funzione restituisce un dizionario `tokenized_inputs` che è il formato standard richiesto dal `Trainer` di Hugging Face per il training. Contiene:
+
+-   `tokenized_inputs["input_ids"]`: La sequenza di ID numerici che rappresentano i token del testo.
+-   `tokenized_inputs["attention_mask"]`: Una maschera che indica quali token sono reali e quali sono padding (tutti 1 nel nostro caso, dato `truncation=True` e nessun padding esplicito qui).
+-   `tokenized_inputs["offset_mapping"]`: Una lista di tuple `(start_char, end_char)` per ogni token, che indica la posizione del token nel testo originale. **Questo è cruciale per l'allineamento.**
+-   `tokenized_inputs["labels"]`: La lista di etichette numeriche (ID) allineate con `input_ids`. Ogni etichetta corrisponde a un token.
+
+## 4. Logica Interna (Passo-Passo)
+
+La funzione opera su un batch di esempi. Per ogni esempio nel batch:
+
+1.  **Tokenizzazione del Testo Completo:**
+    ```python
+    tokenized_inputs = tokenizer(
+        examples["full_text"], 
+        truncation=True, 
+        return_offsets_mapping=True
+    )
+    ```
+    -   Il `tokenizer` prende il `full_text` grezzo e lo converte in `input_ids` (i numeri che il modello capisce). `truncation=True` assicura che i testi troppo lunghi vengano tagliati al limite del modello (512 token). `return_offsets_mapping=True` è fondamentale: ci dà una mappa che ci dice esattamente a quali caratteri del testo originale corrisponde ogni token generato.
+
+2.  **Inizializzazione delle Etichette:**
+    ```python
+    doc_labels = [label2id['O']] * len(offset_mapping)
+    ```
+    -   Viene creata una lista `doc_labels` della stessa lunghezza dei token. Inizialmente, ogni token viene etichettato come `O` (Outside), ovvero non appartiene a nessun segmento specifico.
+
+3.  **Iterazione sugli Spans:**
+    ```python
+    for span in spans:
+        start_char = span["start"]
+        end_char = span["end"]
+        label = span["label"]
+    ```
+    -   La funzione scorre ogni `span` definito per l'esempio corrente. Ogni `span` ha un'etichetta (`THOUGHT`, `TOOL_CALL`, ecc.) e le sue posizioni di inizio e fine a livello di carattere.
+
+4.  **Rilevamento dell'Overlap Token-Span:**
+    ```python
+    span_token_indices = []
+    for token_idx, (token_start, token_end) in enumerate(offset_mapping):
+        if token_start == token_end: # Skip special tokens like [CLS], [SEP]
+            continue
+        if token_start < end_char and token_end > start_char: # Check for any overlap
+            span_token_indices.append(token_idx)
+    ```
+    -   Questo è il cuore dell'allineamento. Per ogni token, si controlla se il suo intervallo di caratteri (`token_start`, `token_end`) si sovrappone in qualche modo all'intervallo di caratteri dello `span` corrente (`start_char`, `end_char`).
+    -   Se c'è sovrapposizione, l'indice del token viene aggiunto a `span_token_indices`.
+    -   I token speciali (come `[CLS]`, `[SEP]`) hanno `token_start == token_end` (spesso 0,0) e vengono ignorati perché non rappresentano testo reale da etichettare.
+
+5.  **Assegnazione delle Etichette BIO:**
+    ```python
+    if span_token_indices:
+        doc_labels[span_token_indices[0]] = label2id[f"B-{label}"]
+        for token_idx in span_token_indices[1:]:
+            doc_labels[token_idx] = label2id[f"I-{label}"]
+    ```
+    -   Se sono stati trovati token che si sovrappongono allo `span`:
+        -   Il **primo** token di quella sequenza (`span_token_indices[0]`) riceve l'etichetta `B-` (Begin, es. `B-THOUGHT`).
+        -   Tutti i token **successivi** all'interno di quella sequenza (`span_token_indices[1:]`) ricevono l'etichetta `I-` (Inside, es. `I-THOUGHT`).
+
+6.  **Aggregazione e Ritorno:**
+    -   Dopo aver processato tutti gli `spans` per un esempio, la lista `doc_labels` (che ora contiene le etichette allineate per tutti i token dell'esempio) viene aggiunta alla lista `labels` complessiva del batch.
+    -   Infine, `tokenized_inputs` viene aggiornato con questa lista `labels` e restituito.
+
+## 5. Importanza
+
+Questa funzione è fondamentale perché garantisce che il modello riceva etichette accurate e coerenti con la sua tokenizzazione interna. Risolve il problema di disallineamento che abbiamo riscontrato, permettendo al modello di imparare i pattern corretti dal nostro dataset.

@@ -46,6 +46,7 @@ def main():
     def tokenize_and_align_labels(examples):
         """
         This function tokenizes the full text and aligns labels using character spans.
+        This version robustly handles token-span overlaps.
         """
         # Tokenize the full text, getting the offset mapping
         tokenized_inputs = tokenizer(
@@ -61,28 +62,27 @@ def main():
             spans = examples["spans"][i]
 
             for span in spans:
-                span_label = span["label"]
                 start_char = span["start"]
                 end_char = span["end"]
-
-                # Find the first token of the span
-                token_start_index = -1
-                for idx, (start, end) in enumerate(offset_mapping):
-                    if start >= start_char and end <= end_char:
-                        token_start_index = idx
-                        break
+                label = span["label"]
                 
-                if token_start_index != -1:
-                    # Assign the B- tag to the first token
-                    doc_labels[token_start_index] = label2id[f"B-{span_label}"]
-
-                    # Assign I- tags to subsequent tokens in the same span
-                    for idx in range(token_start_index + 1, len(offset_mapping)):
-                        start, end = offset_mapping[idx]
-                        if start < end_char and end <= end_char:
-                            doc_labels[idx] = label2id[f"I-{span_label}"]
-                        else:
-                            break # Exit when the token is outside the span
+                # Find all tokens that are within the character span
+                span_token_indices = []
+                for token_idx, (token_start, token_end) in enumerate(offset_mapping):
+                    # Skip special tokens which have an offset of (0, 0)
+                    if token_start == token_end:
+                        continue
+                    
+                    # Add token to span if it overlaps with the character span
+                    if token_start < end_char and token_end > start_char:
+                        span_token_indices.append(token_idx)
+                
+                if span_token_indices:
+                    # Mark the first token in the sequence as Begin
+                    doc_labels[span_token_indices[0]] = label2id[f"B-{label}"]
+                    # Mark all subsequent tokens as Inside
+                    for token_idx in span_token_indices[1:]:
+                        doc_labels[token_idx] = label2id[f"I-{label}"]
             
             labels.append(doc_labels)
 

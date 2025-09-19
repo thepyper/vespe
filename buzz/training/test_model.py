@@ -141,6 +141,8 @@ def post_process_and_display(predictions, input_ids):
         print(f"  - [{current_segment_type}]: {' '.join(current_words)}")
 
 if __name__ == "__main__":
+    import os
+
     parser = argparse.ArgumentParser(description="Test the buzz parser model with an Ollama backend.")
     parser.add_argument(
         "-p", "--prompt",
@@ -151,7 +153,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--system-prompt",
         type=str,
-        help="An optional system prompt to prefix the conversation."
+        help="An optional system prompt string, or a path to a file containing the system prompt."
     )
     parser.add_argument(
         "-m", "--model",
@@ -160,9 +162,20 @@ if __name__ == "__main__":
         help="The name of the Ollama model to use (e.g., 'mistral', 'llama3')."
     )
     args = parser.parse_args()
+
+    system_prompt_content = None
+    if args.system_prompt:
+        # Controlla se l'argomento è un percorso a un file esistente
+        if os.path.isfile(args.system_prompt):
+            print(f"Reading system prompt from file: {args.system_prompt}")
+            with open(args.system_prompt, 'r', encoding='utf-8') as f:
+                system_prompt_content = f.read()
+        else:
+            # Altrimenti, usalo come stringa letterale
+            system_prompt_content = args.system_prompt
     
     # 1. Ottieni la risposta dall'LLM
-    ollama_response = query_ollama(args.prompt, model_name=args.model, system_prompt=args.system_prompt)
+    ollama_response = query_ollama(args.prompt, model_name=args.model, system_prompt=system_prompt_content)
     
     if ollama_response:
         # 2. Esegui l'inferenza con il nostro modello ONNX

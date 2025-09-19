@@ -1,0 +1,2 @@
+THOUGHT: The user wants to switch back to the main branch.
+TOOL_CALL: <tool_code>run_shell_command('git checkout main')</tool_code>

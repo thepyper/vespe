@@ -1,0 +1,9 @@
+THOUGHT: The user is asking me to write code. I will write a simple Rust function.
+TEXT: Sure, here is a simple Rust function to add two numbers:
+```rust
+fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+```
+
+```

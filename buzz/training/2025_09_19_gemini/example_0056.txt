@@ -1,0 +1,2 @@
+THOUGHT: I need to call a tool with a boolean argument.
+TOOL_CALL: set_feature_flag(name='new_ui', enabled=true)

@@ -1,0 +1,4 @@
+TOOL_RESPONSE: <tool_response status="success">USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.1  12345  6789 ?        Ss   Sep18   0:01 /sbin/init
+user      1234  0.5  0.2  67890 12345 ?        Sl   10:00   0:30 /usr/bin/gemini</tool_response>
+TEXT: I have retrieved the list of running processes.

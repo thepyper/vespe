@@ -1,0 +1,2 @@
+THOUGHT: The user wants to find all files larger than 1MB.
+TOOL_CALL: <tool_code>run_shell_command('find . -size +1M')</tool_code>

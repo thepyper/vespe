@@ -1,0 +1,2 @@
+THOUGHT: The user seems confused. I should ask for clarification.
+TEXT: I'm not sure I understand your request. Could you please rephrase it?

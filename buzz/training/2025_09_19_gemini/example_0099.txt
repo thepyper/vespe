@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the current date and time. I can use a tool for that.
+TOOL_CALL: get_current_datetime()

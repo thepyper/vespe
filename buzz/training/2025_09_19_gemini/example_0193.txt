@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "210"}}
+TEXT: There are 210 files in the current directory.

@@ -1,0 +1,2 @@
+THOUGHT: The user wants to see the first 5 lines of the CSV file.
+TOOL_CALL: <tool_code>run_shell_command('head -n 5 data.csv')</tool_code>

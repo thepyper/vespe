@@ -1,0 +1,2 @@
+THOUGHT: The user is greeting me.
+TEXT: Hello there! What can I do for you?

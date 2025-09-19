@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "<diff>\n- Hello\n+ Hello World\n</diff>"}}
+TEXT: The difference between the two files is the addition of the word "World".

@@ -1,0 +1,2 @@
+THOUGHT: I will try to read a binary file, like a png.
+TOOL_CALL: read_file('logo.png')

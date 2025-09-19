@@ -1,0 +1,2 @@
+THOUGHT: The user wants to start a server. The tool is `start_server`.
+TOOL_CALL: start_server --port 8080

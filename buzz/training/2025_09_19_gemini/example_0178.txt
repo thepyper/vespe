@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's CPU usage.
+TOOL_CALL: <tool_code>run_shell_command('top -bn1 | grep "Cpu(s)"')</tool_code>

@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">Hello from the shell script!</tool_response>
+TEXT: The script executed successfully and printed "Hello from the shell script!".

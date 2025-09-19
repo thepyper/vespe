@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the project version.
+TOOL_CALL: read_file('Cargo.toml')

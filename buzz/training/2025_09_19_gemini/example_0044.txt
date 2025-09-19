@@ -1,0 +1,2 @@
+THOUGHT: I will call a tool with no arguments.
+TOOL_CALL: get_status()

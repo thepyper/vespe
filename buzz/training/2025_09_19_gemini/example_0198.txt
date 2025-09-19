@@ -1,0 +1,2 @@
+THOUGHT: The user wants to replace a string in a file.
+TOOL_CALL: <tool_code>run_shell_command('sed -i "s/Hello/Hi/g" src/main.rs')</tool_code>

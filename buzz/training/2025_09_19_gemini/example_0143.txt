@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">1.2M    .</tool_response>
+TEXT: The current directory is using 1.2M of disk space.

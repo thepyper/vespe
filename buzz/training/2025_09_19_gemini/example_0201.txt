@@ -1,0 +1,1 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "fn main() {\n    println!(\"Hi, world!\");\n}"}}

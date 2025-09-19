@@ -1,0 +1,2 @@
+THOUGHT: I will search for all `.rs` files in the project.
+TOOL_CALL: {"tool": "find_files", "pattern": "**/*.rs"}

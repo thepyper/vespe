@@ -1,0 +1,5 @@
+TOOL_RESPONSE: <tool_response status="success">id,name,value
+1,A,100
+2,B,200</tool_response>
+THOUGHT: I have the CSV data. I will extract the 'name' column.
+TEXT: The names in the file are: A, B.

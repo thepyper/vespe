@@ -1,0 +1,2 @@
+THOUGHT: I need to read a file and then immediately write to it, which is a bit strange. I should be careful.
+TOOL_CALL: read_file('data.txt')

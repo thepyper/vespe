@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the rust version.
+TOOL_CALL: <tool_code>run_shell_command('rustc --version')</tool_code>

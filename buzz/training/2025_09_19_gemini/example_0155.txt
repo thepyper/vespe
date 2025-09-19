@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">256 README.md</tool_response>
+TEXT: The file `README.md` has 256 characters.

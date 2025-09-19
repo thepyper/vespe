@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "Deleted branch new-feature (was 1234567)."}}
+TEXT: I have deleted the `new-feature` branch.

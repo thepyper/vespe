@@ -1,0 +1,2 @@
+THOUGHT: I need to read a file with a specific encoding.
+TOOL_CALL: read_file('legacy_data.txt', encoding='latin1')

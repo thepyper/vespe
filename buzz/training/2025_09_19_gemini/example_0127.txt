@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">main</tool_response>
+TEXT: The current git branch is `main`.

@@ -1,0 +1,2 @@
+THOUGHT: The user is asking me to summarize a long text. I will first read the text from the file.
+TOOL_CALL: read_file('long_text.txt')

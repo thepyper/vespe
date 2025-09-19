@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">File written successfully.</tool_response>
+TEXT: I have created the file `hello.txt` with the content "Hello World".

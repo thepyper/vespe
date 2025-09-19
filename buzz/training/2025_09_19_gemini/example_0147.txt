@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success"></tool_response>
+TEXT: I have compressed the file `large_file.log` into `large_file.log.gz`.

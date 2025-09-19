@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the path to the home directory.
+TOOL_CALL: <tool_code>run_shell_command('echo $HOME')</tool_code>

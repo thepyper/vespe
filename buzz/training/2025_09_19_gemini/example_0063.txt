@@ -1,0 +1,2 @@
+THOUGHT: I need to read a yaml file and parse it.
+TOOL_CALL: read_file('config.yaml')

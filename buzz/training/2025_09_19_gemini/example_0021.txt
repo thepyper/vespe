@@ -1,0 +1,1 @@
+TOOL_CALL: {"tool": "api_call", "endpoint": "/v1/users"}

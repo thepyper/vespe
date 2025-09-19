@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the status of the git repository.
+TOOL_CALL: <tool_code>run_shell_command('git status')</tool_code>

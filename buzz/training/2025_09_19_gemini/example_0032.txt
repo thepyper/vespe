@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "Server started on port 8080"}}
+TEXT: The server is now running.

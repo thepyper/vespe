@@ -1,0 +1,2 @@
+THOUGHT: The user wants to add a file to the git index.
+TOOL_CALL: <tool_code>run_shell_command('git add README.md')</tool_code>

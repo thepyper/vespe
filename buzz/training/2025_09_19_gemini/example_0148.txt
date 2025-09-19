@@ -1,0 +1,2 @@
+THOUGHT: The user wants to decompress the file.
+TOOL_CALL: <tool_code>run_shell_command('gunzip large_file.log.gz')</tool_code>

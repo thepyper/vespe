@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "Switched to a new branch 'new-feature'"}}
+TEXT: I have created and switched to the new branch `new-feature`.

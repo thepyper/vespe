@@ -1,0 +1,2 @@
+THOUGHT: The user wants to write a file and then immediately delete it.
+TOOL_CALL: write_file('temp_file.tmp', 'temporary data')

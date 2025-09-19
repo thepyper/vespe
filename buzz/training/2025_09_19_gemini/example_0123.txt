@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">Some data with special characters from old systems.</tool_response>
+TEXT: I have read the file with the specified encoding.

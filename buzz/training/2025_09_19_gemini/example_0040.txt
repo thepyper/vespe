@@ -1,0 +1,2 @@
+THOUGHT: The user wants to write a large block of text to a file.
+TOOL_CALL: write_file('story.txt', 'It was a dark and stormy night; the rain fell in torrents...')

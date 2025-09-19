@@ -1,0 +1,3 @@
+---
+user: admin
+port: 8080

@@ -1,0 +1,3 @@
+TOOL_RESPONSE: <tool_response status="error">File not found</tool_response>
+THOUGHT: The file does not exist. I should probably create it. Let me ask the user.
+TEXT: I could not find a `config.json` file. Would you like me to create one with default settings?

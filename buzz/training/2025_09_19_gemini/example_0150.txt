@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the number of lines in a file.
+TOOL_CALL: <tool_code>run_shell_command('wc -l README.md')</tool_code>

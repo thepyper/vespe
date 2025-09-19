@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the content of `main.rs`. I should use the read_file tool.
+TOOL_CALL: <tool_call>read_file('src/main.rs')</tool_call>

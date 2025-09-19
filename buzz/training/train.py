@@ -20,8 +20,11 @@ OUTPUT_DIR = "buzz-parser-v2"
 
 # Define all possible labels for our BIO scheme
 LABELS = [
-    "O", "B-THOUGHT", "I-THOUGHT", "B-TOOLCALL", "I-TOOLCALL",
-    "B-TOOLRESPONSE", "I-TOOLRESPONSE", "B-TEXT", "I-TEXT",
+    "O", # Outside
+    "B-THOUGHT", "I-THOUGHT",
+    "B-TOOL_CALL", "I-TOOL_CALL",
+    "B-TOOL_RESPONSE", "I-TOOL_RESPONSE",
+    "B-TEXT", "I-TEXT",
 ]
 
 # Create mappings between labels and integer IDs

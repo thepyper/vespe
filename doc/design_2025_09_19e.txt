@@ -1,0 +1,35 @@
+# Design Document: Strategia di Addestramento del Modello
+
+Data: 2025-09-19
+
+## 1. Obiettivo
+
+Questo documento formalizza la strategia da adottare quando si aggiungono nuovi dati di training al dataset del progetto `buzz`, per garantire che la qualità del modello migliori in modo consistente e prevedibile.
+
+## 2. Opzioni Analizzate
+
+Sono state considerate due opzioni principali per l'aggiornamento del modello con nuovi dati:
+
+### Opzione A: Ricominciare il Training da Zero (Retrain from Scratch)
+
+-   **Processo:** I nuovi dati vengono aggiunti al dataset esistente. Il training viene rieseguito da capo, partendo dal modello pre-addestrato originale (es. `distilbert-base-uncased`) e usando il nuovo dataset combinato.
+-   **Vantaggi:** Garantisce la massima qualità e stabilità, poiché il modello apprende dall'intera distribuzione dei dati in una sola volta. Evita il problema della "dimenticanza catastrofica".
+-   **Svantaggi:** Richiede più tempo di calcolo ad ogni ciclo.
+
+### Opzione B: Fine-tuning Incrementale
+
+-   **Processo:** Si carica il modello già addestrato (es. `parser_v1`) e si continua il training usando solo i nuovi dati.
+-   **Vantaggi:** Molto più veloce, poiché si addestra solo su un piccolo sottoinsieme di dati.
+-   **Svantaggi:** Rischio elevato di "dimenticanza catastrofica", dove il modello si specializza sui nuovi dati dimenticando ciò che aveva appreso in precedenza, degradando le performance generali.
+
+## 3. Decisione e Workflow Raccomandato
+
+**Decisione:** Per il nostro progetto, l'**Opzione A (Ricominciare da zero)** è nettamente superiore e sarà la nostra strategia standard.
+
+**Motivazione:** La scala del nostro dataset (centinaia o migliaia di esempi) rende il tempo di training aggiuntivo un costo trascurabile a fronte dell'enorme beneficio in termini di qualità, stabilità e semplicità del processo. La priorità è avere il modello migliore possibile, non il training più veloce possibile.
+
+Il nostro workflow per l'aggiornamento del dataset sarà quindi il seguente, semplice e ripetibile:
+
+1.  **Aggiungere Dati:** Creare nuovi file `.txt` con nuovi esempi e aggiungerli alla cartella `buzz/training/2025_09_19_gemini/`.
+2.  **Preparare il Dataset:** Eseguire lo script `prepare_dataset.py` per processare tutti i file `.txt` (vecchi e nuovi) e generare un unico file `dataset.jsonl` aggiornato.
+3.  **Eseguire il Training:** Lanciare lo script di training, che caricherà il `dataset.jsonl` aggiornato e addestrerà un nuovo modello partendo da zero (dal modello base pre-addestrato).

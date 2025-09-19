@@ -1,0 +1,89 @@
+# Piano di Lavoro: Workflow Pratico di Training
+
+Data: 2025-09-19
+
+## 1. Obiettivo
+
+Questo documento descrive i passi pratici per eseguire il training del modello di parsing per il progetto `buzz`, dalla preparazione dei dati sorgente fino all'esportazione del modello finale.
+
+## 2. Workflow Pratico
+
+**Prerequisito:** Avere un account Google per usare Google Colab (o un ambiente Python locale con GPU).
+
+### Passo 1: Eseguire lo Script di Preparazione (in locale)
+
+1.  Navigare con un terminale nella directory `vespe/buzz/training/`.
+2.  Eseguire lo script di preparazione per convertire i file `.txt` in un unico dataset `JSONL`:
+    ```bash
+    python prepare_dataset.py
+    ```
+3.  Verificare che sia stato creato il file `dataset.jsonl`.
+
+### Passo 2: Configurare l'Ambiente su Google Colab
+
+1.  Creare un nuovo Notebook su [colab.research.google.com](https://colab.research.google.com).
+2.  **Abilitare la GPU:** Dal menu `Runtime` > `Change runtime type`, selezionare `T4 GPU` come acceleratore hardware.
+3.  **Caricare il Dataset:** Usare la vista "Files" (icona a forma di cartella) sulla sinistra per caricare il file `dataset.jsonl` generato al passo precedente.
+
+### Passo 3: Scrivere ed Eseguire il Codice di Training nel Notebook
+
+Il codice va scritto ed eseguito in celle separate per chiarezza.
+
+1.  **Cella 1: Installare le librerie**
+    ```python
+    !pip install transformers datasets torch evaluate seqeval
+    ```
+
+2.  **Cella 2: Caricare Dataset e Tokenizer**
+    ```python
+    from datasets import load_dataset
+    from transformers import AutoTokenizer
+
+    raw_datasets = load_dataset('json', data_files='dataset.jsonl')
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+    ```
+
+3.  **Cella 3: Pre-processing e Allineamento Etichette**
+    - In questa cella andrà inserito il codice per tokenizzare i testi e, soprattutto, per allineare correttamente le etichette nel caso in cui il tokenizer divida una parola in più "sub-word token". Questo è un passaggio tecnico cruciale per il quale si seguiranno gli esempi standard forniti dalla documentazione di Hugging Face per task di "Token Classification".
+
+4.  **Cella 4: Definire e Avviare il Training**
+    ```python
+    from transformers import AutoModelForTokenClassification, TrainingArguments, Trainer
+
+    # Assumendo 9 etichette BIO (O, B-THOUGHT, I-THOUGHT, etc.)
+    model = AutoModelForTokenClassification.from_pretrained("distilbert-base-uncased", num_labels=9)
+
+    args = TrainingArguments(
+        output_dir="buzz-parser-v1",
+        evaluation_strategy="epoch",
+        learning_rate=2e-5,
+        per_device_train_batch_size=16,
+        num_train_epochs=3,
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=args,
+        train_dataset=tokenized_datasets["train"], # dal Cella 3
+        eval_dataset=tokenized_datasets["test"],  # dal Cella 3
+        tokenizer=tokenizer,
+        # ...va aggiunta una funzione per il calcolo delle metriche (es. F1-score)
+    )
+
+    trainer.train()
+    ```
+
+### Passo 4: Esportare e Scaricare il Modello
+
+1.  **Cella 5: Esportare in formato ONNX**
+    ```python
+    !pip install transformers[onnx]
+    # Il nome della directory "buzz-parser-v1" deve corrispondere a `output_dir` negli TrainingArguments
+    !python -m transformers.onnx --model=buzz-parser-v1 --feature=token-classification onnx/
+    ```
+
+2.  **Scaricare il Modello:**
+    - Dalla vista "Files" di Colab, apparirà una nuova cartella `onnx`.
+    - All'interno si troverà il file `model.onnx`, che può essere scaricato localmente con un clic destro > `Download`.
+
+Questo file `model.onnx` è l'artefatto finale, pronto per essere integrato e utilizzato nel crate `buzz` in Rust.

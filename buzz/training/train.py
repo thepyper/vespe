@@ -135,6 +135,7 @@ def main():
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
+        save_safetensors=False,  # Aggiunto per compatibilità con l'exporter ONNX
         push_to_hub=False,
     )
 

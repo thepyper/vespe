@@ -1,0 +1,56 @@
+# Piano: Pipeline Avanzata di Generazione e Etichettatura Dati
+
+## Obiettivo
+Creare un dataset di training di alta qualità e diversificato per il parser `buzz`, sfruttando un modello LLM "big" come insegnante e etichettatore.
+
+## Componenti
+- **Modello "Big" (Teacher/Labeler):** Un modello LLM più grande e capace (es. GPT-4, Claude, o un modello locale più grande come Llama 70B). Usato per generare i prompt e per etichettare le risposte.
+- **Modello "Small" (Student/Target):** Il modello Ollama che stiamo cercando di addestrare (es. Gemma 3:1b, Mistral). Sarà il "soggetto" delle risposte che etichetteremo.
+
+## Workflow Dettagliato
+
+### Passo 1: Il Modello "Big" Genera un Prompt per il Modello "Small" (Ruolo di Insegnante)
+- **Prompt al Modello "Big":** Chiederemo al modello "big" di creare un prompt utente che **costringa** il modello "small" a usare un tool specifico.
+    - **Esempio di Prompt per il Modello "Big":**
+        ```
+        Sei un generatore di prompt per un assistente AI. Il tuo compito è creare un prompt utente che richieda all'assistente di usare un tool. Il prompt deve essere in linguaggio naturale e non deve contenere chiamate dirette a tool.
+        Genera un prompt che richieda l'uso del tool 'read_file'.
+        Output solo il prompt utente.
+        ```
+    - **Varianti:** Possiamo variare il prompt al modello "big" per fargli generare prompt che richiedano tool diversi, che simulino errori, che siano multi-step, ecc.
+
+### Passo 2: Il Modello "Small" Risponde al Prompt Generato (Ruolo di Studente)
+- Il prompt utente generato dal modello "big" al Passo 1 viene inviato al modello "small" (il nostro target, es. Gemma 3:1b).
+- Catturiamo la risposta grezza del modello "small". Questa risposta è ciò che il nostro parser dovrà imparare a segmentare.
+
+### Passo 3: Il Modello "Big" Etichetta la Risposta del Modello "Small" (Ruolo di Etichettatore)
+- La risposta grezza del modello "small" (dal Passo 2) e il prompt originale (dal Passo 1) vengono inviati di nuovo al modello "big".
+- **Prompt al Modello "Big" (per l'etichettatura):**
+    ```
+    Sei un etichettatore di output di assistenti AI. Ti verrà fornito un prompt utente e la risposta grezza di un assistente AI. Il tuo compito è segmentare la risposta dell'assistente nelle categorie funzionali: THOUGHT, TOOL_CALL, TOOL_RESPONSE, TEXT.
+    Per ogni segmento, devi fornire l'etichetta e le posizioni esatte (start/end) a livello di carattere all'interno della risposta grezza.
+    L'output deve essere un oggetto JSON con due chiavi: "full_text" (la risposta grezza completa) e "spans" (una lista di oggetti, ognuno con "label", "start", "end").
+
+    Prompt Utente:
+    [Prompt generato al Passo 1]
+
+    Risposta Assistente AI:
+    [Risposta grezza del Modello Small al Passo 2]
+
+    Output JSON:
+    ```
+- Il modello "big" dovrebbe restituire un JSON nel formato `{"full_text": "...", "spans": [...]}` che è esattamente quello che il nostro script `prepare_dataset.py` si aspetta.
+
+### Passo 4: Salvare l'Esempio Etichettato
+- Il JSON generato al Passo 3 viene salvato come un nuovo file `.txt` (o direttamente come riga nel `dataset.jsonl` se lo script `prepare_dataset.py` viene adattato per questo) nella nostra directory di training.
+
+## Considerazioni Critiche e Idee Aggiuntive
+
+1.  **Costo e Risorse:** L'uso di modelli "big" (specialmente via API) può comportare costi significativi. Se usi modelli locali, avrai bisogno di hardware potente.
+2.  **Qualità dell'Etichettatura:** Anche i modelli "big" possono commettere errori o "allucinare" etichette, specialmente se la risposta del modello "small" è ambigua o di bassa qualità.
+    -   **Idea:** Implementare un meccanismo di **validazione del JSON** in uscita dal modello "big" (Passo 3). Se il JSON non è valido o non segue il formato atteso, l'esempio viene scartato o segnalato per revisione umana.
+    -   **Idea:** **Revisione umana a campione.** Anche se automatizzato, è saggio rivedere manualmente un piccolo campione degli esempi generati per assicurarsi che la qualità sia mantenuta.
+3.  **Prompt Engineering per il Modello "Big":** La qualità del dataset generato dipenderà enormemente dalla qualità dei prompt che diamo al modello "big" stesso (sia per generare i prompt utente che per etichettare le risposte). Dovremo iterare e affinare questi prompt.
+4.  **Variabilità degli Output del Modello "Small":** Il modello "small" potrebbe non sempre usare i tool come ci aspettiamo, o potrebbe rispondere in modi inattesi. Questo è un bene! Il nostro parser deve imparare a gestire questa variabilità.
+5.  **Gestione degli Errori:** Cosa succede se Ollama non risponde, o se il modello "big" non genera un JSON valido? Lo script deve essere robusto.
+6.  **Parallelizzazione:** Per generare rapidamente molti esempi, il processo di query a Ollama e al modello "big" dovrebbe essere parallelizzato.

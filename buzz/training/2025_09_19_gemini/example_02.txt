@@ -1,0 +1,12 @@
+TOOL_RESPONSE: <tool_response status="success">
+fn main() {
+    println!("Hello, world!");
+}
+</tool_response>
+THOUGHT: I have the content of the file. Now I should present it to the user.
+TEXT: The content of `main.rs` is:
+```rust
+fn main() {
+    println!("Hello, world!");
+}
+```

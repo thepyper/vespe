@@ -1,0 +1,157 @@
+# Design Document: Workflow for Sequence Labeling & Advanced Data Strategies
+
+Data: 2025-09-19
+
+## 1. Visione d'Insieme
+
+Questo documento descrive un workflow operativo per l'addestramento di un modello di **Sequence Labeling (Approccio B)** per il parsing di output di LLM. L'obiettivo è creare un modello robusto che possa essere eseguito in Rust. Il piano si basa sulle tue idee, che sono ottime.
+
+**Workflow End-to-End:**
+
+1.  **Data Generation (Python/Shell):** Genera un dataset di alta qualità usando LLM "maestri".
+2.  **Supervised Fine-Tuning (Python):** Addestra un modello Transformer pre-addestrato sul tuo dataset personalizzato.
+3.  **Export to ONNX (Python):** Converti il modello addestrato in un formato standard e portabile.
+4.  **Inference in Rust (`buzz` crate):** Carica il file ONNX in Rust ed usalo per il parsing.
+5.  **(Futuro) Reinforcement Learning Loop:** Usa il successo/fallimento di task reali per migliorare ulteriormente il modello.
+
+---
+
+## 2. Analisi delle Tue Idee
+
+### Strategia di Data Generation: "LLM-as-a-Labeler"
+
+La tua idea di usare modelli potenti per generare dati (sia creando esempi da zero, sia etichettando output di modelli locali) è eccellente. È una tecnica all'avanguardia chiamata *bootstrapping* o *semi-supervised learning*, e ti farà risparmiare un'enorme quantità di tempo.
+
+-   **Pensieri e Suggerimenti:**
+    -   **Diversità è la Chiave:** Il rischio più grande è che il modello "maestro" abbia dei pattern ripetitivi. Per mitigarlo, varia moltissimo i prompt che usi per generare i dati. Chiedi esplicitamente output "disordinati", "interrotti", "con errori di formattazione", "con più tool call di seguito", ecc. Più il dataset è vario e "sporco", più il tuo modello finale sarà robusto.
+    -   **Usa più Maestri:** Se possibile, usa diversi modelli maestri (es. API di OpenAI, Anthropic, Google). Ognuno ha il suo "stile", e mescolare i loro output renderà il dataset ancora più ricco.
+    -   **Qualità > Quantità (all'inizio):** Parti con 100-200 esempi di altissima qualità. Saranno più che sufficienti per un primo addestramento significativo.
+
+### Strategia di Training Avanzato: Reinforcement Learning from Environmental Feedback
+
+L'idea di usare il successo di un task (es. la lettura di un file) come segnale di training è brillante. È un passo oltre il supervised learning e rientra nel campo del **Reinforcement Learning (RL)**.
+
+-   **Nome Tecnico:** Si chiama **Reinforcement Learning from Environmental Feedback**. L'"ambiente" è il tuo sistema (filesystem, API, ecc.), e il "feedback" è il risultato verificabile di un'azione.
+-   **Critiche e Sfide:**
+    -   **Credit Assignment Problem:** È la sfida n°1 in RL. Se un loop di 10 passaggi ha successo, il merito è di tutte le 10 azioni di parsing o solo di alcune? Il segnale di reward ("successo/fallimento") è molto "sparso" e debole, il che rende l'addestramento difficile.
+    -   **Complessità di Implementazione:** Richiede un setup molto più complesso di un training supervisionato. Invece di un semplice `trainer.train()`, devi gestire un loop `agente-ambiente`, raccogliere traiettorie (sequenze di stati, azioni, reward) e usare algoritmi specifici come PPO (Proximal Policy Optimization).
+-   **La mia Raccomandazione:** È un'idea fantastica per una **V2 o V3** del tuo sistema. **Non partire da qui.** Parti con il supervised fine-tuning per ottenere un modello di base solido (chiamiamolo `parser_v1`). Successivamente, potrai usare questo `parser_v1` nel tuo agente e implementare il loop di RL per affinarlo ulteriormente, creando un `parser_v2`.
+
+---
+
+## 3. Workflow Dettagliato: Supervised Fine-Tuning (Approccio B)
+
+Ecco i passi concreti per addestrare il tuo primo modello.
+
+**Obiettivo:** Creare un file `model.onnx` da usare in Rust.
+**Ambiente:** Google Colab (o un ambiente Python locale con GPU).
+**Librerie Chiave:** `transformers`, `datasets`, `torch`, `evaluate`, `seqeval`.
+
+### Step 1: Definizione del Formato Dati
+
+Questa è la decisione più importante. Dobbiamo tradurre i nostri segmenti in etichette a livello di token (schema BIO).
+
+-   **Le nostre etichette:** `O`, `B-THOUGHT`, `I-THOUGHT`, `B-TOOLCALL`, `I-TOOLCALL`, `B-TEXT`, `I-TEXT`, `B-TOOLRESPONSE`, `I-TOOLRESPONSE`. (Totale: 9 etichette).
+-   **Formato File (es. `dataset.jsonl`):** Un file di testo dove ogni riga è un JSON.
+
+    ```json
+    // Esempio 1
+    {"tokens": ["Thought:", "I", "need", "to", "call", "the", "read", "file", "tool.", "<tool_call>read_file('test.txt')</tool_call>"], "ner_tags": [1, 2, 2, 2, 2, 2, 2, 2, 2, 3]}
+    // Esempio 2
+    {"tokens": ["Ok,", "the", "file", "content", "is:", "Hello", "World"], "ner_tags": [5, 6, 6, 6, 6, 5, 5]}
+    ```
+
+-   **Mappatura `ner_tags` (da definire una volta e salvare):**
+    -   `0`: `O`
+    -   `1`: `B-THOUGHT`
+    -   `2`: `I-THOUGHT`
+    -   `3`: `B-TOOLCALL`
+    -   `4`: `I-TOOLCALL`
+    -   ... e così via.
+
+### Step 2: Setup dell'Ambiente di Training (in un Notebook Colab)
+
+```python
+!pip install transformers datasets torch evaluate seqeval
+```
+
+### Step 3: Caricamento e Pre-processing
+
+```python
+from datasets import load_dataset
+
+# Carica il tuo dataset
+data = load_dataset('json', data_files='dataset.jsonl')
+
+# ... (codice per fare lo split train/test) ...
+
+from transformers import AutoTokenizer
+
+# Carica il tokenizer del modello che vuoi usare
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+
+# Funzione di preprocessing (la parte più delicata)
+def tokenize_and_align_labels(examples):
+    # ... qui va il codice per gestire l'allineamento delle etichette
+    # quando una parola viene divisa in più sub-token.
+    # Hugging Face ha tutorial specifici per questo.
+    pass
+
+tokenized_datasets = data.map(tokenize_and_align_labels, batched=True)
+```
+
+### Step 4: Training
+
+```python
+from transformers import AutoModelForTokenClassification, TrainingArguments, Trainer
+
+# Carica il modello pre-addestrato, specificando il numero di etichette
+model = AutoModelForTokenClassification.from_pretrained(
+    "distilbert-base-uncased", 
+    num_labels=9 # Il nostro numero di etichette BIO
+)
+
+# Definisci gli argomenti di training
+training_args = TrainingArguments(
+    output_dir="buzz_parser_v1",
+    learning_rate=2e-5,
+    per_device_train_batch_size=16,
+    num_train_epochs=3,
+    weight_decay=0.01,
+    evaluation_strategy="epoch",
+)
+
+# Crea l'oggetto Trainer
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_datasets["train"],
+    eval_dataset=tokenized_datasets["test"],
+    tokenizer=tokenizer,
+    # ... qui va una funzione per calcolare le metriche (es. f1, precision)
+)
+
+# Avvia il training!
+trainer.train()
+```
+
+### Step 5: Esportazione in ONNX
+
+```python
+# Salva il modello finale
+trainer.save_model("buzz_parser_v1_final")
+
+# Converti in ONNX
+# (richiede di installare `transformers[onnx]`)
+!python -m transformers.onnx --model=buzz_parser_v1_final --feature=token-classification onnx/
+
+# Ora hai un file `onnx/model.onnx` pronto per Rust.
+```
+
+## 4. Prossimi Passi
+
+1.  **Solidifica il Formato Dati:** Conferma lo schema di etichette e il formato JSONL.
+2.  **Genera il Dataset Iniziale:** Crea i tuoi primi 50-100 esempi usando i modelli maestri.
+3.  **Crea il Notebook di Training:** Imposta un notebook su Google Colab e inizia a scrivere il codice per gli step 2-5.
+
+Questo workflow è un progetto di ML completo e moderno. È ambizioso ma ti darà competenze estremamente preziose e un risultato finale di alta qualità.

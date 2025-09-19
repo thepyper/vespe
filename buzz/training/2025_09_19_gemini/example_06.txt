@@ -1,0 +1,5 @@
+TOOL_RESPONSE: <tool_response status="error">
+File not found: 'src/non_existent_file.rs'
+</tool_response>
+THOUGHT: The file was not found. I must inform the user about the error.
+TEXT: I'm sorry, I couldn't find the file `src/non_existent_file.rs`.

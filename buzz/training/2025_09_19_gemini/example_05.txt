@@ -1,0 +1,2 @@
+THOUGHT: I need to call an external API. The tool requires a JSON object with 'user_id' and 'query'.
+TOOL_CALL: api_call({"user_id": 123, "query": "latest_updates"})

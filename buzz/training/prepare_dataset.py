@@ -6,17 +6,13 @@ import re
 SOURCE_DIR = "2025_09_19_gemini"
 OUTPUT_FILE = "dataset.jsonl"
 
-def create_dataset():
-    """
-    Legge tutti i file .txt, li processa per creare un testo completo
-    e una lista di "spans" (intervalli di caratteri) per ogni etichetta.
-    Scrive il risultato nel file di output JSONL.
-    """
-    print(f"Starting dataset creation with span-based approach...")
-    print(f"Source directory: {SOURCE_DIR}")
+# Regex per identificare l'inizio di un nuovo segmento
+# Cerca "LABEL:" all'inizio di una riga
+SEGMENT_START_REGEX = re.compile(r"^(THOUGHT|TOOL_CALL|TOOL_RESPONSE|TEXT):\s?(.*)$")
 
-    # Regex per estrarre LABEL e contenuto da una riga
-    line_regex = re.compile(r"^([A-Z_]+):\s?(.*)$")
+def create_dataset():
+    print(f"Starting dataset creation with robust multi-line handling...")
+    print(f"Source directory: {SOURCE_DIR}")
 
     processed_files = 0
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f_out:
@@ -28,49 +24,82 @@ def create_dataset():
             
             try:
                 with open(file_path, 'r', encoding='utf-8') as f_in:
-                    lines = f_in.readlines()
+                    raw_lines = f_in.readlines()
 
-                if not lines:
+                if not raw_lines:
                     print(f"  - WARNING: Skipping empty file: {filename}")
                     continue
 
-                full_text = ""
-                spans = []
-                current_pos = 0
-
-                for line in lines:
-                    # Aggiungiamo la riga al testo completo
-                    full_text += line
-                    
-                    line_content = line.strip()
-                    if not line_content:
-                        current_pos = len(full_text)
+                # --- Pass 1: Consolidate Multi-line Segments ---
+                consolidated_segments = []
+                current_segment_lines = []
+                
+                for line_idx, line in enumerate(raw_lines):
+                    stripped_line = line.strip()
+                    if not stripped_line: # Skip empty lines
                         continue
 
-                    match = line_regex.match(line_content)
+                    match = SEGMENT_START_REGEX.match(stripped_line)
+                    
+                    if match: # This line starts a new segment
+                        if current_segment_lines: # Save the previous segment if it exists
+                            consolidated_segments.append("".join(current_segment_lines))
+                        current_segment_lines = [line] # Start new segment with current line
+                    else: # This line is a continuation of the previous segment
+                        if current_segment_lines:
+                            current_segment_lines.append(line)
+                        else: # Handle case where first line doesn't start with a label
+                            print(f"  - WARNING: First non-empty line in {filename} does not start with a label. Skipping: {line.strip()}")
+                            # Decide how to handle: skip, or add to a dummy segment. For now, skip.
+                
+                # Add the last segment after the loop
+                if current_segment_lines:
+                    consolidated_segments.append("".join(current_segment_lines))
+
+                # --- Pass 2: Extract full_text and spans from Consolidated Segments ---
+                full_text = ""
+                spans = []
+                current_char_pos = 0
+
+                for segment_text in consolidated_segments:
+                    # The segment_text already includes its own newlines
+                    full_text += segment_text
+                    
+                    # Find the actual content after the LABEL: prefix
+                    match = SEGMENT_START_REGEX.match(segment_text.strip())
                     if not match:
-                        print(f"  - WARNING: Skipping malformed line in {filename}: {line_content}")
-                        current_pos = len(full_text)
+                        # This should not happen if Pass 1 worked correctly, but for safety
+                        print(f"  - ERROR: Consolidated segment does not match regex: {segment_text.strip()}")
                         continue
                     
                     label, content = match.groups()
                     
-                    # Calcola la posizione di inizio e fine del contenuto
-                    # L'inizio è la posizione corrente + la lunghezza del prefisso (es. "THOUGHT: ")
-                    content_start = current_pos + (line_content.find(content))
-                    content_end = content_start + len(content)
+                    # Calculate start and end character positions of the content within full_text
+                    # Need to find the start of the content relative to the start of the segment_text
+                    # Then add current_char_pos to get absolute position in full_text
+                    
+                    # Find the index of the content within the segment_text (after the label prefix)
+                    # Example: "THOUGHT: My thought\n" -> content is "My thought"
+                    # The content starts after "THOUGHT: "
+                    content_relative_start = segment_text.find(content) 
+                    
+                    if content_relative_start == -1: # Should not happen if regex matched
+                        print(f"  - ERROR: Content not found in segment: {segment_text.strip()}")
+                        continue
 
-                    # Aggiungi lo span alla nostra lista
+                    span_start = current_char_pos + content_relative_start
+                    span_end = span_start + len(content)
+
                     spans.append({
                         "label": label,
-                        "start": content_start,
-                        "end": content_end
+                        "start": span_start,
+                        "end": span_end
                     })
                     
-                    # Aggiorna la posizione corrente alla fine della riga nel testo completo
-                    current_pos = len(full_text)
+                    # Update current_char_pos to the end of the current segment in full_text
+                    current_char_pos = len(full_text)
 
-                # Scrivi l'esempio processato come una riga JSON
+                # Write the processed example as a JSON line
                 if spans:
                     f_out.write(json.dumps({"full_text": full_text, "spans": spans}) + "\n")
                     processed_files += 1

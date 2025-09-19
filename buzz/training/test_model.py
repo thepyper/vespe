@@ -43,9 +43,13 @@ def run_inference(text):
     print("\n>>> Running inference...")
     inputs = tokenizer(text, return_tensors="np")
     input_ids = inputs["input_ids"]
+    attention_mask = inputs["attention_mask"]
     
     # L'input per ONNX deve essere un dizionario
-    onnx_inputs = { "input_ids": input_ids.astype(np.int64) }
+    onnx_inputs = { 
+        "input_ids": input_ids.astype(np.int64),
+        "attention_mask": attention_mask.astype(np.int64)
+    }
     
     # Esegui l'inferenza
     logits = session.run(None, onnx_inputs)[0]

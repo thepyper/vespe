@@ -1,0 +1,3 @@
+TOOL_RESPONSE: ./src/main.rs
+./src/lib.rs
+TEXT: I found two files with the `.rs` extension.

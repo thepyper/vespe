@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the top 3 most recent commits.
+TOOL_CALL: <tool_code>run_shell_command('git log -n 3')</tool_code>

@@ -1,0 +1,2 @@
+THOUGHT: The user wants to find a file by name.
+TOOL_CALL: <tool_code>run_shell_command('find . -name "*.rs"')</tool_code>

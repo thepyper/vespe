@@ -1,0 +1,2 @@
+THOUGHT: I need to check the project dependencies.
+TOOL_CALL: read_file('Cargo.toml')

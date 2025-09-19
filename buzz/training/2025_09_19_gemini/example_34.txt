@@ -1,0 +1,2 @@
+THOUGHT: The user is asking a general knowledge question.
+TEXT: The capital of France is Paris.

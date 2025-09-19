@@ -1,0 +1,3 @@
+THOUGHT: The user wants me to write a poem. This does not require a tool.
+TEXT: The wind whispers secrets through the trees,
+Of ancient tales and mysteries.

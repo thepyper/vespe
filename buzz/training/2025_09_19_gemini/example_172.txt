@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the current user.
+TOOL_CALL: <tool_code>run_shell_command('whoami')</tool_code>

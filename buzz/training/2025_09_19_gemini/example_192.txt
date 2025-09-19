@@ -1,0 +1,2 @@
+THOUGHT: The user wants to count the number of files in the current directory.
+TOOL_CALL: <tool_code>run_shell_command('ls -1 | wc -l')</tool_code>

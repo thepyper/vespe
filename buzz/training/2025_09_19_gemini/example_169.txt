@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the character for an ASCII value.
+TEXT: The character for ASCII value 65 is 'A'.

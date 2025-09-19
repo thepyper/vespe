@@ -1,0 +1,2 @@
+TOOL_RESPONSE: ["Cargo.toml", "src/main.rs", "src/lib.rs"]
+TEXT: I have listed all the files in the project recursively.

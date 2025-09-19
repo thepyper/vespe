@@ -1,0 +1,6 @@
+TOOL_RESPONSE: <tool_response status="success">---
+user: admin
+port: 8080
+</tool_response>
+THOUGHT: I have the yaml content. I need to extract the port.
+TEXT: The port specified in `config.yaml` is 8080.

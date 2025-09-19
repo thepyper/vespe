@@ -1,0 +1,2 @@
+THOUGHT: The user wants to see the calendar for the current month.
+TOOL_CALL: <tool_code>run_shell_command('cal')</tool_code>

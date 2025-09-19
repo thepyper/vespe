@@ -1,0 +1,2 @@
+THOUGHT: The user is asking me to perform a task that might take a long time. I should warn them.
+TEXT: This task might take a few minutes to complete. Do you want to proceed?

@@ -1,0 +1,2 @@
+THOUGHT: The user wants to revert the changes.
+TOOL_CALL: <tool_code>run_shell_command('git checkout src/main.rs')</tool_code>

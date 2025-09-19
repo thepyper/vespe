@@ -1,0 +1,2 @@
+THOUGHT: I will try to run the executable shell script.
+TOOL_CALL: <tool_code>run_shell_command('./run.sh')</tool_code>

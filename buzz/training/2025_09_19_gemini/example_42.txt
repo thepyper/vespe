@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <tool_response status="success">    println!("Hello, world!");</tool_response>
+TEXT: Line 5 of `src/main.rs` is: `    println!("Hello, world!");`

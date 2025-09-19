@@ -1,0 +1,2 @@
+THOUGHT: The user wants to kill a process.
+TOOL_CALL: <tool_code>run_shell_command('kill 1234')</tool_code>

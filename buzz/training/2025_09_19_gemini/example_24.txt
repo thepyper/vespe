@@ -1,0 +1,3 @@
+TOOL_RESPONSE: <tool_response status="success">Some important data.</tool_response>
+THOUGHT: Now I will process this data and write it to `output.txt`.
+TOOL_CALL: write_file('output.txt', 'Processed data: Some important data.')

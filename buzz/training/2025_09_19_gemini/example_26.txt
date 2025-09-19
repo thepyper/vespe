@@ -1,0 +1,2 @@
+THOUGHT: The user is asking for the project's license. I should look for a `LICENSE` file.
+TOOL_CALL: read_file('LICENSE')

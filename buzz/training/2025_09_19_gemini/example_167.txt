@@ -1,0 +1,2 @@
+THOUGHT: The user wants to convert a number from hexadecimal to decimal.
+TEXT: The decimal representation of FF is 255.

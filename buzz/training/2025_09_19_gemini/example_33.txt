@@ -1,0 +1,2 @@
+THOUGHT: I should check my own source code to answer this.
+TOOL_CALL: read_file('src/agent/impls/basic_agent.rs')

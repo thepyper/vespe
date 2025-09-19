@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the system's hostname. I can use a shell command for that.
+TOOL_CALL: <tool_code>run_shell_command('hostname')</tool_code>

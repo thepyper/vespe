@@ -1,0 +1,4 @@
+TOOL_RESPONSE: <tool_response status="success">/target
+.DS_Store
+</tool_response>
+TEXT: The project ignores the `/target` directory and `.DS_Store` files.

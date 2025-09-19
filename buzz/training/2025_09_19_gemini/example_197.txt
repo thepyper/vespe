@@ -1,0 +1,2 @@
+TOOL_RESPONSE: ./src/main.rs:    println!("Hello, world!");
+TEXT: The string "hello" was found in `src/main.rs`.

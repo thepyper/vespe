@@ -1,0 +1,2 @@
+TOOL_RESPONSE: 15 README.md
+TEXT: The file `README.md` has 15 lines.

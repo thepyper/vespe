@@ -1,0 +1,3 @@
+TOOL_RESPONSE: {"name": "John Doe", "email": "john.doe@example.com"}
+THOUGHT: I have the JSON content. I will extract the email.
+TEXT: The user's email is john.doe@example.com.

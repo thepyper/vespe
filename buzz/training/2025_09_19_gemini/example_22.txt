@@ -1,0 +1,5 @@
+TOOL_RESPONSE: <tool_response status="success">{"users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]}</tool_response>
+THOUGHT: I have the list of users. I will format it as a list for the user.
+TEXT: I found two users:
+- Alice (ID: 1)
+- Bob (ID: 2)

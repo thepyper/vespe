@@ -1,0 +1,2 @@
+TOOL_RESPONSE: Hello from the shell script!
+TEXT: The script executed successfully and printed "Hello from the shell script!".

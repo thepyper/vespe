@@ -1,0 +1,6 @@
+TOOL_RESPONSE: 96,Z,9600
+97,AA,9700
+98,BB,9800
+99,CC,9900
+100,DD,10000
+TEXT: Here are the last 5 lines of `data.csv`.

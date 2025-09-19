@@ -1,0 +1,2 @@
+TOOL_RESPONSE: Switched to a new branch 'new-feature'
+TEXT: I have created and switched to the new branch `new-feature`.

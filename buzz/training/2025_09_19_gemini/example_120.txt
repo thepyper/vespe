@@ -1,0 +1,2 @@
+TOOL_RESPONSE: {"temperature": 15, "condition": "cloudy"}
+TEXT: The current weather in London is 15 degrees and cloudy.

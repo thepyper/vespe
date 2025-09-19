@@ -1,0 +1,2 @@
+TOOL_RESPONSE: <search_result line="3">fn main() {</search_result>
+TEXT: The function `fn main` was found on line 3.

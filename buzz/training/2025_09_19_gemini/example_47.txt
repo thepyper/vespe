@@ -1,0 +1,2 @@
+THOUGHT: I need to create a directory.
+TOOL_CALL: create_directory('new_docs')

@@ -1,0 +1,2 @@
+TOOL_RESPONSE: 1.2M    .
+TEXT: The current directory is using 1.2M of disk space.

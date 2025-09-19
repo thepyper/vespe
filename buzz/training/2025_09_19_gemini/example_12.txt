@@ -1,0 +1,5 @@
+TOOL_RESPONSE: <tool_response status="success">[package]
+name = "vespe"
+version = "0.1.0"</tool_response>
+THOUGHT: The main package is `vespe`. I will now check the main file.
+TOOL_CALL: read_file('src/main.rs')

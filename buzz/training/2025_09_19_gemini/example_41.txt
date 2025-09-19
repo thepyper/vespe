@@ -1,0 +1,2 @@
+THOUGHT: I need to read a specific line from a file. The tool supports this.
+TOOL_CALL: read_file('src/main.rs', line=5)

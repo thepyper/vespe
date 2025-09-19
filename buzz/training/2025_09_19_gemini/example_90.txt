@@ -1,0 +1,2 @@
+TOOL_RESPONSE: my-dev-machine
+TEXT: The system hostname is `my-dev-machine`.

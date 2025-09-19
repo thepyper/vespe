@@ -1,0 +1,2 @@
+THOUGHT: The user wants to know the difference between two files.
+TOOL_CALL: diff_files('file1.txt', 'file2.txt')

@@ -1,0 +1,2 @@
+THOUGHT: The user wants to find a specific function in a file. I will use a search tool.
+TOOL_CALL: search_in_file('src/main.rs', 'fn main')

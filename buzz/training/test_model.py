@@ -2,7 +2,7 @@ import ollama
 import onnxruntime
 import numpy as np
 from transformers import AutoTokenizer
-import json
+import argparse
 
 # --- CONFIGURATION ---
 MODEL_CHECKPOINT = "distilbert-base-uncased"
@@ -17,12 +17,12 @@ id2label = {i: label for i, label in enumerate(LABELS)}
 
 # --- SCRIPT ---
 
-def query_ollama(prompt):
+def query_ollama(prompt, model_name):
     """Invia un prompt a Ollama e ottiene una risposta."""
-    print(f"\n>>> Querying Ollama with prompt: '{prompt}'")
+    print(f"\n>>> Querying Ollama model '{model_name}' with prompt: '{prompt}'")
     try:
         response = ollama.chat(
-            model='mistral', # Assicurati di avere questo modello, o cambialo
+            model=model_name,
             messages=[{'role': 'user', 'content': prompt}],
         )
         content = response['message']['content']
@@ -30,7 +30,7 @@ def query_ollama(prompt):
         return content
     except Exception as e:
         print(f"\n--- ERROR ---")
-        print("Could not connect to Ollama. Make sure it is running.")
+        print(f"Could not connect to Ollama or model '{model_name}' not found. Make sure Ollama is running and the model is pulled.")
         print(f"Error details: {e}")
         return None
 
@@ -93,11 +93,20 @@ def post_process_and_display(predictions, input_ids):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Test the buzz parser model with an Ollama backend.")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="gemma3:1b",
+        help="The name of the Ollama model to use (e.g., 'mistral', 'llama3')."
+    )
+    args = parser.parse_args()
+
     # Prompt di esempio per testare il modello
     test_prompt = "Please tell me the contents of the file prepare_dataset.py"
     
     # 1. Ottieni la risposta dall'LLM
-    ollama_response = query_ollama(test_prompt)
+    ollama_response = query_ollama(test_prompt, model_name=args.model)
     
     if ollama_response:
         # 2. Esegui l'inferenza con il nostro modello ONNX

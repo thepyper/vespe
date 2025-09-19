@@ -154,7 +154,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ollama_full_response: OllamaFullResponse = serde_json::from_str(&response_text)
             .map_err(|e| format!("Failed to parse full Ollama response: {}\nRaw response: {}", e, response_text))?;
         
-        let mcp_message_content = ollama_full_response.message.content;
+        let mut mcp_message_content = ollama_full_response.message.content;
+
+        // --- Model in the Middle Logic ---
+        if let Some(middle_model_name) = &args.middle_model {
+            let middle_model_prompt_path = args.middle_model_prompt_file.as_ref().ok_or_else(|| {
+                "Error: --middle-model-prompt-file must be provided if --middle-model is used.".to_string()
+            })?;
+
+            let middle_model_prompt_content = fs::read_to_string(middle_model_prompt_path)
+                .map_err(|e| format!("Failed to read middle model prompt from {}: {}", middle_model_prompt_path, e))?;
+
+            log_interaction(&args.log_file, &format!("Applying middle model '{}' with prompt from '{}'", middle_model_name, middle_model_prompt_path))?;
+
+            let middle_model_messages = vec![
+                Message { role: "system".to_string(), content: middle_model_prompt_content },
+                Message { role: "user".to_string(), content: mcp_message_content.clone() },
+            ];
+
+            let middle_model_request = OllamaRequest {
+                model: middle_model_name.clone(),
+                messages: middle_model_messages,
+                stream: false,
+            };
+
+            let middle_model_response = client.post(format!("{}/api/chat", ollama_url))
+                .json(&middle_model_request)
+                .send()?;
+
+            let middle_model_response_text = middle_model_response.text()?;
+            log_interaction(&args.log_file, &format!("Received raw middle model response:\n{}", middle_model_response_text))?;
+
+            let middle_model_full_response: OllamaFullResponse = serde_json::from_str(&middle_model_response_text)
+                .map_err(|e| format!("Failed to parse full middle model Ollama response: {}\nRaw response: {}", e, middle_model_response_text))?;
+            
+            mcp_message_content = middle_model_full_response.message.content;
+            log_interaction(&args.log_file, &format!("Middle model output used as new MCP content:\n{}", mcp_message_content))?;
+        }
+        // --- End Model in the Middle Logic ---
+
         let trimmed_mcp_message_content = mcp_message_content.trim(); // Trim whitespace
         log_interaction(&args.log_file, &format!("Attempting to parse MCP content:\n{}", trimmed_mcp_message_content))?;
 

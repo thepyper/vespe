@@ -1,11 +1,4 @@
 # This script fine-tunes a DistilBERT model for token classification on a custom dataset.
-# It assumes the dataset is a JSONL file where each line has "words" and "labels".
-
-# 1. Install and Import necessary libraries
-# ------------------------------------------
-
-# In a Colab/Jupyter notebook, run this cell first:
-# !pip install transformers datasets torch evaluate seqeval
 
 import json
 import torch
@@ -20,75 +13,83 @@ from transformers import (
 )
 import evaluate
 
-# 2. Define Constants and Configuration
-# -------------------------------------
-
+# --- CONFIGURATION ---
 MODEL_CHECKPOINT = "distilbert-base-uncased"
 DATASET_FILE = "dataset.jsonl"
-OUTPUT_DIR = "buzz-parser-v1"
+OUTPUT_DIR = "buzz-parser-v2"
 
-# Define all possible labels from our BIO scheme
-# This must be consistent with the prepare_dataset.py script
+# Define all possible labels for our BIO scheme
 LABELS = [
-    "O", # Outside
-    "B-THOUGHT", "I-THOUGHT",
-    "B-TOOLCALL", "I-TOOLCALL",
-    "B-TOOLRESPONSE", "I-TOOLRESPONSE",
-    "B-TEXT", "I-TEXT",
+    "O", "B-THOUGHT", "I-THOUGHT", "B-TOOLCALL", "I-TOOLCALL",
+    "B-TOOLRESPONSE", "I-TOOLRESPONSE", "B-TEXT", "I-TEXT",
 ]
 
 # Create mappings between labels and integer IDs
 label2id = {label: i for i, label in enumerate(LABELS)}
 id2label = {i: label for i, label in enumerate(LABELS)}
 
-# 3. Load and Prepare the Dataset
-# --------------------------------
+# --- DATA PREPARATION ---
 
 def main():
     print("Loading dataset...")
-    # Load the dataset from our JSONL file
     raw_datasets = load_dataset('json', data_files=DATASET_FILE, split="train")
-
-    # Split the dataset into training and testing sets (e.g., 90% train, 10% test)
     raw_datasets = raw_datasets.train_test_split(test_size=0.1, seed=42)
 
     print("\nDataset loaded and split:")
     print(raw_datasets)
 
-    # Load the tokenizer for our chosen model
     tokenizer = AutoTokenizer.from_pretrained(MODEL_CHECKPOINT)
 
     def tokenize_and_align_labels(examples):
         """
-        This is the core preprocessing function.
-        It tokenizes the words and aligns the labels with the new subword tokens.
+        This function tokenizes the full text and aligns labels using character spans.
         """
-        tokenized_inputs = tokenizer(examples["words"], truncation=True, is_split_into_words=True)
+        # Tokenize the full text, getting the offset mapping
+        tokenized_inputs = tokenizer(
+            examples["full_text"], 
+            truncation=True, 
+            return_offsets_mapping=True
+        )
 
         labels = []
-        for i, label_list in enumerate(examples["labels"]):
-            word_ids = tokenized_inputs.word_ids(batch_index=i)
-            previous_word_idx = None
-            label_ids = []
-            for word_idx in word_ids:
-                if word_idx is None:
-                    label_ids.append(-100)
-                elif word_idx != previous_word_idx:
-                    label_ids.append(label2id[label_list[word_idx]])
-                else:
-                    label_ids.append(-100)
-                previous_word_idx = word_idx
-            labels.append(label_ids)
+        for i, offset_mapping in enumerate(tokenized_inputs["offset_mapping"]):
+            # Initialize all labels to 'O'
+            doc_labels = [label2id['O']] * len(offset_mapping)
+            spans = examples["spans"][i]
+
+            for span in spans:
+                span_label = span["label"]
+                start_char = span["start"]
+                end_char = span["end"]
+
+                # Find the first token of the span
+                token_start_index = -1
+                for idx, (start, end) in enumerate(offset_mapping):
+                    if start >= start_char and end <= end_char:
+                        token_start_index = idx
+                        break
+                
+                if token_start_index != -1:
+                    # Assign the B- tag to the first token
+                    doc_labels[token_start_index] = label2id[f"B-{span_label}"]
+
+                    # Assign I- tags to subsequent tokens in the same span
+                    for idx in range(token_start_index + 1, len(offset_mapping)):
+                        start, end = offset_mapping[idx]
+                        if start < end_char and end <= end_char:
+                            doc_labels[idx] = label2id[f"I-{span_label}"]
+                        else:
+                            break # Exit when the token is outside the span
+            
+            labels.append(doc_labels)
 
         tokenized_inputs["labels"] = labels
         return tokenized_inputs
 
-    print("\nTokenizing and aligning labels...")
+    print("\nTokenizing and aligning labels with new span-based method...")
     tokenized_datasets = raw_datasets.map(tokenize_and_align_labels, batched=True)
 
-    # 4. Define Metrics for Evaluation
-    # ---------------------------------
-
+    # --- METRICS ---
     metric = evaluate.load("seqeval")
 
     def compute_metrics(p):
@@ -112,9 +113,7 @@ def main():
             "accuracy": results["overall_accuracy"],
         }
 
-    # 5. Configure and Run the Training
-    # ----------------------------------
-
+    # --- TRAINING ---
     print("\nSetting up model and trainer...")
     data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)
 
@@ -135,7 +134,7 @@ def main():
         evaluation_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
-        save_safetensors=False,  # Aggiunto per compatibilità con l'exporter ONNX
+        save_safetensors=False, # Keep compatibility with ONNX exporter
         push_to_hub=False,
     )
 
@@ -152,16 +151,12 @@ def main():
     print("\nStarting training...")
     trainer.train()
 
-    # 6. Save the Final Model
-    # ------------------------
-
     print("\nTraining complete. Saving the best model...")
     trainer.save_model(f"{OUTPUT_DIR}/final_model")
 
     print(f"Model saved to {OUTPUT_DIR}/final_model")
-    print("\nTo export to ONNX, run the following command in your terminal:")
-    print(f"pip install transformers[onnx]")
-    print(f"python -m transformers.onnx --model={OUTPUT_DIR}/final_model --feature=token-classification onnx/")
+    print("\nTo export to ONNX, run the following command:")
+    print(f"python export_to_onnx.py --model_path {OUTPUT_DIR}/final_model")
 
 if __name__ == "__main__":
     main()

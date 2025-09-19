@@ -88,20 +88,6 @@ def main():
 
         tokenized_inputs["labels"] = labels
 
-        # --- DEBUGGING LOG --- (for the first few examples)
-        if examples["full_text"][0] and i < 5: # Only log for the first 5 examples
-            print(f"\n--- DEBUGGING TOKENIZATION & LABELS (Example {i+1}) ---")
-            print(f"Full Text: {examples['full_text'][i].strip()}")
-            print("Tokens & Labels:")
-            tokens = tokenizer.convert_ids_to_tokens(tokenized_inputs["input_ids"][i])
-            for token, label_id in zip(tokens, tokenized_inputs["labels"][i]):
-                # Only print if label_id is not -100 (ignored by loss function)
-                if label_id != -100:
-                    print(f"  - {token:<15} {id2label[label_id]}")
-                else:
-                    print(f"  - {token:<15} (ignored)")
-            print("--------------------------------------------------")
-
         return tokenized_inputs
 
     print("\nTokenizing and aligning labels with new span-based method...")

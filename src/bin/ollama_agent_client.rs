@@ -27,6 +27,14 @@ struct Args {
     /// Optional path for a log file to save raw interactions
     #[arg(long)]
     log_file: Option<String>,
+
+    /// Optional: Name of the model to use for syntactic correction (model in the middle)
+    #[arg(long)]
+    middle_model: Option<String>,
+
+    /// Optional: Path to the prompt file for the middle model
+    #[arg(long)]
+    middle_model_prompt_file: Option<String>,
 }
 
 #[derive(Serialize, Debug)]

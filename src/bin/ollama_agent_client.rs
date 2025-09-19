@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use chrono::Local;
+use std::time::Duration;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -130,7 +131,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Message { role: "user".to_string(), content: args.query.clone() },
     ];
 
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(600))
+        .build()?;
     let ollama_url = args.ollama_url.clone();
 
     loop {

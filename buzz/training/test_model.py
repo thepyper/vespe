@@ -29,6 +29,10 @@ def query_ollama(prompt, model_name, system_prompt):
         messages.append({'role': 'system', 'content': system_prompt})
     messages.append({'role': 'user', 'content': prompt})
 
+    # Stampa il payload completo per debugging
+    import json
+    print(f"--- Ollama Request Payload ---\n{json.dumps(messages, indent=2)}\n----------------------------")
+
     try:
         response = ollama.chat(model=model_name, messages=messages)
         content = response['message']['content']

@@ -1,2 +1,0 @@
-THOUGHT: The user wants to commit the changes.
-TOOL_CALL: <tool_code>run_shell_command('git commit -m "Update README"')</tool_code>

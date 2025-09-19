@@ -1,2 +1,0 @@
-TOOL_RESPONSE: main
-TEXT: The current git branch is `main`.

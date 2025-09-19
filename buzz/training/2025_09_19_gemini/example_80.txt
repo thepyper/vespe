@@ -1,2 +1,0 @@
-THOUGHT: I need to call a tool that has no output.
-TOOL_CALL: log_event('user_interacted')

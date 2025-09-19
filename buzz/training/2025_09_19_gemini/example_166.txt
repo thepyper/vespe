@@ -1,2 +1,0 @@
-THOUGHT: The user wants to convert a number from decimal to hexadecimal.
-TEXT: The hexadecimal representation of 255 is FF.

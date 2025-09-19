@@ -1,3 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">[package]
-license = "MIT"</tool_response>
-TEXT: The project is licensed under the MIT License.

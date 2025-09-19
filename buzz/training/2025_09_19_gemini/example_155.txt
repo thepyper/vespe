@@ -1,2 +1,0 @@
-TOOL_RESPONSE: 256 README.md
-TEXT: The file `README.md` has 256 characters.

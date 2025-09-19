@@ -1,2 +1,0 @@
-TOOL_RESPONSE: cargo 1.72.0 (7e089733b 2023-08-10)
-TEXT: The cargo version is 1.72.0.

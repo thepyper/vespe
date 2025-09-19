@@ -1,2 +1,0 @@
-thought: user wants a summary of `README.md`. okay i will read it.
-TOOL_CALL: read_file('README.md')

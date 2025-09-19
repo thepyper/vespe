@@ -1,3 +1,0 @@
-TOOL_RESPONSE: <tool_response status="error">Permission denied</tool_response>
-THOUGHT: I don't have the necessary permissions to perform that action. I must inform the user.
-TEXT: I am sorry, but I do not have the required permissions to perform that action.

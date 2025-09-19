@@ -1,5 +1,0 @@
-TOOL_RESPONSE: On branch main
-Your branch is up to date with 'origin/main'.
-
-nothing to commit, working tree clean
-TEXT: Your git repository is clean and on the `main` branch.

@@ -1,2 +1,0 @@
-THOUGHT: The user is being polite.
-TEXT: You are welcome!

@@ -1,2 +1,0 @@
-THOUGHT: I need to check if a file is executable.
-TOOL_CALL: is_executable('run.sh')

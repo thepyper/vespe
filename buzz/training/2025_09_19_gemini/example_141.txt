@@ -1,2 +1,0 @@
-TOOL_RESPONSE: Deleted branch new-feature (was 1234567).
-TEXT: I have deleted the `new-feature` branch.

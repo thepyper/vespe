@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success"/>
-TEXT: I have created the `user.json` file.

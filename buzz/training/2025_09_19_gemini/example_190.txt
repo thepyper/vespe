@@ -1,2 +1,0 @@
-THOUGHT: The user wants to see the last 5 lines of the CSV file.
-TOOL_CALL: <tool_code>run_shell_command('tail -n 5 data.csv')</tool_code>

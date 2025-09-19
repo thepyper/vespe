@@ -1,2 +1,0 @@
-TOOL_RESPONSE: 
-TEXT: I have added `README.md` to the git index.

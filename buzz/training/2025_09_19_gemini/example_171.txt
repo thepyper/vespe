@@ -1,2 +1,0 @@
-TOOL_RESPONSE: /home/user
-TEXT: The home directory is `/home/user`.

@@ -1,2 +1,0 @@
-THOUGHT: I need to read a CSV file and extract a column.
-TOOL_CALL: read_file('data.csv')

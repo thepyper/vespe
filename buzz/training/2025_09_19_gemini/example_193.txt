@@ -1,2 +1,0 @@
-TOOL_RESPONSE: 211
-TEXT: There are 211 files in the current directory.

@@ -1,6 +1,0 @@
-TOOL_RESPONSE: id,name,value
-1,A,100
-2,B,200
-3,C,300
-4,D,400
-TEXT: Here are the first 5 lines of `data.csv`.

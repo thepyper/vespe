@@ -1,5 +1,0 @@
-TOOL_RESPONSE: <diff>
-- Hello
-+ Hello World
-</diff>
-TEXT: The difference between the two files is the addition of the word "World".

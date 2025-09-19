@@ -1,2 +1,0 @@
-THOUGHT: The user wants to unzip the file I just downloaded.
-TOOL_CALL: <tool_code>run_shell_command('unzip data.zip')</tool_code>

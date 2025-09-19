@@ -1,2 +1,0 @@
-THOUGHT: I need to call a tool with multiple arguments.
-TOOL_CALL: <tool_code>rename_file(from='old.txt', to='new.txt')</tool_code>

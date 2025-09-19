@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the open ports on the system.
-TOOL_CALL: <tool_code>run_shell_command('netstat -tuln')</tool_code>

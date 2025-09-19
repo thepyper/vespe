@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">... first 100 lines of the log file ...</tool_response>
-TEXT: I have read the first 100 lines of the log file. Is there anything specific you are looking for?

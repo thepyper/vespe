@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the weather. I can use an API for that.
-TOOL_CALL: api_get('https://api.weather.com/v3/weather/now?location=london')

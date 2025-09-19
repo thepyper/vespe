@@ -1,2 +1,0 @@
-THOUGHT: The user wants to write "Hello World" to a new file named `hello.txt`.
-TOOL_CALL: write_file('hello.txt', 'Hello World')

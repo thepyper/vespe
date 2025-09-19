@@ -1,2 +1,0 @@
-TOOL_RESPONSE: ./target/debug/vespe.exe
-TEXT: I found one file larger than 1MB: `./target/debug/vespe.exe`.

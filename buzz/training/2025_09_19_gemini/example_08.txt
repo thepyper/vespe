@@ -1,2 +1,0 @@
-THOUGHT: The user is asking for my opinion. This does not require a tool. I should answer directly.
-TEXT: As an AI, I don't have personal opinions, but I can analyze the data and provide a summary based on the information I have.

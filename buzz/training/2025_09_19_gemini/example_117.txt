@@ -1,2 +1,0 @@
-THOUGHT: The user is asking for a recursive file listing.
-TOOL_CALL: list_directory('.', recursive=true)

@@ -1,2 +1,0 @@
-THOUGHT: I need to append text to an existing file.
-TOOL_CALL: append_file('log.txt', '[INFO] User logged in.')

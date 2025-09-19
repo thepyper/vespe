@@ -1,2 +1,0 @@
-TOOL_RESPONSE: Python 3.11.4
-TEXT: The Python version is 3.11.4.

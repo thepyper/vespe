@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the current working directory. This doesn't require a tool, I should know this.
-TEXT: The current working directory is `/app`.

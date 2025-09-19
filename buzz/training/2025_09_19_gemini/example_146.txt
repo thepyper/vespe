@@ -1,2 +1,0 @@
-THOUGHT: The user wants to compress a file.
-TOOL_CALL: <tool_code>run_shell_command('gzip large_file.log')</tool_code>

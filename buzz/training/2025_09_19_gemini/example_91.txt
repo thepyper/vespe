@@ -1,2 +1,0 @@
-THOUGHT: The user wants to create a file with JSON content.
-TOOL_CALL: write_file('user.json', '{"name": "John Doe", "email": "john.doe@example.com"}')

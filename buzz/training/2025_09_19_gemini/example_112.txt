@@ -1,2 +1,0 @@
-THOUGHT: I will try to read a very large file. I should be mindful of memory usage.
-TOOL_CALL: read_file('large_log_file.log', limit=100)

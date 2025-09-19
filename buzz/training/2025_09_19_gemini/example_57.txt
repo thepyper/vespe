@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"status": "ok"}
-TEXT: I have enabled the 'new_ui' feature flag.

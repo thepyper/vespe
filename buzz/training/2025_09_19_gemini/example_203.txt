@@ -1,2 +1,0 @@
-TOOL_RESPONSE: 
-TEXT: I have reverted the changes to `src/main.rs`.

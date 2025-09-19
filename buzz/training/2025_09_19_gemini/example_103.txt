@@ -1,3 +1,0 @@
-TOOL_RESPONSE: Here is some text with special characters: & < > " ' 
-THOUGHT: I have the content. I need to make sure I display it correctly.
-TEXT: The file content is: `Here is some text with special characters: & < > " ' `

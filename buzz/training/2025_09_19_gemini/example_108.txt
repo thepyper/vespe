@@ -1,2 +1,0 @@
-THOUGHT: I need to perform a calculation. I can do this myself.
-TEXT: The result of 123 + 456 is 579.

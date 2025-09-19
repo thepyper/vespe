@@ -1,2 +1,0 @@
-THOUGHT: The user is asking for a joke.
-TEXT: Why don't scientists trust atoms? Because they make up everything!

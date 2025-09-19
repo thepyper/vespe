@@ -1,2 +1,0 @@
-TOOL_RESPONSE: Some data with special characters from old systems.
-TEXT: I have read the file with the specified encoding.

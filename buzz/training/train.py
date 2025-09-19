@@ -88,6 +88,20 @@ def main():
 
         tokenized_inputs["labels"] = labels
 
+        # --- DEBUGGING LOG (Write to file) ---
+        # Only log for the first few examples to avoid huge files
+        if examples["full_text"][0] and i < 5: 
+            debug_output_path = "debug_token_alignment.jsonl"
+            with open(debug_output_path, 'a', encoding='utf-8') as debug_f:
+                debug_entry = {
+                    "example_index": i,
+                    "full_text": examples['full_text'][i].strip(),
+                    "tokens": tokenizer.convert_ids_to_tokens(tokenized_inputs["input_ids"][i]),
+                    "labels": [id2label[l_id] if l_id != -100 else "(ignored)" for l_id in tokenized_inputs["labels"][i]],
+                    "offset_mapping": tokenized_inputs["offset_mapping"][i].tolist() # Convert numpy array to list
+                }
+                debug_f.write(json.dumps(debug_entry, indent=2) + ",\n")
+
         return tokenized_inputs
 
     print("\nTokenizing and aligning labels with new span-based method...")

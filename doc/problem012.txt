@@ -1,0 +1,90 @@
+----------------------------
+<<< Ollama response:
+Okay, I've read the file `dio/cane`. Here’s a summary:
+
+The document details the evolution of the “Canine” breed, tracing their roots back to the ancient Mediterranean region. It highlights their historical significance as companions, guardians, and working dogs, emphasizing their loyalty, intelligence, and versatility. The document also details key physical characteristics, including their unique coat patterns and temperament – described as generally affectionate, intelligent, and eager to please.  It touches on their historical use in various roles, from hunting and herding to military and police work. The summary concludes by emphasizing the Canine’s enduring cultural importance and their continued relevance today.
+
+---
+
+Do you need anything else from the file?
+
+>>> Loading tokenizer and ONNX session...
+
+>>> Running inference...
+Input is shorter than window size, running simple inference.
+
+>>> Parsed Segments:
+  - [THOUGHT]: okay , i
+  - [TOOLCALL]: '
+  - [THOUGHT]: ve read the file
+  - [TOOLRESPONSE]: ` di o / cane `
+  - [THOUGHT]: . here ’ s a
+  - [TOOLRESPONSE]: summary :
+  - [THOUGHT]: the document
+  - [TOOLRESPONSE]: details
+  - [THOUGHT]: the
+  - [TEXT]: evolution
+  - [THOUGHT]: of
+  - [TOOLRESPONSE]: the “ canine ” breed
+  - [THOUGHT]: , tracing
+  - [TEXT]: their
+  - [THOUGHT]: roots back to the
+  - [TOOLRESPONSE]: ancient
+  - [TEXT]: mediterranean region
+  - [THOUGHT]: . it
+  - [TOOLRESPONSE]: highlights
+  - [TEXT]: their historical
+  - [THOUGHT]: significance as
+  - [TEXT]: companions ,
+  - [THOUGHT]: guardians
+  - [TOOLCALL]: ,
+  - [THOUGHT]: and
+  - [TEXT]: working
+  - [TOOLRESPONSE]: dogs
+  - [THOUGHT]: ,
+  - [TOOLRESPONSE]: emphasizing
+  - [TEXT]: their loyalty ,
+  - [TOOLRESPONSE]: intelligence
+  - [TOOLCALL]: ,
+  - [TOOLRESPONSE]: and
+  - [THOUGHT]: versa
+  - [TOOLRESPONSE]: tility
+  - [TOOLCALL]: .
+  - [THOUGHT]: the document also
+  - [TOOLRESPONSE]: details
+  - [TEXT]: key physical characteristics ,
+  - [TOOLRESPONSE]: including
+  - [TEXT]: their unique coat patterns and temperament
+  - [TOOLRESPONSE]: –
+  - [TEXT]: described as generally affection
+  - [TOOLCALL]: ate
+  - [TEXT]: , intelligent
+  - [TOOLCALL]: ,
+  - [TEXT]: and eager
+  - [THOUGHT]: to
+  - [TEXT]: please
+  - [THOUGHT]: . it touches on
+  - [TEXT]: their
+  - [TOOLRESPONSE]: historical
+  - [THOUGHT]: use
+  - [TOOLRESPONSE]: in
+  - [TEXT]: various
+  - [THOUGHT]: roles
+  - [TOOLCALL]: , from hunting
+  - [TEXT]: and
+  - [TOOLCALL]: herd ing
+  - [TOOLRESPONSE]: to
+  - [TOOLCALL]: military
+  - [TEXT]: and
+  - [TOOLCALL]: police work .
+  - [THOUGHT]: the
+  - [TOOLRESPONSE]: summary
+  - [THOUGHT]: concludes by emphasizing the
+  - [TOOLRESPONSE]: canine ’ s
+  - [TEXT]: enduring cultural importance and
+  - [THOUGHT]: their continued
+  - [TOOLRESPONSE]: relevance
+  - [THOUGHT]: today
+  - [TOOLCALL]: .
+  - [TOOLRESPONSE]: - - -
+  - [THOUGHT]: do you need anything else from the file ?

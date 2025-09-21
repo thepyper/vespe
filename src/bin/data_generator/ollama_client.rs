@@ -1,6 +1,7 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
+use tracing::debug;
 
 #[derive(Debug, Serialize)]
 pub struct OllamaGenerateRequest<'a> {
@@ -22,6 +23,7 @@ pub async fn query_ollama(
     prompt: &str,
     system: Option<&str>,
 ) -> Result<String> {
+    debug!("Ollama Request: model={}, system={:?}, prompt={}", model, system, prompt);
     let request_payload = OllamaGenerateRequest {
         model,
         prompt,
@@ -34,5 +36,6 @@ pub async fn query_ollama(
         .send()
         .await?;
     let response_body = response.json::<OllamaGenerateResponse>().await?;
+    debug!("Ollama Response: {}", response_body.response);
     Ok(response_body.response.trim().to_string())
 }

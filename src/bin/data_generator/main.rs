@@ -3,6 +3,11 @@ use reqwest::Client;
 use handlebars::Handlebars;
 use rand::seq::SliceRandom;
 use clap::Parser;
+use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::prelude::*;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use chrono::Local;
+use std::path::PathBuf;
 
 mod cli_args;
 mod ollama_client;
@@ -10,8 +15,20 @@ mod tool_definitions;
 mod prompt_templates;
 mod pipeline;
 
+const LOG_DIR: &str = ".vespe/log";
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    let file_name = format!("data_generator_{}.log", Local::now().format("%Y%m%d%H%M%S"));
+    let log_path = PathBuf::from(LOG_DIR).join(file_name);
+    let file_appender = RollingFileAppender::new(Rotation::HOURLY, LOG_DIR, log_path);
+    let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_writer(std::io::stdout).with_filter(EnvFilter::from_default_env()))
+        .with(fmt::layer().with_writer(non_blocking_file_writer).with_filter(EnvFilter::from_default_env()))
+        .init();
+
     let args = cli_args::CliArgs::parse();
     let client = Client::new();
 

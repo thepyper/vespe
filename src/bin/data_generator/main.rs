@@ -32,17 +32,21 @@ async fn main() -> Result<()> {
     tracing::info!("Tracing initialized successfully.");
 
     let args = cli_args::CliArgs::parse();
+    tracing::info!("Parsed CLI arguments: {:?}", args);
+
     let client = Client::new();
 
     let mut handlebars = Handlebars::new();
+    tracing::info!("Registering Handlebars templates...");
     prompt_templates::register_all_templates(&mut handlebars)?;
+    tracing::info!("Handlebars templates registered.");
 
-    println!("--- Inizio Pipeline di Generazione Dati (Rust) ---");
+    tracing::info!("--- Inizio Pipeline di Generazione Dati (Rust) ---");
 
     let mut rng = rand::thread_rng();
 
     for i in 1..=args.num_examples {
-        println!("\n========== Inizio Esempio {}/{} ==========", i, args.num_examples);
+        tracing::info!("========== Inizio Esempio {}/{} ==========", i, args.num_examples);
 
         let selected_tool = if let Some(tool_name_arg) = &args.tool_name {
             tool_definitions::TOOLS_DEFINITION.iter()
@@ -61,6 +65,12 @@ async fn main() -> Result<()> {
         let user_style = args.user_style.as_deref().unwrap_or_else(|| pipeline::USER_STYLES.choose(&mut rng).unwrap());
         let context_length = args.context_length.as_deref().unwrap_or_else(|| pipeline::CONTEXT_LENGTHS.choose(&mut rng).unwrap());
 
+        tracing::debug!(
+            "Selected parameters for example {}: tool_name={}, use_case={}, complexity={}, user_style={}, context_length={}",
+            i, tool_name, use_case, complexity, user_style, context_length
+        );
+
+        tracing::info!("PASSO 1: Generating student prompt...");
         let student_prompt = match pipeline::generate_student_prompt(
             &client,
             &args,
@@ -73,21 +83,29 @@ async fn main() -> Result<()> {
             context_length,
             &handlebars
         ).await {
-            Ok(prompt) => prompt,
+            Ok(prompt) => {
+                tracing::debug!("PASSO 1: Student prompt generated successfully. Prompt: {}", prompt);
+                prompt
+            },
             Err(e) => {
-                eprintln!("ERRORE nel Passo 1: {}. Saltando l'esempio.", e);
+                tracing::error!("ERRORE nel Passo 1: {}. Saltando l'esempio.", e);
                 continue;
             }
         };
 
+        tracing::info!("PASSO 2: Getting student response...");
         let (student_response, system_prompt_used) = match pipeline::get_student_response(&client, &args, &student_prompt, &handlebars).await {
-            Ok(res) => res,
+            Ok(res) => {
+                tracing::debug!("PASSO 2: Student response received. Response: {}", res.0);
+                res
+            },
             Err(e) => {
-                eprintln!("ERRORE nel Passo 2: {}. Saltando l'esempio.", e);
+                tracing::error!("ERRORE nel Passo 2: {}. Saltando l'esempio.", e);
                 continue;
             }
         };
 
+        tracing::info!("PASSO 3: Labeling student response...");
         let labeled_json = match pipeline::label_student_response(
             &client,
             &args,
@@ -100,22 +118,28 @@ async fn main() -> Result<()> {
             &handlebars
         ).await {
             Ok(json_str) => {
-                json_str.trim().strip_prefix("```json").unwrap_or(&json_str).strip_suffix("```").unwrap_or(&json_str).trim().to_string()
+                let trimmed_json = json_str.trim().strip_prefix("```json").unwrap_or(&json_str).strip_suffix("```").unwrap_or(&json_str).trim().to_string();
+                tracing::debug!("PASSO 3: Student response labeled. Labeled JSON: {}", trimmed_json);
+                trimmed_json
             },
             Err(e) => {
-                eprintln!("ERRORE nel Passo 3: {}. Saltando l'esempio.", e);
+                tracing::error!("ERRORE nel Passo 3: {}. Saltando l'esempio.", e);
                 continue;
             }
         };
 
-        if let Err(e) = pipeline::save_labeled_example(&args.output_dir, &labeled_json, i) {
-            eprintln!("ERRORE nel Passo 4: {}. Saltando l'esempio.", e);
-            continue;
-        }
+        let output_file_path = match pipeline::save_labeled_example(&args.output_dir, &labeled_json, i) {
+            Ok(path) => path,
+            Err(e) => {
+                tracing::error!("ERRORE nel Passo 4: {}. Saltando l'esempio.", e);
+                continue;
+            }
+        };
+        tracing::info!("PASSO 4: Labeled example saved successfully to {}", output_file_path.display());
 
-        println!("========== Fine Esempio {}/{} ==========", i, args.num_examples);
+        tracing::info!("========== Fine Esempio {}/{} ==========", i, args.num_examples);
     }
 
-    println!("\n--- Pipeline completata ---");
+    tracing::info!("\n--- Pipeline completata ---");
     Ok(())
 }

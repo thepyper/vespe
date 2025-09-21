@@ -1,0 +1,56 @@
+# Logging Plan for `data_generator`
+
+This plan outlines the additions to logging within the `data_generator` Rust binary to provide more comprehensive insights into its execution flow and data processing. The `tracing` crate will be utilized for structured logging.
+
+## Objectives:
+- Enhance visibility into the main pipeline steps (PASSO 1, 2, 3, 4).
+- Log key parameters and intermediate data to aid in understanding data flow.
+- Replace `eprintln!` with `tracing::error!` for consistent error reporting.
+
+## Implementation Details:
+
+### 1. `src/bin/data_generator/main.rs`
+
+- **Initialization:**
+    - Log parsed CLI arguments using `tracing::info!`.
+    - Log the start of Handlebars template registration using `tracing::info!`.
+    - Log the overall pipeline start using `tracing::info!`.
+
+- **Per-Example Loop:**
+    - At the beginning of each example iteration, log the current example number (`i`) and total (`args.num_examples`) using `tracing::info!`.
+    - Log the selected `tool_name`, `use_case`, `complexity`, `user_style`, and `context_length` using `tracing::debug!`.
+
+- **PASSO 1: `pipeline::generate_student_prompt`:**
+    - Before calling the function: `tracing::info!("PASSO 1: Generating student prompt...")`.
+    - After successful generation: `tracing::debug!("PASSO 1: Student prompt generated successfully. Prompt: {}", student_prompt)`.
+    - On error: Replace `eprintln!` with `tracing::error!("ERRORE nel Passo 1: {}. Saltando l'esempio.", e)`.
+
+- **PASSO 2: `pipeline::get_student_response`:**
+    - Before calling the function: `tracing::info!("PASSO 2: Getting student response...")`.
+    - After successful response: `tracing::debug!("PASSO 2: Student response received. Response: {}", student_response)`.
+    - On error: Replace `eprintln!` with `tracing::error!("ERRORE nel Passo 2: {}. Saltando l'esempio.", e)`.
+
+- **PASSO 3: `pipeline::label_student_response`:**
+    - Before calling the function: `tracing::info!("PASSO 3: Labeling student response...")`.
+    - After successful labeling: `tracing::debug!("PASSO 3: Student response labeled. Labeled JSON: {}", labeled_json)`.
+    - On error: Replace `eprintln!` with `tracing::error!("ERRORE nel Passo 3: {}. Saltando l'esempio.", e)`.
+
+- **PASSO 4: `pipeline::save_labeled_example`:**
+    - Before calling the function: `tracing::info!("PASSO 4: Saving labeled example...")`.
+    - After successful save: `tracing::info!("PASSO 4: Labeled example saved successfully to {}", output_path)`. (Will require modifying `save_labeled_example` to return the path or constructing it here).
+    - On error: Replace `eprintln!` with `tracing::error!("ERRORE nel Passo 4: {}. Saltando l'esempio.", e)`.
+
+- **Pipeline Completion:**
+    - Log the completion of the entire pipeline using `tracing::info!`.
+
+### 2. `src/bin/data_generator/pipeline.rs`
+
+- Review all functions within `pipeline.rs` for existing `eprintln!` calls.
+- Replace any `eprintln!` with appropriate `tracing::error!` or `tracing::warn!` calls.
+- Add `tracing::debug!` statements for significant intermediate steps or data within these functions if they contribute to understanding data flow.
+- Modify `save_labeled_example` to return the full path of the saved file.
+
+## Next Steps:
+1. Implement the logging changes in `src/bin/data_generator/main.rs`.
+2. Review and update `src/bin/data_generator/pipeline.rs` for logging and the return value of `save_labeled_example`.
+3. Compile and test the `data_generator` to ensure logging works as expected and no new issues are introduced.

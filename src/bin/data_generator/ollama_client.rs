@@ -30,6 +30,13 @@ pub struct OllamaGenerateResponse {
     pub eval_duration: Option<u64>,
 }
 
+#[derive(PartialEq)]
+enum ReplyStatus {
+    IsWaiting,
+    IsThinking, 
+    IsResponding,
+}
+
 pub async fn query_ollama(
     client: &Client,
     ollama_url: &str,
@@ -63,6 +70,8 @@ pub async fn query_ollama(
     let mut stream = response.bytes_stream();
     let mut buffer = Vec::new();
 
+    let mut reply_status : ReplyStatus = ReplyStatus::IsWaiting;
+
     while let Some(chunk) = stream.next().await {
         let bytes = chunk?;
         buffer.extend_from_slice(&bytes);
@@ -73,12 +82,33 @@ pub async fn query_ollama(
 
             if line.trim().is_empty() { continue; }
 
-            debug!("Ollama Raw Response Chunk: {}", line);
+            //debug!("Ollama Raw Response Chunk: {}", line);
 
             let json_value: Value = serde_json::from_str(&line)?;
+            
             if let Some(response_text) = json_value["response"].as_str() {
-                print!("{}", response_text);
-                io::stdout().flush()?;
+                if !response_text.is_empty() {
+                    if reply_status != ReplyStatus::IsResponding {
+                        reply_status = ReplyStatus::IsResponding;
+                        print!("\nRESPONSE: ");
+                    }
+                    print!("{}", response_text);
+                    io::stdout().flush()?;
+                } 
+            }
+              
+            if let Some(thought_text) = json_value["thinking"].as_str() {
+                if !thought_text.is_empty() {
+                    if reply_status != ReplyStatus::IsThinking {
+                        reply_status =  ReplyStatus::IsThinking;
+                        print!("\nTHINKING: ");
+                    }
+                    print!("{}", thought_text);
+                    io::stdout().flush()?;
+                }                      
+            }
+                        
+            if let Some(response_text) = json_value["response"].as_str() {
                 full_response_text.push_str(response_text);
             }
             if json_value["done"].as_bool().unwrap_or(false) { break; }

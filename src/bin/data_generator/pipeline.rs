@@ -104,9 +104,10 @@ pub async fn get_student_response(
     ollama_url: &str,
     hero_model: &str,
     student_prompt: &str,
+    tool_format: &str,
     handlebars: &Handlebars<'_>,
 ) -> Result<(String, String)> {
-    let tool_spec = build_tool_spec(handlebars, &args.tool_format)?;
+    let tool_spec = build_tool_spec(handlebars, tool_format)?;
     tracing::debug!("get_student_response: Built tool spec: {}", tool_spec);
     let data = json!({
         "tool_spec": tool_spec,

@@ -100,6 +100,7 @@ async fn main() -> Result<()> {
             &args.ollama_url,
             &args.hero_model,
             &student_prompt,
+            &args.tool_format,
             &handlebars
         ).await {
             Ok(res) => {

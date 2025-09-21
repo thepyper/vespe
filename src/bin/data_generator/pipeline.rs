@@ -226,9 +226,9 @@ pub async fn save_labeled_example(
     let converted_json = segmentation_to_json_conversion(labeled_json_str)?;
     tracing::debug!("save_labeled_example: Segmented json conversion: {}", converted_json);
     
-    let original_labeled_json: serde_json::Value = serde_json::from_str(&converted_json)?;
+    let mut original_labeled_json: serde_json::Value = serde_json::from_str(&converted_json)?;
 
-    let mut final_json = json!({
+    let mut debug_json = json!({
         "narrator_query": narrator_query,
         "narrator_response": narrator_response,
         "hero_query": hero_query,
@@ -237,17 +237,10 @@ pub async fn save_labeled_example(
         "marker_response": marker_response,
         "config": serde_json::to_value(config)?,
     });
+    
+    original_labeled_json.as_object_mut().ok_or(anyhow!("internal error"))?["debug"] = debug_json;
 
-    // Merge original labeled_json into final_json
-    if let Some(obj) = final_json.as_object_mut() {
-        if let Some(original_obj) = original_labeled_json.as_object() {
-            for (key, value) in original_obj {
-                obj.insert(key.clone(), value.clone());
-            }
-        }
-    }
-
-    let formatted_json = serde_json::to_string_pretty(&final_json)?;
+    let formatted_json = serde_json::to_string_pretty(&original_labeled_json)?;
     fs::write(&file_path, formatted_json)?;
     tracing::info!("Esempio salvato in '{}'", file_path.display());
     Ok(file_path)

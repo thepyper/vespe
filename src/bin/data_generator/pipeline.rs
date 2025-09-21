@@ -107,8 +107,12 @@ pub async fn get_student_response(
 ) -> Result<(String, String)> {
     let tool_spec = build_tool_spec(handlebars, &args.tool_format)?;
     tracing::debug!("get_student_response: Built tool spec: {}", tool_spec);
-    let system_prompt = format!("{}\n{}", NORMATIVE_SYSTEM_PROMPT, tool_spec);
-    tracing::debug!("get_student_response: Constructed system prompt: {}", system_prompt);
+    let data = json!({
+        "tool_spec": tool_spec,
+    });    
+    tracing::debug!("get_student_response: Data for rendering: {:#?}", data);
+    let system_prompt = handlebars.render("system_prompt", &data)?;
+    tracing::debug!("get_student_response: Rendered system prompt: {}", system_prompt);
     let response = query_ollama(client, &args.ollama_url, &args.small_model, student_prompt, Some(&system_prompt)).await?;
     Ok((response, system_prompt))
 }

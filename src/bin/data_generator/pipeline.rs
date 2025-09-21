@@ -9,7 +9,6 @@ use chrono::Local;
 use super::cli_args::CliArgs;
 use super::ollama_client::query_ollama;
 use super::tool_definitions::{TOOLS_DEFINITION};
-use super::prompt_templates::NORMATIVE_SYSTEM_PROMPT;
 
 pub const USE_CASES: &[&str] = &[
     "data extraction",

@@ -1,6 +1,6 @@
-TRAINING DATA LABELING - SINGLE TOOL RESPONSE SEGMENTATION
+TRAINING DATA LABELING - TOKEN MARKING SEGMENTATION
 
-Analyze a language model's response to create labeled training data for text segmentation into TEXT, THOUGHT, and TOOL_CALL categories.
+Analyze a language model's response and mark each meaningful unit with its category to create training data for text segmentation.
 
 === INPUT DATA ===
 Target Tool: {{{tool_name}}} - {{{tool_description}}}
@@ -25,19 +25,106 @@ Model Response: {{{small_reply}}}
 - Tool parameters and arguments
 - Technical tool-calling syntax (even if malformed)
 
+=== TOKEN MARKING RULES ===
+
+1. **Segmentation Guidelines:**
+   - Split on natural boundaries (words, punctuation, JSON structures)
+   - Keep related content together (don't split mid-word)
+   - Group JSON structures as logical units
+   - Separate punctuation when it changes meaning
+
+2. **Granularity Examples:**
+   - "I'll help you" → Three tokens: "I'll" "help" "you"
+   - "{\"name\": \"read_file\"}" → One or two tokens: "{\"name\":" "\"read_file\"}" OR "{\"name\": \"read_file\"}"
+   - "Let me think..." → Three tokens: "Let" "me" "think..."
+
+3. **JSON Handling:**
+   - Keep complete key-value pairs together when possible
+   - "{\"tool\": \"search\"}" can be one TOOL_CALL unit
+   - Or split logical parts: "{\"tool\":" <TOOL_CALL> "\"search\"}" <TOOL_CALL>
+
+=== OUTPUT FORMAT ===
+
+Mark each unit with <CATEGORY> immediately after it, one per line:
+
+Example Input: "I'll search for information: {\"name\": \"web_search\", \"query\": \"python\"} This should help!"
+
+Example Output:
+I'll <TEXT>
+search <TEXT>
+for <TEXT>
+information: <TEXT>
+{\"name\": \"web_search\", \"query\": \"python\"} <TOOL_CALL>
+This <TEXT>
+should <TEXT>
+help! <TEXT>
+
 === TOOL-SPECIFIC RECOGNITION ===
-For {{{tool_name}}}, identify as TOOL_CALL:
-- Any JSON mentioning "{{{tool_name}}}"
+For {{{tool_name}}}, mark as TOOL_CALL:
+- Any JSON structure containing "{{{tool_name}}}"
 - Parameter structures matching {{{tool_spec}}}
 - Malformed attempts at using {{{tool_name}}}
-- Clear references to {{{tool_name}}} functionality
+- References to {{{tool_name}}} functionality
 
-=== LABELING OUTPUT ===
-Provide DistilBERT format with complete character coverage:
-```json
-{
-  "full_text": "exact_response_text_here",
-  "spans": [
-    {"start": 0, "end": X, "label": "TEXT|THOUGHT|TOOL_CALL", "text": "span_text"}
-  ]
-}
+=== LABELING GUIDELINES ===
+
+**Good Segmentation:**
+- "Let me check that file:" → "Let" <THOUGHT> "me" <THOUGHT> "check" <THOUGHT> "that" <THOUGHT> "file:" <THOUGHT>
+- "Here are the results:" → "Here" <TEXT> "are" <TEXT> "the" <TEXT> "results:" <TEXT>
+- "{\"path\": \"/config.txt\"}" → "{\"path\": \"/config.txt\"}" <TOOL_CALL>
+
+**Consistent Approach:**
+- Be consistent with granularity throughout the response
+- When in doubt, prefer slightly larger units over tiny fragments
+- Keep meaningful phrases together when possible
+
+=== EXAMPLES ===
+
+Example 1:
+Input: "I understand your request. Let me read the specified file: {\"name\": \"read_file\", \"path\": \"data.txt\"} The contents are displayed above."
+
+Output:
+I <TEXT>
+understand <TEXT>
+your <TEXT>
+request. <TEXT>
+Let <THOUGHT>
+me <THOUGHT>
+read <THOUGHT>
+the <THOUGHT>
+specified <THOUGHT>
+file: <THOUGHT>
+{\"name\": \"read_file\", \"path\": \"data.txt\"} <TOOL_CALL>
+The <TEXT>
+contents <TEXT>
+are <TEXT>
+displayed <TEXT>
+above. <TEXT>
+
+Example 2:
+Input: "Hmm, I need to think about this. I'll use echo: {\"text\": \"hello world\"} Done!"
+
+Output:
+Hmm, <THOUGHT>
+I <THOUGHT>
+need <THOUGHT>
+to <THOUGHT>
+think <THOUGHT>
+about <THOUGHT>
+this. <THOUGHT>
+I'll <TEXT>
+use <TEXT>
+echo: <TEXT>
+{\"text\": \"hello world\"} <TOOL_CALL>
+Done! <TEXT>
+
+=== PROCESSING INSTRUCTIONS ===
+
+1. Read the full model response: {{{small_reply}}}
+2. Identify natural segmentation boundaries
+3. Classify each segment based on context and content
+4. Mark each unit with appropriate category
+5. Ensure complete coverage (every word/unit gets a label)
+6. Double-check that TOOL_CALL segments relate to {{{tool_name}}}
+
+Analyze and mark the response:

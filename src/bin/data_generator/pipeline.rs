@@ -148,6 +148,12 @@ fn segmentation_to_json_conversion(input: &str) -> Result<String> {
     let mut pos = 0;
 
     for (line_no, line) in input.lines().enumerate() {
+        
+        // Allow empty lines
+        if line.is_empty() {
+            continue;
+        }
+        
         if line == "<NL>" {
             full_text.push('\n');
             pos += 1;

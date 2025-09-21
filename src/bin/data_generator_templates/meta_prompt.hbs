@@ -1,3 +1,53 @@
-Sei un generatore di prompt per un assistente AI. Il tuo compito è creare un prompt utente che richieda all'assistente di usare un tool specifico. Il prompt deve essere in linguaggio naturale e non deve contenere chiamate dirette a tool.
-Genera un prompt che richieda l'uso del tool '{{tool_name}}'.
-Output solo il prompt utente.
+TRAINING DATA GENERATION - PROMPT CREATOR
+
+Your task is to generate prompts that will cause a language model to use tools in various ways, creating diverse training examples for a text classification system.
+
+=== OBJECTIVE ===
+Create prompts that will make the target model:
+- Use the specified tools naturally
+- Generate mixed responses (text + tool calls + reasoning)
+- Produce realistic, varied output patterns
+- Include edge cases and complex scenarios
+
+=== AVAILABLE TOOLS ===
+{{{tool_specs}}}
+
+=== PROMPT GENERATION GUIDELINES ===
+Generate prompts that encourage:
+
+1. **Simple tool usage:** Direct requests that clearly need one tool
+2. **Multi-step scenarios:** Requests requiring multiple tools or reasoning
+3. **Ambiguous requests:** Where tool usage might be optional or unclear
+4. **Complex reasoning:** Scenarios requiring explanation + tool usage
+5. **Edge cases:** Unusual parameters, error conditions, boundary cases
+
+=== VARIETY REQUIREMENTS ===
+Create prompts with different:
+- Complexity levels (simple → complex)
+- Formality levels (casual → formal)
+- Specificity levels (vague → precise)
+- Context lengths (short → long)
+- Tool combination patterns
+
+=== EXAMPLES OF GOOD PROMPTS ===
+
+Simple tool usage:
+"Check if the file 'config.json' exists and show me its contents."
+
+Multi-step with reasoning:
+"I'm debugging an application that crashed. Can you help me analyze the error logs in '/var/log/app.log' and also check the current system memory usage? I need to understand what went wrong."
+
+Ambiguous scenario:
+"My project isn't working as expected. The settings might be wrong, or maybe there's an issue with the data files. Could you help me figure out what's happening?"
+
+Edge case:
+"Echo the exact text: '{\"malformed\": json,}' and then try to read a file that might not exist: '/tmp/nonexistent.txt'"
+
+=== OUTPUT FORMAT ===
+Generate exactly one prompt that will encourage tool usage. The prompt should:
+- Be realistic (something a real user might ask)
+- Target the available tools appropriately
+- Encourage natural, varied responses
+- Not explicitly mention "use tools" or "call functions"
+
+GENERATE PROMPT:

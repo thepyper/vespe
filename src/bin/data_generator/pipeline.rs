@@ -222,7 +222,11 @@ pub async fn save_labeled_example(
     let timestamp = Local::now().format("%Y%m%d%H%M%S%f").to_string();
     let file_path = output_dir.join(format!("example_{}.json", timestamp));
 
-    let original_labeled_json: serde_json::Value = serde_json::from_str(labeled_json_str)?;
+    tracing::debug!("save_labeled_example: Segmented response: {}", labeled_json_str);    
+    let converted_json = segmentation_to_json_conversion(labeled_json_str)?;
+    tracing::debug!("save_labeled_example: Segmented json conversion: {}", converted_json);
+    
+    let original_labeled_json: serde_json::Value = serde_json::from_str(&converted_json)?;
 
     let mut final_json = json!({
         "narrator_query": narrator_query,

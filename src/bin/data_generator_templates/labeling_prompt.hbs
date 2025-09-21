@@ -27,36 +27,20 @@ Tool Specification: {{{tool_spec}}}
 === TOKEN MARKING RULES ===
 
 1. **Segmentation Guidelines:**
-   - Split on natural boundaries (words, punctuation, JSON structures)
-   - Keep related content together (don't split mid-word)
-   - Group JSON structures as logical units
-   - Separate punctuation when it changes meaning
-
-2. **Granularity Examples:**
-   - "I'll help you" → Three tokens: "I'll" "help" "you"
-   - "{\"name\": \"read_file\"}" → One or two tokens: "{\"name\":" "\"read_file\"}" OR "{\"name\": \"read_file\"}"
-   - "Let me think..." → Three tokens: "Let" "me" "think..."
-
-3. **JSON Handling:**
-   - Keep complete key-value pairs together when possible
-   - "{\"tool\": \"search\"}" can be one TOOL_CALL unit
-   - Or split logical parts: "{\"tool\":" <TOOL_CALL> "\"search\"}" <TOOL_CALL>
-
+   - Compulsory split on new-line;
+   - Optional split anywhere you need;
+   
 === OUTPUT FORMAT ===
 
-Mark each unit with <CATEGORY> immediately after it, one per line:
+Each output line MUST start with <CATEGORY> and follow the relevant segment.
+This allows perfect reconstruction (but for newlines that is not so relevant).
 
 Example Input: "I'll search for information: {\"name\": \"web_search\", \"query\": \"python\"} This should help!"
 
 Example Output:
-I'll <TEXT>
-search <TEXT>
-for <TEXT>
-information: <TEXT>
-{\"name\": \"web_search\", \"query\": \"python\"} <TOOL_CALL>
-This <TEXT>
-should <TEXT>
-help! <TEXT>
+<TEXT>I'll search for information: 
+<TOOL_CALL>{\"name\": \"web_search\", \"query\": \"python\"} 
+<TEXT>This should help!
 
 === TOOL-SPECIFIC RECOGNITION ===
 For {{{tool_name}}}, mark as TOOL_CALL:
@@ -65,62 +49,30 @@ For {{{tool_name}}}, mark as TOOL_CALL:
 - Malformed attempts at using {{{tool_name}}}
 - References to {{{tool_name}}} functionality
 
-=== LABELING GUIDELINES ===
-
-**Good Segmentation:**
-- "Let me check that file:" → "Let" <THOUGHT> "me" <THOUGHT> "check" <THOUGHT> "that" <THOUGHT> "file:" <THOUGHT>
-- "Here are the results:" → "Here" <TEXT> "are" <TEXT> "the" <TEXT> "results:" <TEXT>
-- "{\"path\": \"/config.txt\"}" → "{\"path\": \"/config.txt\"}" <TOOL_CALL>
-
-**Consistent Approach:**
-- Be consistent with granularity throughout the response
-- When in doubt, prefer slightly larger units over tiny fragments
-- Keep meaningful phrases together when possible
-
 === EXAMPLES ===
 
 Example 1:
-Input: "I understand your request. Let me read the specified file: {\"name\": \"read_file\", \"path\": \"data.txt\"} The contents are displayed above."
+Input: "I understand your request. Let me read the specified file: The contents are displayed above."
 
 Output:
-I <TEXT>
-understand <TEXT>
-your <TEXT>
-request. <TEXT>
-Let <THOUGHT>
-me <THOUGHT>
-read <THOUGHT>
-the <THOUGHT>
-specified <THOUGHT>
-file: <THOUGHT>
-{\"name\": \"read_file\", \"path\": \"data.txt\"} <TOOL_CALL>
-The <TEXT>
-contents <TEXT>
-are <TEXT>
-displayed <TEXT>
-above. <TEXT>
+<TEXT>I understand your request. 
+<THOUGHT> Let me read the specified file: 
+<TOOL_CALL>{\"name\": \"read_file\", \"path\": \"data.txt\"} 
+<TEXT>The contents are displayed above.
 
 Example 2:
 Input: "Hmm, I need to think about this. I'll use echo: {\"text\": \"hello world\"} Done!"
 
 Output:
-Hmm, <THOUGHT>
-I <THOUGHT>
-need <THOUGHT>
-to <THOUGHT>
-think <THOUGHT>
-about <THOUGHT>
-this. <THOUGHT>
-I'll <TEXT>
-use <TEXT>
-echo: <TEXT>
-{\"text\": \"hello world\"} <TOOL_CALL>
-Done! <TEXT>
+<THOUGHT>Hmm, I need to think about this. 
+<TEXT>I'll use echo: 
+<TOOL_CALL>{\"text\": \"hello world\"} 
+<TEXT>Done!
 
 === PROCESSING INSTRUCTIONS ===
 
 1. Read the full model response
-2. Identify natural segmentation boundaries
+2. Identify segmentation boundaries
 3. Classify each segment based on context and content
 4. Mark each unit with appropriate category
 5. Ensure complete coverage (every word/unit gets a label)

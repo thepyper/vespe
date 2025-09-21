@@ -42,7 +42,8 @@ Notice that the newline tag is NOT on the same line of the category and segment.
 2. It is result of a non-newline split, then output format is:
 <CATEGORY>segment
 
-The wanted result is segmented output is a perfect reconstruction of the original output.
+The WANTED result is segmented output is a perfect reconstruction of the original output.
+Then, any markup language in the original output MUST be present in the segmented output as well.
 
 You CANNOT output anything else than the segment conversion into one of there two cases.
 You CANNOT output any explanation of how you decided segmentation.
@@ -106,7 +107,7 @@ Output:
 5. Ensure complete coverage (every word/unit gets a label)
 6. Double-check that TOOL_CALL segments relate to {{{tool_name}}}
 
-=== ORIGINL QUERY TO THE MODEL ===
+=== ORIGINAL QUERY TO THE MODEL ===
 {{{small_query}}}
 
 === MODEL RESPONSE TO SEGMENT ===

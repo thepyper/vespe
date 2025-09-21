@@ -1,0 +1,16 @@
+Plan to debug tracing in data_generator:
+
+1.  **Verify `RUST_LOG` environment variable**: The most common reason for `tracing` output not appearing is that the `RUST_LOG` environment variable is not set or is set to a level that filters out `debug!` messages. Please run the `data-generator` executable with `RUST_LOG=debug` (or `RUST_LOG=trace` for even more verbose output) set in your environment. For example, on Windows, you can do this in your command prompt:
+    ```bash
+    set RUST_LOG=debug
+    cargo run --bin data-generator -- --num-examples 1
+    ```
+    Or, if you are running the executable directly:
+    ```bash
+    set RUST_LOG=debug
+    target\debug\data-generator.exe --num-examples 1
+    ```
+
+2.  **Add a simple `info!` message in `main.rs`**: To confirm that the `tracing` subscriber is active, I will add a simple `tracing::info!` message immediately after the `tracing` initialization block in `src/bin/data_generator/main.rs`. This will help us determine if the subscriber is initialized correctly.
+
+3.  **Inspect `_guard` variable**: I will confirm that the `_guard` variable returned by `tracing_appender::non_blocking` is correctly held for the entire duration of the `main` function. (My current code already does this, but it's good to confirm).

@@ -26,20 +26,29 @@ Tool Specification: {{{tool_spec}}}
 
 === TOKEN MARKING RULES ===
 
-1. **Segmentation Guidelines:**
-   - Compulsory split on new-line;
-   - Optional split anywhere you need;
-   
+**Segmentation Guidelines:**
+- You MUST split on newline;
+- You CAN split anywhere else.
+      
 === OUTPUT FORMAT ===
 
-Each output line MUST start with <CATEGORY> and follow the relevant segment.
-This allows perfect reconstruction (but for newlines that is not so relevant).
+Each segment:
+1. Either is result from a newline split, then output format is:
+<CATEGORY>segment
+<NL>
+2. Or is result from a non-newline split, then output format is:
+<CATEGORY>segment
 
-Example Input: "I'll search for information: {\"name\": \"web_search\", \"query\": \"python\"} This should help!"
+The wanted result is segmented output is a perfect reconstruction of the original output.
+
+Example Input: 
+I'll search for information: {\"name\": \"web_search\", \"query\": \"python\"} 
+This should help!
 
 Example Output:
 <TEXT>I'll search for information: 
 <TOOL_CALL>{\"name\": \"web_search\", \"query\": \"python\"} 
+<NL>
 <TEXT>This should help!
 
 === TOOL-SPECIFIC RECOGNITION ===
@@ -52,21 +61,31 @@ For {{{tool_name}}}, mark as TOOL_CALL:
 === EXAMPLES ===
 
 Example 1:
-Input: "I understand your request. Let me read the specified file: The contents are displayed above."
+Input: 
+I understand your request. 
+Let me read the specified file:
+{\"name\": \"read_file\", \"path\": \"data.txt\"}
+The contents are displayed above.
 
 Output:
 <TEXT>I understand your request. 
-<THOUGHT> Let me read the specified file: 
-<TOOL_CALL>{\"name\": \"read_file\", \"path\": \"data.txt\"} 
+<NL>
+<THOUGHT>Let me read the specified file:
+<NL>
+<TOOL_CALL>{\"name\": \"read_file\", \"path\": \"data.txt\"}
+<NL>
 <TEXT>The contents are displayed above.
 
 Example 2:
-Input: "Hmm, I need to think about this. I'll use echo: {\"text\": \"hello world\"} Done!"
+Input: 
+Hmm, I need to think about this. I'll use echo: {\"text\": \"hello world\"} 
+Done!
 
 Output:
 <THOUGHT>Hmm, I need to think about this. 
 <TEXT>I'll use echo: 
 <TOOL_CALL>{\"text\": \"hello world\"} 
+<NL>
 <TEXT>Done!
 
 === PROCESSING INSTRUCTIONS ===

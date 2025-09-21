@@ -130,6 +130,7 @@ pub async fn label_student_response(
     small_query: &str,
     small_reply: &str,
     system_prompt_used: &str,
+    all_tools_specs: &str,
     handlebars: &Handlebars<'_>,
 ) -> Result<(String, String)> {
     let data = json!({
@@ -138,7 +139,8 @@ pub async fn label_student_response(
         "small_reply": small_reply,
         "tool_name": tool_name,
         "tool_description": tool_description,
-        "tool_spec": tool_spec_json
+        "tool_spec": tool_spec_json,
+        "tools_specs": all_tools_specs,
     });
     tracing::debug!("label_student_response: Data for rendering: {:#?}", data);
     let prompt = handlebars.render("labeling_prompt", &data)?;

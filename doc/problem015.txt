@@ -1,0 +1,8 @@
+     Running `target\debug\data-generator.exe --num-examples 1`
+--- Inizio Pipeline di Generazione Dati (Rust) ---
+
+========== Inizio Esempio 1/1 ==========
+PASSO 4: Esempio salvato in 'buzz/training/generated_examples_rust\example_20250921180649955516500.json'
+========== Fine Esempio 1/1 ==========
+
+--- Pipeline completata ---

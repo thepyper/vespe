@@ -1,63 +1,43 @@
-TRAINING DATA LABELING - RESPONSE SEGMENTATION
+TRAINING DATA LABELING - SINGLE TOOL RESPONSE SEGMENTATION
 
-Your task is to analyze a language model's response and create training data for a text classification system that segments responses into TEXT, THOUGHT, and TOOL_CALL categories.
+Analyze a language model's response to create labeled training data for text segmentation into TEXT, THOUGHT, and TOOL_CALL categories.
 
-=== TASK OVERVIEW ===
-You will receive:
-- Original user query: {{{student_prompt}}}
-- Model's response: {{{student_response}}}
-
-You must produce labeled training data in DistilBERT format with character-level spans.
-
-=== AVAILABLE TOOLS (for reference) ===
-{{{tool_specs}}}
+=== INPUT DATA ===
+Target Tool: {{{tool_name}}} - {{{tool_description}}}
+Tool Specification: {{{tool_spec}}}
+Original Query: {{{small_query}}}
+Model Response: {{{small_reply}}}
 
 === CLASSIFICATION CATEGORIES ===
 
-**TEXT:** Regular conversational content intended for the user
-- Explanations, answers, confirmations
-- Polite phrases, acknowledgments
-- Results or summaries
-- Any content that's "user-facing"
+**TEXT:** User-facing content
+- Direct answers, explanations, confirmations
+- Results presentation, summaries
+- Polite conversational elements
 
-**THOUGHT:** Internal reasoning, analysis, or planning
-- "Let me think about this..."
-- "I need to check..."
-- "The user probably wants..."
-- Strategic reasoning about approach
-- Analysis of the situation
+**THOUGHT:** Internal reasoning about the task
+- "I need to...", "Let me...", "The user wants..."
+- Analysis of the situation or approach
+- Planning statements
 
-**TOOL_CALL:** Actual tool invocations or tool-related content
-- JSON tool call structures
-- Tool names and parameters
-- References to specific tool usage
-- Technical tool-calling syntax
+**TOOL_CALL:** Tool invocation content
+- JSON structures for {{{tool_name}}}
+- Tool parameters and arguments
+- Technical tool-calling syntax (even if malformed)
 
-=== SPAN IDENTIFICATION RULES ===
+=== TOOL-SPECIFIC RECOGNITION ===
+For {{{tool_name}}}, identify as TOOL_CALL:
+- Any JSON mentioning "{{{tool_name}}}"
+- Parameter structures matching {{{tool_spec}}}
+- Malformed attempts at using {{{tool_name}}}
+- Clear references to {{{tool_name}}} functionality
 
-1. **Precise boundaries:** Mark exact character positions
-2. **Complete segments:** Don't split sentences arbitrarily
-3. **Context awareness:** Consider the flow and intent
-4. **Tool recognition:** Identify tool calls even if malformed
-5. **Overlapping content:** If unclear, prefer TEXT classification
-
-=== EDGE CASE HANDLING ===
-
-- **Mixed content:** "I'll search for that: {tool_call}" → Split appropriately
-- **Malformed tool calls:** Still label as TOOL_CALL if intent is clear
-- **Refusals:** "I cannot access files" → TEXT (user-facing response)
-- **Meta-commentary:** "Let me use the search function" → THOUGHT
-- **Results discussion:** "The search returned..." → TEXT
-
-=== OUTPUT FORMAT ===
-Provide DistilBERT training format:
+=== LABELING OUTPUT ===
+Provide DistilBERT format with complete character coverage:
 ```json
 {
-  "full_text": "complete response text here",
+  "full_text": "exact_response_text_here",
   "spans": [
-    {"start": 0, "end": 25, "label": "TEXT", "text": "I'll help you with that."},
-    {"start": 26, "end": 65, "label": "THOUGHT", "text": "Let me think about the best approach"},
-    {"start": 66, "end": 120, "label": "TOOL_CALL", "text": "{\"name\": \"read_file\", \"arguments\": {\"path\": \"config.json\"}}"},
-    {"start": 121, "end": 150, "label": "TEXT", "text": "Here's what I found:"}
+    {"start": 0, "end": X, "label": "TEXT|THOUGHT|TOOL_CALL", "text": "span_text"}
   ]
 }

@@ -52,6 +52,8 @@ pub async fn query_ollama(
     debug!("Ollama Raw Request Payload: {}", serde_json::to_string_pretty(&request_payload)?);
 
     let mut full_response_text = String::new();
+    let mut is_thinking_started = false;
+    let mut is_response_started = false;
 
     let response = client
         .post(format!("{}/api/generate", ollama_url))
@@ -73,10 +75,20 @@ pub async fn query_ollama(
 
             if line.trim().is_empty() { continue; }
 
-            debug!("Ollama Raw Response Chunk: {}", line);
+            debug!("Ollama Raw Response Chunk: {}", json_value);
 
-            let json_value: Value = serde_json::from_str(&line)?;
+            if json_value["thinking"].as_bool().unwrap_or(false) && !is_thinking_started {
+                print!("\nTHINKING: ");
+                io::stdout().flush()?;
+                is_thinking_started = true;
+            }
+
             if let Some(response_text) = json_value["response"].as_str() {
+                if !is_response_started {
+                    print!("\nRESPONSE: ");
+                    io::stdout().flush()?;
+                    is_response_started = true;
+                }
                 print!("{}", response_text);
                 io::stdout().flush()?;
                 full_response_text.push_str(response_text);

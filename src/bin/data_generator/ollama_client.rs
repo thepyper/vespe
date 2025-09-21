@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::Result;
 use tracing::debug;
 use tokio_stream::StreamExt;
+use serde_json::Value;
 use std::io::{self, Write};
 
 #[derive(Debug, Serialize)]
@@ -74,7 +75,6 @@ pub async fn query_ollama(
 
             if line.trim().is_empty() { continue; }
 
-            let json_value: serde_json::Value = serde_json::from_str(&line)?;
             debug!("Ollama Raw Response Chunk: {}", json_value);
 
             if json_value["thinking"].as_bool().unwrap_or(false) && !is_thinking_started {

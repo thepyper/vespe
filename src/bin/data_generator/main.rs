@@ -96,7 +96,8 @@ async fn main() -> Result<()> {
         let student_prompt = narrator_response_raw.clone(); // student_prompt is the response from narrator
 
         tracing::info!("PASSO 2: Getting student response...");
-        let (hero_response_raw, hero_query) = match pipeline::get_student_response(
+        let hero_query = student_prompt.clone(); // hero_query is the student_prompt
+        let (hero_response_raw, system_prompt_used) = match pipeline::get_student_response(
             &client,
             &args.ollama_url,
             &args.hero_model,
@@ -104,9 +105,9 @@ async fn main() -> Result<()> {
             &args.tool_format,
             &handlebars
         ).await {
-            Ok((response, query)) => {
-                tracing::debug!("PASSO 2: Student response received. Response: {}", response);
-                (response, query)
+            Ok(res) => {
+                tracing::debug!("PASSO 2: Student response received. Response: {}", res.0);
+                res
             },
             Err(e) => {
                 tracing::error!("ERRORE nel Passo 2: {}. Saltando l'esempio.", e);

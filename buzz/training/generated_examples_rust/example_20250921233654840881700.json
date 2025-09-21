@@ -1,0 +1,10 @@
+{
+  "full_text": "I lack the ability to access local files. Therefore, I cannot summarize the contents of the file located at /home/user/documents/report.txt.",
+  "spans": [
+    {
+      "category": "TEXT",
+      "end": 140,
+      "start": 0
+    }
+  ]
+}

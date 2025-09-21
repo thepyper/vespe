@@ -1,17 +1,63 @@
-Sei un etichettatore di output di assistenti AI. Il tuo compito è segmentare la risposta dell'assistente nelle categorie funzionali: THOUGHT, TOOL_CODE, TEXT.
-Fornisci l'etichetta e le posizioni esatte (start/end) in formato JSON.
+TRAINING DATA LABELING - RESPONSE SEGMENTATION
 
---- CONTESTO FORNITO ALL'ASSISTENTE ---
-System Prompt:
-{{system_prompt_used}}
+Your task is to analyze a language model's response and create training data for a text classification system that segments responses into TEXT, THOUGHT, and TOOL_CALL categories.
 
---- TASK DI ETICHETTATURA ---
-Prompt Utente:
-{{student_prompt}}
+=== TASK OVERVIEW ===
+You will receive:
+- Original user query: {{{student_prompt}}}
+- Model's response: {{{student_response}}}
 
-Risposta Assistente AI:
-{{student_response}}
+You must produce labeled training data in DistilBERT format with character-level spans.
 
---- OUTPUT RICHIESTO ---
-Genera un oggetto JSON con chiavi 'full_text' e 'spans'.
-Output JSON:
+=== AVAILABLE TOOLS (for reference) ===
+{{{tool_specs}}}
+
+=== CLASSIFICATION CATEGORIES ===
+
+**TEXT:** Regular conversational content intended for the user
+- Explanations, answers, confirmations
+- Polite phrases, acknowledgments
+- Results or summaries
+- Any content that's "user-facing"
+
+**THOUGHT:** Internal reasoning, analysis, or planning
+- "Let me think about this..."
+- "I need to check..."
+- "The user probably wants..."
+- Strategic reasoning about approach
+- Analysis of the situation
+
+**TOOL_CALL:** Actual tool invocations or tool-related content
+- JSON tool call structures
+- Tool names and parameters
+- References to specific tool usage
+- Technical tool-calling syntax
+
+=== SPAN IDENTIFICATION RULES ===
+
+1. **Precise boundaries:** Mark exact character positions
+2. **Complete segments:** Don't split sentences arbitrarily
+3. **Context awareness:** Consider the flow and intent
+4. **Tool recognition:** Identify tool calls even if malformed
+5. **Overlapping content:** If unclear, prefer TEXT classification
+
+=== EDGE CASE HANDLING ===
+
+- **Mixed content:** "I'll search for that: {tool_call}" → Split appropriately
+- **Malformed tool calls:** Still label as TOOL_CALL if intent is clear
+- **Refusals:** "I cannot access files" → TEXT (user-facing response)
+- **Meta-commentary:** "Let me use the search function" → THOUGHT
+- **Results discussion:** "The search returned..." → TEXT
+
+=== OUTPUT FORMAT ===
+Provide DistilBERT training format:
+```json
+{
+  "full_text": "complete response text here",
+  "spans": [
+    {"start": 0, "end": 25, "label": "TEXT", "text": "I'll help you with that."},
+    {"start": 26, "end": 65, "label": "THOUGHT", "text": "Let me think about the best approach"},
+    {"start": 66, "end": 120, "label": "TOOL_CALL", "text": "{\"name\": \"read_file\", \"arguments\": {\"path\": \"config.json\"}}"},
+    {"start": 121, "end": 150, "label": "TEXT", "text": "Here's what I found:"}
+  ]
+}

@@ -1,18 +1,18 @@
-I tool disponibili sono:
+Available tools are:
 {{#each tools}}
 - {{this.name}}: {{this.description}}
 {{/each}}
 
-Il blocco TOOL_CODE deve essere un singolo oggetto JSON che segue la specifica 'Model Context Protocol'.
-Ogni chiamata a tool deve essere un oggetto JSON con `type: 'tool_use'`.
+The TOOL_CODE block must be a single JSON object that follows the 'Model Context Protocol' specification.
+Each tool call must be a JSON object with `type: 'tool_use'`.
 
-Ecco un esempio di chiamata singola:
+Here is an example of a single call:
 ```json
 {{{json_example}}}
 ```
 
-Regole per il formato MCP:
-- L'output deve essere un JSON valido.
-- `role` deve essere `assistant`.
-- `content` è una lista che contiene oggetti di tipo `tool_use`.
-- Ogni `tool_use` deve avere un `id` univoco e semplice (es. 'call_1'), il `name` del tool, e un oggetto `input` con i parametri.
+Rules for MCP format:
+- The output must be valid JSON.
+- `role` must be `assistant`.
+- `content` is a list containing `tool_use` type objects.
+- Each `tool_use` must have a unique and simple `id` (e.g., 'call_1'), the tool's `name`, and an `input` object with the parameters.

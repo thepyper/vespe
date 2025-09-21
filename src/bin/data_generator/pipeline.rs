@@ -51,7 +51,7 @@ pub async fn generate_student_prompt(
     user_style: &str,
     context_length: &str,
     handlebars: &Handlebars<'_>,
-) -> Result<String> {
+) -> Result<(String, String)> {
     let data = json!({
         "tool_name": tool_name,
         "tool_spec": tool_spec_json,
@@ -64,7 +64,8 @@ pub async fn generate_student_prompt(
     tracing::debug!("generate_student_prompt: Data for rendering: {:#?}", data);
     let prompt = handlebars.render("meta_prompt", &data)?;
     tracing::debug!("generate_student_prompt: Rendered prompt: {}", prompt);
-    query_ollama(client, ollama_url, narrator_model, &prompt, None).await
+    let response = query_ollama(client, ollama_url, narrator_model, &prompt, None).await?;
+    Ok((response, prompt))
 }
 
 pub fn build_tool_spec(
@@ -130,7 +131,7 @@ pub async fn label_student_response(
     small_reply: &str,
     system_prompt_used: &str,
     handlebars: &Handlebars<'_>,
-) -> Result<String> {
+) -> Result<(String, String)> {
     let data = json!({
         "system_prompt_used": system_prompt_used,
         "small_query": small_query,
@@ -142,7 +143,8 @@ pub async fn label_student_response(
     tracing::debug!("label_student_response: Data for rendering: {:#?}", data);
     let prompt = handlebars.render("labeling_prompt", &data)?;
     tracing::debug!("label_student_response: Rendered prompt: {}", prompt);
-    query_ollama(client, ollama_url, marker_model, &prompt, None).await
+    let response = query_ollama(client, ollama_url, marker_model, &prompt, None).await?;
+    Ok((response, prompt))
 }
 
 fn segmentation_to_json_conversion(input: &str) -> Result<String> {
@@ -202,16 +204,44 @@ fn segmentation_to_json_conversion(input: &str) -> Result<String> {
     Ok(serde_json::to_string_pretty(&result)?)
 }
 
-pub fn save_labeled_example(
+pub async fn save_labeled_example(
     output_dir: &PathBuf,
-    example_json_str: &str,
+    labeled_json_str: &str,
     _example_index: u32,
+    narrator_query: &str,
+    narrator_response: &str,
+    hero_query: &str,
+    hero_response: &str,
+    marker_query: &str,
+    marker_response: &str,
+    config: &CliArgs,
 ) -> Result<PathBuf> {
     fs::create_dir_all(output_dir)?;
     let timestamp = Local::now().format("%Y%m%d%H%M%S%f").to_string();
     let file_path = output_dir.join(format!("example_{}.json", timestamp));
-    let parsed_json: serde_json::Value = serde_json::from_str(&segmentation_to_json_conversion(example_json_str)?)?;
-    let formatted_json = serde_json::to_string_pretty(&parsed_json)?;
+
+    let original_labeled_json: serde_json::Value = serde_json::from_str(labeled_json_str)?;
+
+    let mut final_json = json!({
+        "narrator_query": narrator_query,
+        "narrator_response": narrator_response,
+        "hero_query": hero_query,
+        "hero_response": hero_response,
+        "marker_query": marker_query,
+        "marker_response": marker_response,
+        "config": serde_json::to_value(config)?,
+    });
+
+    // Merge original labeled_json into final_json
+    if let Some(obj) = final_json.as_object_mut() {
+        if let Some(original_obj) = original_labeled_json.as_object() {
+            for (key, value) in original_obj {
+                obj.insert(key.clone(), value.clone());
+            }
+        }
+    }
+
+    let formatted_json = serde_json::to_string_pretty(&final_json)?;
     fs::write(&file_path, formatted_json)?;
     tracing::info!("Esempio salvato in '{}'", file_path.display());
     Ok(file_path)

@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
         );
 
         tracing::info!("PASSO 1: Generating student prompt...");
-        let student_prompt = match pipeline::generate_student_prompt(
+        let (narrator_response_raw, narrator_query) = match pipeline::generate_student_prompt(
             &client,
             &args.ollama_url,
             &args.narrator_model,
@@ -84,18 +84,19 @@ async fn main() -> Result<()> {
             context_length,
             &handlebars
         ).await {
-            Ok(prompt) => {
-                tracing::debug!("PASSO 1: Student prompt generated successfully. Prompt: {}", prompt);
-                prompt
+            Ok((response, query)) => {
+                tracing::debug!("PASSO 1: Student prompt generated successfully. Prompt: {}", response);
+                (response, query)
             },
             Err(e) => {
                 tracing::error!("ERRORE nel Passo 1: {}. Saltando l'esempio.", e);
                 continue;
             }
         };
+        let student_prompt = narrator_response_raw.clone(); // student_prompt is the response from narrator
 
         tracing::info!("PASSO 2: Getting student response...");
-        let (student_response, system_prompt_used) = match pipeline::get_student_response(
+        let (hero_response_raw, hero_query) = match pipeline::get_student_response(
             &client,
             &args.ollama_url,
             &args.hero_model,
@@ -103,18 +104,19 @@ async fn main() -> Result<()> {
             &args.tool_format,
             &handlebars
         ).await {
-            Ok(res) => {
-                tracing::debug!("PASSO 2: Student response received. Response: {}", res.0);
-                res
+            Ok((response, query)) => {
+                tracing::debug!("PASSO 2: Student response received. Response: {}", response);
+                (response, query)
             },
             Err(e) => {
                 tracing::error!("ERRORE nel Passo 2: {}. Saltando l'esempio.", e);
                 continue;
             }
         };
+        let student_response = hero_response_raw.clone(); // student_response is the response from hero
 
         tracing::info!("PASSO 3: Labeling student response...");
-        let labeled_json = match pipeline::label_student_response(
+        let (marker_response_raw, marker_query) = match pipeline::label_student_response(
             &client,
             &args.ollama_url,
             &args.marker_model,
@@ -126,18 +128,30 @@ async fn main() -> Result<()> {
             &system_prompt_used,
             &handlebars
         ).await {
-            Ok(json_str) => {
-                let trimmed_json = json_str.trim().strip_prefix("```json").unwrap_or(&json_str).strip_suffix("```").unwrap_or(&json_str).trim().to_string();
+            Ok((response, query)) => {
+                let trimmed_json = response.trim().strip_prefix("```json").unwrap_or(&response).strip_suffix("```").unwrap_or(&response).trim().to_string();
                 tracing::debug!("PASSO 3: Student response labeled. Labeled JSON: {}", trimmed_json);
-                trimmed_json
+                (trimmed_json, query)
             },
             Err(e) => {
                 tracing::error!("ERRORE nel Passo 3: {}. Saltando l'esempio.", e);
                 continue;
             }
         };
+        let labeled_json = marker_response_raw.clone(); // labeled_json is the response from marker
 
-        let output_file_path = match pipeline::save_labeled_example(&args.output_dir, &labeled_json, i) {
+        let output_file_path = match pipeline::save_labeled_example(
+            &args.output_dir,
+            &labeled_json,
+            i,
+            &narrator_query,
+            &narrator_response_raw,
+            &hero_query,
+            &hero_response_raw,
+            &marker_query,
+            &marker_response_raw,
+            &args,
+        ).await {
             Ok(path) => path,
             Err(e) => {
                 tracing::error!("ERRORE nel Passo 4: {}. Saltando l'esempio.", e);

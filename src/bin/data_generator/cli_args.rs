@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, serde::Serialize)]
 #[command(version, about, long_about = None)]
 pub struct CliArgs {
     #[arg(long, default_value = "llama3.1:8b")]

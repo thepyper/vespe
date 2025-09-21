@@ -8,7 +8,7 @@ use chrono::Local;
 
 use super::cli_args::CliArgs;
 use super::ollama_client::query_ollama;
-use super::tool_definitions::{TOOLS_DEFINITION, ToolSpec};
+use super::tool_definitions::{TOOLS_DEFINITION};
 use super::prompt_templates::NORMATIVE_SYSTEM_PROMPT;
 
 pub const USE_CASES: &[&str] = &[
@@ -110,19 +110,21 @@ pub async fn get_student_response(
 pub async fn label_student_response(
     client: &Client,
     args: &CliArgs,
-    student_prompt: &str,
-    student_response: &str,
+    tool_name: &str,
+    tool_description: &str,
+    tool_spec_json: &str,
+    small_query: &str,
+    small_reply: &str,
     system_prompt_used: &str,
     handlebars: &Handlebars<'_>,
 ) -> Result<String> {
-    let tool_specs_vec: Vec<ToolSpec> = TOOLS_DEFINITION.iter().map(|t| t.to_tool_spec()).collect();
-    let tool_specs_json = serde_json::to_string_pretty(&tool_specs_vec)?;
-
     let data = json!({
         "system_prompt_used": system_prompt_used,
-        "student_prompt": student_prompt,
-        "student_response": student_response,
-        "tool_specs": tool_specs_json
+        "small_query": small_query,
+        "small_reply": small_reply,
+        "tool_name": tool_name,
+        "tool_description": tool_description,
+        "tool_spec": tool_spec_json
     });
     let prompt = handlebars.render("labeling_prompt", &data)?;
     query_ollama(client, &args.ollama_url, &args.big_model, &prompt, None).await

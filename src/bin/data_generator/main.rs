@@ -88,7 +88,17 @@ async fn main() -> Result<()> {
             }
         };
 
-        let labeled_json = match pipeline::label_student_response(&client, &args, &student_prompt, &student_response, &system_prompt_used, &handlebars).await {
+        let labeled_json = match pipeline::label_student_response(
+            &client,
+            &args,
+            tool_name,
+            tool_description,
+            &tool_spec_json,
+            &student_prompt,
+            &student_response,
+            &system_prompt_used,
+            &handlebars
+        ).await {
             Ok(json_str) => {
                 json_str.trim().strip_prefix("```json").unwrap_or(&json_str).strip_suffix("```").unwrap_or(&json_str).trim().to_string()
             },

@@ -1,0 +1,55 @@
+Struttura di base di una richiesta MCP dal modello:
+{
+  "role": "assistant",
+  "content": {
+    "type": "text",
+    "text": "[Testo opzionale prima della chiamata]"
+  }
+}
+
+Struttura per una risposta testuale piu' due chiamate consecutive a tool:
+{
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text", 
+      "text": "Eseguirò diverse operazioni per completare la richiesta."
+    },
+    {
+      "type": "tool_use",
+      "id": "call_1",
+      "name": "primo_tool",
+      "input": {
+        "param": "value"
+      }
+    },
+    {
+      "type": "tool_use", 
+      "id": "call_2",
+      "name": "secondo_tool",
+      "input": {
+        "altro_param": "altro_value"
+      }
+    }
+  ]
+}
+
+Elementi Obbligatori
+1. ID Univoco
+
+Ogni tool_use deve avere un id univoco
+Formato raccomandato: tool_call_[timestamp]_[counter] o UUID
+Esempio: "tool_call_1637123456789_001"
+
+2. Nome Tool
+
+Il campo name deve corrispondere esattamente al nome registrato nel server MCP
+Case-sensitive
+Deve essere una stringa non vuota
+
+3. Input Parameters
+
+L'oggetto input contiene i parametri richiesti dal tool
+Deve rispettare lo schema JSON definito per il tool specifico
+Parametri obbligatori devono essere sempre presenti
+Tipi di dati devono corrispondere alla specifica

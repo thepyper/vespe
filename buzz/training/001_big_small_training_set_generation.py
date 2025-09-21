@@ -21,9 +21,6 @@ import random
 import requests
 
 # --- DEFINIZIONE STRUTTURATA DEI TOOL ---
-# Ogni tool è un dizionario con nome, descrizione e parametri.
-# Questa struttura dati è la "source of truth" per generare le specifiche
-# dei tool nei vari formati (JSON, XML, etc.).
 TOOLS_DEFINITION = [
     {
         "name": "read_file",
@@ -78,8 +75,6 @@ TOOLS_DEFINITION = [
 
 # --- DEFINIZIONE DEI SYSTEM PROMPT ---
 
-# Parte 1: Prompt Normativo (Fisso)
-# Contiene le regole di comportamento generali per il modello.
 NORMATIVE_SYSTEM_PROMPT = '''
 Sei un assistente AI progettato per aiutare gli utenti eseguendo task.
 Per farlo, hai a disposizione una serie di tool.
@@ -89,44 +84,55 @@ Il tuo processo di pensiero deve seguire questi passi:
 2.  **TOOL_CODE**: Se hai deciso di usare un tool, scrivi la chiamata al tool nel formato specificato. **DEVI FERMARTI SUBITO DOPO AVER CHIAMATO IL TOOL.** Non devi generare la risposta del tool (TOOL_RESPONSE) o continuare la conversazione.
 
 Regole Assolute:
--   Usa **solo e soltanto** i tool elencati nella sezione <tools>. Non inventare tool o parametri.
+-   Usa **solo e soltanto** i tool elencati. Non inventare tool o parametri.
 -   Rispetta **scrupolosamente** il formato di output richiesto per il TOOL_CODE.
 -   Fermati **immediatamente** dopo aver prodotto il blocco TOOL_CODE.
 '''
 
-# Parte 2: Generatori di Specifiche Tool (Variabili)
-# Queste funzioni creano la seconda parte del system prompt, che descrive i
-# tool nel formato richiesto (MCP, JSON, XML).
-
 def _build_mcp_tool_spec(tools):
-    """Costruisce la specifica dei tool in formato MCP (Multi-Component Prompt)."""
-    spec = "<tools>\n"
+    """Costruisce la specifica dei tool secondo il Model Context Protocol (JSON-based)."""
+    spec = "I tool disponibili sono:\n"
     for tool in tools:
-        spec += f"  Tool: {tool['name']}\n"
-        spec += f"    Description: {tool['description']}\n"
-        spec += "    Parameters:\n"
-        for param in tool['parameters']:
-            spec += f"      - {param['name']} ({param['type']}): {param['description']}\n"
-    spec += "</tools>\n\n"
-    spec += "Formato di output per TOOL_CODE (MCP):\n"
-    spec += "TOOL_CODE\n<tool_name>(\n  <param_name>='<value>',\n  ...\n)"
+        spec += f"- `{tool['name']}`: {tool['description']}\n"
+
+    spec += "\nIl blocco TOOL_CODE deve essere un singolo oggetto JSON, o un array di oggetti JSON, che segue la specifica 'Model Context Protocol'.\n"
+    spec += "Ogni chiamata a tool deve essere un oggetto JSON con `type: 'tool_use'`."
+    spec += "\nEcco un esempio di chiamata singola:\n"
+    spec += "```json\n"
+    spec += json.dumps({
+        "role": "assistant",
+        "content": [
+            {
+                "type": "tool_use",
+                "id": "call_1",
+                "name": "read_file",
+                "input": {
+                    "absolute_path": "/path/to/file.txt"
+                }
+            }
+        ]
+    }, indent=2)
+    spec += "\n```\n"
+    spec += "\nRegole per il formato MCP:\n"
+    spec += "- L'output deve essere un JSON valido.\n"
+    spec += "- `role` deve essere `assistant`.\n"
+    spec += "- `content` è una lista che contiene oggetti di tipo `tool_use`.\n"
+    spec += "- Ogni `tool_use` deve avere un `id` univoco e semplice (es. 'call_1'), il `name` del tool, e un oggetto `input` con i parametri."
     return spec
 
 def _build_json_tool_spec(tools):
-    """Costruisce la specifica dei tool e il formato di output in JSON."""
+    """Costruisce la specifica dei tool e il formato di output in JSON generico."""
     spec = "Definizione dei tool in formato JSON:\n"
     spec += json.dumps(tools, indent=2)
     spec += "\n\nFormato di output per TOOL_CODE (JSON):\n"
     spec += "```json\n"
-    spec += "{\n"
-    spec += '  "tool_name": "<nome del tool>",\n'
-    spec += '  "parameters": {\n'
-    spec += '    "<nome parametro>": "<valore>",\n'
-    spec += '    ...\n'
-    spec += '  }\n'
-    spec += "}
-"
-    spec += "```\n"
+    spec += json.dumps({
+        "tool_name": "<nome del tool>",
+        "parameters": {
+            "<nome parametro>": "<valore>"
+        }
+    }, indent=2)
+    spec += "\n```\n"
     return spec
 
 def _build_xml_tool_spec(tools):

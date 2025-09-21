@@ -1,0 +1,20 @@
+Plan to generate and provide `tool_specs` to templates:
+
+1.  **Define `ToolSpec` structures**: In `src/bin/data_generator/tool_definitions.rs`:
+    *   Define a `Parameter` struct with fields: `name: String`, `type: String`, `description: String`, `required: bool`.
+    *   Define a `ToolSpec` struct with fields: `name: String`, `description: String`, `parameters: Vec<Parameter>`.
+    *   Derive `Serialize` and `Debug` for both structs.
+
+2.  **Implement `to_tool_spec` for `Tool`**: In `src/bin/data_generator/tool_definitions.rs`:
+    *   Add a method `to_tool_spec(&self) -> ToolSpec` to the existing `Tool` struct. This method will convert the `Tool`'s `name`, `description`, and `parameters` (which are currently `serde_json::Value`) into the `ToolSpec` and `Parameter` structs.
+    *   This will involve iterating over the `parameters` JSON array and extracting the relevant fields.
+
+3.  **Generate `tool_specs` JSON string**: In `src/bin/data_generator/pipeline.rs`:
+    *   At the beginning of the `generate_student_prompt` and `label_student_response` functions, generate the `tool_specs` string.
+    *   Iterate over `super::tool_definitions::TOOLS_DEFINITION`.
+    *   For each `Tool`, call `tool.to_tool_spec()`.
+    *   Collect the resulting `ToolSpec` instances into a `Vec<ToolSpec>`.
+    *   Serialize this `Vec<ToolSpec>` into a pretty-printed JSON string using `serde_json::to_string_pretty(&tool_specs_vec)?`.
+
+4.  **Pass `tool_specs` to Handlebars templates**: In `src/bin/data_generator/pipeline.rs`:
+    *   Modify the `data` JSON object passed to `handlebars.render` for both `meta_prompt` and `labeling_prompt` to include the generated `tool_specs` string with the key `"tool_specs"`.

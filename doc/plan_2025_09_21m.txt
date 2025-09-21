@@ -1,0 +1,16 @@
+Plan to update `labeling_prompt.hbs` variable dependencies:
+
+1.  **Modify `src/bin/data_generator/pipeline.rs`**:
+    *   Update the `label_student_response` function signature to accept `tool_name: &str`, `tool_description: &str`, and `tool_spec_json: &str`.
+    *   Modify the `data` JSON object passed to `handlebars.render("labeling_prompt", &data)` to:
+        *   Include `"tool_name": tool_name`.
+        *   Include `"tool_description": tool_description`.
+        *   Include `"tool_spec": tool_spec_json`.
+        *   Rename `"student_prompt"` to `"small_query"`.
+        *   Rename `"student_response"` to `"small_reply"`.
+
+2.  **Modify `src/bin/data_generator/main.rs`**:
+    *   When calling `pipeline::label_student_response`:
+        *   Pass the resolved `tool_name`, `tool_description`, and `tool_spec_json`.
+        *   Pass the `student_prompt` variable as the argument for `small_query`.
+        *   Pass the `student_response` variable as the argument for `small_reply`.

@@ -73,7 +73,8 @@ async fn main() -> Result<()> {
         tracing::info!("PASSO 1: Generating student prompt...");
         let student_prompt = match pipeline::generate_student_prompt(
             &client,
-            &args,
+            &args.ollama_url,
+            &args.narrator_model,
             tool_name,
             &tool_spec_json,
             tool_description,
@@ -94,7 +95,13 @@ async fn main() -> Result<()> {
         };
 
         tracing::info!("PASSO 2: Getting student response...");
-        let (student_response, system_prompt_used) = match pipeline::get_student_response(&client, &args, &student_prompt, &handlebars).await {
+        let (student_response, system_prompt_used) = match pipeline::get_student_response(
+            &client,
+            &args.ollama_url,
+            &args.hero_model,
+            &student_prompt,
+            &handlebars
+        ).await {
             Ok(res) => {
                 tracing::debug!("PASSO 2: Student response received. Response: {}", res.0);
                 res
@@ -108,7 +115,8 @@ async fn main() -> Result<()> {
         tracing::info!("PASSO 3: Labeling student response...");
         let labeled_json = match pipeline::label_student_response(
             &client,
-            &args,
+            &args.ollama_url,
+            &args.marker_model,
             tool_name,
             tool_description,
             &tool_spec_json,

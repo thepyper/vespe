@@ -41,7 +41,8 @@ pub const CONTEXT_LENGTHS: &[&str] = &[
 
 pub async fn generate_student_prompt(
     client: &Client,
-    args: &CliArgs,
+    ollama_url: &str,
+    narrator_model: &str,
     tool_name: &str,
     tool_spec_json: &str,
     tool_description: &str,
@@ -63,7 +64,7 @@ pub async fn generate_student_prompt(
     tracing::debug!("generate_student_prompt: Data for rendering: {:#?}", data);
     let prompt = handlebars.render("meta_prompt", &data)?;
     tracing::debug!("generate_student_prompt: Rendered prompt: {}", prompt);
-    query_ollama(client, &args.ollama_url, &args.big_model, &prompt, None).await
+    query_ollama(client, ollama_url, narrator_model, &prompt, None).await
 }
 
 pub fn build_tool_spec(
@@ -100,7 +101,8 @@ pub fn build_tool_spec(
 
 pub async fn get_student_response(
     client: &Client,
-    args: &CliArgs,
+    ollama_url: &str,
+    hero_model: &str,
     student_prompt: &str,
     handlebars: &Handlebars<'_>,
 ) -> Result<(String, String)> {
@@ -112,13 +114,14 @@ pub async fn get_student_response(
     tracing::debug!("get_student_response: Data for rendering: {:#?}", data);
     let system_prompt = handlebars.render("system_prompt", &data)?;
     tracing::debug!("get_student_response: Rendered system prompt: {}", system_prompt);
-    let response = query_ollama(client, &args.ollama_url, &args.small_model, student_prompt, Some(&system_prompt)).await?;
+    let response = query_ollama(client, ollama_url, hero_model, student_prompt, Some(&system_prompt)).await?;
     Ok((response, system_prompt))
 }
 
 pub async fn label_student_response(
     client: &Client,
-    args: &CliArgs,
+    ollama_url: &str,
+    marker_model: &str,
     tool_name: &str,
     tool_description: &str,
     tool_spec_json: &str,
@@ -138,7 +141,7 @@ pub async fn label_student_response(
     tracing::debug!("label_student_response: Data for rendering: {:#?}", data);
     let prompt = handlebars.render("labeling_prompt", &data)?;
     tracing::debug!("label_student_response: Rendered prompt: {}", prompt);
-    query_ollama(client, &args.ollama_url, &args.big_model, &prompt, None).await
+    query_ollama(client, ollama_url, marker_model, &prompt, None).await
 }
 
 fn segmentation_to_json_conversion(input: &str) -> Result<String> {

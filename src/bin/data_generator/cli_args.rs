@@ -5,9 +5,11 @@ use std::path::PathBuf;
 #[command(version, about, long_about = None)]
 pub struct CliArgs {
     #[arg(long, default_value = "gpt-oss:20b")]
-    pub big_model: String,
+    pub narrator_model: String,
+    #[arg(long, default_value = "gpt-oss:20b")]
+    pub marker_model: String,
     #[arg(long, default_value = "gemma3:1b")]
-    pub small_model: String,
+    pub hero_model: String,
     #[arg(long, default_value = "http://localhost:11434")]
     pub ollama_url: String,
     #[arg(long, default_value_t = 10)]

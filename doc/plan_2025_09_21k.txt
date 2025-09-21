@@ -1,0 +1,17 @@
+Plan to add new command-line options and template variables for data_generator:
+
+1.  **Update `src/bin/data_generator/cli_args.rs`**:
+    *   Add new optional fields to the `CliArgs` struct, each of type `Option<String>`, for `tool_name`, `use_case`, `complexity`, `user_style`, and `context_length`.
+
+2.  **Define default lists in `src/bin/data_generator/pipeline.rs`**:
+    *   Add `const` arrays of `&'static str` for `USE_CASES`, `COMPLEXITIES`, `USER_STYLES`, and `CONTEXT_LENGTHS`. These will serve as the pools for random selection when no CLI argument is provided.
+
+3.  **Modify `src/bin/data_generator/main.rs`**:
+    *   Before calling `pipeline::generate_student_prompt`:
+        *   Resolve the `tool_name`: If `args.tool_name` is `None`, randomly select a `Tool` from `TOOLS_DEFINITION`. Otherwise, find the `Tool` corresponding to `args.tool_name`. Extract its `name`, `to_tool_spec()` (serialized to JSON), and `description`.
+        *   Resolve `use_case`, `complexity`, `user_style`, and `context_length`: If the corresponding `args` field is `None`, randomly select a value from the respective `const` array defined in `pipeline.rs`. Otherwise, use the value from `args`.
+        *   Pass these resolved values to `pipeline::generate_student_prompt`.
+
+4.  **Modify `src/bin/data_generator/pipeline.rs`**:
+    *   Update the `generate_student_prompt` function signature to accept the new parameters: `tool_name: &str`, `tool_spec_json: &str`, `tool_description: &str`, `use_case: &str`, `complexity: &str`, `user_style: &str`, `context_length: &str`.
+    *   Modify the `data` JSON object passed to `handlebars.render("meta_prompt", &data)` to include these new parameters.

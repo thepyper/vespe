@@ -1,0 +1,53 @@
+# Plan for Enriching Output Example JSON
+
+This plan outlines the modifications to include detailed intermediate queries, responses, and configuration settings within the generated example JSON files. This will enhance traceability and aid in debugging and analysis of the data generation process.
+
+## Objectives:
+-   Capture the exact prompts sent to and raw responses received from the NARRATOR, HERO, and MARKER models for each example.
+-   Include a snapshot of the `CliArgs` (configuration) used for generating each example.
+-   Integrate these new fields into the final output JSON structure.
+
+## Implementation Details:
+
+### 1. Modify `src/bin/data_generator/main.rs`
+
+-   **Capture Narrator Query and Response:**
+    -   Before calling `pipeline::generate_student_prompt`, store the `meta_prompt` (the prompt rendered by Handlebars) as `narrator_query`.
+    -   After `pipeline::generate_student_prompt` returns, store its result (the `student_prompt`) as `narrator_response`.
+-   **Capture Hero Query and Response:**
+    -   Before calling `pipeline::get_student_response`, store the `student_prompt` as `hero_query`.
+    -   After `pipeline::get_student_response` returns, store its first element (the `student_response`) as `hero_response`.
+-   **Capture Marker Query and Response:**
+    -   Before calling `pipeline::label_student_response`, store the `labeling_prompt` (the prompt rendered by Handlebars) as `marker_query`.
+    -   After `pipeline::label_student_response` returns, store its result (the `labeled_json` string) as `marker_response`.
+-   **Capture Configuration:** The `args: CliArgs` struct already holds the configuration. A clone or reference to it will be passed.
+-   **Update `pipeline::save_labeled_example` call:** Pass all these newly captured variables and the `args` struct to the `save_labeled_example` function.
+
+### 2. Modify `src/bin/data_generator/pipeline.rs`
+
+-   **Update `save_labeled_example` function signature:**
+    -   Add new parameters to accept:
+        -   `narrator_query: &str`
+        -   `narrator_response: &str`
+        -   `hero_query: &str`
+        -   `hero_response: &str`
+        -   `marker_query: &str`
+        -   `marker_response: &str`
+        -   `config: &CliArgs` (or a serializable representation if `CliArgs` cannot be directly serialized).
+-   **Update `save_labeled_example` implementation:**
+    -   The function currently takes `example_json_str` (which is the `labeled_json`). It needs to parse this string into a `serde_json::Value`.
+    -   Then, it will merge the parsed `labeled_json` with the new fields (`narrator_query`, `narrator_response`, `hero_query`, `hero_response`, `marker_query`, `marker_response`, and `config`).
+    -   The `config` field should be serialized from the `CliArgs` struct. This might require `#[derive(Serialize)]` on `CliArgs` if it's not already there.
+    -   The final merged JSON object will then be pretty-printed and saved to the file.
+
+### 3. Review `src/bin/data_generator/cli_args.rs`
+
+-   Ensure `CliArgs` has `#[derive(Serialize)]` so it can be easily included in the output JSON. (It already has `Debug`, so `Serialize` should be straightforward).
+
+## Next Steps:
+
+1.  Obtain user approval for this plan.
+2.  Implement changes in `main.rs` to capture intermediate data.
+3.  Implement changes in `pipeline.rs` to update `save_labeled_example` signature and logic.
+4.  Ensure `CliArgs` is serializable.
+5.  Compile and test the `data_generator` to verify the enriched output JSON.

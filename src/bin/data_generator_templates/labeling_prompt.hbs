@@ -1,12 +1,11 @@
 TRAINING DATA LABELING - TOKEN MARKING SEGMENTATION
 
 Analyze a language model's response and mark each meaningful unit with its category to create training data for text segmentation.
+Response should (but could not) contain a tool call of the tool specified in the next section.
 
 === INPUT DATA ===
 Target Tool: {{{tool_name}}} - {{{tool_description}}}
 Tool Specification: {{{tool_spec}}}
-Original Query: {{{small_query}}}
-Model Response: {{{small_reply}}}
 
 === CLASSIFICATION CATEGORIES ===
 
@@ -120,11 +119,15 @@ Done! <TEXT>
 
 === PROCESSING INSTRUCTIONS ===
 
-1. Read the full model response: {{{small_reply}}}
+1. Read the full model response
 2. Identify natural segmentation boundaries
 3. Classify each segment based on context and content
 4. Mark each unit with appropriate category
 5. Ensure complete coverage (every word/unit gets a label)
 6. Double-check that TOOL_CALL segments relate to {{{tool_name}}}
 
-Analyze and mark the response:
+Here is the original query to the model:
+{{{small_query}}}
+
+Here is the response to analyze and mark:
+{{{small_reply}}}

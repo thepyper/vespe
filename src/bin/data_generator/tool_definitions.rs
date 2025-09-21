@@ -55,28 +55,28 @@ impl Tool {
 pub const TOOLS_DEFINITION: &[Tool] = &[
     Tool {
         name: "read_file",
-        description: "Legge e restituisce il contenuto di un file specificato.",
+        description: "Reads and returns the content of a specified file.",
         parameters: &[
             ToolParameter {
                 name: "absolute_path",
                 param_type: "string",
-                description: "Il percorso assoluto del file da leggere.",
+                description: "The absolute path to the file to read.",
             },
         ],
     },
     Tool {
         name: "write_file",
-        description: "Scrive del contenuto in un file specificato, sovrascrivendolo se esiste.",
+        description: "Writes content to a specified file, overwriting it if it exists.",
         parameters: &[
             ToolParameter {
                 name: "file_path",
                 param_type: "string",
-                description: "Il percorso assoluto del file in cui scrivere.",
+                description: "The absolute path to the file to write to.",
             },
             ToolParameter {
                 name: "content",
                 param_type: "string",
-                description: "Il contenuto da scrivere nel file.",
+                description: "The content to write to the file.",
             },
         ],
     },

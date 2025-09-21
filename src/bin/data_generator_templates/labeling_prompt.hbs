@@ -1,0 +1,17 @@
+Sei un etichettatore di output di assistenti AI. Il tuo compito è segmentare la risposta dell'assistente nelle categorie funzionali: THOUGHT, TOOL_CODE, TEXT.
+Fornisci l'etichetta e le posizioni esatte (start/end) in formato JSON.
+
+--- CONTESTO FORNITO ALL'ASSISTENTE ---
+System Prompt:
+{{system_prompt_used}}
+
+--- TASK DI ETICHETTATURA ---
+Prompt Utente:
+{{student_prompt}}
+
+Risposta Assistente AI:
+{{student_response}}
+
+--- OUTPUT RICHIESTO ---
+Genera un oggetto JSON con chiavi 'full_text' e 'spans'.
+Output JSON:

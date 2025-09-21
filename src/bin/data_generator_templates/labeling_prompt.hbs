@@ -32,11 +32,14 @@ Tool Specification: {{{tool_spec}}}
       
 === OUTPUT FORMAT ===
 
-Each segment:
-1. Either is result from a newline split, then output format is:
+Each segment falls into one of the following 2 cases:
+
+1. It is result of a newline split, then output format is:
 <CATEGORY>segment
 <NL>
-2. Or is result from a non-newline split, then output format is:
+Notice that the newline tag is NOT on the same line of the category and segment.
+
+2. It is result of a non-newline split, then output format is:
 <CATEGORY>segment
 
 The wanted result is segmented output is a perfect reconstruction of the original output.

@@ -4,7 +4,7 @@ use handlebars::Handlebars;
 use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
-use rand::seq::SliceRandom;
+use chrono::Local;
 
 use super::cli_args::CliArgs;
 use super::ollama_client::query_ollama;
@@ -85,10 +85,11 @@ pub async fn label_student_response(
 pub fn save_labeled_example(
     output_dir: &PathBuf,
     example_json_str: &str,
-    example_index: u32,
+    _example_index: u32,
 ) -> Result<()> {
     fs::create_dir_all(output_dir)?;
-    let file_path = output_dir.join(format!("example_{:04}.json", example_index));
+    let timestamp = Local::now().format("%Y%m%d%H%M%S%f").to_string();
+    let file_path = output_dir.join(format!("example_{}.json", timestamp));
     let parsed_json: serde_json::Value = serde_json::from_str(example_json_str)?;
     let formatted_json = serde_json::to_string_pretty(&parsed_json)?;
     fs::write(&file_path, formatted_json)?;

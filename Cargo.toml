@@ -19,7 +19,7 @@ path = "src/bin/ollama_agent_client.rs"
 
 [[bin]]
 name = "data-generator"
-path = "src/bin/data_generator.rs"
+path = "src/bin/data_generator/main.rs"
 
 [dependencies]
 rand = "0.8"

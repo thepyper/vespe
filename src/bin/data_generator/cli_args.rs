@@ -4,7 +4,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct CliArgs {
-    #[arg(long, default_value = "gpt-oss:20b")]
+    #[arg(long, default_value = "llama3.1:8b")]
     pub narrator_model: String,
     #[arg(long, default_value = "gpt-oss:20b")]
     pub marker_model: String,

@@ -11,19 +11,55 @@ use super::ollama_client::query_ollama;
 use super::tool_definitions::{TOOLS_DEFINITION, ToolSpec};
 use super::prompt_templates::NORMATIVE_SYSTEM_PROMPT;
 
+pub const USE_CASES: &[&str] = &[
+    "data extraction",
+    "code generation",
+    "summarization",
+    "question answering",
+    "text transformation",
+];
+
+pub const COMPLEXITIES: &[&str] = &[
+    "simple",
+    "medium",
+    "complex",
+    "very complex",
+];
+
+pub const USER_STYLES: &[&str] = &[
+    "formal",
+    "informal",
+    "technical",
+    "casual",
+];
+
+pub const CONTEXT_LENGTHS: &[&str] = &[
+    "short",
+    "medium",
+    "long",
+    "very long",
+];
 
 pub async fn generate_student_prompt(
     client: &Client,
     args: &CliArgs,
     tool_name: &str,
+    tool_spec_json: &str,
+    tool_description: &str,
+    use_case: &str,
+    complexity: &str,
+    user_style: &str,
+    context_length: &str,
     handlebars: &Handlebars<'_>,
 ) -> Result<String> {
-    let tool_specs_vec: Vec<ToolSpec> = TOOLS_DEFINITION.iter().map(|t| t.to_tool_spec()).collect();
-    let tool_specs_json = serde_json::to_string_pretty(&tool_specs_vec)?;
-
     let data = json!({
         "tool_name": tool_name,
-        "tool_specs": tool_specs_json
+        "tool_spec": tool_spec_json,
+        "tool_description": tool_description,
+        "use_case": use_case,
+        "complexity": complexity,
+        "user_style": user_style,
+        "context_length": context_length
     });
     let prompt = handlebars.render("meta_prompt", &data)?;
     query_ollama(client, &args.ollama_url, &args.big_model, &prompt, None).await

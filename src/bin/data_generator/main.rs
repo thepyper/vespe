@@ -39,15 +39,40 @@ async fn main() -> Result<()> {
 
     println!("--- Inizio Pipeline di Generazione Dati (Rust) ---");
 
-    let tool_names: Vec<&str> = tool_definitions::TOOLS_DEFINITION.iter().map(|t| t.name).collect();
     let mut rng = rand::thread_rng();
 
     for i in 1..=args.num_examples {
         println!("\n========== Inizio Esempio {}/{} ==========", i, args.num_examples);
 
-        let tool_to_practice = *tool_names.choose(&mut rng).unwrap();
+        let selected_tool = if let Some(tool_name_arg) = &args.tool_name {
+            tool_definitions::TOOLS_DEFINITION.iter()
+                .find(|t| t.name == tool_name_arg)
+                .ok_or_else(|| anyhow::anyhow!("Tool '{}' not found", tool_name_arg))?
+        } else {
+            tool_definitions::TOOLS_DEFINITION.choose(&mut rng).unwrap()
+        };
 
-        let student_prompt = match pipeline::generate_student_prompt(&client, &args, tool_to_practice, &handlebars).await {
+        let tool_name = selected_tool.name;
+        let tool_description = selected_tool.description;
+        let tool_spec_json = serde_json::to_string_pretty(&selected_tool.to_tool_spec())?;
+
+        let use_case = args.use_case.as_deref().unwrap_or_else(|| pipeline::USE_CASES.choose(&mut rng).unwrap());
+        let complexity = args.complexity.as_deref().unwrap_or_else(|| pipeline::COMPLEXITIES.choose(&mut rng).unwrap());
+        let user_style = args.user_style.as_deref().unwrap_or_else(|| pipeline::USER_STYLES.choose(&mut rng).unwrap());
+        let context_length = args.context_length.as_deref().unwrap_or_else(|| pipeline::CONTEXT_LENGTHS.choose(&mut rng).unwrap());
+
+        let student_prompt = match pipeline::generate_student_prompt(
+            &client,
+            &args,
+            tool_name,
+            &tool_spec_json,
+            tool_description,
+            use_case,
+            complexity,
+            user_style,
+            context_length,
+            &handlebars
+        ).await {
             Ok(prompt) => prompt,
             Err(e) => {
                 eprintln!("ERRORE nel Passo 1: {}. Saltando l'esempio.", e);

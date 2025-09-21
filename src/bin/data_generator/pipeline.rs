@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use reqwest::Client;
 use handlebars::Handlebars;
 use serde_json::json;
@@ -141,6 +141,57 @@ pub async fn label_student_response(
     query_ollama(client, &args.ollama_url, &args.big_model, &prompt, None).await
 }
 
+fn segmentation_to_json_conversion(input: &str) -> Result<String> {
+
+    let mut full_text = String::new();
+    let mut spans = Vec::new();
+    let mut pos = 0;
+
+    for (line_no, line) in input.lines().enumerate() {
+        if line == "<NL>" {
+            full_text.push('\n');
+            pos += 1;
+            continue;
+        }
+
+        // Controllo che inizi con '<'
+        if !line.starts_with('<') {
+            return Err(anyhow!("Formato invalido alla riga {}: manca '<'", line_no + 1));
+        }
+
+        // Deve contenere almeno un '>'
+        let (category, segment) = match line.find('>') {
+            Some(idx) if idx > 1 => {
+                let category = &line[1..idx];
+                let segment = &line[idx + 1..];
+                if category.is_empty() || segment.is_empty() {
+                    return Err(anyhow!("Formato invalido alla riga {}", line_no + 1));
+                }
+                (category.to_string(), segment)
+            }
+            _ => return Err(anyhow!("Formato invalido alla riga {}", line_no + 1)),
+        };
+
+        let start = pos;
+        full_text.push_str(segment);
+        pos += segment.chars().count();
+        let end = pos;
+
+        spans.push(json!({
+            "start": start,
+            "end": end,
+            "category": category
+        }));
+    }
+
+    let result = json!({
+        "full_text": full_text,
+        "spans": spans
+    });
+
+    Ok(serde_json::to_string_pretty(&result)?)
+}
+
 pub fn save_labeled_example(
     output_dir: &PathBuf,
     example_json_str: &str,
@@ -149,7 +200,7 @@ pub fn save_labeled_example(
     fs::create_dir_all(output_dir)?;
     let timestamp = Local::now().format("%Y%m%d%H%M%S%f").to_string();
     let file_path = output_dir.join(format!("example_{}.json", timestamp));
-    let parsed_json: serde_json::Value = serde_json::from_str(example_json_str)?;
+    let parsed_json: serde_json::Value = serde_json::from_str(&segmentation_to_json_conversion(example_json_str)?)?;
     let formatted_json = serde_json::to_string_pretty(&parsed_json)?;
     fs::write(&file_path, formatted_json)?;
     tracing::info!("Esempio salvato in '{}'", file_path.display());

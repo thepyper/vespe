@@ -1,0 +1,78 @@
+# Piano di Refactoring di `data-generator` con Handlebars
+
+## Obiettivo
+Sostituire la logica di costruzione manuale delle stringhe (`format!`, `push_str`) nel binario `data-generator` con il motore di templating `handlebars`. Questo renderà il codice più pulito, sicuro e manutenibile, eliminando i problemi di escaping delle stringhe.
+
+## Contesto
+I tentativi precedenti di modificare i prompt e le specifiche dei tool hanno introdotto errori di sintassi a causa della complessità della gestione manuale delle stringhe. L'uso di `handlebars`, già presente come dipendenza nel progetto, è la soluzione standard per questo problema.
+
+## Passi di Implementazione
+
+### 1. Creazione di una Directory per i Template
+- **Azione:** Creare una nuova directory per ospitare i template di handlebars.
+- **Percorso:** `src/bin/data_generator_templates/` (fuori da `data_generator` per chiarezza)
+- **Motivazione:** Tenere i template separati dal codice Rust migliora la leggibilità e permette di modificarli senza ricompilare (se caricati a runtime). Per semplicità iniziale, li registreremo all'avvio.
+
+### 2. Creazione dei File di Template
+- **Azione:** Creare file di template `.hbs` per ogni stringa complessa che viene generata.
+
+#### 2.1. Template per i System Prompt dei Tool (`tool_spec.hbs`)
+- Verrà creato un unico file generico, e la logica per i vari formati (MCP, JSON, XML) sarà gestita con helper Handlebars o passando dati pre-formattati.
+- **Esempio per `mcp_spec.hbs`:**
+  ```handlebars
+  I tool disponibili sono:
+  {{#each tools}}
+  - {{this.name}}: {{this.description}}
+  {{/each}}
+
+  Il blocco TOOL_CODE deve essere un singolo oggetto JSON che segue la specifica 'Model Context Protocol'.
+
+  Ecco un esempio di chiamata singola:
+  ```json
+  {{{json_example}}}
+  ```
+  ```
+
+#### 2.2. Template per i Prompt della Pipeline
+- **`meta_prompt.hbs`:**
+  ```handlebars
+  Sei un generatore di prompt per un assistente AI. Il tuo compito è creare un prompt utente che richieda all'assistente di usare un tool specifico. Il prompt deve essere in linguaggio naturale e non deve contenere chiamate dirette a tool.
+  Genera un prompt che richieda l'uso del tool '{{tool_name}}'.
+  Output solo il prompt utente.
+  ```
+- **`labeling_prompt.hbs`:**
+  ```handlebars
+  Sei un etichettatore di output di assistenti AI. [...]
+
+  --- CONTESTO FORNITO ALL'ASSISTENTE ---
+  System Prompt:
+  {{system_prompt_used}}
+
+  --- TASK DI ETICHETTATURA ---
+  Prompt Utente:
+  {{student_prompt}}
+
+  Risposta Assistente AI:
+  {{student_response}}
+
+  --- OUTPUT RICHIESTO ---
+  Genera un oggetto JSON con chiavi 'full_text' e 'spans'.
+  Output JSON:
+  ```
+
+### 3. Integrazione di Handlebars nel Codice Rust
+
+- **Azione:** Modificare `data_generator.rs` per usare `handlebars`.
+- **Logica:**
+    1.  **Inizializzazione:** All'avvio, nella funzione `main`, creare un'istanza di `Handlebars`.
+    2.  **Registrazione dei Template:** Caricare e registrare tutti i file `.hbs` dalla directory dei template.
+    3.  **Modifica delle Funzioni:**
+        - Le funzioni `build_*_tool_spec`, `generate_student_prompt`, e `label_student_response` non costruiranno più stringhe manualmente.
+        - Invece, creeranno una struttura dati (o una `serde_json::Value`) contenente i dati necessari per il template (es. la lista dei tool, il nome del tool, etc.).
+        - Chiameranno `handlebars.render("nome_template", &dati)` per generare la stringa finale.
+
+### 4. Versioning con Git
+1.  **Commit 1 (Pianificazione):** Aggiunta di questo file di piano.
+2.  **Commit 2 (Templates):** Creazione della directory `templates/` e aggiunta di tutti i file `.hbs`.
+3.  **Commit 3 (Refactoring):** Modifica del file `data_generator.rs` per integrare e usare `handlebars`.
+4.  **Commit 4 (Verifica):** Esecuzione di `cargo build` e `cargo run` per assicurarsi che il programma funzioni come previsto.

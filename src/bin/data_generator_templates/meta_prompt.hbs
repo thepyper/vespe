@@ -1,53 +1,49 @@
-TRAINING DATA GENERATION - PROMPT CREATOR
+TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR
 
-Your task is to generate prompts that will cause a language model to use tools in various ways, creating diverse training examples for a text classification system.
+Your task is to generate a user prompt that will encourage a language model to use a specific tool in a particular scenario, creating training data for a text segmentation system.
 
-=== OBJECTIVE ===
-Create prompts that will make the target model:
-- Use the specified tools naturally
-- Generate mixed responses (text + tool calls + reasoning)
-- Produce realistic, varied output patterns
-- Include edge cases and complex scenarios
+=== TARGET TOOL ===
+Tool Name: {{{tool_name}}}
+Tool Specification: {{{tool_spec}}}
+Tool Description: {{{tool_description}}}
 
-=== AVAILABLE TOOLS ===
-{{{tool_specs}}}
+=== SCENARIO PARAMETERS ===
+Use Case: {{{use_case}}}
+Complexity: {{{complexity}}}
+User Style: {{{user_style}}}
+Context Length: {{{context_length}}}
 
 === PROMPT GENERATION GUIDELINES ===
-Generate prompts that encourage:
 
-1. **Simple tool usage:** Direct requests that clearly need one tool
-2. **Multi-step scenarios:** Requests requiring multiple tools or reasoning
-3. **Ambiguous requests:** Where tool usage might be optional or unclear
-4. **Complex reasoning:** Scenarios requiring explanation + tool usage
-5. **Edge cases:** Unusual parameters, error conditions, boundary cases
+**Use Case Behaviors:**
+- "direct_request": User directly asks for tool functionality
+- "problem_solving": User describes a problem that needs this tool
+- "exploratory": User is unsure and exploring options
+- "workflow": User mentions this tool as part of larger task
+- "troubleshooting": User has an issue that this tool might solve
 
-=== VARIETY REQUIREMENTS ===
-Create prompts with different:
-- Complexity levels (simple → complex)
-- Formality levels (casual → formal)
-- Specificity levels (vague → precise)
-- Context lengths (short → long)
-- Tool combination patterns
+**Complexity Behaviors:**
+- "simple": Straightforward, obvious tool usage
+- "moderate": Requires some reasoning or multiple parameters
+- "complex": Ambiguous intent or challenging parameters
 
-=== EXAMPLES OF GOOD PROMPTS ===
+**User Style Behaviors:**
+- "casual": Informal, conversational language
+- "technical": Precise, professional language  
+- "verbose": Detailed explanations and context
+- "terse": Brief, minimal context
 
-Simple tool usage:
-"Check if the file 'config.json' exists and show me its contents."
+**Context Length Behaviors:**
+- "short": 1-2 sentences
+- "medium": 3-5 sentences with some background
+- "long": Extended context with multiple details
 
-Multi-step with reasoning:
-"I'm debugging an application that crashed. Can you help me analyze the error logs in '/var/log/app.log' and also check the current system memory usage? I need to understand what went wrong."
+=== GENERATION RULES ===
+1. Create realistic user request (not "please use the X tool")
+2. Match the specified use case and complexity naturally
+3. Include appropriate context for the context_length parameter
+4. Use language style matching user_style parameter
+5. Make tool usage feel natural and necessary
 
-Ambiguous scenario:
-"My project isn't working as expected. The settings might be wrong, or maybe there's an issue with the data files. Could you help me figure out what's happening?"
-
-Edge case:
-"Echo the exact text: '{\"malformed\": json,}' and then try to read a file that might not exist: '/tmp/nonexistent.txt'"
-
-=== OUTPUT FORMAT ===
-Generate exactly one prompt that will encourage tool usage. The prompt should:
-- Be realistic (something a real user might ask)
-- Target the available tools appropriately
-- Encourage natural, varied responses
-- Not explicitly mention "use tools" or "call functions"
-
-GENERATE PROMPT:
+=== OUTPUT ===
+Generate exactly one user prompt that matches all parameters:

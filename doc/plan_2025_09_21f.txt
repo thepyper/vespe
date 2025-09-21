@@ -1,31 +1,75 @@
-Piano per la refactorizzazione di `src/bin/data_generator.rs`
+Piano Riformulato per la Refactorizzazione di `src/bin/data_generator.4rs`
 
-**Obiettivo:** Migliorare la manutenibilità del file `src/bin/data_generator.rs` dividendolo in più moduli, senza alterare la funzionalità esistente.
+**Obiettivo:** Migliorare la manutenibilità del binario `src/bin/data_generator.rs` dividendolo in moduli logici all'interno della stessa directory `src/bin/`, mantenendo inalterata la funzionalità esistente.
 
-**Passi:**
+**Nuova Struttura dei Moduli Proposta:**
 
-1.  **Creazione della struttura dei moduli:**
-    *   Creare una nuova directory `src/data_generator_modules`.
-    *   All'interno di `src/data_generator_modules`, creare i seguenti file:
-        *   `mod.rs`: Questo file conterrà le dichiarazioni dei moduli e le funzioni principali che orchestrano la generazione dei dati.
-        *   `core_generators.rs`: Conterrà le funzioni di generazione di alto livello come `generate_example`, `generate_random_value`, `generate_random_json_value`.
-        *   `primitive_generators.rs`: Conterrà le funzioni per la generazione di tipi primitivi come `generate_random_string`, `generate_random_number`, `generate_random_boolean`.
-        *   `complex_generators.rs`: Conterrà le funzioni per la generazione di tipi complessi come `generate_random_array`, `generate_random_object`, `generate_random_json_array`, `generate_random_json_object`.
-        *   `json_primitive_generators.rs`: Conterrà le funzioni specifiche per la generazione di tipi primitivi JSON come `generate_random_json_string`, `generate_random_json_number`, `generate_random_json_boolean`, `generate_random_json_null`.
+Invece di creare una nuova directory `src/data_generator/`, creeremo dei moduli all'interno della directory `src/bin/` stessa, o in una sottodirectory specifica per il binario `data_generator`. La convenzione Rust per i binari complessi è spesso quella di creare una directory con lo stesso nome del binario (es. `src/bin/data_generator/`) e mettere lì `main.rs` e i sottomoduli. Questo è l'approccio più pulito per un binario.
 
-2.  **Spostamento del codice:**
-    *   Spostare le funzioni pertinenti da `src/bin/data_generator.rs` ai rispettivi nuovi file di modulo.
-    *   Assicurarsi che tutte le dipendenze tra le funzioni siano risolte tramite `use` statements all'interno dei nuovi moduli.
+Quindi, la struttura sarà:
 
-3.  **Aggiornamento di `src/bin/data_generator.rs`:**
-    *   Il file `src/bin/data_generator.rs` verrà semplificato per includere solo la funzione `main`.
-    *   La funzione `main` importerà le funzioni necessarie dai nuovi moduli e le utilizzerà come prima.
+*   `src/bin/data_generator/main.rs`: Questo sarà il nuovo punto di ingresso del binario.
+*   `src/bin/data_generator/mod.rs`: Questo file fungerà da modulo radice per la logica del generatore di dati, esportando le funzioni e le strutture pubbliche necessarie a `main.rs`.
+*   `src/bin/data_generator/cli_args.rs`: Conterrà la definizione della struct `CliArgs` e le relative implementazioni.
+*   `src/bin/data_generator/ollama_client.rs`: Conterrà le struct `OllamaGenerateRequest`, `OllamaGenerateResponse` e la funzione `query_ollama`.
+*   `src/bin/data_generator/tool_definitions.rs`: Conterrà le struct `Tool`, `ToolParameter` e la costante `TOOLS_DEFINITION`.
+*   `src/bin/data_generator/prompt_templates.rs`: Conterrà la logica per la registrazione dei template Handlebars e la costante `NORMATIVE_SYSTEM_PROMPT`.
+*   `src/bin/data_generator/pipeline.rs`: Conterrà le funzioni che orchestrano la pipeline di generazione: `generate_student_prompt`, `build_tool_spec`, `get_student_response`, `label_student_response`, `save_labeled_example`.
 
-4.  **Aggiornamento di `src/lib.rs` (se necessario):**
-    *   Se i nuovi moduli devono essere accessibili da altre parti della crate, sarà necessario dichiararli in `src/lib.rs`. Per ora, assumeremo che siano solo per uso interno di `data_generator.rs`.
+**Passi Dettagliati:**
 
-5.  **Verifica:**
-    *   Compilare il progetto per assicurarsi che non ci siano errori di compilazione.
-    *   Eseguire il `data_generator` per verificare che la funzionalità sia rimasta invariata.
+1.  **Rinominare e creare la directory del binario:**
+    *   Rinominare `src/bin/data_generator.rs` a `src/bin/data_generator/main.rs`.
+    *   Creare la directory `src/bin/data_generator/`.
 
-Questo piano garantirà che la funzionalità rimanga intatta mentre si migliora la struttura del codice per una migliore manutenibilità.
+2.  **Creazione dei file dei moduli all'interno di `src/bin/data_generator/`:**
+    *   Creare i file `src/bin/data_generator/mod.rs`, `src/bin/data_generator/cli_args.rs`, `src/bin/data_generator/ollama_client.rs`, `src/bin/data_generator/tool_definitions.rs`, `src/bin/data_generator/prompt_templates.rs`, `src/bin/data_generator/pipeline.rs`.
+
+3.  **Spostamento del codice e adattamento (come nel piano precedente, ma con percorsi relativi ai nuovi moduli):**
+
+    *   **`src/bin/data_generator/cli_args.rs`**:
+        *   Spostare la definizione della struct `CliArgs` e l'attributo `#[derive(Parser, Debug)]`.
+        *   Aggiungere `use clap::Parser;`.
+        *   Rendere la struct `pub`.
+
+    *   **`src/bin/data_generator/ollama_client.rs`**:
+        *   Spostare le definizioni delle struct `OllamaGenerateRequest`, `OllamaGenerateResponse`.
+        *   Spostare la funzione `async fn query_ollama(...)`.
+        *   Aggiungere `use reqwest::Client;`, `use serde::{Deserialize, Serialize};`, `use anyhow::Result;`.
+        *   Rendere le struct e la funzione `pub`.
+
+    *   **`src/bin/data_generator/tool_definitions.rs`**:
+        *   Spostare le definizioni delle struct `Tool`, `ToolParameter`.
+        *   Spostare la costante `TOOLS_DEFINITION`.
+        *   Aggiungere `use serde::Serialize;`.
+        *   Rendere le struct e la costante `pub`.
+
+    *   **`src/bin/data_generator/prompt_templates.rs`**:
+        *   Spostare la costante `NORMATIVE_SYSTEM_PROMPT`.
+        *   Creare una funzione `pub fn register_all_templates(...)` che accetti `&mut Handlebars` e registri tutti i template.
+        *   Aggiungere `use handlebars::Handlebars;`, `use anyhow::Result;`.
+        *   Rendere la costante e la funzione `pub`.
+
+    *   **`src/bin/data_generator/pipeline.rs`**:
+        *   Spostare le funzioni `async fn generate_student_prompt(...)`, `fn build_tool_spec(...)`, `async fn get_student_response(...)`, `async fn label_student_response(...)`, `fn save_labeled_example(...)`.
+        *   Queste funzioni dovranno importare le dipendenze dai *fratelli* moduli (es. `CliArgs` da `super::cli_args`, `query_ollama` da `super::ollama_client`, `TOOLS_DEFINITION` da `super::tool_definitions`, `NORMATIVE_SYSTEM_PROMPT` da `super::prompt_templates`).
+        *   Aggiungere `use anyhow::Result;`, `use reqwest::Client;`, `use handlebars::Handlebars;`, `use serde_json::json;`, `use std::fs;`, `use std::path::PathBuf;`, `use rand::seq::SliceRandom;`.
+        *   Rendere tutte le funzioni `pub`.
+
+    *   **`src/bin/data_generator/mod.rs`**:
+        *   Dichiarare i sottomoduli: `pub mod cli_args;`, `pub mod ollama_client;`, `pub mod tool_definitions;`, `pub mod prompt_templates;`, `pub mod pipeline;`.
+        *   Esportare le struct e le funzioni chiave che `main.rs` dovrà utilizzare (es. `pub use cli_args::CliArgs;`, `pub use ollama_client::query_ollama;`, `pub use tool_definitions::TOOLS_DEFINITION;`, `pub use prompt_templates::register_all_templates;`, `pub use pipeline::{generate_student_prompt, build_tool_spec, get_student_response, label_student_response, save_labeled_example};`).
+
+4.  **Aggiornamento di `src/bin/data_generator/main.rs`:**
+    *   Il file `src/bin/data_generator/main.rs` conterrà solo la funzione `main`.
+    *   Aggiungere `use crate::data_generator::{cli_args::CliArgs, ollama_client::query_ollama, prompt_templates::register_all_templates, pipeline::*, tool_definitions::TOOLS_DEFINITION};` (o importazioni simili a seconda di come si decide di esportare da `mod.rs`).
+    *   La funzione `main` utilizzerà le funzioni e le struct importate dai moduli.
+
+5.  **Aggiornamento di `Cargo.toml` (se necessario):**
+    *   Verificare che la sezione `[[bin]]` per `data_generator` sia configurata correttamente per puntare a `src/bin/data_generator/main.rs`. Potrebbe non essere necessario un cambiamento esplicito se Rust rileva automaticamente la nuova struttura.
+
+6.  **Verifica:**
+    *   Eseguire `cargo check` per verificare la compilazione.
+    *   Eseguire il binario `data_generator` per assicurarsi che la funzionalità sia rimasta invariata.
+
+Questo piano corregge l'errore precedente e allinea la refactorizzazione con la natura di binario del programma, seguendo le convenzioni di Rust per l'organizzazione del codice eseguibile.

@@ -1,0 +1,65 @@
+{
+  "full_text": "{\n  \"parameters\": {\n    \"method\": \"tools/call\",\n    \"params\": {\n      \"name\": \"read_file\",\n      \"arguments\": {\n        \"path\": \"ai_trends.txt\"\n      }\n    }\n  },\n  \"tool_name\": \"read_file\"\n}",
+  "spans": [
+    {
+      "category": "TOOL_CALL",
+      "end": 1,
+      "start": 0
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 19,
+      "start": 2
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 47,
+      "start": 20
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 63,
+      "start": 48
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 90,
+      "start": 64
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 111,
+      "start": 91
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 143,
+      "start": 112
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 151,
+      "start": 144
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 157,
+      "start": 152
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 162,
+      "start": 158
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 189,
+      "start": 163
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 191,
+      "start": 190
+    }
+  ]
+}

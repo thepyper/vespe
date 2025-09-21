@@ -157,17 +157,22 @@ fn segmentation_to_json_conversion(input: &str) -> Result<String> {
 
     for (line_no, line) in input.lines().enumerate() {
         
-        // Allow empty lines
-        if line.is_empty() {
-            continue;
-        }
-        
         if line == "<NL>" {
             full_text.push('\n');
             pos += 1;
             continue;
         }
-
+        
+        let (ending_nl, line) = match line.trim_end().ends_with("<NL>") {
+            true => (true, line.trim_end().strip_suffix("<NL>").unwrap()),
+            false => (false, line)
+        };
+        
+        // Allow empty lines
+        if line.is_empty() {
+            continue;
+        }        
+        
         // Controllo che inizi con '<'
         if !line.starts_with('<') {
             return Err(anyhow!("Formato invalido alla riga {}: manca '<'", line_no + 1));
@@ -196,6 +201,12 @@ fn segmentation_to_json_conversion(input: &str) -> Result<String> {
             "end": end,
             "category": category
         }));
+        
+        if ending_nl {
+            full_text.push('\n');
+            pos += 1;
+            continue;
+        }
     }
 
     let result = json!({

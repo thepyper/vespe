@@ -1,0 +1,31 @@
+Piano per la refactorizzazione di `src/bin/data_generator.rs`
+
+**Obiettivo:** Migliorare la manutenibilità del file `src/bin/data_generator.rs` dividendolo in più moduli, senza alterare la funzionalità esistente.
+
+**Passi:**
+
+1.  **Creazione della struttura dei moduli:**
+    *   Creare una nuova directory `src/data_generator_modules`.
+    *   All'interno di `src/data_generator_modules`, creare i seguenti file:
+        *   `mod.rs`: Questo file conterrà le dichiarazioni dei moduli e le funzioni principali che orchestrano la generazione dei dati.
+        *   `core_generators.rs`: Conterrà le funzioni di generazione di alto livello come `generate_example`, `generate_random_value`, `generate_random_json_value`.
+        *   `primitive_generators.rs`: Conterrà le funzioni per la generazione di tipi primitivi come `generate_random_string`, `generate_random_number`, `generate_random_boolean`.
+        *   `complex_generators.rs`: Conterrà le funzioni per la generazione di tipi complessi come `generate_random_array`, `generate_random_object`, `generate_random_json_array`, `generate_random_json_object`.
+        *   `json_primitive_generators.rs`: Conterrà le funzioni specifiche per la generazione di tipi primitivi JSON come `generate_random_json_string`, `generate_random_json_number`, `generate_random_json_boolean`, `generate_random_json_null`.
+
+2.  **Spostamento del codice:**
+    *   Spostare le funzioni pertinenti da `src/bin/data_generator.rs` ai rispettivi nuovi file di modulo.
+    *   Assicurarsi che tutte le dipendenze tra le funzioni siano risolte tramite `use` statements all'interno dei nuovi moduli.
+
+3.  **Aggiornamento di `src/bin/data_generator.rs`:**
+    *   Il file `src/bin/data_generator.rs` verrà semplificato per includere solo la funzione `main`.
+    *   La funzione `main` importerà le funzioni necessarie dai nuovi moduli e le utilizzerà come prima.
+
+4.  **Aggiornamento di `src/lib.rs` (se necessario):**
+    *   Se i nuovi moduli devono essere accessibili da altre parti della crate, sarà necessario dichiararli in `src/lib.rs`. Per ora, assumeremo che siano solo per uso interno di `data_generator.rs`.
+
+5.  **Verifica:**
+    *   Compilare il progetto per assicurarsi che non ci siano errori di compilazione.
+    *   Eseguire il `data_generator` per verificare che la funzionalità sia rimasta invariata.
+
+Questo piano garantirà che la funzionalità rimanga intatta mentre si migliora la struttura del codice per una migliore manutenibilità.

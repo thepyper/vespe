@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use anyhow::Result;
 use tracing::debug;
 use tokio_stream::StreamExt;
-use futures_util::Stream;
 use serde_json::Value;
 use std::io::{self, Write};
 
@@ -75,7 +74,7 @@ pub async fn query_ollama(
             let json_value: Value = serde_json::from_str(&line)?;
             if let Some(response_text) = json_value["response"].as_str() {
                 print!("{}", response_text);
-                io::stdout().flush().await?;
+                io::stdout().flush()?;
                 full_response_text.push_str(response_text);
             }
             if json_value["done"].as_bool().unwrap_or(false) { break; }

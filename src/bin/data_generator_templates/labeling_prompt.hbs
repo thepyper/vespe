@@ -27,7 +27,7 @@ Tool Specification: {{{tool_spec}}}
 === TOKEN MARKING RULES ===
 
 **Segmentation Guidelines:**
-- You MUST split on newline;
+- You MUST split on newline, even if it is internal to structured data such as JSON or any other;
 - You CAN split anywhere else.
       
 === OUTPUT FORMAT ===
@@ -43,6 +43,10 @@ Notice that the newline tag is NOT on the same line of the category and segment.
 <CATEGORY>segment
 
 The wanted result is segmented output is a perfect reconstruction of the original output.
+
+You CANNOT output anything else than the segment conversion into one of there two cases.
+You CANNOT output any explanation of how you decided segmentation.
+You CANNOT output any markup other than specified in the two cases.
 
 Example Input: 
 I'll search for information: {\"name\": \"web_search\", \"query\": \"python\"} 

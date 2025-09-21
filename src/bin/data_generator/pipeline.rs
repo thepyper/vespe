@@ -228,7 +228,7 @@ pub async fn save_labeled_example(
     
     let mut original_labeled_json: serde_json::Value = serde_json::from_str(&converted_json)?;
 
-    let mut debug_json = json!({ "debug": {
+    let mut debug_json = json!({
         "narrator_query": narrator_query,
         "narrator_response": narrator_response,
         "hero_query": hero_query,
@@ -236,10 +236,9 @@ pub async fn save_labeled_example(
         "marker_query": marker_query,
         "marker_response": marker_response,
         "config": serde_json::to_value(config)?,
-    }});
+    });
     
-    //original_labeled_json.as_object_mut().ok_or(anyhow!("internal error"))?["debug"] = debug_json;
-    let _ = original_labeled_json.as_object_mut().insert(debug_json.as_object_mut().expect("internal error 001"));
+    original_labeled_json.as_object_mut().ok_or(anyhow!("internal error"))?.insert("debug".to_string(), debug_json);
 
     let formatted_json = serde_json::to_string_pretty(&original_labeled_json)?;
     fs::write(&file_path, formatted_json)?;

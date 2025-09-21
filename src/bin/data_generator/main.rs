@@ -29,6 +29,8 @@ async fn main() -> Result<()> {
         .with(fmt::layer().with_writer(non_blocking_file_writer).with_filter(EnvFilter::from_default_env()))
         .init();
 
+    tracing::info!("Tracing initialized successfully.");
+
     let args = cli_args::CliArgs::parse();
     let client = Client::new();
 

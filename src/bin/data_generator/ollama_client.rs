@@ -49,6 +49,8 @@ pub async fn query_ollama(
         })),
     };
 
+    debug!("Ollama Raw Request Payload: {}", serde_json::to_string_pretty(&request_payload)?);
+
     let mut full_response_text = String::new();
 
     let response = client
@@ -70,6 +72,8 @@ pub async fn query_ollama(
             let line = String::from_utf8(line_bytes)?;
 
             if line.trim().is_empty() { continue; }
+
+            debug!("Ollama Raw Response Chunk: {}", line);
 
             let json_value: Value = serde_json::from_str(&line)?;
             if let Some(response_text) = json_value["response"].as_str() {

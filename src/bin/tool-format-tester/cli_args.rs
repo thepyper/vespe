@@ -12,7 +12,7 @@ pub struct CliArgs {
     pub ollama_url: String,
     #[arg(long, default_value_t = 10)]
     pub num_examples: u32,
-    #[arg(long, default_value = "buzz/training/generated_examples_rust")]
+    #[arg(long, default_value = "buzz/training/generated_format_test")]
     pub output_dir: PathBuf,
     #[arg(long, value_parser = ["mcp"], default_value = "mcp")]
     pub policy: String,

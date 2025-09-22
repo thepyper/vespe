@@ -2,9 +2,11 @@ use anyhow::{anyhow, Result};
 use chrono::Local;
 use clap::Parser;
 use handlebars::Handlebars;
-use policies::{JsonToolCallPolicy, ToolCallPolicy};
+use policies::{JsonToolCallPolicy, ParsedToolCall, ToolCallPolicy};
 use rand::seq::SliceRandom;
 use reqwest::Client;
+use serde_json::json;
+use std::fs;
 use std::path::PathBuf;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -18,6 +20,34 @@ mod prompt_templates;
 mod tool_definitions;
 
 const LOG_DIR: &str = ".vespe/log";
+
+async fn save_test_result(
+    output_dir: &PathBuf,
+    hero_prompt: &str,
+    hero_response: &str,
+    validation_result: &Result<Vec<ParsedToolCall>, anyhow::Error>,
+) -> Result<PathBuf> {
+    let status = match validation_result {
+        Ok(_) => "SUCCESS",
+        Err(_) => "FAILURE",
+    };
+    let timestamp = Local::now().format("%Y%m%d%H%M%S%f").to_string();
+    let file_path = output_dir.join(format!("test_{}_{}.json", timestamp, status));
+
+    let result_data = json!({
+        "status": status,
+        "hero_prompt": hero_prompt,
+        "hero_response": hero_response,
+        "validation_output": match validation_result {
+            Ok(calls) => json!(calls),
+            Err(e) => json!(e.to_string()),
+        }
+    });
+
+    fs::create_dir_all(output_dir)?;
+    fs::write(&file_path, serde_json::to_string_pretty(&result_data)?)?;
+    Ok(file_path)
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -62,7 +92,7 @@ async fn main() -> Result<()> {
             tool_definitions::TOOLS_DEFINITION
                 .iter()
                 .find(|t| t.name == tool_name_arg)
-                .ok_or_else(|| anyhow!("Tool '{}' not found", tool_name_arg))?
+                .ok_or_else(|| anyhow!("Tool '{}' not found", tool_name_arg))? 
         } else {
             tool_definitions::TOOLS_DEFINITION.choose(&mut rng).unwrap()
         };
@@ -135,21 +165,23 @@ async fn main() -> Result<()> {
         };
 
         tracing::info!("PASSO 3: Validating HERO response with '{}' policy...", selected_policy.name());
-        match selected_policy.validate_and_parse(&hero_response_raw) {
+        let validation_result = selected_policy.validate_and_parse(&hero_response_raw);
+        match &validation_result {
             Ok(parsed_calls) => {
                 tracing::info!("Validation successful: {:?}", parsed_calls);
-                // TODO: Save successful result
             }
             Err(e) => {
                 tracing::error!("Validation FAILED: {}", e);
-                // TODO: Save failed result
             }
+        }
+
+        if let Err(e) = save_test_result(&args.output_dir, &student_prompt, &hero_response_raw, &validation_result).await {
+            tracing::error!("Failed to save test result: {}", e);
         }
 
         tracing::info!("========== Fine Esempio {}/{} ==========", i, args.num_examples);
     }
 
-    tracing::info!("
---- Pipeline completata ---");
+    tracing::info!("\n--- Pipeline completata ---");
     Ok(())
 }

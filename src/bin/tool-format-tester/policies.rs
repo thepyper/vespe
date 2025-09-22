@@ -34,10 +34,7 @@ impl ToolCallPolicy for JsonToolCallPolicy {
     }
 
     fn build_prompt_section(&self, _handlebars: &Handlebars) -> Result<String> {
-        // TODO: Render this from the `json_policy_prompt.hbs` template
-        //       once the template registration is updated in Phase 4.
-        let prompt = "When you need to call a tool, you MUST use the following JSON format. Do not include any other text or explanations outside of the JSON block.\n\nYour response should be a single JSON object that represents the tool call.\n\n**JSON Format:**\n```json\n{\n  \"tool_name\": \"<name of the tool to be called>\",\n  \"parameters\": {\n    \"<parameter_name>\": \"<parameter_value>\",\n    ...\n  }\n}\n```\n\n**Example:**\nTo write the text \"Hello, world!\" to the file \"/tmp/hello.txt\", you would respond with:\n```json\n{\n  \"tool_name\": \"write_file\",\n  \"parameters\": {\n    \"file_path\": \"/tmp/hello.txt\",\n    \"content\": \"Hello, world!\"\n  }\n}\n```";
-        Ok(prompt.to_string())
+        Ok(include_str!("../tool-format-tester-templates/json_policy_prompt.hbs").to_string())
     }
 
     fn validate_and_parse(&self, model_output: &str) -> Result<Vec<ParsedToolCall>> {

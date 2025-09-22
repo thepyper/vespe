@@ -14,6 +14,7 @@ mod ollama_client;
 mod tool_definitions;
 mod prompt_templates;
 mod pipeline;
+mod policies;
 
 const LOG_DIR: &str = ".vespe/log";
 

@@ -202,3 +202,20 @@ pub fn calculate_result_hash(task_uid: &str) -> Result<String, ProjectError>;
 *   **Logging:** Ogni transizione di stato e azione significativa dovrebbe essere registrata nella cartella `persistent/` del task.
 *   **Gestione Hash:** Le funzioni `complete_task` e quelle che gestiscono le dipendenze dovranno invocare `calculate_result_hash` e aggiornare `parent_content_hashes` in `status.json`.
 *   **Template System:** Il `create_task` dipenderà da un sistema di template per inizializzare correttamente la struttura della directory del task.
+
+### Paradigma di Interazione: API come Tool per LLM e Override Utente
+
+Le funzioni API definite in questo documento non sono intese solo come interfacce programmatiche per altri moduli Rust, ma rappresentano anche i "tool" primari a disposizione degli agenti LLM e dell'utente finale per interagire con il sistema di gestione dei task.
+
+1.  **API come Tool per Agenti LLM:**
+    *   Gli agenti LLM riceveranno il contesto del task (incluso lo stato corrente, l'obiettivo e la storia da `persistent/`) e, basandosi sul loro ragionamento, decideranno quale funzione API invocare e con quali parametri.
+    *   Questo permette all'LLM di "agire" sul task, definendo obiettivi, creando piani, aggiungendo risultati o modificando lo stato.
+    *   La cartella `persistent/` funge da "memoria conversazionale" o "chat history" dell'agente, fornendo il contesto necessario per decisioni coerenti.
+
+2.  **Override e Controllo Manuale dell'Utente:**
+    *   L'utente avrà la possibilità di invocare manualmente le stesse funzioni API, tipicamente tramite comandi CLI che mappano direttamente a queste funzioni.
+    *   Questo garantisce all'utente il pieno controllo sul task, permettendo di:
+        *   Correggere o guidare l'LLM.
+        *   Intervenire direttamente nel workflow del task.
+        *   Debuggare e testare il comportamento dell'agente.
+    *   La trasparenza è garantita dal fatto che sia l'LLM che l'utente operano sullo stesso set di azioni e sullo stesso stato persistente sul filesystem.

@@ -5,6 +5,7 @@ use handlebars::Handlebars;
 use policies::{StructuredOutputBlock, ToolCallPolicy};
 use crate::mcp_policy::McpPolicy;
 use crate::tagged_policy::TaggedPolicy;
+use crate::markdown_policy::MarkdownPolicy;
 use rand::seq::SliceRandom;
 use reqwest::Client;
 use serde_json::json;

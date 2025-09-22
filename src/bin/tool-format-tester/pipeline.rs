@@ -81,7 +81,8 @@ pub async fn get_student_response(
     });    
     tracing::debug!("get_student_response: Data for rendering: {:#?}", data);
     let system_prompt = handlebars.render("system_prompt", &data)?;
-    tracing::debug!("get_student_response: Rendered system prompt: {}", system_prompt);
+    tracing::info!("Hero System Prompt: {}", system_prompt);
+    tracing::info!("Hero User Prompt: {}", student_prompt);
     let response = query_ollama(client, ollama_url, hero_model, student_prompt, Some(&system_prompt)).await?;
     Ok((response, system_prompt))
 }

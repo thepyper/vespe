@@ -29,6 +29,7 @@ async fn save_test_result(
     output_dir: &PathBuf,
     narrator_prompt: &str,
     narrator_response: &str,
+    hero_system_prompt: &str,
     hero_prompt: &str,
     hero_response: &str,
     validation_result: &Result<Vec<StructuredOutputBlock>, anyhow::Error>,
@@ -44,6 +45,7 @@ async fn save_test_result(
         "status": status,
         "narrator_prompt": narrator_prompt,
         "narrator_response": narrator_response,
+        "hero_system_prompt": hero_system_prompt,
         "hero_prompt": hero_prompt,
         "hero_response": hero_response,
         "validation_output": match validation_result {
@@ -158,7 +160,7 @@ async fn main() -> Result<()> {
         let student_prompt = narrator_response_raw.clone();
 
         tracing::info!("PASSO 2: Getting HERO response...");
-        let (hero_response_raw, _system_prompt_used) = match pipeline::get_student_response(
+        let (hero_response_raw, hero_system_prompt_used) = match pipeline::get_student_response(
             &client,
             &args.ollama_url,
             &args.hero_model,
@@ -190,7 +192,7 @@ async fn main() -> Result<()> {
             }
         }
 
-        if let Err(e) = save_test_result(&args.output_dir, &narrator_query, &narrator_response_raw, &student_prompt, &hero_response_raw, &validation_result).await {
+        if let Err(e) = save_test_result(&args.output_dir, &narrator_query, &narrator_response_raw, &hero_system_prompt_used, &student_prompt, &hero_response_raw, &validation_result).await {
             tracing::error!("Failed to save test result: {}", e);
         }
 

@@ -1,0 +1,73 @@
+# Implementation Plan: Project, Agent, Tool, and Kit Entities
+
+## Obiettivo
+Implementare le entità `Project`, `Agent`, `Tool`, e `Kit` all'interno del crate `project`, seguendo i design definiti in `doc/design_2025_09_22e.txt` (Agent), `doc/design_2025_09_22g.txt` (Tool), e `doc/design_2025_09_22h.txt` (Project).
+
+## Fasi di Implementazione
+
+### Fase 0: Preparazione Generale
+1.  **Aggiornamento `ProjectError`:** Aggiungere varianti specifiche per errori relativi a Project, Agent, Tool, Kit (es. `AgentNotFound`, `ToolNotFound`, `KitNotFound`, `InvalidProjectConfig`).
+2.  **Aggiornamento `utils.rs`:**
+    *   Implementare `get_project_root_path()`: Funzione per risalire l'albero delle directory e trovare la radice del progetto (dove si trova `.vespe/`).
+    *   Implementare `get_agents_base_path(project_root_path: &Path) -> PathBuf`.
+    *   Implementare `get_tools_base_path(project_root_path: &Path) -> PathBuf`.
+    *   Implementare `get_kits_base_path() -> PathBuf` (percorso globale di Vespe per i Kit).
+
+### Fase 1: Implementazione dell'Entità Tool
+1.  **Definizione Strutture Dati Tool:**
+    *   Creare `project/src/tool_models.rs`.
+    *   Definire struct `ToolConfig`, `Tool` (rappresentazione in memoria).
+    *   Definire struct `KitConfig`.
+2.  **API per Tool (in `project/src/api.rs` o `project/src/tool_api.rs`):**
+    *   **`create_tool`:** Crea un Tool di Progetto (in `.vespe/tools/`).
+    *   **`load_tool`:** Carica un Tool dato il suo UID (sia di Kit che di Progetto).
+    *   **`list_all_tools_in_path`:** Funzione helper per listare tutti i Tool in una data directory base (es. `.vespe/tools/` o `kits/KIT_ID/`).
+    *   **`list_all_kits() -> Vec<KitConfig>`:** Scopre e lista tutti i Kit disponibili nell'installazione di Vespe.
+    *   **`resolve_tool(project_config: &ProjectConfig, tool_name: &str) -> Result<Tool, ProjectError>`:** Funzione chiave per risolvere un Tool dato il suo nome e la configurazione del progetto (considerando `active_kits` e `tool_resolution_order`).
+    *   **`list_available_tools(project_config: &ProjectConfig) -> Vec<Tool>`:** Elenca tutti i Tool disponibili per un dato progetto.
+
+### Fase 2: Implementazione dell'Entità Project
+1.  **Definizione Strutture Dati Project:**
+    *   Creare `project/src/project_models.rs`.
+    *   Definire struct `ProjectConfig`.
+2.  **API per Project (in `project/src/api.rs` o `project/src/project_api.rs`):**
+    *   **`load_project_config(project_root_path: &Path) -> Result<ProjectConfig, ProjectError>`:** Carica la configurazione globale del progetto da `project_config.json`.
+    *   **`save_project_config(project_root_path: &Path, config: &ProjectConfig) -> Result<(), ProjectError>`:** Salva la configurazione globale del progetto.
+    *   **`initialize_project(project_root_path: &Path, name: String) -> Result<ProjectConfig, ProjectError>`:** Crea la directory `.vespe/` e il file `project_config.json` iniziale.
+
+### Fase 3: Implementazione dell'Entità Agent
+1.  **Definizione Strutture Dati Agent:**
+    *   Creare `project/src/agent_models.rs`.
+    *   Definire struct `AgentConfig`, `Agent` (rappresentazione in memoria).
+2.  **API per Agent (in `project/src/api.rs` o `project/src/agent_api.rs`):**
+    *   **`create_agent`:** Crea un nuovo Agente (in `.vespe/agents/`).
+    *   **`load_agent`:** Carica un Agente dato il suo UID, risolvendo la sua configurazione completa tramite la catena di ereditarietà (`parent_agent_uid`).
+    *   **`list_agents`:** Elenca tutti gli Agenti disponibili nel progetto.
+    *   **`get_agent_full_prompt(agent_uid: &str, task_context: &TaskContext) -> String`:** Funzione per ottenere il prompt completo da inviare all'LLM, considerando l'ereditarietà e il contesto specifico del task.
+
+### Fase 4: Integrazione e Test
+1.  **Aggiornamento `Task` API:** Modificare le API `Task` esistenti per utilizzare le nuove funzioni di `Project` (es. `get_tasks_base_path` ora prende `project_root_path`).
+2.  **Test Unitari:** Scrivere unit test completi per tutte le nuove API implementate (Project, Agent, Tool, Kit).
+3.  **Test di Integrazione (CLI Mock):**
+    *   Aggiornare `test_task_api.rs` o creare un nuovo eseguibile per dimostrare l'interazione tra Project, Agent, Tool e Task.
+    *   Esempio di workflow:
+        *   Inizializzare un progetto (`initialize_project`).
+        *   Creare un Agente.
+        *   Creare un Tool di Progetto.
+        *   Attivare un Kit predefinito nel `project_config.json`.
+        *   Creare un Task.
+        *   Simulare l'esecuzione di un Tool da parte di un Agente, usando `resolve_tool` e `execute_tool` (quest'ultimo sarà un mock per ora).
+
+## Criteri di Successo
+*   Tutti i nuovi crate e moduli compilano senza errori.
+*   Tutti gli unit test passano.
+*   I test di integrazione dimostrano la corretta interazione tra le entità Project, Agent, Tool e Task.
+*   La struttura del filesystem per Project, Agent e Tool è conforme al design.
+
+## Dipendenze Aggiuntive
+*   `walkdir` (già aggiunta per Task hashing).
+*   `serde_json` (già presente).
+*   `chrono` (già presente).
+*   `uuid` (già presente).
+*   `thiserror` (già presente).
+*   `sha2` (già presente).

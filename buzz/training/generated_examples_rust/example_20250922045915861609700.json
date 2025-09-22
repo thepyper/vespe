@@ -1,0 +1,92 @@
+{
+  "debug": {
+    "config": {
+      "complexity": "low to medium",
+      "context_length": "small",
+      "hero_model": "gemma3:1b",
+      "marker_model": "gpt-oss:20b",
+      "narrator_model": "llama3.1:8b",
+      "num_examples": 100,
+      "ollama_url": "http://localhost:11434",
+      "output_dir": "buzz/training/generated_examples_rust",
+      "tool_format": "mcp",
+      "tool_name": null,
+      "use_case": null,
+      "user_style": null
+    },
+    "hero_query": "Here is a generated user prompt that meets the specified requirements:\n\n\"I need to generate a concise summary of this article on [article title] and save it as a text file for future reference. Can you write a 2-paragraph summary, including the main points and key takeaways, and save it to a file named 'summary.txt' in the documents folder?\"\n\nThis prompt meets all the requirements:\n\n* It uses the specified tool (`write_file`) naturally and necessary\n* It matches the use case (summarization) and complexity (low to medium)\n* It includes context for the context length parameter (small, 2-paragraph summary)\n* It uses a formal language style matching the user style parameter\n* It is a realistic user request that doesn't explicitly mention using the `write_file` tool.",
+    "hero_response": "```json\n{\n  \"parameters\": {\n    \"article_title\": \"[article title]\"\n  },\n  \"tool_name\": \"write_file\",\n  \"input\": {\n    \"text\": \"I need to generate a concise summary of this article on [article title] and save it as a text file for future reference. Can you write a 2-paragraph summary, including the main points and key takeaways, and save it to a file named 'summary.txt' in the documents folder?\"\n  },\n  \"model_context_protocol\": {\n    \"role\": \"assistant\",\n    \"content\": \"I understand your request to generate a summary of an article and save it as a text file.  I will fulfill this task by providing a two-paragraph overview, highlighting the core elements and significant insights.  Please provide the article title so I can begin the process.\"\n  }\n}\n```\n\n**Explanation:**\n\n*   **`parameters`**:  The prompt clearly defines the input: `article_title` – a placeholder for the user to fill in.\n*   **`tool_name`**:  Correctly uses `write_file` as the tool.\n*   **`input`**:  The prompt includes the full, natural-sounding request, mimicking the user's intent.\n*   **Context**: The `model_context_protocol` section provides a polite and professional introduction to the task.\n*   **JSON Format**:  The output is a valid JSON object, adhering to the specified structure.\n\nThis response fulfills all the requirements of the prompt while maintaining a natural and helpful tone.",
+    "marker_query": "TRAINING DATA LABELING - TOKEN MARKING SEGMENTATION\n\nAnalyze a language model's response and mark each meaningful unit with its category to create training data for text segmentation.\nResponse should (but could not) contain a tool call of the tool specified in the next section.\n\n=== INPUT DATA ===\nAvailable tools:\n{\n  \"name\": \"read_file\",\n  \"description\": \"Reads and returns the content of a specified file.\",\n  \"parameters\": [\n    {\n      \"name\": \"absolute_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to read.\",\n      \"required\": true\n    }\n  ]\n}\n{\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\n\n=== CLASSIFICATION CATEGORIES ===\n\n**TEXT:** User-facing content\n- Direct answers, explanations, confirmations\n- Results presentation, summaries\n- Polite conversational elements\n\n**THOUGHT:** Internal reasoning about the task\n- \"I need to...\", \"Let me...\", \"The user wants...\"\n- Analysis of the situation or approach\n- Planning statements\n\n**TOOL_CALL:** Tool invocation content\n- JSON structures for any tool calling\n- Tool parameters and arguments\n- Technical tool-calling syntax (even if malformed)\n\n=== TOKEN MARKING RULES ===\n\n**Segmentation Guidelines:**\n- You MUST split on newline, even if it is internal to structured data such as JSON or any other;\n- You CAN split anywhere else if you need to begin a new segment.\n      \n=== OUTPUT FORMAT ===\n\nEach segment falls into one of the following 2 cases:\n\n1. It is result of a newline split, then output format is:\n<CATEGORY>segment\n<NL>\nNotice that the newline tag is NOT on the same line of the category and segment.\n\n2. It is result of a non-newline split, then output format is:\n<CATEGORY>segment\n\nThe WANTED result is segmented output is a perfect reconstruction of the original output.\nThen, any markup language in the original output MUST be present in the segmented output as well.\n\nYou CANNOT output anything else than the segment conversion into one of there two cases.\nYou CANNOT output any explanation of how you decided segmentation.\nYou CANNOT output any markup other than specified in the two cases.\n\nExample Input: \nI'll search for information: {\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \nThis should help!\n\nExample Output:\n<TEXT>I'll search for information: \n<TOOL_CALL>{\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \n<NL>\n<TEXT>This should help!\n\n=== TOOL-SPECIFIC RECOGNITION ===\nFor any tool, mark as TOOL_CALL:\n- Any JSON structure containing tool name\n- Parameter structures matching the tool specifications\n- Malformed attempts at using any tool\n- References to any tool functionality\n\n=== EXAMPLES ===\n\nExample 1:\nInput: \nI understand your request. \nLet me read the specified file:\n{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\nThe contents are displayed above.\n\nOutput:\n<TEXT>I understand your request. \n<NL>\n<THOUGHT>Let me read the specified file:\n<NL>\n<TOOL_CALL>{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\n<NL>\n<TEXT>The contents are displayed above.\n<NL>\n\nExample 2:\nInput: \nHmm, I need to think about this. I'll use echo: {\\\"text\\\": \\\"hello world\\\"} \nDone!\n\nOutput:\n<THOUGHT>Hmm, I need to think about this. \n<TEXT>I'll use echo: \n<TOOL_CALL>{\\\"text\\\": \\\"hello world\\\"} \n<NL>\n<TEXT>Done!\n<NL>\n\n=== PROCESSING INSTRUCTIONS ===\n\n1. Read the full model response\n2. Identify segmentation boundaries\n3. Classify each segment based on context and content\n4. Mark each unit with appropriate category\n5. Ensure complete coverage (every word/unit gets a label)\n6. Double-check that TOOL_CALL segments relate to write_file\n\n=== ORIGINAL QUERY TO THE MODEL ===\nHere is a generated user prompt that meets the specified requirements:\n\n\"I need to generate a concise summary of this article on [article title] and save it as a text file for future reference. Can you write a 2-paragraph summary, including the main points and key takeaways, and save it to a file named 'summary.txt' in the documents folder?\"\n\nThis prompt meets all the requirements:\n\n* It uses the specified tool (`write_file`) naturally and necessary\n* It matches the use case (summarization) and complexity (low to medium)\n* It includes context for the context length parameter (small, 2-paragraph summary)\n* It uses a formal language style matching the user style parameter\n* It is a realistic user request that doesn't explicitly mention using the `write_file` tool.\n\n=== MODEL RESPONSE TO SEGMENT ===\n```json\n{\n  \"parameters\": {\n    \"article_title\": \"[article title]\"\n  },\n  \"tool_name\": \"write_file\",\n  \"input\": {\n    \"text\": \"I need to generate a concise summary of this article on [article title] and save it as a text file for future reference. Can you write a 2-paragraph summary, including the main points and key takeaways, and save it to a file named 'summary.txt' in the documents folder?\"\n  },\n  \"model_context_protocol\": {\n    \"role\": \"assistant\",\n    \"content\": \"I understand your request to generate a summary of an article and save it as a text file.  I will fulfill this task by providing a two-paragraph overview, highlighting the core elements and significant insights.  Please provide the article title so I can begin the process.\"\n  }\n}\n```\n\n**Explanation:**\n\n*   **`parameters`**:  The prompt clearly defines the input: `article_title` – a placeholder for the user to fill in.\n*   **`tool_name`**:  Correctly uses `write_file` as the tool.\n*   **`input`**:  The prompt includes the full, natural-sounding request, mimicking the user's intent.\n*   **Context**: The `model_context_protocol` section provides a polite and professional introduction to the task.\n*   **JSON Format**:  The output is a valid JSON object, adhering to the specified structure.\n\nThis response fulfills all the requirements of the prompt while maintaining a natural and helpful tone.\n",
+    "marker_response": "<TOOL_CALL>{\n<NL>\n<TOOL_CALL>  \"parameters\": {\n<NL>\n<TOOL_CALL>    \"article_title\": \"[article title]\"\n<NL>\n<TOOL_CALL>  },\n<NL>\n<TOOL_CALL>  \"tool_name\": \"write_file\",\n<NL>\n<TOOL_CALL>  \"input\": {\n<NL>\n<TOOL_CALL>    \"text\": \"I need to generate a concise summary of this article on [article title] and save it as a text file for future reference. Can you write a 2-paragraph summary, including the main points and key takeaways, and save it to a file named 'summary.txt' in the documents folder?\"\n<NL>\n<TOOL_CALL>  },\n<NL>\n<TOOL_CALL>  \"model_context_protocol\": {\n<NL>\n<TOOL_CALL>    \"role\": \"assistant\",\n<NL>\n<TOOL_CALL>    \"content\": \"I understand your request to generate a summary of an article and save it as a text file.  I will fulfill this task by providing a two-paragraph overview, highlighting the core elements and significant insights.  Please provide the article title so I can begin the process.\"\n<NL>\n<TOOL_CALL>  }\n<NL>\n<TOOL_CALL>}",
+    "narrator_query": "TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR\n\nYour task is to generate a user prompt that will encourage a language model to use a specific tool in a particular crafted scenario.\n\n=== TARGET TOOL ===\nTool Name: write_file\nTool Specification: {\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\nTool Description: Writes content to a specified file, overwriting it if it exists.\n\n=== SCENARIO PARAMETERS ===\nUse Case: summarization\nComplexity: low to medium\nUser Style: formal\nContext Length: small\n\n=== GENERATION RULES ===\n1. Create realistic user request (not \"please use the X tool\")\n2. Match the specified use case and complexity naturally\n3. Include appropriate context for the context_length parameter\n4. Use language style matching user_style parameter\n5. Make tool usage feel natural and necessary\nGenerate exactly one user prompt that matches all parameters.\n\n=== OUTPUT ===\n",
+    "narrator_response": "Here is a generated user prompt that meets the specified requirements:\n\n\"I need to generate a concise summary of this article on [article title] and save it as a text file for future reference. Can you write a 2-paragraph summary, including the main points and key takeaways, and save it to a file named 'summary.txt' in the documents folder?\"\n\nThis prompt meets all the requirements:\n\n* It uses the specified tool (`write_file`) naturally and necessary\n* It matches the use case (summarization) and complexity (low to medium)\n* It includes context for the context length parameter (small, 2-paragraph summary)\n* It uses a formal language style matching the user style parameter\n* It is a realistic user request that doesn't explicitly mention using the `write_file` tool."
+  },
+  "full_text": "{\n  \"parameters\": {\n    \"article_title\": \"[article title]\"\n  },\n  \"tool_name\": \"write_file\",\n  \"input\": {\n    \"text\": \"I need to generate a concise summary of this article on [article title] and save it as a text file for future reference. Can you write a 2-paragraph summary, including the main points and key takeaways, and save it to a file named 'summary.txt' in the documents folder?\"\n  },\n  \"model_context_protocol\": {\n    \"role\": \"assistant\",\n    \"content\": \"I understand your request to generate a summary of an article and save it as a text file.  I will fulfill this task by providing a two-paragraph overview, highlighting the core elements and significant insights.  Please provide the article title so I can begin the process.\"\n  }\n}",
+  "spans": [
+    {
+      "category": "TOOL_CALL",
+      "end": 1,
+      "start": 0
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 19,
+      "start": 2
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 58,
+      "start": 20
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 63,
+      "start": 59
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 92,
+      "start": 64
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 105,
+      "start": 93
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 389,
+      "start": 106
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 394,
+      "start": 390
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 424,
+      "start": 395
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 449,
+      "start": 425
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 740,
+      "start": 450
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 744,
+      "start": 741
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 746,
+      "start": 745
+    }
+  ]
+}

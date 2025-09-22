@@ -70,12 +70,14 @@ pub async fn get_student_response(
     hero_model: &str,
     student_prompt: &str,
     policy: &dyn ToolCallPolicy,
+    all_tools_specs_json: &str,
     handlebars: &Handlebars<'_>,
 ) -> Result<(String, String)> {
-    let tool_spec = policy.build_prompt_section(handlebars)?;
-    tracing::debug!("get_student_response: Built tool spec using '{}' policy", policy.name());
+    let format_specs_content = policy.build_prompt_section(handlebars)?;
+    tracing::debug!("get_student_response: Built format specs using '{}' policy", policy.name());
     let data = json!({
-        "tool_spec": tool_spec,
+        "tool_spec": all_tools_specs_json,
+        "format_specs": format_specs_content,
     });    
     tracing::debug!("get_student_response: Data for rendering: {:#?}", data);
     let system_prompt = handlebars.render("system_prompt", &data)?;

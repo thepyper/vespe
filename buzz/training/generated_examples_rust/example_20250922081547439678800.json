@@ -1,0 +1,127 @@
+{
+  "debug": {
+    "config": {
+      "complexity": "low to medium",
+      "context_length": "small to medium",
+      "hero_model": "gemma3:1b",
+      "marker_model": "gpt-oss:20b",
+      "narrator_model": "llama3.1:8b",
+      "num_examples": 1000,
+      "ollama_url": "http://localhost:11434",
+      "output_dir": "buzz/training/generated_examples_rust",
+      "tool_format": "mcp",
+      "tool_name": null,
+      "use_case": null,
+      "user_style": null
+    },
+    "hero_query": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm trying to implement a simple FAQ system for our website, where we store frequently asked questions in a text file. Can you help me write a script that takes a question and answer as input, and writes them to a file named 'faq.txt' located in the root directory of my project? The file should be overwritten if it already exists.\"\n\nThis prompt:\n\n* Matches the use case (question answering) and complexity (low to medium)\n* Includes context for the context length parameter (small to medium), with a specific example scenario\n* Uses technical language style, as specified by the user_style parameter\n* Makes tool usage feel natural and necessary, without explicitly mentioning the \"write_file\" tool.",
+    "hero_response": "```json\n{\n  \"parameters\": {\n    \"question\": \"How do I change the website's theme?\",\n    \"answer\": \"To change the website's theme, you'll need to navigate to the 'Appearance' section in your website's admin panel. There, you'll find a 'Theme' dropdown menu. Select a new theme from the available options.  You'll then need to click 'Apply' to save your changes.  This process typically involves a brief delay as the theme is applied.\",\n    \"file_name\": \"faq.txt\",\n    \"file_location\": \"root\"\n  },\n  \"tool_code\": {\n    \"model_context\": {\n      \"type\": \"tools/call\",\n      \"params\": {\n        \"name\": \"read_file\",\n        \"arguments\": {\n          \"path\": \"faq.txt\"\n        }\n      }\n    }\n  },\n  \"role\": \"assistant\"\n}\n```\n\n**Explanation:**\n\n*   **`question`**:  The user's question about changing the website theme.\n*   **`answer`**: A concise and helpful answer to the question, providing a step-by-step guide.\n*   **`file_name`**: Specifies the file to be created.\n*   **`file_location`**:  Sets the file location to the root directory.\n\nThis JSON structure directly addresses all the requirements of the prompt:\n\n*   It uses a `tool_code` object with a `model_context` to represent the tool's purpose.\n*   It includes the `read_file` tool with the specified `path` parameter.\n*   The `parameters` object clearly defines the input data for the tool.\n*   The JSON is well-formatted and easy to parse.\n*   The response is natural and helpful, mimicking the user's request.",
+    "marker_query": "TRAINING DATA LABELING - TOKEN MARKING SEGMENTATION\n\nAnalyze a language model's response and mark each meaningful unit with its category to create training data for text segmentation.\nResponse should (but could not) contain a tool call of the tool specified in the next section.\n\n=== INPUT DATA ===\nAvailable tools:\n{\n  \"name\": \"read_file\",\n  \"description\": \"Reads and returns the content of a specified file.\",\n  \"parameters\": [\n    {\n      \"name\": \"absolute_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to read.\",\n      \"required\": true\n    }\n  ]\n}\n{\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\n\n=== CLASSIFICATION CATEGORIES ===\n\n**TEXT:** User-facing content\n- Direct answers, explanations, confirmations\n- Results presentation, summaries\n- Polite conversational elements\n\n**THOUGHT:** Internal reasoning about the task\n- \"I need to...\", \"Let me...\", \"The user wants...\"\n- Analysis of the situation or approach\n- Planning statements\n\n**TOOL_CALL:** Tool invocation content\n- JSON structures for any tool calling\n- Tool parameters and arguments\n- Technical tool-calling syntax (even if malformed)\n\n=== TOKEN MARKING RULES ===\n\n**Segmentation Guidelines:**\n- You MUST split on newline, even if it is internal to structured data such as JSON or any other;\n- You CAN split anywhere else if you need to begin a new segment.\n      \n=== OUTPUT FORMAT ===\n\nEach segment falls into one of the following 2 cases:\n\n1. It is result of a newline split, then output format is:\n<CATEGORY>segment\n<NL>\nNotice that the newline tag is NOT on the same line of the category and segment.\n\n2. It is result of a non-newline split, then output format is:\n<CATEGORY>segment\n\nThe WANTED result is segmented output is a perfect reconstruction of the original output.\nThen, any markup language in the original output MUST be present in the segmented output as well.\n\nYou CANNOT output anything else than the segment conversion into one of there two cases.\nYou CANNOT output any explanation of how you decided segmentation.\nYou CANNOT output any markup other than specified in the two cases.\n\nExample Input: \nI'll search for information: {\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \nThis should help!\n\nExample Output:\n<TEXT>I'll search for information: \n<TOOL_CALL>{\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \n<NL>\n<TEXT>This should help!\n\n=== TOOL-SPECIFIC RECOGNITION ===\nFor any tool, mark as TOOL_CALL:\n- Any JSON structure containing tool name\n- Parameter structures matching the tool specifications\n- Malformed attempts at using any tool\n- References to any tool functionality\n\n=== EXAMPLES ===\n\nExample 1:\nInput: \nI understand your request. \nLet me read the specified file:\n{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\nThe contents are displayed above.\n\nOutput:\n<TEXT>I understand your request. \n<NL>\n<THOUGHT>Let me read the specified file:\n<NL>\n<TOOL_CALL>{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\n<NL>\n<TEXT>The contents are displayed above.\n<NL>\n\nExample 2:\nInput: \nHmm, I need to think about this. I'll use echo: {\\\"text\\\": \\\"hello world\\\"} \nDone!\n\nOutput:\n<THOUGHT>Hmm, I need to think about this. \n<TEXT>I'll use echo: \n<TOOL_CALL>{\\\"text\\\": \\\"hello world\\\"} \n<NL>\n<TEXT>Done!\n<NL>\n\n=== PROCESSING INSTRUCTIONS ===\n\n1. Read the full model response\n2. Identify segmentation boundaries\n3. Classify each segment based on context and content\n4. Mark each unit with appropriate category\n5. Ensure complete coverage (every word/unit gets a label)\n6. Double-check that TOOL_CALL segments relate to write_file\n\n=== ORIGINAL QUERY TO THE MODEL ===\nHere is a generated user prompt that meets the specified requirements:\n\n\"I'm trying to implement a simple FAQ system for our website, where we store frequently asked questions in a text file. Can you help me write a script that takes a question and answer as input, and writes them to a file named 'faq.txt' located in the root directory of my project? The file should be overwritten if it already exists.\"\n\nThis prompt:\n\n* Matches the use case (question answering) and complexity (low to medium)\n* Includes context for the context length parameter (small to medium), with a specific example scenario\n* Uses technical language style, as specified by the user_style parameter\n* Makes tool usage feel natural and necessary, without explicitly mentioning the \"write_file\" tool.\n\n=== MODEL RESPONSE TO SEGMENT ===\n```json\n{\n  \"parameters\": {\n    \"question\": \"How do I change the website's theme?\",\n    \"answer\": \"To change the website's theme, you'll need to navigate to the 'Appearance' section in your website's admin panel. There, you'll find a 'Theme' dropdown menu. Select a new theme from the available options.  You'll then need to click 'Apply' to save your changes.  This process typically involves a brief delay as the theme is applied.\",\n    \"file_name\": \"faq.txt\",\n    \"file_location\": \"root\"\n  },\n  \"tool_code\": {\n    \"model_context\": {\n      \"type\": \"tools/call\",\n      \"params\": {\n        \"name\": \"read_file\",\n        \"arguments\": {\n          \"path\": \"faq.txt\"\n        }\n      }\n    }\n  },\n  \"role\": \"assistant\"\n}\n```\n\n**Explanation:**\n\n*   **`question`**:  The user's question about changing the website theme.\n*   **`answer`**: A concise and helpful answer to the question, providing a step-by-step guide.\n*   **`file_name`**: Specifies the file to be created.\n*   **`file_location`**:  Sets the file location to the root directory.\n\nThis JSON structure directly addresses all the requirements of the prompt:\n\n*   It uses a `tool_code` object with a `model_context` to represent the tool's purpose.\n*   It includes the `read_file` tool with the specified `path` parameter.\n*   The `parameters` object clearly defines the input data for the tool.\n*   The JSON is well-formatted and easy to parse.\n*   The response is natural and helpful, mimicking the user's request.\n",
+    "marker_response": "<TOOL_CALL>{<NL>\n<TOOL_CALL>  \"parameters\": {<NL>\n<TOOL_CALL>    \"question\": \"How do I change the website's theme?\",<NL>\n<TOOL_CALL>    \"answer\": \"To change the website's theme, you'll need to navigate to the 'Appearance' section in your website's admin panel. There, you'll find a 'Theme' dropdown menu. Select a new theme from the available options.  You'll then need to click 'Apply' to save your changes.  This process typically involves a brief delay as the theme is applied.\",<NL>\n<TOOL_CALL>    \"file_name\": \"faq.txt\",<NL>\n<TOOL_CALL>    \"file_location\": \"root\"<NL>\n<TOOL_CALL>  },<NL>\n<TOOL_CALL>  \"tool_code\": {<NL>\n<TOOL_CALL>    \"model_context\": {<NL>\n<TOOL_CALL>      \"type\": \"tools/call\",<NL>\n<TOOL_CALL>      \"params\": {<NL>\n<TOOL_CALL>        \"name\": \"read_file\",<NL>\n<TOOL_CALL>        \"arguments\": {<NL>\n<TOOL_CALL>          \"path\": \"faq.txt\"<NL>\n<TOOL_CALL>        }<NL>\n<TOOL_CALL>      }<NL>\n<TOOL_CALL>    }<NL>\n<TOOL_CALL>  },<NL>\n<TOOL_CALL>  \"role\": \"assistant\"<NL>\n<TOOL_CALL>}<NL>",
+    "narrator_query": "TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR\n\nYour task is to generate a user prompt that will encourage a language model to use a specific tool in a particular crafted scenario.\n\n=== TARGET TOOL ===\nTool Name: write_file\nTool Specification: {\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\nTool Description: Writes content to a specified file, overwriting it if it exists.\n\n=== SCENARIO PARAMETERS ===\nUse Case: question answering\nComplexity: low to medium\nUser Style: technical\nContext Length: small to medium\n\n=== GENERATION RULES ===\n1. Create realistic user request (not \"please use the X tool\")\n2. Match the specified use case and complexity naturally\n3. Include appropriate context for the context_length parameter\n4. Use language style matching user_style parameter\n5. Make tool usage feel natural and necessary\nGenerate exactly one user prompt that matches all parameters.\n\n=== OUTPUT ===\n",
+    "narrator_response": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm trying to implement a simple FAQ system for our website, where we store frequently asked questions in a text file. Can you help me write a script that takes a question and answer as input, and writes them to a file named 'faq.txt' located in the root directory of my project? The file should be overwritten if it already exists.\"\n\nThis prompt:\n\n* Matches the use case (question answering) and complexity (low to medium)\n* Includes context for the context length parameter (small to medium), with a specific example scenario\n* Uses technical language style, as specified by the user_style parameter\n* Makes tool usage feel natural and necessary, without explicitly mentioning the \"write_file\" tool."
+  },
+  "full_text": "{\n  \"parameters\": {\n    \"question\": \"How do I change the website's theme?\",\n    \"answer\": \"To change the website's theme, you'll need to navigate to the 'Appearance' section in your website's admin panel. There, you'll find a 'Theme' dropdown menu. Select a new theme from the available options.  You'll then need to click 'Apply' to save your changes.  This process typically involves a brief delay as the theme is applied.\",\n    \"file_name\": \"faq.txt\",\n    \"file_location\": \"root\"\n  },\n  \"tool_code\": {\n    \"model_context\": {\n      \"type\": \"tools/call\",\n      \"params\": {\n        \"name\": \"read_file\",\n        \"arguments\": {\n          \"path\": \"faq.txt\"\n        }\n      }\n    }\n  },\n  \"role\": \"assistant\"\n}\n",
+  "spans": [
+    {
+      "category": "TOOL_CALL",
+      "end": 1,
+      "start": 0
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 19,
+      "start": 2
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 75,
+      "start": 20
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 426,
+      "start": 76
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 454,
+      "start": 427
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 482,
+      "start": 455
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 487,
+      "start": 483
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 504,
+      "start": 488
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 527,
+      "start": 505
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 555,
+      "start": 528
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 573,
+      "start": 556
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 602,
+      "start": 574
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 625,
+      "start": 603
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 653,
+      "start": 626
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 663,
+      "start": 654
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 671,
+      "start": 664
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 677,
+      "start": 672
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 682,
+      "start": 678
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 704,
+      "start": 683
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 706,
+      "start": 705
+    }
+  ]
+}

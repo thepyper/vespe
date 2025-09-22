@@ -21,6 +21,7 @@ mod pipeline;
 mod policies;
 mod mcp_policy;
 mod tagged_policy;
+mod markdown_policy;
 mod prompt_templates;
 mod tool_definitions;
 

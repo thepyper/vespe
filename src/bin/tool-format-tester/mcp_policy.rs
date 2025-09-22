@@ -3,7 +3,7 @@ use handlebars::Handlebars;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use super::{ParsedToolCall, StructuredOutputBlock, ToolCallPolicy};
+use crate::policies::{ParsedToolCall, StructuredOutputBlock, ToolCallPolicy};
 
 pub struct McpPolicy;
 

@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
     let (non_blocking_file_writer, _guard) = tracing_appender::non_blocking(file_appender);
 
     tracing_subscriber::registry()
-        .with(fmt::layer().with_writer(std::io::stdout).with_filter(EnvFilter::from_default_env()))
+        .with(fmt::layer().with_writer(std::io::stdout).with_filter(EnvFilter::new("debug")))
         .with(fmt::layer().with_writer(non_blocking_file_writer).with_filter(EnvFilter::new("debug")))
         .init();
 

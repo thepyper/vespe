@@ -21,6 +21,10 @@ path = "src/bin/ollama_agent_client.rs"
 name = "data-generator"
 path = "src/bin/data_generator/main.rs"
 
+[[bin]]
+name = "tool-format-tester"
+path = "src/bin/tool-format-tester/main.rs"
+
 [dependencies]
 rand = "0.8"
 tokio = { version = "1", features = ["full"] }

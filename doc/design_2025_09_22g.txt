@@ -1,0 +1,102 @@
+# Design - Entità Tool (Tool)
+
+## Obiettivo
+Definire la struttura, la configurazione e il meccanismo di gestione dei tool all'interno del sistema Vespe, consentendo la loro organizzazione in "Kit" e la loro estensibilità a livello di progetto.
+
+## Concetti Fondamentali
+
+### Tool
+Un Tool è una funzionalità discreta che un agente LLM può invocare per interagire con l'ambiente esterno (es. filesystem, shell, API esterne). Ogni Tool ha un'interfaccia ben definita (input, output, tipi di dato) e una logica di implementazione.
+
+### Kit di Tool
+Un Kit è una collezione predefinita di Tool fornita dal framework Vespe. I Kit permettono di raggruppare Tool correlati e di offrire implementazioni alternative per funzionalità comuni (es. `write_file` con o senza integrazione Git). I Kit sono a livello di installazione Vespe e i progetti possono scegliere quali attivare.
+
+### Tool di Progetto
+Sono Tool definiti e implementati specificamente per un singolo progetto Vespe dall'utente. Servono a coprire esigenze non soddisfatte dai Kit predefiniti.
+
+## Struttura Filesystem dei Tool
+
+I Tool saranno organizzati in directory basate su UID, simili a Task e Agenti.
+
+### Tool all'interno di un Kit (Vespe-level)
+I Kit risiederanno in una posizione nota all'interno dell'installazione di Vespe (es. `vespe_install_root/kits/`). Ogni Kit avrà una propria directory, contenente le directory UID dei Tool che ne fanno parte.
+
+**Esempio di struttura per Kit:**
+
+```
+vespe_install_root/kits/
+├── file_io_with_git/
+│   ├── kit_config.json
+│   ├── tool-uid_write_file/
+│   │   ├── config.json
+│   │   └── description.md
+│   └── tool-uid_read_file/
+│       ├── config.json
+│       └── description.md
+└── file_io_without_git/
+    ├── kit_config.json
+    ├── tool-uid_write_file_nogit/
+    │   ├── config.json
+    │   └── description.md
+    └── tool-uid_read_file_nogit/
+        ├── config.json
+        └── description.md
+```
+
+### Tool di Progetto (Project-level)
+I Tool definiti a livello di progetto risiederanno all'interno della directory `.vespe/tools/` del progetto.
+
+**Esempio di struttura per Tool di Progetto:**
+
+```
+.vespe/tools/
+├── tool-uid_custom_api_call/
+│   ├── config.json
+│   └── description.md
+└── tool-uid_data_processor/
+    ├── config.json
+    └── description.md
+```
+
+## File di Configurazione dei Tool
+
+Ogni directory UID di un Tool conterrà i seguenti file:
+
+1.  **`config.json`**: Contiene i metadati e le configurazioni strutturate del Tool.
+    *   `uid`: Stringa univoca per identificare il Tool (es. `tool-UUID`).
+    *   `name`: Nome leggibile del Tool (es. "write_file", "read_file", "custom_api_call"). Questo è il nome che l'LLM userà per invocare il Tool.
+    *   `description`: Breve descrizione dello scopo del Tool.
+    *   `schema`: JSON Schema che definisce gli input (parametri) e gli output del Tool. Cruciale per la comprensione dell'LLM.
+    *   `implementation_details`: Dettagli su come il Tool deve essere eseguito.
+        *   `type`: Tipo di implementazione (es. "rust_function", "python_script", "shell_command", "http_request").
+        *   `path`: Percorso al file dello script o al modulo/funzione Rust.
+        *   `entrypoint`: Nome della funzione o comando da eseguire.
+        *   `args`: (Opzionale) Argomenti fissi o di configurazione per l'implementazione.
+    *   `kit_id`: (Opzionale) ID del Kit a cui appartiene il Tool (solo per Tool di Kit).
+
+2.  **`description.md`**:
+    *   Una descrizione più dettagliata e leggibile del Tool, utile per la documentazione e per gli utenti.
+
+## Configurazione del Progetto per i Tool
+
+L'entità `Project` (che verrà definita in seguito) avrà un campo nel suo `config.json` per gestire i Tool:
+
+*   **`active_kits`**: Un array di `kit_id` che il progetto ha scelto di attivare. Solo i Tool appartenenti a questi Kit saranno considerati disponibili.
+*   **`tool_resolution_order`**: (Opzionale) Un array che definisce l'ordine di precedenza nella risoluzione dei Tool con lo stesso `name`. Esempio: `["project_tools", "active_kits"]` significa che i Tool di progetto hanno precedenza sui Tool dei Kit attivi.
+
+## Risoluzione dei Tool per gli Agenti
+
+Quando un agente richiede di utilizzare un Tool per `name` (es. "write_file"), il sistema dovrà:
+1.  Consultare la configurazione `active_kits` e `tool_resolution_order` del progetto.
+2.  Trovare lo specifico `tool-UID` che corrisponde al `name` richiesto all'interno del contesto risolto (Kit attivo o Tool di Progetto).
+3.  Caricare la definizione completa di quel Tool specifico (`config.json`, `description.md`).
+4.  Presentare lo `schema` del Tool all'LLM per l'invocazione.
+
+## Implicazioni API (Crate `project` o `tool_manager`)
+
+Le API per i Tool dovranno supportare:
+*   **`create_tool(name: String, schema: JsonValue, implementation_details: JsonValue, ...)`**: Creazione di un nuovo Tool (principalmente per Tool di Progetto).
+*   **`load_tool(uid: &str) -> Tool`**: Caricamento di un Tool specifico.
+*   **`resolve_tool(project_config: &ProjectConfig, tool_name: &str) -> Result<Tool, ProjectError>`**: Funzione chiave per risolvere un Tool dato il suo nome e la configurazione del progetto.
+*   **`list_available_tools(project_config: &ProjectConfig) -> Vec<Tool>`**: Elenco di tutti i Tool disponibili per un dato progetto, risolvendo i Kit attivi e i Tool di Progetto.
+*   **`execute_tool(tool_uid: &str, args: JsonValue) -> Result<JsonValue, ProjectError>`**: Esecuzione del Tool (questa funzione sarà probabilmente gestita dal "Tool Manager Agent" di cui parleremo).

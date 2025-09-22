@@ -10,34 +10,35 @@ Un task rappresenta un'unità di lavoro discreta con un obiettivo specifico.
 
 ### Subtask
 Un task può essere scomposto in uno o più subtask. La relazione tra task e subtask è gerarchica e si riflette nella struttura del filesystem.
+La gerarchia logica tra task e subtask sarà derivata dai metadati (es. `parent_uid` e dipendenze), non direttamente dalla struttura delle directory.
 
 ## Struttura del Task (Filesystem-based)
 
-Ogni task (e subtask) sarà rappresentato da una directory dedicata. All'interno di questa directory, i file conterranno i metadati e i contenuti relativi al task.
+Ogni task (e subtask) sarà rappresentato da una directory dedicata, il cui nome sarà l'UID univoco del task. All'interno di questa directory, i file conterranno i metadati e i contenuti relativi al task. La struttura del filesystem sarà flat, con tutte le directory dei task direttamente sotto `.vespe/tasks/`.
 
 Esempio di struttura:
 
 ```
 .vespe/tasks/
-├── task_001_implement_feature_X/
-│   ├── config.json             // Metadati immutabili
+├── tsk-abc123def456/             // Corrisponde a "task_001_implement_feature_X"
+│   ├── config.json             // Metadati immutabili (include nome leggibile, parent_uid)
 │   ├── objective.md            // Obiettivo (mutabile)
 │   ├── plan.md                 // Piano di esecuzione
 │   ├── status.json             // Stato corrente del task
-│   ├── dependencies.json       // Dipendenze da altri task
-│   └── subtasks/
-│       ├── subtask_001_design_api/
-│       │   ├── config.json
-│       │   ├── objective.md
-│       │   └── status.json
-│       └── subtask_002_implement_frontend/
-│           ├── config.json
-│           ├── objective.md
-│           └── status.json
-└── task_002_fix_bug_Y/
+│   └── dependencies.json       // Dipendenze da altri task
+├── tsk-xyz789uvw012/             // Corrisponde a "subtask_001_design_api"
+│   ├── config.json
+│   ├── objective.md
+│   └── status.json
+└── tsk-pqr012stu345/             // Corrisponde a "task_002_fix_bug_Y"
     ├── config.json
     └── ...
 ```
+
+### Rationale per la Struttura Flat con UID
+La scelta di una struttura flat con directory nominate tramite UID è motivata dalla necessità di robustezza e gestibilità programmatica. Questo approccio disaccoppia la rappresentazione logica (gerarchia, nomi leggibili) dalla rappresentazione fisica sul filesystem.
+*   **Pro:** Robustezza a ridenominazioni e spostamenti (solo aggiornamenti di metadati), unicità garantita dei nomi delle directory, semplificazione delle operazioni sul filesystem, disaccoppiamento tra storage e presentazione.
+*   **Contro:** Scarsa leggibilità diretta del filesystem per l'utente; richiede l'uso della CLI/API di Vespe per una navigazione significativa. Questo tradeoff è accettabile in quanto la cartella `.vespe` è intesa come un'area di lavoro interna gestita dal sistema.
 
 ### File di Configurazione del Task
 
@@ -69,12 +70,16 @@ Esempio di struttura:
     *   `current_state`: Stato attuale del task (vedi "Ciclo di Vita del Task").
     *   `last_updated_at`: Timestamp dell'ultimo aggiornamento di stato.
     *   `progress`: (Opzionale) Percentuale di completamento o descrizione del progresso.
+    *   `parent_content_hashes`: (Opzionale) Mappa degli hash dei contenuti dei task dipendenti, registrati al momento del completamento della dipendenza. Usato per rilevare modifiche a monte.
 
     ```json
     {
       "current_state": "created",
       "last_updated_at": "2025-09-22T10:00:00Z",
-      "progress": "0%"
+      "progress": "0%",
+      "parent_content_hashes": {
+        "tsk-xyz789uvw012_objective": "sha256-abcdef12345..."
+      }
     }
     ```
 
@@ -87,6 +92,16 @@ Esempio di struttura:
     }
     ```
 
+## Fasi Predefinite del Task (Subtask Hard-wired)
+
+Per formalizzare il workflow di un task, alcune fasi cruciali possono essere trattate come subtask "hard-wired" o predefiniti. Questi subtask avranno dipendenze implicite o esplicite:
+
+*   **`define_objective`**: Subtask per la definizione dell'obiettivo principale del task.
+*   **`create_plan`**: Subtask per la creazione del piano di esecuzione, dipendente da `define_objective`.
+*   **`create_subtasks`**: Subtask per la scomposizione del task in ulteriori subtask, dipendente da `create_plan`.
+
+Questa struttura permette una gestione granulare del processo di pianificazione e una chiara definizione delle dipendenze tra le fasi.
+
 ## Ciclo di Vita del Task (Stati)
 
 I task possono transitare tra i seguenti stati:
@@ -97,16 +112,20 @@ I task possono transitare tra i seguenti stati:
 *   **`started`**: L'esecuzione del task è iniziata.
 *   **`paused`**: L'esecuzione del task è temporaneamente sospesa.
 *   **`blocked`**: Il task è bloccato, in attesa di un'azione esterna o di una risoluzione di un problema.
-*   **`changed`**: Il task è stato modificato (obiettivo, piano, ecc.) e potrebbe richiedere una ri-valutazione o ri-pianificazione.
+*   **`changed`**: Il task è stato modificato (obiettivo, piano, ecc.) o una delle sue dipendenze a monte è cambiata (rilevato tramite hash mismatch). Richiede una ri-valutazione o ri-pianificazione.
 *   **`done`**: Il task è stato completato con successo.
 *   **`failed`**: Il task non è riuscito a completarsi a causa di un errore.
 *   **`aborted`**: Il task è stato interrotto dall'utente o dal sistema prima del completamento.
 
 ## Relazioni e Dipendenze
 
-*   **Gerarchia**: La struttura delle directory riflette la gerarchia task/subtask.
-*   **Dipendenze**: Le dipendenze tra task sono esplicitate in `dependencies.json`. Queste sono l'unico criterio di ordinamento forzato. Un task non può passare allo stato `ready` o `started` se le sue dipendenze non sono `done` o `aborted` (a seconda della politica).
-*   **Esecuzione**: I task senza dipendenze o con dipendenze soddisfatte possono essere eseguiti in parallelo o in qualsiasi ordine.
+*   **Gerarchia Logica**: La gerarchia tra task e subtask è definita dai metadati (es. `parent_uid` in `config.json`) e dal grafo delle dipendenze, non dalla struttura fisica delle directory.
+*   **Dipendenze Esplicite**: Le dipendenze tra task sono esplicitate in `dependencies.json`. Queste sono l'unico criterio di ordinazione forzato. Un task non può passare allo stato `ready` o `started` se le sue dipendenze non sono `done` o `aborted` (a seconda della politica).
+*   **Invalidazione Basata su Hash (Makefile-like)**:
+    *   Quando un task dipendente viene completato (o passa allo stato `ready`), registra nel proprio `status.json` l'hash del contenuto rilevante (es. `objective.md`) del task da cui dipende.
+    *   Periodicamente, o al tentativo di avviare un task, il sistema confronterà l'hash memorizzato con l'hash corrente del contenuto del task dipendente.
+    *   Se gli hash non corrispondono, significa che il contenuto del task a monte è cambiato. In questo caso, il task dipendente transiterà automaticamente allo stato `changed`, richiedendo una rivalutazione o ri-pianificazione.
+*   **Esecuzione**: I task senza dipendenze o con dipendenze soddisfatte e non nello stato `changed` possono essere eseguiti in parallelo o in qualsiasi ordine.
 
 ## Interazioni
 
@@ -114,3 +133,4 @@ I task possono transitare tra i seguenti stati:
 *   **Pianificazione**: La creazione del `plan.md` può essere assistita da un LLM, che può anche porre domande all'utente per affinare il piano.
 *   **Progressione**: Gli stati del task vengono aggiornati in base all'avanzamento.
 *   **Modifica**: L'obiettivo o il piano possono essere modificati, portando il task allo stato `changed`.
+*   **Rivalutazione**: I task nello stato `changed` richiederanno un intervento (manuale o LLM) per essere riportati a uno stato `ready` o per essere ri-pianificati.

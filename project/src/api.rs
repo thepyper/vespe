@@ -1,10 +1,12 @@
 use std::fs;
 use chrono::Utc;
 use uuid::Uuid;
+use sha2::{Sha256, Digest};
+use std::io::Read;
 
 use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent};
 use crate::error::ProjectError;
-use crate::utils::{self, get_task_path, generate_task_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status};
+use crate::utils::{self, get_task_path, generate_task_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file};
 
 /// Creates a new task or subtask.
 /// Initializes the task directory with config.json, empty objective.md, etc.
@@ -148,4 +150,56 @@ pub fn get_all_persistent_events(task_uid: &str) -> Result<Vec<PersistentEvent>,
     events.sort_by_key(|event| event.timestamp);
 
     Ok(events)
+}
+
+/// Calculates the SHA256 hash of the `result/` folder content for a task.
+/// The hash is based on the content of all files and their relative paths within the folder.
+pub fn calculate_result_hash(task_uid: &str) -> Result<String, ProjectError> {
+    let task_path = get_task_path(task_uid)?;
+    let result_path = task_path.join("result");
+
+    if !result_path.exists() {
+        return Ok(format!("{:x}", Sha256::new().finalize())); // Hash of empty content
+    }
+
+    let mut hasher = Sha256::new();
+    let mut file_hashes: Vec<(String, String)> = Vec::new(); // (relative_path, hash)
+
+    for entry in walkdir::WalkDir::new(&result_path) {
+        let entry = entry.map_err(|e| ProjectError::ContentHashError(result_path.clone(), e.to_string()))?;
+        let path = entry.path();
+
+        if path.is_file() {
+            let relative_path = path.strip_prefix(&result_path)
+                .map_err(|e| ProjectError::InvalidPath(path.to_path_buf()))?
+                .to_string_lossy()
+                .into_owned();
+            let file_hash = hash_file(path)?;
+            file_hashes.push((relative_path, file_hash));
+        }
+    }
+
+    // Sort to ensure canonical representation regardless of filesystem iteration order
+    file_hashes.sort_by(|a, b| a.0.cmp(&b.0));
+
+    for (relative_path, file_hash) in file_hashes {
+        hasher.update(relative_path.as_bytes());
+        hasher.update(file_hash.as_bytes());
+    }
+
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Adds a file to the `result/` folder of the task.
+pub fn add_result_file(task_uid: &str, filename: &str, content: Vec<u8>) -> Result<(), ProjectError> {
+    let task_path = get_task_path(task_uid)?;
+    let result_path = task_path.join("result");
+
+    // Ensure the result directory exists
+    fs::create_dir_all(&result_path).map_err(|e| ProjectError::Io(e))?;
+
+    let file_path = result_path.join(filename);
+    fs::write(&file_path, content).map_err(|e| ProjectError::Io(e))?;
+
+    Ok(())
 }

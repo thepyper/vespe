@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 use chrono::Utc;
+use sha2::{Sha256, Digest};
+use std::io::Read;
 
 use crate::error::ProjectError;
 use crate::models::{TaskStatus, TaskState};
@@ -58,4 +60,12 @@ pub fn update_task_status(task_path: &Path, new_state: TaskState, current_status
     current_status.last_updated_at = Utc::now();
     write_json_file(&task_path.join("status.json"), current_status)?;
     Ok(())
+}
+
+/// Calculates the SHA256 hash of a file.
+pub fn hash_file(path: &Path) -> Result<String, ProjectError> {
+    let mut file = std::fs::File::open(path).map_err(|e| ProjectError::Io(e))?;
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher).map_err(|e| ProjectError::Io(e))?;
+    Ok(format!("{:x}", hasher.finalize()))
 }

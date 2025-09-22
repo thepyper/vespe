@@ -6,7 +6,7 @@ use sha2::{Sha256, Digest};
 
 use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent};
 use crate::error::ProjectError;
-use crate::utils::{get_task_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file, get_tasks_base_path};
+use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file, get_tasks_base_path};
 
 /// Creates a new task or subtask.
 /// Initializes the task directory with config.json, empty objective.md, etc.
@@ -20,7 +20,7 @@ pub fn create_task(
 ) -> Result<Task, ProjectError> {
     let uid = generate_uid("tsk")?;
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, &uid)?;
+    let task_path = get_entity_path(&tasks_base_path, &uid)?;
 
     // Create task directory and subdirectories
     fs::create_dir_all(&task_path).map_err(|e| ProjectError::Io(e))?;
@@ -66,7 +66,7 @@ pub fn load_task(
     uid: &str
 ) -> Result<Task, ProjectError> {
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, uid)?;
+    let task_path = get_entity_path(&tasks_base_path, uid)?;
 
     if !task_path.exists() {
         return Err(ProjectError::TaskNotFound(uid.to_string()));
@@ -98,7 +98,7 @@ pub fn define_objective(
 ) -> Result<Task, ProjectError> {
     let mut task = load_task(project_root_path, task_uid)?;
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, task_uid)?;
+    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
 
     // Update objective.md
     write_file_content(&task_path.join("objective.md"), &objective_content)?;
@@ -119,7 +119,7 @@ pub fn define_plan(
 ) -> Result<Task, ProjectError> {
     let mut task = load_task(project_root_path, task_uid)?;
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, task_uid)?;
+    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
 
     // Update plan.md
     write_file_content(&task_path.join("plan.md"), &plan_content)?;
@@ -138,7 +138,7 @@ pub fn add_persistent_event(
     event: PersistentEvent
 ) -> Result<(), ProjectError> {
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, task_uid)?;
+    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let persistent_path = task_path.join("persistent");
 
     // Use UUID for filename to guarantee uniqueness, append timestamp for sorting
@@ -156,7 +156,7 @@ pub fn get_all_persistent_events(
     task_uid: &str
 ) -> Result<Vec<PersistentEvent>, ProjectError> {
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, task_uid)?;
+    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let persistent_path = task_path.join("persistent");
 
     if !persistent_path.exists() {
@@ -185,7 +185,7 @@ pub fn calculate_result_hash(
     task_uid: &str
 ) -> Result<String, ProjectError> {
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, task_uid)?;
+    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let result_path = task_path.join("result");
 
     if !result_path.exists() {
@@ -228,7 +228,7 @@ pub fn add_result_file(
     content: Vec<u8>
 ) -> Result<(), ProjectError> {
     let tasks_base_path = get_tasks_base_path(project_root_path);
-    let task_path = get_task_path(&tasks_base_path, task_uid)?;
+    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let result_path = task_path.join("result");
 
     // Ensure the result directory exists
@@ -388,7 +388,7 @@ mod tests {
         assert_ne!(hash2, hash3);
 
         // Add a file in a subdirectory
-        let task_path = get_task_path(&get_tasks_base_path(&project_root_path), &task.uid).unwrap();
+        let task_path = get_entity_path(&get_tasks_base_path(&project_root_path), &task.uid).unwrap();
         fs::create_dir_all(task_path.join("result").join("subdir")).unwrap();
         add_result_file(&project_root_path, &task.uid, "subdir/file3.txt", "content3".as_bytes().to_vec()).unwrap();
         let hash4 = calculate_result_hash(&project_root_path, &task.uid).unwrap();

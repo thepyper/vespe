@@ -11,6 +11,14 @@ pub enum ProjectError {
     Json(#[from] serde_json::Error),
     #[error("Task not found: {0}")]
     TaskNotFound(String),
+    #[error("Agent not found: {0}")]
+    AgentNotFound(String),
+    #[error("Tool not found: {0}")]
+    ToolNotFound(String),
+    #[error("Kit not found: {0}")]
+    KitNotFound(String),
+    #[error("Invalid project configuration: {0}")]
+    InvalidProjectConfig(String),
     #[error("Invalid state transition: from {0:?} to {1:?}")]
     InvalidStateTransition(TaskState, TaskState),
     #[error("Task is in an unexpected state: {0:?}")]
@@ -25,4 +33,6 @@ pub enum ProjectError {
     UidGenerationError(String),
     #[error("Invalid path: {0}")]
     InvalidPath(PathBuf),
+    #[error("Project root not found. Looked in {0}")]
+    ProjectRootNotFound(PathBuf),
 }

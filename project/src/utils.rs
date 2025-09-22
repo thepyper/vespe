@@ -29,8 +29,8 @@ pub fn get_project_root_path() -> Result<PathBuf, ProjectError> {
     }
 }
 
-/// Constructs the full path for a given task UID within a base path.
-pub fn get_task_path(base_path: &Path, uid: &str) -> Result<PathBuf, ProjectError> {
+/// Constructs the full path for a given entity UID within a base path.
+pub fn get_entity_path(base_path: &Path, uid: &str) -> Result<PathBuf, ProjectError> {
     Ok(base_path.join(uid))
 }
 

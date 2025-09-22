@@ -1,9 +1,9 @@
 import os
 import json
 
-# Definiamo le directory di input e il file di output
-SOURCE_DIR = "generated_examples_rust"
-OUTPUT_FILE = "dataset.jsonl"
+# Definiamo le directory di input e il file di output (relativi alla root del progetto)
+SOURCE_DIR = "buzz/training/generated_examples_rust"
+OUTPUT_FILE = "buzz/training/dataset.jsonl"
 
 def create_dataset():
     """

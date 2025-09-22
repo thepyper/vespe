@@ -70,7 +70,7 @@ pub struct Task {
 }
 
 // Struttura per gli eventi persistenti (da persistent/)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersistentEvent {
     pub timestamp: DateTime<Utc>,
     pub event_type: String, // Es. "llm_response", "tool_call", "agent_decision"

@@ -26,6 +26,10 @@ path = "src/bin/data_generator/main.rs"
 name = "tool-format-tester"
 path = "src/bin/tool-format-tester/main.rs"
 
+[[bin]]
+name = "test_task_api"
+path = "src/bin/test_task_api.rs"
+
 [dependencies]
 rand = "0.8"
 tokio = { version = "1", features = ["full"] }
@@ -48,3 +52,5 @@ once_cell = "1.19.0"
 serde-xml-rs = "0.6"
 tokio-stream = "0.1"
 futures-util = "0.3"
+project = { path = "project" }
+tempfile = "3.22"

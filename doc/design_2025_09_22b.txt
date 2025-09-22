@@ -1,0 +1,88 @@
+# Design - Crate 'project'
+
+## Obiettivo
+Implementare un crate Rust dedicato (`project`) per la gestione e la rappresentazione dello stato di un progetto Vespe, basato sui file contenuti nella directory `.vespe`.
+
+## Principi Chiave
+
+1.  **Modularità e Isolamento**: Il crate `project` sarà un sub-crate indipendente, simile a `buzz`, per isolare la logica di gestione del progetto dal resto dell'applicazione. Questo permette un riutilizzo flessibile da parte di CLI tools, daemon o altri componenti.
+2.  **Statelessness e Source of Truth**: La libreria opererà in modo stateless. Lo stato del progetto sarà sempre derivato da una scansione e parsing "on-demand" dei file presenti nella directory `.vespe`. Il filesystem è considerato la "source of truth" primaria. Non verranno implementati meccanismi di caching o file watching complessi per la fase iniziale.
+3.  **Velocità e Semplicità**: La scansione e il parsing devono essere veloci per supportare l'approccio "on-demand". La complessità sarà mantenuta al minimo, focalizzandosi sulla rappresentazione accurata dello stato del progetto.
+
+## Struttura Proposta
+
+Il crate `project` sarà responsabile di:
+*   Localizzare la directory `.vespe` all'interno di un dato percorso (o risalendo l'albero delle directory).
+*   Scansionare i file di configurazione all'interno di `.vespe` (es. `agents/`, `prompts/`, `statistics.json`).
+*   Parsare il contenuto di questi file in strutture dati Rust fortemente tipizzate.
+*   Assemblare queste strutture in un modello di progetto coerente e navigabile.
+
+## Modelli Dati (Data Models)
+
+Verranno definite delle struct Rust fortemente tipizzate per rappresentare i vari componenti del progetto. Si userà la libreria `serde` per la de/serializzazione da/verso formati come JSON (o TOML, se appropriato per futuri file di configurazione).
+
+Esempi di struct:
+
+```rust
+// src/lib.rs (o un modulo dedicato come models.rs)
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Project {
+    pub root_path: PathBuf,
+    pub agents: HashMap<String, Agent>,
+    pub prompts: HashMap<String, Prompt>,
+    pub statistics: Option<Statistics>, // Potrebbe essere un file opzionale
+    // Altri campi per configurazioni globali, ecc.
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Agent {
+    pub name: String,
+    pub description: String,
+    pub model_id: String,
+    // Altri campi specifici dell'agente
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Prompt {
+    pub name: String,
+    pub content: String, // O un tipo più specifico per template
+    // Altri metadati del prompt
+}
+
+// E così via per altre configurazioni come Statistics, ToolDefinitions, ecc.
+```
+
+## API Principale (Esempio)
+
+Il crate esporrà una funzione principale per caricare lo stato del progetto:
+
+```rust
+// src/lib.rs
+
+pub fn load(path_to_project_root: &Path) -> Result<Project, ProjectError> {
+    // Logica per trovare .vespe, scansionare, parsare e costruire la struct Project
+    unimplemented!()
+}
+```
+
+## Gestione Errori
+
+Verrà definito un tipo di errore specifico (`ProjectError`) per gestire i vari fallimenti che possono verificarsi durante il caricamento del progetto (es. errori I/O, errori di parsing, file non trovati).
+
+```rust
+// src/error.rs (o all'interno di lib.rs)
+
+#[derive(Debug, thiserror::Error)]
+pub enum ProjectError {
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("JSON parsing error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("File not found: {0}")]
+    FileNotFound(PathBuf),
+    #[error("Invalid project structure: {0}")]
+    InvalidStructure(String),
+    // Altri tipi di errore specifici
+}
+```

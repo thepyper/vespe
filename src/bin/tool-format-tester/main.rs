@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     tracing::info!("Parsed CLI arguments: {:?}", args);
 
     // --- Policy Setup ---
-    let available_policies: Vec<Box<dyn ToolCallPolicy>> = vec![Box::new(McpPolicy), Box::new(TaggedPolicy)];
+    let available_policies: Vec<Box<dyn ToolCallPolicy>> = vec![Box::new(McpPolicy), Box::new(TaggedPolicy), Box::new(MarkdownPolicy)];
     let selected_policy = available_policies
         .iter()
         .find(|p| p.name() == args.policy)

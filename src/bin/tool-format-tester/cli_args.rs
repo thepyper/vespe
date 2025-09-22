@@ -18,6 +18,8 @@ pub struct CliArgs {
     pub output_dir: PathBuf,
     #[arg(long, value_parser = ["mcp", "json", "xml"], default_value = "mcp")]
     pub tool_format: String,
+    #[arg(long, value_parser = ["json"], default_value = "json")]
+    pub policy: String,
     #[arg(long)]
     pub tool_name: Option<String>,
     #[arg(long)]

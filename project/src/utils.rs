@@ -2,20 +2,9 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 use chrono::Utc;
 use sha2::{Sha256, Digest};
-use std::io::Read;
 
 use crate::error::ProjectError;
 use crate::models::{TaskStatus, TaskState};
-
-// Base path for all tasks. For now, hardcoded.
-// In a real application, this would be configurable (e.g., from project config).
-pub fn get_tasks_base_path() -> Result<PathBuf, ProjectError> {
-    // This path should be relative to the project root, which is where vespe is run.
-    // For now, we assume the current working directory is the project root.
-    let current_dir = std::env::current_dir().map_err(|e| ProjectError::Io(e))?;
-    let base_path = current_dir.join(".vespe").join("tasks");
-    Ok(base_path)
-}
 
 /// Generates a unique UID for a task.
 pub fn generate_task_uid() -> Result<String, ProjectError> {
@@ -23,9 +12,8 @@ pub fn generate_task_uid() -> Result<String, ProjectError> {
     Ok(format!("tsk-{}", uuid.to_string().replace("-", "")))
 }
 
-/// Constructs the full path for a given task UID.
-pub fn get_task_path(uid: &str) -> Result<PathBuf, ProjectError> {
-    let base_path = get_tasks_base_path()?;
+/// Constructs the full path for a given task UID within a base path.
+pub fn get_task_path(base_path: &Path, uid: &str) -> Result<PathBuf, ProjectError> {
     Ok(base_path.join(uid))
 }
 

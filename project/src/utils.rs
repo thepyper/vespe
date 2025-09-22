@@ -6,15 +6,56 @@ use sha2::{Sha256, Digest};
 use crate::error::ProjectError;
 use crate::models::{TaskStatus, TaskState};
 
-/// Generates a unique UID for a task.
-pub fn generate_task_uid() -> Result<String, ProjectError> {
+/// Generates a unique UID for a task, agent, or tool.
+pub fn generate_uid(prefix: &str) -> Result<String, ProjectError> {
     let uuid = Uuid::new_v4();
-    Ok(format!("tsk-{}", uuid.to_string().replace("-", "")))
+    Ok(format!("{}-{}", prefix, uuid.to_string().replace("-", "")))
+}
+
+/// Finds the project root by traversing up the directory tree until a .vespe/ directory is found.
+pub fn get_project_root_path() -> Result<PathBuf, ProjectError> {
+    let mut current_dir = std::env::current_dir().map_err(|e| ProjectError::Io(e))?;
+
+    loop {
+        let vespe_dir = current_dir.join(".vespe");
+        if vespe_dir.exists() && vespe_dir.is_dir() {
+            return Ok(current_dir);
+        }
+
+        if !current_dir.pop() {
+            // Reached the root of the filesystem
+            return Err(ProjectError::ProjectRootNotFound(std::env::current_dir().map_err(|e| ProjectError::Io(e))?));
+        }
+    }
 }
 
 /// Constructs the full path for a given task UID within a base path.
 pub fn get_task_path(base_path: &Path, uid: &str) -> Result<PathBuf, ProjectError> {
     Ok(base_path.join(uid))
+}
+
+/// Returns the base path for tasks within a project.
+pub fn get_tasks_base_path(project_root_path: &Path) -> PathBuf {
+    project_root_path.join(".vespe").join("tasks")
+}
+
+/// Returns the base path for agents within a project.
+pub fn get_agents_base_path(project_root_path: &Path) -> PathBuf {
+    project_root_path.join(".vespe").join("agents")
+}
+
+/// Returns the base path for project-specific tools within a project.
+pub fn get_tools_base_path(project_root_path: &Path) -> PathBuf {
+    project_root_path.join(".vespe").join("tools")
+}
+
+/// Returns the base path for global Vespe kits.
+/// For now, hardcoded relative to the current working directory (assuming Vespe's root).
+pub fn get_kits_base_path() -> Result<PathBuf, ProjectError> {
+    let current_dir = std::env::current_dir().map_err(|e| ProjectError::Io(e))?;
+    // This assumes kits are in a 'kits' directory at the Vespe installation root.
+    // For development, we'll assume it's at the same level as the 'vespe' project.
+    Ok(current_dir.join("kits"))
 }
 
 /// Reads the content of a file as a String.

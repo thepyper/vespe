@@ -23,6 +23,8 @@ const LOG_DIR: &str = ".vespe/log";
 
 async fn save_test_result(
     output_dir: &PathBuf,
+    narrator_prompt: &str,
+    narrator_response: &str,
     hero_prompt: &str,
     hero_response: &str,
     validation_result: &Result<Vec<StructuredOutputBlock>, anyhow::Error>,
@@ -36,6 +38,8 @@ async fn save_test_result(
 
     let result_data = json!({
         "status": status,
+        "narrator_prompt": narrator_prompt,
+        "narrator_response": narrator_response,
         "hero_prompt": hero_prompt,
         "hero_response": hero_response,
         "validation_output": match validation_result {
@@ -117,7 +121,7 @@ async fn main() -> Result<()> {
         );
 
         tracing::info!("PASSO 1: Generating prompt for HERO model...");
-        let (narrator_response_raw, _narrator_query) = match pipeline::generate_student_prompt(
+        let (narrator_response_raw, narrator_query) = match pipeline::generate_student_prompt(
             &client,
             &args.ollama_url,
             &args.narrator_model,
@@ -175,7 +179,7 @@ async fn main() -> Result<()> {
             }
         }
 
-        if let Err(e) = save_test_result(&args.output_dir, &student_prompt, &hero_response_raw, &validation_result).await {
+        if let Err(e) = save_test_result(&args.output_dir, &narrator_query, &narrator_response_raw, &student_prompt, &hero_response_raw, &validation_result).await {
             tracing::error!("Failed to save test result: {}", e);
         }
 

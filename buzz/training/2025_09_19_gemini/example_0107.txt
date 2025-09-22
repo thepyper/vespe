@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "Bonjour, le monde!"}}
-TEXT: The translation of "Hello, world!" to French is "Bonjour, le monde!".

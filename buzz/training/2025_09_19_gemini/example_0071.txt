@@ -1,3 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success" content_type="base64">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=</tool_response>
-THOUGHT: I have the base64 content of the image. I cannot display it, but I can inform the user I have it.
-TEXT: I have read the image `logo.png`. It is a binary file.

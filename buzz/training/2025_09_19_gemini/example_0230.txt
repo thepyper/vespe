@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">1 replacement made.</tool_response>
-TEXT: I have replaced the text in `config.ini`.

@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system kernel version.
-TOOL_CALL: get_kernel_version()

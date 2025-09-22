@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">)</tool_response>
-TEXT: The system's default closing bracket is `)`.

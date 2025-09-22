@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the current user's home directory.
-TOOL_CALL: get_home_directory()

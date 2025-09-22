@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">{"total": "8GB"}</tool_response>
-TEXT: The system has 8GB of total memory.

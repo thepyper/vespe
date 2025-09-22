@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "UTC"}}
-TEXT: The system timezone is UTC.

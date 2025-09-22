@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default background color.
-TOOL_CALL: get_default_background_color()

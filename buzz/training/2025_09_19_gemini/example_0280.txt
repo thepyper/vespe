@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "MM/DD/YYYY HH:MM:SS"}}
-TEXT: The system's default datetime format is `MM/DD/YYYY HH:MM:SS`.

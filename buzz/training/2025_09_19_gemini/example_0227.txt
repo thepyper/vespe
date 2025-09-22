@@ -1,2 +1,0 @@
-THOUGHT: The user wants to search for a specific string in a file.
-TOOL_CALL: search_file('log.txt', 'ERROR')

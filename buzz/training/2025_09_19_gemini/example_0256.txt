@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "Linux 5.15.0-100-generic"}}
-TEXT: The kernel version is `Linux 5.15.0-100-generic`.

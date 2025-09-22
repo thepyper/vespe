@@ -1,3 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "error", "content": "kill: (1234) - No such process"}}
-THOUGHT: The process does not exist. I should inform the user.
-TEXT: I could not kill process 1234 as it does not exist.

@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the DNS servers.
-TOOL_CALL: get_dns_servers()

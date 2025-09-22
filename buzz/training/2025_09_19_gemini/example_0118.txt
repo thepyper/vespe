@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">["Cargo.toml", "src/main.rs", "src/lib.rs"]</tool_response>
-TEXT: I have listed all the files in the project recursively.

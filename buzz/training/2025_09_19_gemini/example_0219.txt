@@ -1,2 +1,0 @@
-THOUGHT: I need to fetch data from a remote API.
-TOOL_CALL: api_get('https://api.example.com/data')

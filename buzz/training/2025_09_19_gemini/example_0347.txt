@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default bullet point.
-TOOL_CALL: get_default_bullet_point()

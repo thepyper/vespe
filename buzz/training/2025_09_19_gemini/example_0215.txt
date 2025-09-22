@@ -1,2 +1,0 @@
-THOUGHT: The user wants to execute the new script.
-TOOL_CALL: <tool_code>run_shell_command('python new_script.py')</tool_code>

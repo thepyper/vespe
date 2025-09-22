@@ -1,3 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "false"}}
-THOUGHT: The file does not exist. I will inform the user.
-TEXT: The file `unicorn.txt` does not exist.

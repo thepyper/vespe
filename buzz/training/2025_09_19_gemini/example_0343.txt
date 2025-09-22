@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default hyphen.
-TOOL_CALL: get_default_hyphen()

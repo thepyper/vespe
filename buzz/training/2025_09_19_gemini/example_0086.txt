@@ -1,3 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">123</tool_response>
-THOUGHT: The content is "123". Now I will overwrite it with "456".
-TOOL_CALL: write_file('data.txt', '456')

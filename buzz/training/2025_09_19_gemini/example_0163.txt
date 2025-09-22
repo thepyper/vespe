@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">pub fn parse(input: &str) -> Vec<Segment> { ... }</tool_response>
-TEXT: My parsing logic is implemented in the `parse` function within `src/buzz/parser.rs`.

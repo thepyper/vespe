@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the current time.
-TOOL_CALL: get_current_time()

@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default weekend start.
-TOOL_CALL: get_default_weekend_start()

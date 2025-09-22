@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success"/>
-TEXT: The file `temp.log` has been deleted.

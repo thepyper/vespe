@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">File created successfully.</tool_response>
-TEXT: I have created `new_script.py`.

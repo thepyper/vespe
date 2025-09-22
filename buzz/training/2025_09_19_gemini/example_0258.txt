@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">x86_64</tool_response>
-TEXT: The system architecture is `x86_64`.

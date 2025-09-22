@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">metric</tool_response>
-TEXT: The system's default measurement system is `metric`.

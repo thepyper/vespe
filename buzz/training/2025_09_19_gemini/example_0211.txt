@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the current working directory. I can use a shell command for that.
-TOOL_CALL: <tool_code>run_shell_command('pwd')</tool_code>

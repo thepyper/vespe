@@ -1,2 +1,0 @@
-THOUGHT: The user is asking me to wait for 5 seconds.
-TOOL_CALL: sleep(5)

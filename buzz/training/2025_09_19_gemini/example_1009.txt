@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "1.5"}}
-TEXT: The system's default line height is `1.5`.

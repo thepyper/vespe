@@ -1,2 +1,0 @@
-THOUGHT: The user wants to push the changes.
-TOOL_CALL: <tool_code>run_shell_command('git push')</tool_code>

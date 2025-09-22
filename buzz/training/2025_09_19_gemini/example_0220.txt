@@ -1,4 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "{\"id\": 1, \"value\": \"test\"}"}}
-THOUGHT: I have received the data. I will extract the ID.
-TEXT: The ID from the API response is 1.
-

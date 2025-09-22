@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "/home/user/project"}}
-TEXT: The current working directory is `/home/user/project`.

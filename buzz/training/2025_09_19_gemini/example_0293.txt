@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default exponent symbol.
-TOOL_CALL: get_default_exponent_symbol()

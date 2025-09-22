@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the last modification time of a file.
-TOOL_CALL: get_last_modified('Cargo.toml')

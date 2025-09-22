@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default language code.
-TOOL_CALL: get_default_language_code()

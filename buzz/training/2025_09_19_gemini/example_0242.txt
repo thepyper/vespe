@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">{"total": "100GB", "free": "50GB"}</tool_response>
-TEXT: You have 50GB of free disk space on the root partition.

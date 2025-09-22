@@ -1,2 +1,0 @@
-THOUGHT: The user's request is unclear. "Make it better" could mean anything. I will ask for specifics.
-TEXT: Could you please specify what you mean by "make it better"? For example, should I refactor the code for readability, improve performance, or add new features?

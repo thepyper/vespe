@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the cargo version.
-TOOL_CALL: <tool_code>run_shell_command('cargo --version')</tool_code>

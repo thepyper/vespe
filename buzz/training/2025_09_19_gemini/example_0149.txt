@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": ""}}
-TEXT: I have decompressed the file `large_file.log.gz` back to `large_file.log`.

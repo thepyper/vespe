@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default text shadow.
-TOOL_CALL: get_default_text_shadow()

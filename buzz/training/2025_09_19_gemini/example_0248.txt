@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "["eth0", "lo"]"}}
-TEXT: The network interfaces are `eth0` and `lo`.

@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">none</tool_response>
-TEXT: The system's default text emphasis style is `none`.

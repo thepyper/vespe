@@ -1,3 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "[package]\nlicense = \"MIT\""}}
-TEXT: The project is licensed under the MIT License.
-

@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default first day of week.
-TOOL_CALL: get_default_first_day_of_week()

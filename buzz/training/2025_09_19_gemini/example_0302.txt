@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">NaN</tool_response>
-TEXT: The system's default NaN symbol is `NaN`.

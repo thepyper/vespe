@@ -1,2 +1,0 @@
-THOUGHT: The user wants to delete the script.
-TOOL_CALL: delete_file('new_script.py')

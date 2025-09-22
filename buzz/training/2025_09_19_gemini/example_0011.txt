@@ -1,5 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">[dependencies]
-tokio = "1"</tool_response>
-THOUGHT: Ok, it uses tokio. Now I'll check the main function.
-TOOL_CALL: <tool_code>read_file('src/main.rs')</tool_code>
-

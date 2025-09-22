@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "2025-09-18T08:00:00Z"}}
-TEXT: The system was last booted at `2025-09-18T08:00:00Z`.

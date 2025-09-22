@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's default opening brace.
-TOOL_CALL: get_default_opening_brace()

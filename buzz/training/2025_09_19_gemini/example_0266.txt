@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">en_US.UTF-8</tool_response>
-TEXT: The system locale is `en_US.UTF-8`.

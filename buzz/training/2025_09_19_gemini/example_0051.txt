@@ -1,3 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">version = "0.1.0"</tool_response>
-THOUGHT: I need to extract the version number from this line.
-TEXT: The project version is `0.1.0`.

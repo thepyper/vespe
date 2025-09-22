@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "File written successfully."}}
-TEXT: I have updated the file `data.txt`.

@@ -1,2 +1,0 @@
-THOUGHT: I will try to read the `config.json` file.
-TOOL_CALL: read_file('config.json')

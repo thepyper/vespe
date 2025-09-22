@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system's current date and time.
-TOOL_CALL: get_datetime()

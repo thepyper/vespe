@@ -1,2 +1,0 @@
-THOUGHT: I need to list the files in the `src` directory.
-TOOL_CALL: <tool_code>list_directory('src')</tool_code>

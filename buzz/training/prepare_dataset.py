@@ -3,7 +3,7 @@ import json
 import re
 
 # Definiamo le directory di input e il file di output
-SOURCE_DIR = "2025_09_19_gemini"
+SOURCE_DIR = "generated_examples_rust"
 OUTPUT_FILE = "dataset.jsonl"
 
 # Regex per identificare l'inizio di un nuovo segmento

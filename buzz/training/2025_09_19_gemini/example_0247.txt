@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the network interfaces.
-TOOL_CALL: get_network_interfaces()

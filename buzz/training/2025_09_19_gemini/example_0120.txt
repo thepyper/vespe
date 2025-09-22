@@ -1,1 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "{\"temperature\": 15, \"condition\": \"cloudy\"}"}}

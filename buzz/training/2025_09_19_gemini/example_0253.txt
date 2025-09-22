@@ -1,2 +1,0 @@
-THOUGHT: The user wants to know the system hostname.
-TOOL_CALL: get_hostname()

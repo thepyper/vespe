@@ -1,3 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">A very long text about the history of the world...</tool_response>
-THOUGHT: I have the text. Now I will summarize it. This does not require a tool.
-TEXT: The text is a comprehensive history of the world, starting from the big bang and ending in the present day.

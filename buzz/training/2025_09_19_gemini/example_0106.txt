@@ -1,2 +1,0 @@
-THOUGHT: The user wants to translate a sentence. I can use a translation tool for that.
-TOOL_CALL: translate(text='Hello, world!', to='fr')

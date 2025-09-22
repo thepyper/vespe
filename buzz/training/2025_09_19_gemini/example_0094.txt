@@ -1,2 +1,0 @@
-THOUGHT: The user is asking for something that is outside my scope.
-TEXT: I am an AI assistant designed to help with software development tasks. I cannot help you with that.

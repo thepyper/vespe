@@ -1,2 +1,0 @@
-TOOL_RESPONSE: {"tool_response": {"status": "success", "content": "42 README.md"}}
-TEXT: The file `README.md` has 42 words.

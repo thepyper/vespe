@@ -1,2 +1,0 @@
-TOOL_RESPONSE: <tool_response status="success">Latn</tool_response>
-TEXT: The system's default script is `Latn`.

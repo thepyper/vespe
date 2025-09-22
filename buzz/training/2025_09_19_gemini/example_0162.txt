@@ -1,2 +1,0 @@
-THOUGHT: The user is asking for my source code. I can show them the relevant parts.
-TOOL_CALL: read_file('src/buzz/parser.rs')

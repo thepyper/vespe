@@ -150,64 +150,43 @@ pub async fn label_student_response(
 }
 
 fn segmentation_to_json_conversion(input: &str) -> Result<String> {
-
     let mut full_text = String::new();
     let mut spans = Vec::new();
-    let mut pos = 0;
+    let mut current_pos = 0;
 
-    for (line_no, line) in input.lines().enumerate() {
-        
-        if line == "<NL>" {
-            full_text.push('\n');
-            pos += 1;
-            continue;
-        }
-        
-        let (ending_nl, line) = match line.trim_end().ends_with("<NL>") {
-            true => (true, line.trim_end().strip_suffix("<NL>").unwrap()),
-            false => (false, line)
-        };
-        
-        // Allow empty lines
-        if line.is_empty() {
-            continue;
-        }        
-        
-        // Controllo che inizi con '<'
-        if !line.starts_with('<') {
-            return Err(anyhow!("Formato invalido alla riga {}: manca '<'", line_no + 1));
-        }
+    let re = regex::Regex::new(r"<([A-Z_]+)>(.*?)</\1>")?;
 
-        // Deve contenere almeno un '>'
-        let (category, segment) = match line.find('>') {
-            Some(idx) if idx > 1 => {
-                let category = &line[1..idx];
-                let segment = &line[idx + 1..];
-                if category.is_empty() || segment.is_empty() {
-                    return Err(anyhow!("Formato invalido alla riga {}", line_no + 1));
-                }
-                (category.to_string(), segment)
-            }
-            _ => return Err(anyhow!("Formato invalido alla riga {}", line_no + 1)),
-        };
+    for cap in re.captures_iter(input) {
+        let category = cap.get(1).unwrap().as_str().to_string();
+        let segment_content = cap.get(2).unwrap().as_str();
 
-        let start = pos;
-        full_text.push_str(segment);
-        pos += segment.chars().count();
-        let end = pos;
+        let start = current_pos;
+        full_text.push_str(segment_content);
+        let end = current_pos + segment_content.chars().count();
 
         spans.push(json!({
             "start": start,
             "end": end,
             "category": category
         }));
-        
-        if ending_nl {
-            full_text.push('\n');
-            pos += 1;
-            continue;
+
+        current_pos = end;
+    }
+
+    // Basic check for unparsed content (e.g., if tags are malformed or missing)
+    // This is a simplified check and might need more robust error handling
+    let mut last_match_end = 0;
+    if let Some(last_cap) = re.captures_iter(input).last() {
+        last_match_end = last_cap.get(0).unwrap().end();
+    }
+    if last_match_end < input.len() {
+        // Check if the remaining part is just whitespace
+        let remaining = &input[last_match_end..];
+        if !remaining.trim().is_empty() {
+            return Err(anyhow!("Unparsed content or malformed tags found after last segment. Remaining: '{}'", remaining));
         }
     }
+
 
     let result = json!({
         "full_text": full_text,
@@ -216,7 +195,6 @@ fn segmentation_to_json_conversion(input: &str) -> Result<String> {
 
     Ok(serde_json::to_string_pretty(&result)?)
 }
-
 pub async fn save_labeled_example(
     output_dir: &PathBuf,
     labeled_json_str: &str,

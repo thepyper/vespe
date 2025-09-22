@@ -27,37 +27,31 @@ Available tools:
 === TOKEN MARKING RULES ===
 
 **Segmentation Guidelines:**
-- You MUST split on newline, even if it is internal to structured data such as JSON or any other;
-- You CAN split anywhere else if you need to begin a new segment.
-      
+- Each meaningful unit of text MUST be enclosed within a pair of `<CATEGORY>` and `</CATEGORY>` tags.
+- Segments can span multiple lines. Newlines within a segment's content MUST be preserved.
+
 === OUTPUT FORMAT ===
 
-Each segment falls into one of the following 2 cases:
+Each segment MUST be formatted as:
+<CATEGORY>
+segment content
+</CATEGORY>
 
-1. It is result of a newline split, then output format is:
-<CATEGORY>segment
-<NL>
-Notice that the newline tag is NOT on the same line of the category and segment.
+The segmented output MUST be a perfect reconstruction of the original output.
+Any markup language in the original output MUST be present in the segmented output as well.
 
-2. It is result of a non-newline split, then output format is:
-<CATEGORY>segment
-
-The WANTED result is segmented output is a perfect reconstruction of the original output.
-Then, any markup language in the original output MUST be present in the segmented output as well.
-
-You CANNOT output anything else than the segment conversion into one of there two cases.
+You CANNOT output anything else than the segment conversion into the specified format.
 You CANNOT output any explanation of how you decided segmentation.
-You CANNOT output any markup other than specified in the two cases.
+You CANNOT output any markup other than the specified `<CATEGORY>` and `</CATEGORY>` tags.
 
 Example Input: 
-I'll search for information: {\"name\": \"web_search\", \"query\": \"python\"} 
+I'll search for information: {"name": "web_search", "query": "python"} 
 This should help!
 
 Example Output:
-<TEXT>I'll search for information: 
-<TOOL_CALL>{\"name\": \"web_search\", \"query\": \"python\"} 
-<NL>
-<TEXT>This should help!
+<TEXT>I'll search for information:</TEXT>
+<TOOL_CALL>{"name": "web_search", "query": "python"}</TOOL_CALL>
+<TEXT>This should help!</TEXT>
 
 === TOOL-SPECIFIC RECOGNITION ===
 For any tool, mark as TOOL_CALL:
@@ -72,31 +66,26 @@ Example 1:
 Input: 
 I understand your request. 
 Let me read the specified file:
-{\"name\": \"read_file\", \"path\": \"data.txt\"}
+{"name": "read_file", "path": "data.txt"}
 The contents are displayed above.
 
 Output:
-<TEXT>I understand your request. 
-<NL>
-<THOUGHT>Let me read the specified file:
-<NL>
-<TOOL_CALL>{\"name\": \"read_file\", \"path\": \"data.txt\"}
-<NL>
-<TEXT>The contents are displayed above.
-<NL>
+<TEXT>I understand your request.</TEXT>
+<THOUGHT>Let me read the specified file:</THOUGHT>
+<TOOL_CALL>{"name": "read_file", "path": "data.txt"}</TOOL_CALL>
+<TEXT>The contents are displayed above.</TEXT>
 
 Example 2:
 Input: 
-Hmm, I need to think about this. I'll use echo: {\"text\": \"hello world\"} 
+Hmm, I need to think about this. I'll use echo: {"text": "hello world"} 
 Done!
 
 Output:
-<THOUGHT>Hmm, I need to think about this. 
-<TEXT>I'll use echo: 
-<TOOL_CALL>{\"text\": \"hello world\"} 
-<NL>
-<TEXT>Done!
-<NL>
+<THOUGHT>Hmm, I need to think about this.</THOUGHT>
+<TEXT>I'll use echo:</TEXT>
+<TOOL_CALL>{"text": "hello world"}</TOOL_CALL>
+<TEXT>Done!</TEXT>
+
 
 === PROCESSING INSTRUCTIONS ===
 

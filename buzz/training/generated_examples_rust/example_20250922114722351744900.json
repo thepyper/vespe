@@ -1,0 +1,102 @@
+{
+  "debug": {
+    "config": {
+      "complexity": "low to medium",
+      "context_length": "small to medium",
+      "hero_model": "gemma3:1b",
+      "marker_model": "gpt-oss:20b",
+      "narrator_model": "llama3.1:8b",
+      "num_examples": 1000,
+      "ollama_url": "http://localhost:11434",
+      "output_dir": "buzz/training/generated_examples_rust",
+      "tool_format": "mcp",
+      "tool_name": null,
+      "use_case": null,
+      "user_style": null
+    },
+    "hero_query": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm working on a project to automate report generation for our team's daily stand-ups. We have a script that currently outputs a large amount of text, but I'd like to summarize it into a concise 2-3 sentence summary per day. Can you help me write this summary to a file called `daily_summary.txt` in the `/reports` directory on our shared drive? The content should be something like 'Team discussed project X, made progress on task Y, and encountered issue Z.'\"\n\nThis prompt:\n\n* Matches the use case of summarization\n* Has low to medium complexity (it's a straightforward request with some context)\n* Uses technical language style\n* Includes small to medium context length (the user is asking for a summary of a script output, which implies a relatively short text)\n* Makes tool usage feel natural and necessary (the user is trying to automate report generation and needs the tool to write the summary to a file)",
+    "hero_response": "```json\n{\n  \"parameters\": {\n    \"name\": \"daily_summary\",\n    \"input\": \"Team discussed project X, made progress on task Y, and encountered issue Z\",\n    \"output_file\": \"/reports/daily_summary.txt\",\n    \"directory\": \"/reports\"\n  },\n  \"tool_name\": \"write_file\"\n}\n```\n\nHere's the generated summary:\n\n```\n\"The team reviewed project X, progressed on task Y, and addressed the issue of Z.  This report summarizes the key activities and challenges encountered during the daily stand-up.\"\n```",
+    "marker_query": "TRAINING DATA LABELING - TOKEN MARKING SEGMENTATION\n\nAnalyze a language model's response and mark each meaningful unit with its category to create training data for text segmentation.\nResponse should (but could not) contain a tool call of the tool specified in the next section.\n\n=== INPUT DATA ===\nAvailable tools:\n{\n  \"name\": \"read_file\",\n  \"description\": \"Reads and returns the content of a specified file.\",\n  \"parameters\": [\n    {\n      \"name\": \"absolute_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to read.\",\n      \"required\": true\n    }\n  ]\n}\n{\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\n\n=== CLASSIFICATION CATEGORIES ===\n\n**TEXT:** User-facing content\n- Direct answers, explanations, confirmations\n- Results presentation, summaries\n- Polite conversational elements\n\n**THOUGHT:** Internal reasoning about the task\n- \"I need to...\", \"Let me...\", \"The user wants...\"\n- Analysis of the situation or approach\n- Planning statements\n\n**TOOL_CALL:** Tool invocation content\n- JSON structures for any tool calling\n- Tool parameters and arguments\n- Technical tool-calling syntax (even if malformed)\n\n=== TOKEN MARKING RULES ===\n\n**Segmentation Guidelines:**\n- You MUST split on newline, even if it is internal to structured data such as JSON or any other;\n- You CAN split anywhere else if you need to begin a new segment.\n      \n=== OUTPUT FORMAT ===\n\nEach segment falls into one of the following 2 cases:\n\n1. It is result of a newline split, then output format is:\n<CATEGORY>segment\n<NL>\nNotice that the newline tag is NOT on the same line of the category and segment.\n\n2. It is result of a non-newline split, then output format is:\n<CATEGORY>segment\n\nThe WANTED result is segmented output is a perfect reconstruction of the original output.\nThen, any markup language in the original output MUST be present in the segmented output as well.\n\nYou CANNOT output anything else than the segment conversion into one of there two cases.\nYou CANNOT output any explanation of how you decided segmentation.\nYou CANNOT output any markup other than specified in the two cases.\n\nExample Input: \nI'll search for information: {\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \nThis should help!\n\nExample Output:\n<TEXT>I'll search for information: \n<TOOL_CALL>{\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \n<NL>\n<TEXT>This should help!\n\n=== TOOL-SPECIFIC RECOGNITION ===\nFor any tool, mark as TOOL_CALL:\n- Any JSON structure containing tool name\n- Parameter structures matching the tool specifications\n- Malformed attempts at using any tool\n- References to any tool functionality\n\n=== EXAMPLES ===\n\nExample 1:\nInput: \nI understand your request. \nLet me read the specified file:\n{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\nThe contents are displayed above.\n\nOutput:\n<TEXT>I understand your request. \n<NL>\n<THOUGHT>Let me read the specified file:\n<NL>\n<TOOL_CALL>{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\n<NL>\n<TEXT>The contents are displayed above.\n<NL>\n\nExample 2:\nInput: \nHmm, I need to think about this. I'll use echo: {\\\"text\\\": \\\"hello world\\\"} \nDone!\n\nOutput:\n<THOUGHT>Hmm, I need to think about this. \n<TEXT>I'll use echo: \n<TOOL_CALL>{\\\"text\\\": \\\"hello world\\\"} \n<NL>\n<TEXT>Done!\n<NL>\n\n=== PROCESSING INSTRUCTIONS ===\n\n1. Read the full model response\n2. Identify segmentation boundaries\n3. Classify each segment based on context and content\n4. Mark each unit with appropriate category\n5. Ensure complete coverage (every word/unit gets a label)\n6. Double-check that TOOL_CALL segments relate to write_file\n\n=== ORIGINAL QUERY TO THE MODEL ===\nHere is a generated user prompt that meets the specified requirements:\n\n\"I'm working on a project to automate report generation for our team's daily stand-ups. We have a script that currently outputs a large amount of text, but I'd like to summarize it into a concise 2-3 sentence summary per day. Can you help me write this summary to a file called `daily_summary.txt` in the `/reports` directory on our shared drive? The content should be something like 'Team discussed project X, made progress on task Y, and encountered issue Z.'\"\n\nThis prompt:\n\n* Matches the use case of summarization\n* Has low to medium complexity (it's a straightforward request with some context)\n* Uses technical language style\n* Includes small to medium context length (the user is asking for a summary of a script output, which implies a relatively short text)\n* Makes tool usage feel natural and necessary (the user is trying to automate report generation and needs the tool to write the summary to a file)\n\n=== MODEL RESPONSE TO SEGMENT ===\n```json\n{\n  \"parameters\": {\n    \"name\": \"daily_summary\",\n    \"input\": \"Team discussed project X, made progress on task Y, and encountered issue Z\",\n    \"output_file\": \"/reports/daily_summary.txt\",\n    \"directory\": \"/reports\"\n  },\n  \"tool_name\": \"write_file\"\n}\n```\n\nHere's the generated summary:\n\n```\n\"The team reviewed project X, progressed on task Y, and addressed the issue of Z.  This report summarizes the key activities and challenges encountered during the daily stand-up.\"\n```\n",
+    "marker_response": "<TOOL_CALL>{ \n<NL>\n<TOOL_CALL>  \"parameters\": { \n<NL>\n<TOOL_CALL>    \"name\": \"daily_summary\", \n<NL>\n<TOOL_CALL>    \"input\": \"Team discussed project X, made progress on task Y, and encountered issue Z\", \n<NL>\n<TOOL_CALL>    \"output_file\": \"/reports/daily_summary.txt\", \n<NL>\n<TOOL_CALL>    \"directory\": \"/reports\" \n<NL>\n<TOOL_CALL>  }, \n<NL>\n<TOOL_CALL>  \"tool_name\": \"write_file\" \n<NL>\n<TOOL_CALL>} \n<NL>\n<TEXT> \n<NL>\n<TEXT>Here's the generated summary: \n<NL>\n<TEXT> \n<NL>\n<TEXT>``` \n<NL>\n<TEXT>\"The team reviewed project X, progressed on task Y, and addressed the issue of Z.  This report summarizes the key activities and challenges encountered during the daily stand-up.\" \n<NL>\n<TEXT>``` \n<NL>",
+    "narrator_query": "TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR\n\nYour task is to generate a user prompt that will encourage a language model to use a specific tool in a particular crafted scenario.\n\n=== TARGET TOOL ===\nTool Name: write_file\nTool Specification: {\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\nTool Description: Writes content to a specified file, overwriting it if it exists.\n\n=== SCENARIO PARAMETERS ===\nUse Case: summarization\nComplexity: low to medium\nUser Style: technical\nContext Length: small to medium\n\n=== GENERATION RULES ===\n1. Create realistic user request (not \"please use the X tool\")\n2. Match the specified use case and complexity naturally\n3. Include appropriate context for the context_length parameter\n4. Use language style matching user_style parameter\n5. Make tool usage feel natural and necessary\nGenerate exactly one user prompt that matches all parameters.\n\n=== OUTPUT ===\n",
+    "narrator_response": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm working on a project to automate report generation for our team's daily stand-ups. We have a script that currently outputs a large amount of text, but I'd like to summarize it into a concise 2-3 sentence summary per day. Can you help me write this summary to a file called `daily_summary.txt` in the `/reports` directory on our shared drive? The content should be something like 'Team discussed project X, made progress on task Y, and encountered issue Z.'\"\n\nThis prompt:\n\n* Matches the use case of summarization\n* Has low to medium complexity (it's a straightforward request with some context)\n* Uses technical language style\n* Includes small to medium context length (the user is asking for a summary of a script output, which implies a relatively short text)\n* Makes tool usage feel natural and necessary (the user is trying to automate report generation and needs the tool to write the summary to a file)"
+  },
+  "full_text": "{ \n  \"parameters\": { \n    \"name\": \"daily_summary\", \n    \"input\": \"Team discussed project X, made progress on task Y, and encountered issue Z\", \n    \"output_file\": \"/reports/daily_summary.txt\", \n    \"directory\": \"/reports\" \n  }, \n  \"tool_name\": \"write_file\" \n} \n \nHere's the generated summary: \n \n``` \n\"The team reviewed project X, progressed on task Y, and addressed the issue of Z.  This report summarizes the key activities and challenges encountered during the daily stand-up.\" \n``` \n",
+  "spans": [
+    {
+      "category": "TOOL_CALL",
+      "end": 2,
+      "start": 0
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 21,
+      "start": 3
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 51,
+      "start": 22
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 143,
+      "start": 52
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 193,
+      "start": 144
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 222,
+      "start": 194
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 228,
+      "start": 223
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 257,
+      "start": 229
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 260,
+      "start": 258
+    },
+    {
+      "category": "TEXT",
+      "end": 262,
+      "start": 261
+    },
+    {
+      "category": "TEXT",
+      "end": 293,
+      "start": 263
+    },
+    {
+      "category": "TEXT",
+      "end": 295,
+      "start": 294
+    },
+    {
+      "category": "TEXT",
+      "end": 300,
+      "start": 296
+    },
+    {
+      "category": "TEXT",
+      "end": 481,
+      "start": 301
+    },
+    {
+      "category": "TEXT",
+      "end": 486,
+      "start": 482
+    }
+  ]
+}

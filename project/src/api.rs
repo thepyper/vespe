@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent};
 use crate::error::ProjectError;
-use crate::utils::{self, get_task_path, generate_task_uid, write_json_file, write_file_content, read_json_file, read_file_content};
+use crate::utils::{self, get_task_path, generate_task_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status};
 
 /// Creates a new task or subtask.
 /// Initializes the task directory with config.json, empty objective.md, etc.
@@ -79,4 +79,73 @@ pub fn load_task(uid: &str) -> Result<Task, ProjectError> {
         plan,
         dependencies,
     })
+}
+
+/// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
+/// Writes the objective content to `objective.md`.
+pub fn define_objective(task_uid: &str, objective_content: String) -> Result<Task, ProjectError> {
+    let mut task = load_task(task_uid)?;
+    let task_path = get_task_path(task_uid)?;
+
+    // Update objective.md
+    write_file_content(&task_path.join("objective.md"), &objective_content)?;
+    task.objective = objective_content;
+
+    // Update status
+    update_task_status(&task_path, TaskState::ObjectiveDefined, &mut task.status)?;
+
+    Ok(task)
+}
+
+/// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.
+/// Writes the plan content to `plan.md`.
+pub fn define_plan(task_uid: &str, plan_content: String) -> Result<Task, ProjectError> {
+    let mut task = load_task(task_uid)?;
+    let task_path = get_task_path(task_uid)?;
+
+    // Update plan.md
+    write_file_content(&task_path.join("plan.md"), &plan_content)?;
+    task.plan = Some(plan_content);
+
+    // Update status
+    update_task_status(&task_path, TaskState::PlanDefined, &mut task.status)?;
+
+    Ok(task)
+}
+
+/// Adds a new event to the `persistent/` folder of the task.
+pub fn add_persistent_event(task_uid: &str, event: PersistentEvent) -> Result<(), ProjectError> {
+    let task_path = get_task_path(task_uid)?;
+    let persistent_path = task_path.join("persistent");
+
+    let filename = format!("{}_{}.json", event.timestamp.format("%Y%m%d%H%M%S%3f"), event.event_type);
+    let file_path = persistent_path.join(filename);
+
+    write_json_file(&file_path, &event)?;
+
+    Ok(())
+}
+
+/// Retrieves all persistent events for a task, sorted by timestamp.
+pub fn get_all_persistent_events(task_uid: &str) -> Result<Vec<PersistentEvent>, ProjectError> {
+    let task_path = get_task_path(task_uid)?;
+    let persistent_path = task_path.join("persistent");
+
+    if !persistent_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut events = Vec::new();
+    for entry in fs::read_dir(&persistent_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+            let event: PersistentEvent = read_json_file(&path)?;
+            events.push(event);
+        }
+    }
+
+    events.sort_by_key(|event| event.timestamp);
+
+    Ok(events)
 }

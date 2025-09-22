@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+use chrono::Utc;
 
 use crate::error::ProjectError;
+use crate::models::{TaskStatus, TaskState};
 
 // Base path for all tasks. For now, hardcoded.
 // In a real application, this would be configurable (e.g., from project config).
@@ -45,4 +47,15 @@ pub fn read_json_file<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, 
 pub fn write_json_file<T: serde::Serialize>(path: &Path, data: &T) -> Result<(), ProjectError> {
     let content = serde_json::to_string_pretty(data).map_err(|e| ProjectError::Json(e))?;
     write_file_content(path, &content)
+}
+
+/// Updates the status.json file for a given task.
+pub fn update_task_status(task_path: &Path, new_state: TaskState, current_status: &mut TaskStatus) -> Result<(), ProjectError> {
+    if !current_status.current_state.can_transition_to(new_state) {
+        return Err(ProjectError::InvalidStateTransition(current_status.current_state, new_state));
+    }
+    current_status.current_state = new_state;
+    current_status.last_updated_at = Utc::now();
+    write_json_file(&task_path.join("status.json"), current_status)?;
+    Ok(())
 }

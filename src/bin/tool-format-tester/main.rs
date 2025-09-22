@@ -105,6 +105,12 @@ async fn main() -> Result<()> {
         let tool_description = selected_tool.description;
         let tool_spec_json = serde_json::to_string_pretty(&selected_tool.to_tool_spec())?;
 
+        // Generate all_tools_specs_json
+        let all_tools_specs_json = tool_definitions::TOOLS_DEFINITION.iter()
+            .map(|tool| serde_json::to_string_pretty(&tool.to_tool_spec()).unwrap_or_default())
+            .collect::<Vec<String>>()
+            .join("\n");
+
         let use_case = args.use_case.as_deref().unwrap_or_else(|| pipeline::USE_CASES.choose(&mut rng).unwrap());
         let complexity = args.complexity.as_deref().unwrap_or_else(|| pipeline::COMPLEXITIES.choose(&mut rng).unwrap());
         let user_style = args.user_style.as_deref().unwrap_or_else(|| pipeline::USER_STYLES.choose(&mut rng).unwrap());
@@ -154,6 +160,7 @@ async fn main() -> Result<()> {
             &args.hero_model,
             &student_prompt,
             selected_policy.as_ref(),
+            &all_tools_specs_json,
             &handlebars,
         )
         .await

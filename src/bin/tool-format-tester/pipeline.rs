@@ -78,11 +78,12 @@ pub async fn get_student_response(
     let data = json!({
         "tool_spec": all_tools_specs_json,
         "format_specs": format_specs_content,
+	"student_prompt": student_prompt,
     });    
     tracing::debug!("get_student_response: Data for rendering: {:#?}", data);
-    let system_prompt = handlebars.render("system_prompt", &data)?;
-    tracing::info!("Hero System Prompt: {}", system_prompt);
-    tracing::info!("Hero User Prompt: {}", student_prompt);
-    let response = query_ollama(client, ollama_url, hero_model, student_prompt, Some(&system_prompt)).await?;
-    Ok((response, system_prompt))
+    let prompt = handlebars.render("system_prompt", &data)?;
+    tracing::info!("Hero System Prompt: {}", prompt);
+    tracing::info!("Hero User Prompt: {}", prompt);
+    let response = query_ollama(client, ollama_url, hero_model, &prompt, Some(&prompt)).await?;
+    Ok((response, prompt))
 }

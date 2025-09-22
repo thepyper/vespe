@@ -39,7 +39,7 @@ L'idea è solida e offre un'ottima base per un sistema di orchestrazione. Ecco a
         *   `name`: Nome univoco dell'agente.
         *   `description`: Breve descrizione delle sue capacità.
         *   `llm_model`: Il modello LLM specifico che l'agente utilizza (es. `llama3.1:8b`).
-        *   `tools_available`: Un elenco di tool che l'agente è in grado di utilizzare.
+        *   `tools_inherent_capabilities`: Un elenco di tool che l'agente è intrinsecamente in grado di utilizzare (fa parte della sua "personality").
         *   `capabilities`: Un elenco di tipi di task che l'agente è specializzato a gestire (es. "code generation", "refactoring", "documentation").
     *   **Caricamento Dinamico:** Vespe dovrebbe scansionare la cartella `agents` all'avvio per registrare dinamicamente gli agenti disponibili.
 
@@ -79,5 +79,13 @@ L'idea è solida e offre un'ottima base per un sistema di orchestrazione. Ecco a
 
 6.  **Controllo Versione (Git):**
     *   La struttura `.vespe` è ideale per essere versionata con Git. Tutti i file di configurazione degli agenti e le definizioni dei task dovrebbero essere tracciati. Questo garantisce la riproducibilità e la collaborazione.
+
+7.  **Gestione dei Tool e Autorizzazioni:**
+    *   **Capacità Inerenti dell'Agente:** Ogni agente, nella sua definizione (configurazione), avrà una lista di tool che *può* usare per sua natura (`tools_inherent_capabilities`). Questa è la sua "personalità" o set di competenze di base.
+    *   **Autorizzazioni dell'Utente:** L'utente ha il controllo finale sull'accesso ai tool. Per ogni progetto, l'utente può concedere l'uso di un tool a un agente con diverse granularità:
+        *   **Per Progetto:** Il tool è concesso all'agente per tutta la durata del progetto.
+        *   **Per Sessione:** Il tool è concesso all'agente solo per la sessione di lavoro corrente.
+        *   **Per Utilizzo (One-Shot):** Il tool è concesso all'agente per un singolo utilizzo specifico, richiedendo una nuova autorizzazione per ogni uso successivo.
+    *   **Meccanismo di Richiesta/Concessione:** L'orchestratore dovrà implementare un meccanismo per cui un agente può "richiedere" l'uso di un tool (se non già autorizzato) e l'utente può "concedere" o "negare" tale richiesta con la granularità desiderata.
 
 Questo design è molto promettente e offre una chiara roadmap per lo sviluppo di Vespe. La chiave sarà la standardizzazione dei formati di configurazione e definizione dei task per consentire un'orchestrazione robusta e automatizzata.

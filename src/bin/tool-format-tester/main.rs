@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
         let selected_tool = if let Some(tool_name_arg) = &args.tool_name {
             tool_definitions::TOOLS_DEFINITION.iter()
                 .find(|t| t.name == tool_name_arg)
-                .ok_or_else(|| anyhow::anyhow!("Tool '{}' not found", tool_name_arg))?;
+                .ok_or_else(|| anyhow::anyhow!("Tool '{}' not found", tool_name_arg))?
         } else {
             tool_definitions::TOOLS_DEFINITION.choose(&mut rng).unwrap()
         };

@@ -44,7 +44,7 @@ pub async fn query_ollama(
     prompt: &str,
     system: Option<&str>,
 ) -> Result<String> {
-    debug!("Ollama Request: model={}, system={{:?}}, prompt={}", model, system, prompt);
+    debug!("Ollama Request: model={}, system={:?}, prompt={}", model, system, prompt);
     let request_payload = OllamaGenerateRequest {
         model,
         prompt,

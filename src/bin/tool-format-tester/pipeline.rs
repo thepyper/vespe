@@ -59,7 +59,7 @@ pub async fn generate_student_prompt(
     });
     tracing::debug!("generate_student_prompt: Data for rendering: {:#?}", data);
     let prompt = handlebars.render("meta_prompt", &data)?;
-    tracing::debug!("generate_student_prompt: Rendered prompt: {}", prompt);
+    tracing::info!("Narrator Query: {}", prompt);
     let response = query_ollama(client, ollama_url, narrator_model, &prompt, None).await?;
     Ok((response, prompt))
 }

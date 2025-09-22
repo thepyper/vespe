@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use chrono::Local;
 use clap::Parser;
 use handlebars::Handlebars;
-use policies::{StructuredOutputBlock, ToolCallPolicy};
+use policies::{McpPolicy, StructuredOutputBlock, ToolCallPolicy};
 use rand::seq::SliceRandom;
 use reqwest::Client;
 use serde_json::json;
@@ -66,13 +66,13 @@ async fn main() -> Result<()> {
     let args = cli_args::CliArgs::parse();
     tracing::info!("Parsed CLI arguments: {:?}", args);
 
-    // --- Policy Setup (Commented out until a policy is implemented) ---
-    // let available_policies: Vec<Box<dyn ToolCallPolicy>> = vec![];
-    // let selected_policy = available_policies
-    //     .iter()
-    //     .find(|p| p.name() == args.policy)
-    //     .ok_or_else(|| anyhow!("Policy '{}' not found.", args.policy))?;
-    // tracing::info!("Selected policy: {}", selected_policy.name());
+    // --- Policy Setup ---
+    let available_policies: Vec<Box<dyn ToolCallPolicy>> = vec![Box::new(McpPolicy)];
+    let selected_policy = available_policies
+        .iter()
+        .find(|p| p.name() == args.policy)
+        .ok_or_else(|| anyhow!("Policy '{}' not found.", args.policy))?;
+    tracing::info!("Selected policy: {}", selected_policy.name());
 
     let client = Client::new();
 
@@ -117,7 +117,7 @@ async fn main() -> Result<()> {
         );
 
         tracing::info!("PASSO 1: Generating prompt for HERO model...");
-        let (_narrator_response_raw, _narrator_query) = match pipeline::generate_student_prompt(
+        let (narrator_response_raw, _narrator_query) = match pipeline::generate_student_prompt(
             &client,
             &args.ollama_url,
             &args.narrator_model,
@@ -141,9 +141,43 @@ async fn main() -> Result<()> {
                 continue;
             }
         };
-        // let student_prompt = narrator_response_raw.clone();
+        let student_prompt = narrator_response_raw.clone();
 
-        // --- Steps 2 and 3 are disabled until a policy is implemented ---
+        tracing::info!("PASSO 2: Getting HERO response...");
+        let (hero_response_raw, _system_prompt_used) = match pipeline::get_student_response(
+            &client,
+            &args.ollama_url,
+            &args.hero_model,
+            &student_prompt,
+            selected_policy.as_ref(),
+            &handlebars,
+        )
+        .await
+        {
+            Ok(res) => {
+                tracing::debug!("PASSO 2: HERO response received: {}", res.0);
+                res
+            }
+            Err(e) => {
+                tracing::error!("ERROR in Step 2: {}. Skipping example.", e);
+                continue;
+            }
+        };
+
+        tracing::info!("PASSO 3: Validating HERO response with '{}' policy...", selected_policy.name());
+        let validation_result = selected_policy.validate_and_parse(&hero_response_raw);
+        match &validation_result {
+            Ok(parsed_calls) => {
+                tracing::info!("Validation successful: {:?}", parsed_calls);
+            }
+            Err(e) => {
+                tracing::error!("Validation FAILED: {}", e);
+            }
+        }
+
+        if let Err(e) = save_test_result(&args.output_dir, &student_prompt, &hero_response_raw, &validation_result).await {
+            tracing::error!("Failed to save test result: {}", e);
+        }
 
         tracing::info!("========== Fine Esempio {}/{} ==========", i, args.num_examples);
     }

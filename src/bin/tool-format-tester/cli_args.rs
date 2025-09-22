@@ -14,7 +14,7 @@ pub struct CliArgs {
     pub num_examples: u32,
     #[arg(long, default_value = "buzz/training/generated_examples_rust")]
     pub output_dir: PathBuf,
-    #[arg(long, value_parser = ["json"], default_value = "json")]
+    #[arg(long, value_parser = ["mcp"], default_value = "mcp")]
     pub policy: String,
     #[arg(long)]
     pub tool_name: Option<String>,

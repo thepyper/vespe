@@ -1,0 +1,31 @@
+Your response must be a sequence of structured blocks. Each block must be on a new line and follow one of the formats below.
+
+**Formats:**
+
+1.  **Thought Block:** For your internal reasoning.
+    `THOUGHT: <your thought process>`
+
+2.  **Text Block:** For user-facing text.
+    `TEXT: <text to show to the user>`
+
+3.  **Tool Call Block:** For calling a tool. The content must be a single-line JSON object.
+    `TOOL_CALL: {"name": "<tool_name>", "parameters": {<..._>}}`
+
+**Examples:**
+
+*Example 1: Simple text response*
+```
+TEXT: Hello! How can I help you today?
+```
+
+*Example 2: Thought process followed by a tool call*
+```
+THOUGHT: The user wants to know the content of a file. I should use the `read_file` tool.
+TOOL_CALL: {"name": "read_file", "parameters": {"absolute_path": "/path/to/file.txt"}}
+```
+
+*Example 3: Tool call followed by a text response*
+```
+THOUGHT: I have the file content. Now I need to present it to the user.
+TEXT: The file `file.txt` contains the following: ...
+```

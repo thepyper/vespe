@@ -5,8 +5,10 @@ use uuid::Uuid;
 use sha2::{Sha256, Digest};
 
 use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent};
+use crate::tool_models::{Tool, ToolConfig};
+use crate::project_models::ProjectConfig;
 use crate::error::ProjectError;
-use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file, get_tasks_base_path};
+use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file, get_tasks_base_path, get_tools_base_path};
 
 /// Creates a new task or subtask.
 /// Initializes the task directory with config.json, empty objective.md, etc.
@@ -240,6 +242,107 @@ pub fn add_result_file(
     Ok(())
 }
 
+/// Creates a new tool.
+pub fn create_tool(
+    project_root_path: &Path,
+    name: String,
+    description: String,
+    schema: serde_json::Value,
+    implementation_details: serde_json::Value,
+) -> Result<Tool, ProjectError> {
+    let uid = generate_uid("tool")?;
+    let tools_base_path = get_tools_base_path(project_root_path);
+    let tool_path = get_entity_path(&tools_base_path, &uid)?;
+
+    fs::create_dir_all(&tool_path).map_err(|e| ProjectError::Io(e))?;
+
+    let config = ToolConfig {
+        uid: uid.clone(),
+        name: name.clone(),
+        description: description.clone(),
+        schema,
+        implementation_details,
+    };
+    write_json_file(&tool_path.join("config.json"), &config)?;
+    write_file_content(&tool_path.join("description.md"), &description)?;
+
+    Ok(Tool {
+        uid: uid.clone(),
+        root_path: tool_path,
+        config,
+    })
+}
+
+/// Loads a tool from the filesystem given its absolute path.
+pub fn load_tool(
+    tool_path: &Path,
+) -> Result<Tool, ProjectError> {
+    if !tool_path.exists() {
+        return Err(ProjectError::ToolNotFound(tool_path.to_string_lossy().into_owned()));
+    }
+
+    let config: ToolConfig = read_json_file(&tool_path.join("config.json"))?;
+    let description_content = read_file_content(&tool_path.join("description.md"))?;
+
+    Ok(Tool {
+        uid: config.uid.clone(),
+        root_path: tool_path.to_path_buf(),
+        config,
+    })
+}
+
+/// Lists all tools in a given base path.
+fn list_all_tools_in_path(base_path: &Path) -> Result<Vec<Tool>, ProjectError> {
+    let mut tools = Vec::new();
+    if !base_path.exists() {
+        return Ok(tools);
+    }
+
+    for entry in fs::read_dir(base_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
+                // Attempt to load the tool using its direct path
+                match load_tool(&path) {
+                    Ok(tool) => tools.push(tool),
+                    Err(e) => eprintln!("Warning: Could not load tool {}: {}", uid_str, e),
+                }
+            }
+        }
+    }
+    Ok(tools)
+}
+
+/// Resolves a tool given its name and project configuration.
+/// For now, only resolves project-specific tools.
+pub fn resolve_tool(
+    project_root_path: &Path,
+    _project_config: &ProjectConfig, // project_config is not used for now as kits are out of scope
+    tool_name: &str
+) -> Result<Tool, ProjectError> {
+    let tools_base_path = get_tools_base_path(project_root_path);
+    let project_tools = list_all_tools_in_path(&tools_base_path)?;
+    if let Some(tool) = project_tools.into_iter().find(|t| t.config.name == tool_name) {
+        return Ok(tool);
+    }
+
+    Err(ProjectError::ToolNotFound(tool_name.to_string()))
+}
+
+/// Lists all tools available for a given project.
+/// For now, only lists project-specific tools.
+pub fn list_available_tools(
+    project_root_path: &Path,
+    _project_config: &ProjectConfig // project_config is not used for now as kits are out of scope
+) -> Result<Vec<Tool>, ProjectError> {
+    let tools_base_path = get_tools_base_path(project_root_path);
+    let available_tools = list_all_tools_in_path(&tools_base_path)?;
+
+    // No deduplication needed as only project-specific tools are listed.
+    Ok(available_tools)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,7 +356,9 @@ mod tests {
         let base_path = temp_dir.path(); // This is the project root for the test
         let vespe_dir = base_path.join(".vespe");
         let tasks_dir = vespe_dir.join("tasks");
+        let tools_dir = vespe_dir.join("tools");
         fs::create_dir_all(&tasks_dir).unwrap();
+        fs::create_dir_all(&tools_dir).unwrap();
         base_path.to_path_buf()
     }
 

@@ -15,8 +15,6 @@ pub enum ProjectError {
     AgentNotFound(String),
     #[error("Tool not found: {0}")]
     ToolNotFound(String),
-    #[error("Kit not found: {0}")]
-    KitNotFound(String),
     #[error("Invalid project configuration: {0}")]
     InvalidProjectConfig(String),
     #[error("Invalid state transition: from {0:?} to {1:?}")]

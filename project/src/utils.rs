@@ -49,15 +49,6 @@ pub fn get_tools_base_path(project_root_path: &Path) -> PathBuf {
     project_root_path.join(".vespe").join("tools")
 }
 
-/// Returns the base path for global Vespe kits.
-/// For now, hardcoded relative to the current working directory (assuming Vespe's root).
-pub fn get_kits_base_path() -> Result<PathBuf, ProjectError> {
-    let current_dir = std::env::current_dir().map_err(|e| ProjectError::Io(e))?;
-    // This assumes kits are in a 'kits' directory at the Vespe installation root.
-    // For development, we'll assume it's at the same level as the 'vespe' project.
-    Ok(current_dir.join("kits"))
-}
-
 /// Reads the content of a file as a String.
 pub fn read_file_content(path: &Path) -> Result<String, ProjectError> {
     std::fs::read_to_string(path).map_err(|e| ProjectError::Io(e))

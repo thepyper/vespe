@@ -18,9 +18,9 @@ impl ToolCallPolicy for MarkdownPolicy {
 
     fn validate_and_parse(&self, model_output: &str) -> Result<Vec<StructuredOutputBlock>> {
         let mut blocks = Vec::new();
-        let re_section = Regex::new(r"```(text|thought|tool)\n([\s\S]*?)\n```")?;
-        let re_func_call = Regex::new(r"(\w+)\(.*\)")?;
-        let re_param = Regex::new(r"(\w+):\s*""([^"]*)"")?"; // For parsing key: "value" pairs
+        let re_section = Regex::new(r###"```(text|thought|tool)\n([\s\S]*?)\n```"###)?;
+        let re_func_call = Regex::new(r###"(\w+)\(.*\)"###)?;
+        let re_param = Regex::new(r###"(\w+):\s*"([^\"]*)""###)?; // For parsing key: "value" pairs
 
         for cap in re_section.captures_iter(model_output) {
             let block_type = cap.get(1).unwrap().as_str();

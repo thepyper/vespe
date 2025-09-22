@@ -25,6 +25,8 @@ Esempio di struttura:
 │   ├── objective.md            // Obiettivo (mutabile)
 │   ├── plan.md                 // Piano di esecuzione
 │   ├── status.json             // Stato corrente del task
+│   ├── persistent/             // Storia interna del task (log, decisioni LLM, tool outputs)
+│   └── result/                 // Risultati finali e consumabili del task
 │   └── dependencies.json       // Dipendenze da altri task
 ├── tsk-xyz789uvw012/             // Corrisponde a "subtask_001_design_api"
 │   ├── config.json
@@ -40,7 +42,7 @@ La scelta di una struttura flat con directory nominate tramite UID è motivata d
 *   **Pro:** Robustezza a ridenominazioni e spostamenti (solo aggiornamenti di metadati), unicità garantita dei nomi delle directory, semplificazione delle operazioni sul filesystem, disaccoppiamento tra storage e presentazione.
 *   **Contro:** Scarsa leggibilità diretta del filesystem per l'utente; richiede l'uso della CLI/API di Vespe per una navigazione significativa. Questo tradeoff è accettabile in quanto la cartella `.vespe` è intesa come un'area di lavoro interna gestita dal sistema.
 
-### File di Configurazione del Task
+### File e Cartelle di Configurazione del Task
 
 1.  **`config.json` (Immutabile)**:
     *   `uid`: Stringa univoca per identificare il task (essenziale per referenziare dipendenze e per l'integrità del sistema).
@@ -92,6 +94,18 @@ La scelta di una struttura flat con directory nominate tramite UID è motivata d
     }
     ```
 
+6.  **`persistent/` (Cartella per la Storia Interna):**
+    *   Contiene file generati dagli agenti (nominati con timestamp, es. `YYYYMMDDhhmmss_ms_event.json`) che registrano la storia interna del task: prompt LLM, risposte LLM, chiamate a tool, output di tool, decisioni prese.
+    *   Questa storia è destinata principalmente all'LLM per mantenere il contesto e per scopi di debugging/audit.
+    *   Non è destinata al consumo diretto da parte di altri task o utenti finali.
+
+7.  **`result/` (Cartella per i Risultati Consumabili):**
+    *   Contiene i risultati finali e consumabili prodotti dal task.
+    *   Il contenuto è specifico per il task (es. codice generato, documentazione, dati, report).
+    *   Può essere popolata in modo incrementale durante l'esecuzione del task.
+    *   È la cartella da cui altri task o utenti leggeranno l'output di un task completato.
+    *   I nomi dei file dovrebbero essere descrittivi del loro contenuto (es. `generated_code.rs`, `api_spec.json`).
+
 ## Fasi Predefinite del Task (Subtask Hard-wired)
 
 Per formalizzare il workflow di un task, alcune fasi cruciali possono essere trattate come subtask "hard-wired" o predefiniti. Questi subtask avranno dipendenze implicite o esplicite:
@@ -122,7 +136,7 @@ I task possono transitare tra i seguenti stati:
 *   **Gerarchia Logica**: La gerarchia tra task e subtask è definita dai metadati (es. `parent_uid` in `config.json`) e dal grafo delle dipendenze, non dalla struttura fisica delle directory.
 *   **Dipendenze Esplicite**: Le dipendenze tra task sono esplicitate in `dependencies.json`. Queste sono l'unico criterio di ordinazione forzato. Un task non può passare allo stato `ready` o `started` se le sue dipendenze non sono `done` o `aborted` (a seconda della politica).
 *   **Invalidazione Basata su Hash (Makefile-like)**:
-    *   Quando un task dipendente viene completato (o passa allo stato `ready`), registra nel proprio `status.json` l'hash del contenuto rilevante (es. `objective.md`) del task da cui dipende.
+    *   Quando un task dipendente viene completato (o passa allo stato `ready`), registra nel proprio `status.json` l'hash del contenuto rilevante (es. `objective.md`, `plan.md`, o un hash combinato dei risultati in `result/`) del task da cui dipende.
     *   Periodicamente, o al tentativo di avviare un task, il sistema confronterà l'hash memorizzato con l'hash corrente del contenuto del task dipendente.
     *   Se gli hash non corrispondono, significa che il contenuto del task a monte è cambiato. In questo caso, il task dipendente transiterà automaticamente allo stato `changed`, richiedendo una rivalutazione o ri-pianificazione.
 *   **Esecuzione**: I task senza dipendenze o con dipendenze soddisfatte e non nello stato `changed` possono essere eseguiti in parallelo o in qualsiasi ordine.

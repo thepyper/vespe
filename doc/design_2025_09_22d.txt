@@ -1,0 +1,204 @@
+### Obiettivo della API
+La API per i task, esposta dal crate `project`, avrà il compito di:
+1.  Fornire un'interfaccia per la creazione, il caricamento e la gestione dei task.
+2.  Incapsulare la logica di persistenza sul filesystem (lettura/scrittura di `config.json`, `status.json`, `objective.md`, `plan.md`, `persistent/`, `result/`, ecc.).
+3.  Gestire le transizioni di stato dei task, inclusa la validazione delle transizioni e l'aggiornamento dei metadati.
+4.  Fornire utility per la gestione dei contenuti (`persistent/` e `result/`).
+
+### Strutture Dati Core (Rust-like Pseudocode)
+
+Queste struct rappresenteranno i dati di un task in memoria, mappando i file sul filesystem.
+
+```rust
+use std::path::PathBuf;
+use std::collections::HashMap;
+use chrono::{DateTime, Utc}; // Per timestamp
+
+// Rappresenta lo stato attuale del task
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub enum TaskState {
+    Created,
+    ObjectiveDefined,
+    PlanDefined,
+    Executing,
+    WaitingForSubtasks,
+    NeedsReview,
+    Completed,
+    Failed,
+    Aborted,
+}
+
+// Corrisponde a config.json
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TaskConfig {
+    pub uid: String,
+    pub name: String,
+    pub created_by: String,
+    pub created_at: DateTime<Utc>,
+    pub parent_uid: Option<String>, // UID del task genitore, se è un subtask
+}
+
+// Corrisponde a status.json
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TaskStatus {
+    pub current_state: TaskState,
+    pub last_updated_at: DateTime<Utc>,
+    pub progress: Option<String>, // Es. "50% completato"
+    pub parent_content_hashes: HashMap<String, String>, // Key: UID_dipendenza, Value: hash_contenuto_result
+}
+
+// Corrisponde a dependencies.json
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TaskDependencies {
+    pub depends_on: Vec<String>, // Lista di UID dei task da cui dipende
+}
+
+// Rappresenta un task completo caricato in memoria
+#[derive(Debug)]
+pub struct Task {
+    pub uid: String,
+    pub root_path: PathBuf, // Percorso alla directory tsk-UID/
+    pub config: TaskConfig,
+    pub status: TaskStatus,
+    pub objective: String, // Contenuto di objective.md
+    pub plan: Option<String>, // Contenuto di plan.md
+    pub dependencies: TaskDependencies,
+    // Potrebbero esserci altri campi per subtask caricati, ecc.
+}
+
+// Struttura per gli eventi persistenti (da persistent/)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PersistentEvent {
+    pub timestamp: DateTime<Utc>,
+    pub event_type: String, // Es. "llm_response", "tool_call", "agent_decision"
+    pub agent_id: String,
+    pub content: String, // Contenuto dell'evento (es. prompt, output tool)
+    // Altri metadati specifici dell'evento
+}
+
+// Errore specifico per la libreria project
+#[derive(Debug, thiserror::Error)]
+pub enum ProjectError {
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("JSON parsing error: {0}")]
+    Json(#[from] serde_json::Error),
+    #[error("Task not found: {0}")]
+    TaskNotFound(String),
+    #[error("Invalid state transition: from {0:?} to {1:?}")]
+    InvalidStateTransition(TaskState, TaskState),
+    #[error("Task is in an unexpected state: {0:?}")]
+    UnexpectedState(TaskState),
+    #[error("Missing required file for task: {0}")]
+    MissingRequiredFile(PathBuf),
+    #[error("Dependency cycle detected involving task: {0}")]
+    DependencyCycle(String),
+    #[error("Failed to calculate content hash for {0}: {1}")]
+    ContentHashError(PathBuf, String),
+    // ... altri errori specifici
+}
+```
+
+### Funzioni API (Rust-like Pseudocode)
+
+Queste funzioni saranno i punti di ingresso principali per interagire con il sistema di gestione dei task.
+
+```rust
+// In project/src/lib.rs o project/src/api.rs
+
+// --- Task Creation ---
+/// Crea un nuovo task o subtask.
+/// Inizializza la directory del task con config.json, objective.md vuoto, ecc.
+/// Il task viene creato nello stato `CREATED`.
+pub fn create_task(
+    parent_uid: Option<String>, // None per task di primo livello
+    name: String,
+    created_by: String,
+    template_name: String, // Nome del template da usare per la struttura iniziale
+) -> Result<Task, ProjectError>;
+
+// --- Task Loading/Retrieval ---
+/// Carica un task completo dal filesystem dato il suo UID.
+pub fn load_task(uid: &str) -> Result<Task, ProjectError>;
+
+/// Elenca i task, eventualmente filtrati per stato, genitore, ecc.
+pub fn list_tasks(filter: TaskFilter) -> Result<Vec<Task>, ProjectError>; // TaskFilter è una struct per i criteri di filtro
+
+/// Ricostruisce e restituisce la gerarchia logica dei task a partire da un UID radice.
+pub fn get_task_hierarchy(root_uid: &str) -> Result<TaskNode, ProjectError>; // TaskNode è una struct per rappresentare il nodo nell'albero
+
+// --- Transizioni di Stato (Core della API) ---
+// Ogni funzione gestisce una transizione specifica, validando lo stato corrente
+// e aggiornando status.json e altri file.
+
+/// Transizione da `CREATED` a `OBJECTIVE_DEFINED`.
+/// Scrive il contenuto dell'obiettivo in `objective.md`.
+pub fn define_objective(task_uid: &str, objective_content: String) -> Result<Task, ProjectError>;
+
+/// Transizione da `OBJECTIVE_DEFINED` a `PLAN_DEFINED`.
+/// Scrive il contenuto del piano in `plan.md`.
+pub fn define_plan(task_uid: &str, plan_content: String) -> Result<Task, ProjectError>;
+
+/// Transizione da `PLAN_DEFINED` a `EXECUTING`.
+/// Avvia l'esecuzione del task.
+pub fn start_execution(task_uid: &str) -> Result<Task, ProjectError>;
+
+/// Transizione da `EXECUTING` a `WAITING_FOR_SUBTASKS`.
+/// Chiamata dal task genitore dopo aver creato subtask e in attesa del loro completamento.
+pub fn wait_for_subtasks(task_uid: &str, subtask_uids: Vec<String>) -> Result<Task, ProjectError>;
+
+/// Transizione da `WAITING_FOR_SUBTASKS` a `EXECUTING`.
+/// Chiamata quando i subtask completano e il task genitore può riprendere.
+pub fn resume_execution(task_uid: &str) -> Result<Task, ProjectError>;
+
+/// Transizione da `EXECUTING` a `COMPLETED`.
+/// Chiamata dal task stesso quando il suo lavoro è terminato e i risultati sono in `result/`.
+/// Calcola e memorizza l'hash del contenuto di `result/` per le dipendenze.
+pub fn complete_task(task_uid: &str) -> Result<Task, ProjectError>;
+
+/// Transizione a `FAILED` da qualsiasi stato attivo.
+pub fn fail_task(task_uid: &str, error_message: String) -> Result<Task, ProjectError>;
+
+/// Transizione a `ABORTED` da qualsiasi stato attivo.
+pub fn abort_task(task_uid: &str) -> Result<Task, ProjectError>;
+
+// --- Gestione dello Stato `NEEDS_REVIEW` ---
+/// Imposta lo stato del task a `NEEDS_REVIEW` a causa di un cambiamento rilevato.
+/// Questo può essere chiamato da un sistema di monitoraggio delle dipendenze.
+pub fn mark_as_needs_review(task_uid: &str, reason: String) -> Result<Task, ProjectError>;
+
+/// Azioni possibili quando un task è in `NEEDS_REVIEW`:
+/// Ridefinisce l'obiettivo, riportando il task a `OBJECTIVE_DEFINED`.
+pub fn redefine_objective(task_uid: &str, new_objective_content: String) -> Result<Task, ProjectError>;
+
+/// Ridefinisce il piano, riportando il task a `PLAN_DEFINED`.
+pub fn redefine_plan(task_uid: &str, new_plan_content: String) -> Result<Task, ProjectError>;
+
+/// Conferma la revisione, riportando il task allo stato precedente o a `EXECUTING`.
+/// Questa funzione potrebbe richiedere logica più complessa per determinare lo stato di ripristino.
+pub fn confirm_review(task_uid: &str) -> Result<Task, ProjectError>;
+
+// --- Gestione Contenuti (persistent/ e result/) ---
+/// Aggiunge un nuovo evento alla cartella `persistent/` del task.
+pub fn add_persistent_event(task_uid: &str, event: PersistentEvent) -> Result<(), ProjectError>;
+
+/// Recupera tutti gli eventi persistenti per un task.
+pub fn get_all_persistent_events(task_uid: &str) -> Result<Vec<PersistentEvent>, ProjectError>;
+
+/// Aggiunge un file alla cartella `result/` del task.
+pub fn add_result_file(task_uid: &str, filename: &str, content: Vec<u8>) -> Result<(), ProjectError>;
+
+/// Recupera il contenuto di un file dalla cartella `result/` del task.
+pub fn get_result_file(task_uid: &str, filename: &str) -> Result<Vec<u8>, ProjectError>;
+
+/// Calcola l'hash del contenuto della cartella `result/` di un task.
+pub fn calculate_result_hash(task_uid: &str) -> Result<String, ProjectError>;
+```
+
+### Considerazioni Aggiuntive per l'Implementazione:
+
+*   **Validazione delle Transizioni:** Ogni funzione di transizione di stato deve verificare che lo stato corrente del task sia valido per la transizione richiesta.
+*   **Atomicità:** Le operazioni sul filesystem che modificano lo stato del task (es. aggiornamento di `status.json`) dovrebbero essere il più possibile atomiche per prevenire corruzioni.
+*   **Logging:** Ogni transizione di stato e azione significativa dovrebbe essere registrata nella cartella `persistent/` del task.
+*   **Gestione Hash:** Le funzioni `complete_task` e quelle che gestiscono le dipendenze dovranno invocare `calculate_result_hash` e aggiornare `parent_content_hashes` in `status.json`.
+*   **Template System:** Il `create_task` dipenderà da un sistema di template per inizializzare correttamente la struttura della directory del task.

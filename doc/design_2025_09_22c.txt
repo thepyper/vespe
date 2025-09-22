@@ -137,6 +137,7 @@ I task possono transitare tra i seguenti stati:
 *   **Dipendenze Esplicite**: Le dipendenze tra task sono esplicitate in `dependencies.json`. Queste sono l'unico criterio di ordinazione forzato. Un task non può passare allo stato `ready` o `started` se le sue dipendenze non sono `done` o `aborted` (a seconda della politica).
 *   **Invalidazione Basata su Hash (Makefile-like)**:
     *   Quando un task dipendente viene completato (o passa allo stato `ready`), registra nel proprio `status.json` l'hash del contenuto rilevante (es. `objective.md`, `plan.md`, o un hash combinato dei risultati in `result/`) del task da cui dipende.
+    *   Per i task che producono output, la hash rilevante per le dipendenze sarà calcolata sul contenuto della cartella `result/`. Questa "hash della directory" sarà ottenuta combinando le hash dei singoli file e i loro percorsi relativi all'interno di `result/`.
     *   Periodicamente, o al tentativo di avviare un task, il sistema confronterà l'hash memorizzato con l'hash corrente del contenuto del task dipendente.
     *   Se gli hash non corrispondono, significa che il contenuto del task a monte è cambiato. In questo caso, il task dipendente transiterà automaticamente allo stato `changed`, richiedendo una rivalutazione o ri-pianificazione.
 *   **Esecuzione**: I task senza dipendenze o con dipendenze soddisfatte e non nello stato `changed` possono essere eseguiti in parallelo o in qualsiasi ordine.

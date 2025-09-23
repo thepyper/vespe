@@ -327,3 +327,17 @@ pub async fn save_project_config_handler(
         Err(e) => Err(map_project_error_to_http_response(e)),
     }
 }
+
+pub async fn save_project_config_handler(
+    State(app_state): State<AppState>,
+    Json(payload): Json<SaveProjectConfigRequest>,
+) -> Result<Json<SaveProjectConfigResponse>, (StatusCode, String)> {
+    let result = api::save_project_config(&app_state.project_root, &payload.config);
+
+    match result {
+        Ok(_) => Ok(Json(SaveProjectConfigResponse {
+            message: "Project configuration saved successfully".to_string(),
+        })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}

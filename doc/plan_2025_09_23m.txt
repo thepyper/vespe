@@ -1,53 +1,68 @@
-Refactoring Plan: Consolidate Core Logic into Root Crate
+Refactoring Plan: Introduce Project Object
 
-**Goal:** To move the core business logic (currently in the `vespe` sub-crate) directly into the `src/` directory of the root crate, making the root crate itself the primary `vespe` library.
+**Goal:** To improve the design by encapsulating project-related information into a `Project` struct, replacing the pervasive passing of `project_root_path: &Path`.
 
-**Current State (after previous refactoring):**
-*   Root directory contains `vespe-lib` crate (defined in root `Cargo.toml`).
-*   `vespe` sub-crate (formerly `vespe-project`) contains the core business logic.
-*   `vespe-cli` and `vespe-tui` depend on the `vespe` sub-crate.
-*   `vespe-lib/src/lib.rs` currently re-exports `pub use vespe::*;`.
+**Problem Identified:**
+*   **Anti-pattern:** Passing raw paths (`&Path`) around extensively leads to lack of context, repetitive code for loading project details, reduced type safety, and cumbersome testing.
+*   **Current State:** `project_root_path: &Path` is a common argument in `src/api.rs` functions.
+*   `ProjectConfig` exists but is not fully integrated into a central project object.
 
-**Desired State:**
-*   Root directory contains the `vespe` crate (the core library).
-*   All core business logic files (api.rs, models.rs, etc.) are directly under `src/` of the root crate.
-*   `vespe-cli` and `vespe-tui` depend on the root `vespe` crate.
-*   The `vespe` sub-crate directory is removed.
+**Proposed Solution:**
+Introduce a `Project` struct that encapsulates the project's root path and its configuration, and modify relevant functions to operate on this `Project` object.
 
-**Phase 1: Move `vespe` sub-crate content to root `src/` and remove `vespe` sub-crate**
+**Phase 1: Define the `Project` Struct and its Core Methods**
 
-1.  **Move `vespe/src/*` to `src/` (root crate):**
-    *   Move all files and directories from `c:/Proj/xxx/025_006.Vespe/vespe/vespe/src/` to `c:/Proj/xxx/025_006.Vespe/vespe/src/`.
-    *   This includes `api.rs`, `agent_api.rs`, `error.rs`, `lib.rs`, `models.rs`, `project_models.rs`, `tool_models.rs`, `utils.rs`.
-    *   *Note:* The `lib.rs` in the root `src/` will be overwritten by the `lib.rs` from the `vespe` sub-crate. This is intended, as the `vespe` sub-crate's `lib.rs` contains the actual module declarations for the core logic.
+1.  **Modify `src/project_models.rs`:**
+    *   Add a new `Project` struct:
+        ```rust
+        pub struct Project {
+            pub root_path: PathBuf,
+            pub config: ProjectConfig,
+        }
+        ```
+    *   Implement `Project::load(project_root_path: &Path) -> Result<Self, ProjectError>`:
+        *   This method will attempt to load `ProjectConfig` from `.vespe/config.json` within the `project_root_path`.
+        *   If `config.json` doesn't exist or fails to load, it should use `ProjectConfig::default()`.
+        *   It will return a `Project` instance.
+    *   Implement helper methods on `Project` to get paths to subdirectories (e.g., `tasks_dir()`, `tools_dir()`, `agents_dir()`), replacing the utility functions in `src/utils.rs`.
 
-2.  **Remove `vespe` sub-crate directory:**
-    *   Remove the directory `c:/Proj/xxx/025_006.Vespe/vespe/vespe/`.
+2.  **Modify `src/utils.rs`:**
+    *   Remove `get_tasks_base_path`, `get_tools_base_path`, `get_agents_base_path` as their functionality will be moved to `Project` methods.
+    *   Adapt `find_project_root` to return `Option<Project>` instead of `Option<PathBuf>`, by calling `Project::load` internally.
+    *   Adapt `initialize_project_root` to return `Result<Project, ProjectError>`, by creating a default `ProjectConfig` and saving it, then returning a `Project` instance.
 
-3.  **Update Root `Cargo.toml` (`vespe-lib`'s Cargo.toml):**
-    *   Remove `vespe = { path = "./vespe" }` from `[dependencies]`.
-    *   Remove `"vespe"` from `[workspace.members]`.
-    *   Change `name = "vespe-lib"` back to `name = "vespe"`.
-    *   Add `[[bin]]` entries for `ollama_test_client`, `ollama_agent_client`, `data-generator`, `tool-format-tester`, `test_task_api` back to the root `Cargo.toml` (as they are now part of the main `vespe` crate).
+**Phase 2: Refactor `src/api.rs`**
 
-**Phase 2: Update Dependencies in Other Crates**
+1.  **Update Function Signatures:**
+    *   Modify all public functions in `src/api.rs` that currently take `project_root_path: &Path` to instead take `project: &Project`.
+    *   Examples:
+        *   `create_task(project_root_path: &Path, ...)` becomes `create_task(project: &Project, ...)`
+        *   `load_task(project_root_path: &Path, ...)` becomes `load_task(project: &Project, ...)`
+        *   ...and so on for all relevant functions.
 
-1.  **Update `vespe-cli/Cargo.toml`:**
-    *   Change `vespe = { path = "../vespe" }` to `vespe = { path = ".." }` (since the core library is now the root crate).
+2.  **Update Function Bodies:**
+    *   Inside these functions, replace usages of `project_root_path` with `project.root_path`.
+    *   Replace calls to `get_tasks_base_path`, `get_tools_base_path`, `get_agents_base_path` with `project.tasks_dir()`, `project.tools_dir()`, `project.agents_dir()` respectively.
+    *   Replace usages of `ProjectConfig::default()` with `project.config` where appropriate (e.g., in `list_available_tools`).
 
-2.  **Update `vespe-tui/Cargo.toml`:**
-    *   Change `vespe = { path = "../vespe" }` to `vespe = { path = ".." }`.
+**Phase 3: Update CLI and TUI Consumers**
 
-3.  **Update `vespe-buzz/Cargo.toml` (if it depends on `vespe`):**
-    *   Update its dependency path if necessary.
+1.  **Modify `vespe-cli/src/main.rs`:**
+    *   In `main()`, load the `Project` object once using `find_project_root` or `initialize_project_root`.
+    *   Pass this `Project` object to all subsequent calls to `api::...` functions.
 
-4.  **Update `use` statements in `vespe-cli` and `vespe-tui`:**
-    *   Change `use vespe::...` to `use vespe::...` (no change in the `use` statement itself, but the underlying path resolution will change).
+2.  **Modify `vespe-cli/src/cli/resolve.rs`:**
+    *   Update `resolve_task` and `resolve_tool` to accept `project: &Project` instead of `project_root: &Path`.
+    *   Adjust their internal logic to use `project.root_path` and `project.tasks_dir()`/`project.tools_dir()`.
+
+3.  **Modify `vespe-tui/src/main.rs`:**
+    *   If `vespe-tui` directly calls `vespe` API functions that take `project_root_path`, update them to take `project: &Project`.
+    *   Load the `Project` object at the start of the TUI application.
 
 **Verification Steps (after each phase/major step):**
 *   Run `cargo check --workspace` to ensure all crates compile.
 *   Run `cargo build --workspace`.
-*   Test `vespe-cli` by running `cargo run --package vespe-cli -- --help`.
+*   Test `vespe-cli` by running `cargo run --package vespe-cli -- --help` and other commands.
 *   Test `vespe-tui` by running `cargo run --package vespe-tui`.
 
 **Approval:**

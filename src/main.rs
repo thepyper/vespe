@@ -148,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
                 }
                 if !*approve && !*reject {
                     eprintln!("Error: Must specify either --approve or --reject.");
-                    return Ok(();
+                    return Ok(());
                 }
 
                 match resolve_task(&project_root, identifier) {

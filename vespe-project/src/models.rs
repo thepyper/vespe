@@ -15,6 +15,7 @@ pub enum TaskState {
     Completed,
     Failed,
     Aborted,
+    Replanned,
 }
 
 impl TaskState {

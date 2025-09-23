@@ -2602,6 +2602,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "vespe-api-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "vespe-project",
+]
+
+[[package]]
 name = "vespe-buzz"
 version = "0.1.0"
 

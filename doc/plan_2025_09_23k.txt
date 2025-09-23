@@ -1,0 +1,254 @@
+Piano: Creazione del Server API Axum (`vespe-api-server`) per il Wrapping di `vespe-project`
+
+## Obiettivo
+Creare una nuova crate Rust (`vespe-api-server`) che esponga un'API HTTP basata su Axum, la quale fungerà da wrapper diretto per le funzioni API fornite dalla crate `vespe-project`. Questo server non conterrà alcuna logica di business, ma si limiterà a ricevere richieste HTTP, deserializzarle, chiamare le corrispondenti funzioni di `vespe-project` e serializzare le risposte.
+
+## Principi Chiave
+*   **Zero Business Logic nel Server API:** Il server API si occuperà solo di trasporto (HTTP), serializzazione/deserializzazione (JSON) e routing. Ogni logica applicativa risiederà esclusivamente in `vespe-project`.
+*   **Mapping Diretto:** Le API esposte dal server cercheranno di mappare il più direttamente possibile le funzioni pubbliche di `vespe-project::api`.
+*   **Gestione degli Errori:** Gli errori di `vespe-project::error::ProjectError` verranno mappati a risposte HTTP appropriate.
+*   **Dipendenza da `vespe-project`:** La nuova crate dipenderà da `vespe-project`.
+
+## Dettagli delle Proposte
+
+### Fase 1: Creazione della Crate `vespe-api-server`
+
+1.  **Creazione della Crate:** Creare una nuova crate Rust chiamata `vespe-api-server`.
+    ```bash
+    cargo new vespe-api-server
+    ```
+2.  **Configurazione di `Cargo.toml`:**
+    *   Aggiungere `axum`, `tokio` (con feature `full`), `serde` (con feature `derive`), `serde_json` come dipendenze.
+    *   Aggiungere `tracing`, `tracing-subscriber` per il logging.
+    *   Aggiungere `vespe-project` come dipendenza locale.
+
+    ```toml
+    # vespe-api-server/Cargo.toml
+    [package]
+    name = "vespe-api-server"
+    version = "0.1.0"
+    edition = "2021"
+
+    [dependencies]
+    axum = "0.7"
+    tokio = { version = "1.38", features = ["full"] }
+    serde = { version = "1.0", features = ["derive"] }
+    serde_json = "1.0"
+    tracing = "0.1"
+    tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+    # Dipendenza locale da vespe-project
+    vespe-project = { path = "../vespe-project" }
+    ```
+
+### Fase 2: Definizione dei Modelli di Richiesta/Risposta (DTOs)
+
+Per ogni funzione API di `vespe-project` che verrà esposta, verranno definite delle struct Rust (Data Transfer Objects - DTOs) per le richieste e le risposte HTTP. Queste DTOs risiederanno in `vespe-api-server/src/models.rs` (o direttamente in `main.rs` per semplicità iniziale).
+
+Esempi:
+
+*   **`POST /tasks` (per `vespe_project::api::create_task`)**
+    ```rust
+    // vespe-api-server/src/models.rs (o main.rs)
+    #[derive(serde::Deserialize)]
+    pub struct CreateTaskRequest {
+        pub parent_uid: Option<String>,
+        pub name: String,
+        pub created_by_agent_uid: String,
+        pub template_name: String,
+    }
+
+    #[derive(serde::Serialize)]
+    pub struct CreateTaskResponse {
+        pub task_uid: String,
+        pub task_name: String,
+        // ... altri campi rilevanti dalla Task creata
+    }
+    ```
+
+*   **`GET /tasks` (per `vespe_project::api::list_all_tasks`)**
+    ```rust
+    // vespe-api-server/src/models.rs (o main.rs)
+    #[derive(serde::Serialize)]
+    pub struct ListTasksResponse {
+        pub tasks: Vec<vespe_project::Task>, // Riutilizza la struct Task di vespe-project
+    }
+    ```
+
+*   **`POST /agents` (per `vespe_project::api::create_agent`)**
+    ```rust
+    // vespe-api-server/src/models.rs (o main.rs)
+    #[derive(serde::Deserialize)]
+    pub struct CreateAgentRequest {
+        pub agent_type: vespe_project::AgentType, // Riutilizza l'enum di vespe-project
+        pub name: String,
+    }
+
+    #[derive(serde::Serialize)]
+    pub struct CreateAgentResponse {
+        pub agent_uid: String,
+        pub agent_name: String,
+        // ... altri campi rilevanti dall'Agent creato
+    }
+    ```
+
+*   **`GET /agents` (per `vespe_project::api::list_agents`)**
+    ```rust
+    // vespe-api-server/src/models.rs (o main.rs)
+    #[derive(serde::Serialize)]
+    pub struct ListAgentsResponse {
+        pub agents: Vec<vespe_project::Agent>, // Riutilizza la struct Agent di vespe-project
+    }
+    ```
+
+### Fase 3: Implementazione degli Handler Axum
+
+Per ogni endpoint API, verrà creato un handler Axum che seguirà il pattern:
+
+1.  Ricevere la richiesta HTTP.
+2.  Estrarre i dati dalla richiesta (JSON body, path params, query params) usando gli extractors di Axum.
+3.  Chiamare la funzione corrispondente in `vespe_project::api`.
+4.  Gestire il `Result` della chiamata a `vespe_project`:
+    *   In caso di `Ok`, serializzare il risultato nella struct di risposta (DTO) e restituire una risposta HTTP 200 OK.
+    *   In caso di `Err(ProjectError)`, mappare l'errore a un appropriato stato HTTP (es. 400 Bad Request, 404 Not Found, 500 Internal Server Error) e restituire un JSON di errore.
+5.  Restituire la risposta HTTP.
+
+Esempio di handler per `create_task`:
+
+```rust
+// vespe-api-server/src/main.rs (o handlers.rs)
+
+use axum::{extract::State, http::StatusCode, Json};
+use std::path::PathBuf;
+use vespe_project::api;
+use vespe_project::error::ProjectError;
+// use crate::models::{CreateTaskRequest, CreateTaskResponse}; // Se definiti in models.rs
+
+// Lo stato dell'applicazione (es. la root del progetto)
+#[derive(Clone)]
+pub struct AppState {
+    pub project_root: PathBuf,
+}
+
+pub async fn create_task_handler(
+    State(app_state): State<AppState>,
+    Json(payload): Json<CreateTaskRequest>,
+) -> Result<Json<CreateTaskResponse>, (StatusCode, String)> {
+    let result = api::create_task(
+        &app_state.project_root,
+        payload.parent_uid,
+        payload.name,
+        payload.created_by_agent_uid,
+        payload.template_name,
+    );
+
+    match result {
+        Ok(task) => Ok(Json(CreateTaskResponse {
+            task_uid: task.uid,
+            task_name: task.config.name,
+            // ... altri campi
+        })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+// Funzione helper per mappare ProjectError a risposte HTTP
+pub fn map_project_error_to_http_response(error: ProjectError) -> (StatusCode, String) {
+    match error {
+        ProjectError::TaskNotFound(msg) => (StatusCode::NOT_FOUND, msg),
+        ProjectError::InvalidPath(path) => (StatusCode::BAD_REQUEST, format!("Invalid path: {}", path.display())),
+        ProjectError::Io(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("I/O error: {}", e)),
+        // ... mappare altri ProjectError
+        _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("An unexpected error occurred: {}", error)),
+    }
+}
+```
+
+### Fase 4: Configurazione del Server Axum
+
+Il `main.rs` configurerà il router Axum e avvierà il server HTTP.
+
+```rust
+// vespe-api-server/src/main.rs
+
+use axum::{routing::{get, post}, Router};
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+// use crate::handlers::{create_task_handler, list_tasks_handler, ...}; // Se gli handler sono in un modulo separato
+// use crate::models::{CreateTaskRequest, CreateTaskResponse, ...}; // Se i modelli sono in un modulo separato
+
+#[tokio::main]
+pub async fn main() {
+    // Inizializzazione del logging
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "vespe_api_server=debug,tower_http=debug".into()),
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+    let project_root = PathBuf::from(std::env::var("VESPE_PROJECT_ROOT")
+        .expect("VESPE_PROJECT_ROOT environment variable must be set"));
+
+    let app_state = AppState { project_root };
+
+    let app = Router::new()
+        // Task Endpoints
+        .route("/tasks", post(create_task_handler))
+        .route("/tasks", get(list_tasks_handler)) // Esempio
+        // Agent Endpoints
+        .route("/agents", post(create_agent_handler))
+        .route("/agents", get(list_agents_handler)) // Esempio
+        // ... altri endpoint per tool, task show, define_objective, etc.
+        .with_state(app_state); // Passa lo stato a tutti gli handler
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    tracing::debug!("listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+```
+
+### Fase 5: Mappatura Completa delle API di `vespe-project`
+
+Verranno mappate tutte le funzioni pubbliche di `vespe_project::api` a endpoint HTTP, seguendo il pattern definito.
+
+*   **Task API:**
+    *   `create_task` -> `POST /tasks`
+    *   `load_task` -> `GET /tasks/{uid}`
+    *   `define_objective` -> `POST /tasks/{uid}/objective`
+    *   `define_plan` -> `POST /tasks/{uid}/plan`
+    *   `add_persistent_event` -> `POST /tasks/{uid}/events`
+    *   `get_all_persistent_events` -> `GET /tasks/{uid}/events`
+    *   `calculate_result_hash` -> `GET /tasks/{uid}/result/hash`
+    *   `add_result_file` -> `POST /tasks/{uid}/result/files`
+    *   `create_tool` -> `POST /tools`
+    *   `load_tool` -> `GET /tools/{uid}`
+    *   `list_all_tasks` -> `GET /tasks`
+    *   `review_task` -> `POST /tasks/{uid}/review`
+
+*   **Tool API:**
+    *   `create_tool` -> `POST /tools`
+    *   `load_tool` -> `GET /tools/{uid}`
+    *   `resolve_tool` -> `GET /tools/resolve/{name}` (o `POST /tools/resolve` con body)
+    *   `list_available_tools` -> `GET /tools`
+
+*   **Agent API:**
+    *   `create_agent` -> `POST /agents`
+    *   `load_agent` -> `GET /agents/{uid}`
+    *   `list_agents` -> `GET /agents`
+
+### Fase 6: Gestione degli Errori Centralizzata
+
+La funzione `map_project_error_to_http_response` verrà estesa per coprire tutti i `ProjectError` rilevanti, fornendo messaggi di errore chiari e codici di stato HTTP appropriati.
+
+## Prossimi Passi
+1.  Creare il file `doc/plan_2025_09_23k.txt` con questo piano.
+2.  Creare la crate `vespe-api-server` e configurare `Cargo.toml`.
+3.  Definire le struct DTOs necessarie in `vespe-api-server/src/models.rs` (o `main.rs`).
+4.  Implementare gli handler Axum per un sottoinsieme delle API di `vespe-project` (es. `create_task`, `list_tasks`, `create_agent`, `list_agents`) per un primo test end-to-end.
+5.  Implementare la funzione `map_project_error_to_http_response`.
+6.  Configurare e avviare il server Axum.
+7.  Eseguire `cargo build` e `cargo run` per verificare il funzionamento.

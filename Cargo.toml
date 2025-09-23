@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    ".",
+    ".", "vespe-api-server",
     "vespe-buzz",
     "vespe-project",
 ]

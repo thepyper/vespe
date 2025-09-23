@@ -33,7 +33,7 @@ impl TaskState {
 }
 
 // Corrisponde a config.json
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TaskConfig {
     pub uid: String,
     pub name: String,
@@ -43,7 +43,7 @@ pub struct TaskConfig {
 }
 
 // Corrisponde a status.json
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TaskStatus {
     pub current_state: TaskState,
     pub last_updated_at: DateTime<Utc>,
@@ -52,13 +52,13 @@ pub struct TaskStatus {
 }
 
 // Corrisponde a dependencies.json
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TaskDependencies {
     pub depends_on: Vec<String>, // Lista di UID dei task da cui dipende
 }
 
 // Rappresenta un task completo caricato in memoria
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Task {
     pub uid: String,
     pub root_path: PathBuf, // Percorso alla directory tsk-UID/

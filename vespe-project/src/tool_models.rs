@@ -13,7 +13,7 @@ pub struct ToolConfig {
 }
 
 // Represents a Tool loaded in memory
-#[derive(Debug, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tool {
     pub uid: String,
     pub root_path: PathBuf, // Path to tool-UID/ or kit-UID/tool-UID/

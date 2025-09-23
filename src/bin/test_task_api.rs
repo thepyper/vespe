@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let event1 = PersistentEvent {
         timestamp: Utc::now(),
         event_type: "llm_thought".to_string(),
-        agent_id: "manager_agent".to_string(),
+        acting_agent_uid: "manager_agent".to_string(),
         content: "Considering initial steps for auth implementation.".to_string(),
     };
     api::add_persistent_event(&base_path, &task.uid, event1.clone())?;
@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let event2 = PersistentEvent {
         timestamp: Utc::now() + chrono::Duration::seconds(1),
         event_type: "tool_output".to_string(),
-        agent_id: "dev_agent".to_string(),
+        acting_agent_uid: "dev_agent".to_string(),
         content: "OAuth2 research complete. Recommended providers: Google, GitHub.".to_string(),
     };
     api::add_persistent_event(&base_path, &task.uid, event2.clone())?;

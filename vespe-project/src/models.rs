@@ -37,7 +37,7 @@ impl TaskState {
 pub struct TaskConfig {
     pub uid: String,
     pub name: String,
-    pub created_by: String,
+    pub created_by_agent_uid: String, // Riferimento all'UID dell'Agente
     pub created_at: DateTime<Utc>,
     pub parent_uid: Option<String>, // UID del task genitore, se è un subtask
 }
@@ -75,7 +75,30 @@ pub struct Task {
 pub struct PersistentEvent {
     pub timestamp: DateTime<Utc>,
     pub event_type: String, // Es. "llm_response", "tool_call", "agent_decision"
-    pub agent_id: String,
+    pub acting_agent_uid: String, // Riferimento all'UID dell'Agente che ha generato l'evento
     pub content: String, // Contenuto dell'evento (es. prompt, output tool)
     // Altri metadati specifici dell'evento
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum AgentType {
+    Human,
+    AI,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Agent {
+    pub uid: String, // Unique ID for the agent (e.g., "usr-pyper", "agt-manager-v1")
+    pub name: String, // Display name
+    pub agent_type: AgentType,
+    pub created_at: DateTime<Utc>,
+    // Campi specifici per AI (opzionali)
+    pub parent_agent_uid: Option<String>,
+    pub model_id: Option<String>,
+    pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub default_tools: Option<Vec<String>>, // UIDs of tools
+    pub context_strategy: Option<String>,
+    // Campi specifici per Human (opzionali)
+    // pub user_preferences: Option<UserPreferences>, // Placeholder for future user-specific settings
 }

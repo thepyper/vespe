@@ -4,7 +4,7 @@ use chrono::Utc;
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 
-use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent};
+use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent, Agent, AgentType};
 use crate::tool_models::{Tool, ToolConfig};
 use crate::project_models::ProjectConfig;
 use crate::error::ProjectError;
@@ -17,7 +17,7 @@ pub fn create_task(
     project_root_path: &Path,
     parent_uid: Option<String>,
     name: String,
-    created_by: String,
+    created_by_agent_uid: String,
     _template_name: String, // Template not yet implemented, ignored for now
 ) -> Result<Task, ProjectError> {
     let uid = generate_uid("tsk")?;
@@ -35,7 +35,7 @@ pub fn create_task(
     let config = TaskConfig {
         uid: uid.clone(),
         name: name.clone(),
-        created_by: created_by.clone(),
+        created_by_agent_uid: created_by_agent_uid.clone(),
         created_at: now,
         parent_uid,
     };
@@ -411,6 +411,89 @@ pub fn review_task(
     Ok(task)
 }
 
+/// Creates a new agent (AI or human).
+pub fn create_agent(
+    project_root_path: &Path,
+    agent_type: AgentType,
+    name: String,
+    // ... other initial configuration fields
+) -> Result<Agent, ProjectError> {
+    let uid_prefix = match agent_type {
+        AgentType::Human => "usr", // Or "human"
+        AgentType::AI => "agt",
+    };
+    let uid = generate_uid(uid_prefix)?;
+    let agents_base_path = project_root_path.join(".vespe").join("agents"); // Assuming this path
+    let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+    fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+
+    let now = Utc::now();
+
+    let agent_config = Agent {
+        uid: uid.clone(),
+        name: name.clone(),
+        agent_type,
+        created_at: now,
+        parent_agent_uid: None, // For now, no parent on creation
+        model_id: None,
+        temperature: None,
+        top_p: None,
+        default_tools: None,
+        context_strategy: None,
+    };
+    write_json_file(&agent_path.join("config.json"), &agent_config)?;
+
+    // For human agents, we might not need a system_prompt.md or description.md initially
+    // For AI agents, these would be created. For now, we'll skip.
+
+    Ok(agent_config)
+}
+
+/// Loads an agent from the filesystem given its UID.
+pub fn load_agent(
+    project_root_path: &Path,
+    agent_uid: &str,
+) -> Result<Agent, ProjectError> {
+    let agents_base_path = project_root_path.join(".vespe").join("agents");
+    let agent_path = get_entity_path(&agents_base_path, agent_uid)?;
+
+    if !agent_path.exists() {
+        return Err(ProjectError::AgentNotFound(agent_uid.to_string()));
+    }
+
+    let agent_config: Agent = read_json_file(&agent_path.join("config.json"))?;
+
+    Ok(agent_config)
+}
+
+/// Lists all agents available in the project.
+pub fn list_agents(
+    project_root_path: &Path,
+) -> Result<Vec<Agent>, ProjectError> {
+    let agents_base_path = project_root_path.join(".vespe").join("agents");
+    let mut agents = Vec::new();
+
+    if !agents_base_path.exists() {
+        return Ok(agents);
+    }
+
+    for entry in fs::read_dir(agents_base_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
+                match load_agent(project_root_path, uid_str) {
+                    Ok(agent) => agents.push(agent),
+                    Err(e) => eprintln!("Warning: Could not load agent {}: {}", uid_str, e),
+                }
+            }
+        }
+    }
+
+    Ok(agents)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -441,7 +524,7 @@ mod tests {
         let task = create_task(&project_root_path, None, task_name.clone(), created_by.clone(), template.clone()).unwrap();
 
         assert_eq!(task.config.name, task_name);
-        assert_eq!(task.config.created_by, created_by);
+        assert_eq!(task.config.created_by_agent_uid, created_by);
         assert_eq!(task.status.current_state, TaskState::Created);
         assert!(task.root_path.exists());
         assert!(task.root_path.join("config.json").exists());
@@ -514,7 +597,7 @@ mod tests {
         let event1 = PersistentEvent {
             timestamp: Utc::now(),
             event_type: "llm_response".to_string(),
-            agent_id: "agent_a".to_string(),
+            acting_agent_uid: "agent_a".to_string(),
             content: "LLM thought 1".to_string(),
         };
         add_persistent_event(&project_root_path, &task.uid, event1.clone()).unwrap();
@@ -522,7 +605,7 @@ mod tests {
         let event2 = PersistentEvent {
             timestamp: Utc::now() + Duration::seconds(1), // Ensure different timestamp
             event_type: "tool_call".to_string(),
-            agent_id: "agent_b".to_string(),
+            acting_agent_uid: "agent_b".to_string(),
             content: "Tool called with args".to_string(),
         };
         add_persistent_event(&project_root_path, &task.uid, event2.clone()).unwrap();
@@ -599,5 +682,56 @@ mod tests {
         // Check if we can find the tasks by name (case-sensitive)
         assert!(tasks.iter().any(|t| t.config.name == "Task A"));
         assert!(tasks.iter().any(|t| t.config.name == "Task B"));
+    }
+
+    #[test]
+    fn test_create_agent() {
+        let project_root_path = setup_test_env();
+
+        let agent_name = "Test Human Agent".to_string();
+        let agent_type = AgentType::Human;
+
+        let agent = create_agent(&project_root_path, agent_type, agent_name.clone()).unwrap();
+
+        assert_eq!(agent.name, agent_name);
+        assert_eq!(agent.agent_type, agent_type);
+        assert!(agent.uid.starts_with("usr-"));
+        assert!(project_root_path.join(".vespe").join("agents").join(&agent.uid).join("config.json").exists());
+
+        let ai_agent_name = "Test AI Agent".to_string();
+        let ai_agent_type = AgentType::AI;
+
+        let ai_agent = create_agent(&project_root_path, ai_agent_type, ai_agent_name.clone()).unwrap();
+
+        assert_eq!(ai_agent.name, ai_agent_name);
+        assert_eq!(ai_agent.agent_type, ai_agent_type);
+        assert!(ai_agent.uid.starts_with("agt-"));
+        assert!(project_root_path.join(".vespe").join("agents").join(&ai_agent.uid).join("config.json").exists());
+    }
+
+    #[test]
+    fn test_load_agent() {
+        let project_root_path = setup_test_env();
+
+        let agent = create_agent(&project_root_path, AgentType::Human, "Loader Agent".to_string()).unwrap();
+        let loaded_agent = load_agent(&project_root_path, &agent.uid).unwrap();
+
+        assert_eq!(agent.uid, loaded_agent.uid);
+        assert_eq!(agent.name, loaded_agent.name);
+        assert_eq!(agent.agent_type, loaded_agent.agent_type);
+    }
+
+    #[test]
+    fn test_list_agents() {
+        let project_root_path = setup_test_env();
+
+        create_agent(&project_root_path, AgentType::Human, "Agent 1".to_string()).unwrap();
+        create_agent(&project_root_path, AgentType::AI, "Agent 2".to_string()).unwrap();
+
+        let agents = list_agents(&project_root_path).unwrap();
+        assert_eq!(agents.len(), 2);
+
+        assert!(agents.iter().any(|a| a.name == "Agent 1"));
+        assert!(agents.iter().any(|a| a.name == "Agent 2"));
     }
 }

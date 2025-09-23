@@ -34,6 +34,35 @@ impl Page {
             Page::Chat => Color::LightYellow,
         }
     }
+
+    fn page_footer_actions(&self) -> Vec<(&str, KeyCode)> {
+        match self {
+            Page::Tasks => vec![
+                ("New", KeyCode::F(5)),
+                ("Edit", KeyCode::F(6)),
+                ("Delete", KeyCode::F(7)),
+                ("View", KeyCode::F(8)),
+            ],
+            Page::Tools => vec![
+                ("New", KeyCode::F(5)),
+                ("Edit", KeyCode::F(6)),
+                ("Delete", KeyCode::F(7)),
+                ("Run", KeyCode::F(8)),
+            ],
+            Page::Agents => vec![
+                ("New", KeyCode::F(5)),
+                ("Edit", KeyCode::F(6)),
+                ("Delete", KeyCode::F(7)),
+                ("Interact", KeyCode::F(8)),
+            ],
+            Page::Chat => vec![
+                ("Send", KeyCode::F(5)),
+                ("History", KeyCode::F(6)),
+                ("Clear", KeyCode::F(7)),
+                ("Config", KeyCode::F(8)),
+            ],
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -56,8 +85,9 @@ fn main() -> Result<()> {
             let layout = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints(vec![
-                    Constraint::Min(1), // Main content area
-                    Constraint::Length(1), // F-keys footer
+                    Constraint::Min(1),      // Main content area
+                    Constraint::Length(1),   // Page-specific F5-F8 footer
+                    Constraint::Length(1),   // Global F1-F4 footer
                 ])
                 .split(frame.size());
 
@@ -69,8 +99,11 @@ fn main() -> Result<()> {
                 Page::Chat => render_chat_page(frame, layout[0]),
             }
 
-            // Render F-keys footer
-            render_footer(frame, layout[1], &app.current_page);
+            // Render page-specific F5-F8 footer
+            render_page_footer(frame, layout[1], &app.current_page);
+
+            // Render global F1-F4 footer
+            render_global_footer(frame, layout[2], &app.current_page);
         })?;
         should_quit = handle_events(&mut app)?;
     }
@@ -91,6 +124,7 @@ fn handle_events(app: &mut App) -> Result<bool> {
                     KeyCode::F(2) => app.current_page = Page::Tools,
                     KeyCode::F(3) => app.current_page = Page::Agents,
                     KeyCode::F(4) => app.current_page = Page::Chat,
+                    // F5-F8 will be handled by page-specific logic later
                     _ => {},
                 }
             }
@@ -103,8 +137,7 @@ fn render_tasks_page(frame: &mut Frame, area: Rect) {
     frame.render_widget(
         Paragraph::new("Tasks Page Content")
             .white()
-            .on_dark_gray()
-            .block(Block::default().title("Tasks").borders(Borders::ALL)),
+            .on_dark_gray(),
         area,
     );
 }
@@ -113,8 +146,7 @@ fn render_tools_page(frame: &mut Frame, area: Rect) {
     frame.render_widget(
         Paragraph::new("Tools Page Content")
             .white()
-            .on_dark_gray()
-            .block(Block::default().title("Tools").borders(Borders::ALL)),
+            .on_dark_gray(),
         area,
     );
 }
@@ -123,8 +155,7 @@ fn render_agents_page(frame: &mut Frame, area: Rect) {
     frame.render_widget(
         Paragraph::new("Agents Page Content")
             .white()
-            .on_dark_gray()
-            .block(Block::default().title("Agents").borders(Borders::ALL)),
+            .on_dark_gray(),
         area,
     );
 }
@@ -133,13 +164,34 @@ fn render_chat_page(frame: &mut Frame, area: Rect) {
     frame.render_widget(
         Paragraph::new("Chat Page Content")
             .white()
-            .on_dark_gray()
-            .block(Block::default().title("Chat").borders(Borders::ALL)),
+            .on_dark_gray(),
         area,
     );
 }
 
-fn render_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
+fn render_page_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(vec![
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+        ])
+        .split(area);
+
+    let actions = current_page.page_footer_actions();
+
+    for (i, (label, _key_code)) in actions.iter().enumerate() {
+        let text = format!("F{} {}", i + 5, label);
+        let paragraph = Paragraph::new(text)
+            .style(Style::default().fg(Color::White).bg(Color::DarkGray))
+            .alignment(Alignment::Center);
+        frame.render_widget(paragraph, chunks[i]);
+    }
+}
+
+fn render_global_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![

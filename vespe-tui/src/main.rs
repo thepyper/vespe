@@ -80,6 +80,8 @@ struct App {
     current_page: Page,
 }
 
+mod pages;
+
 fn main() -> Result<()> {
     // setup terminal
     enable_raw_mode()?;
@@ -103,10 +105,10 @@ fn main() -> Result<()> {
 
             // Render main content based on current page
             match app.current_page {
-                Page::Tasks => render_tasks_page(frame, layout[0]),
-                Page::Tools => render_tools_page(frame, layout[0]),
-                Page::Agents => render_agents_page(frame, layout[0]),
-                Page::Chat => render_chat_page(frame, layout[0]),
+                Page::Tasks => pages::tasks::render_tasks_page(frame, layout[0]),
+                Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
+                Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
+                Page::Chat => pages::chat::render_chat_page(frame, layout[0]),
             }
 
             // Render page-specific F5-F8 footer
@@ -141,42 +143,6 @@ fn handle_events(app: &mut App) -> Result<bool> {
         }
     }
     Ok(false)
-}
-
-fn render_tasks_page(frame: &mut Frame, area: Rect) {
-    frame.render_widget(
-        Paragraph::new("Tasks Page Content")
-            .white()
-            .on_dark_gray(),
-        area,
-    );
-}
-
-fn render_tools_page(frame: &mut Frame, area: Rect) {
-    frame.render_widget(
-        Paragraph::new("Tools Page Content")
-            .white()
-            .on_dark_gray(),
-        area,
-    );
-}
-
-fn render_agents_page(frame: &mut Frame, area: Rect) {
-    frame.render_widget(
-        Paragraph::new("Agents Page Content")
-            .white()
-            .on_dark_gray(),
-        area,
-    );
-}
-
-fn render_chat_page(frame: &mut Frame, area: Rect) {
-    frame.render_widget(
-        Paragraph::new("Chat Page Content")
-            .white()
-            .on_dark_gray(),
-        area,
-    );
 }
 
 fn render_page_footer(frame: &mut Frame, area: Rect, current_page: &Page) {

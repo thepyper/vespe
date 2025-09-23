@@ -7,6 +7,16 @@ use crossterm::{
 use ratatui::{prelude::*, widgets::*};
 use std::io::{stdout, Stdout};
 
+// Color Constants
+const TASKS_COLOR: Color = Color::LightBlue;
+const TOOLS_COLOR: Color = Color::LightCyan;
+const AGENTS_COLOR: Color = Color::LightMagenta;
+const CHAT_COLOR: Color = Color::LightYellow;
+const DEFAULT_FOOTER_BG_COLOR: Color = Color::DarkGray;
+const SELECTED_FOOTER_FG_COLOR: Color = Color::Black;
+const DEFAULT_FOOTER_FG_COLOR: Color = Color::White;
+const QUIT_BUTTON_BG_COLOR: Color = Color::Red;
+
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 enum Page {
     #[default]
@@ -28,10 +38,10 @@ impl Page {
 
     fn color(&self) -> Color {
         match self {
-            Page::Tasks => Color::LightBlue,
-            Page::Tools => Color::LightCyan,
-            Page::Agents => Color::LightMagenta,
-            Page::Chat => Color::LightYellow,
+            Page::Tasks => TASKS_COLOR,
+            Page::Tools => TOOLS_COLOR,
+            Page::Agents => AGENTS_COLOR,
+            Page::Chat => CHAT_COLOR,
         }
     }
 
@@ -181,11 +191,12 @@ fn render_page_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
         .split(area);
 
     let actions = current_page.page_footer_actions();
+    let background_color = current_page.color();
 
     for (i, (label, _key_code)) in actions.iter().enumerate() {
         let text = format!("F{} {}", i + 5, label);
         let paragraph = Paragraph::new(text)
-            .style(Style::default().fg(Color::White).bg(Color::DarkGray))
+            .style(Style::default().fg(SELECTED_FOOTER_FG_COLOR).bg(background_color))
             .alignment(Alignment::Center);
         frame.render_widget(paragraph, chunks[i]);
     }
@@ -211,8 +222,8 @@ fn render_global_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
 
     for (i, (page, _key_code)) in pages.iter().enumerate() {
         let is_selected = page == current_page;
-        let background_color = if is_selected { page.color() } else { Color::DarkGray };
-        let foreground_color = if is_selected { Color::Black } else { Color::White };
+        let background_color = if is_selected { page.color() } else { DEFAULT_FOOTER_BG_COLOR };
+        let foreground_color = if is_selected { SELECTED_FOOTER_FG_COLOR } else { DEFAULT_FOOTER_FG_COLOR };
 
         let text = format!("F{} {}", i + 1, page.title());
         let paragraph = Paragraph::new(text)

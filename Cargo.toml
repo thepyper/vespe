@@ -1,12 +1,11 @@
 [workspace]
 members = [
-    ".",
-    "vespe-buzz",
+    "vespe-buzz", "vespe-cli",
     "vespe-project", "vespe-tui",
 ]
 
 [package]
-name = "vespe"
+name = "vespe-lib"
 version = "0.1.0"
 edition = "2021"
 

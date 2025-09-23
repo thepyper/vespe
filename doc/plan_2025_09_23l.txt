@@ -1,0 +1,82 @@
+Piano: Mappatura Completa dell'API di `vespe-project` al Server Axum e Ristrutturazione del Codice
+
+## Obiettivo
+Completare la mappatura di tutte le funzioni pubbliche di `vespe_project::api` a endpoint HTTP nel server Axum (`vespe-api-server`). Contestualmente, ristrutturare il codice del server suddividendo DTOs, handler e logica di errore in moduli separati per migliorare l'organizzazione e la manutenibilità.
+
+## Principi Chiave
+*   **Mapping Esaustivo:** Ogni funzione pubblica di `vespe_project::api` avrà un corrispondente endpoint HTTP.
+*   **Separazione dei Moduli:**
+    *   `vespe-api-server/src/main.rs`: Contiene la configurazione principale del server Axum (logging, stato, router).
+    *   `vespe-api-server/src/models.rs`: Contiene tutte le struct DTO (richiesta/risposta) per gli endpoint API.
+    *   `vespe-api-server/src/handlers.rs`: Contiene tutti gli handler Axum, raggruppati per entità (task, agent, tool).
+    *   `vespe-api-server/src/error.rs`: Contiene la logica di mappatura degli errori da `vespe_project::error::ProjectError` a risposte HTTP.
+*   **Nessuna Business Logic:** Ribadire che il server API non introdurrà alcuna logica di business.
+
+## Dettagli delle Proposte
+
+### Fase 1: Ristrutturazione Iniziale dei Moduli
+
+1.  **Creare `vespe-api-server/src/models.rs`:** Spostare tutte le DTOs attualmente in `main.rs` in questo nuovo file.
+2.  **Creare `vespe-api-server/src/error.rs`:** Spostare la funzione `map_project_error_to_http_response` in questo nuovo file.
+3.  **Creare `vespe-api-server/src/handlers.rs`:** Spostare gli handler esistenti (`create_task_handler`, `list_tasks_handler`, `create_agent_handler`, `list_agents_handler`) in questo nuovo file.
+4.  **Aggiornare `vespe-api-server/src/main.rs`:** Importare i moduli appena creati e rimuovere il codice spostato.
+
+### Fase 2: Mappatura Completa delle API di `vespe-project`
+
+Per ogni funzione pubblica in `vespe_project::api`, verrà creato un endpoint HTTP e un handler corrispondente.
+
+*   **Task API (`vespe-api-server/src/handlers/task.rs`):**
+    *   `create_task` -> `POST /tasks`
+    *   `load_task` -> `GET /tasks/{uid}`
+    *   `define_objective` -> `POST /tasks/{uid}/objective`
+    *   `define_plan` -> `POST /tasks/{uid}/plan`
+    *   `add_persistent_event` -> `POST /tasks/{uid}/events`
+    *   `get_all_persistent_events` -> `GET /tasks/{uid}/events`
+    *   `calculate_result_hash` -> `GET /tasks/{uid}/result/hash`
+    *   `add_result_file` -> `POST /tasks/{uid}/result/files`
+    *   `list_all_tasks` -> `GET /tasks`
+    *   `review_task` -> `POST /tasks/{uid}/review`
+
+*   **Tool API (`vespe-api-server/src/handlers/tool.rs`):**
+    *   `create_tool` -> `POST /tools`
+    *   `load_tool` -> `GET /tools/{uid}`
+    *   `resolve_tool` -> `GET /tools/resolve/{name}` (o `POST /tools/resolve` con body per maggiore flessibilità)
+    *   `list_available_tools` -> `GET /tools`
+
+*   **Agent API (`vespe-api-server/src/handlers/agent.rs`):**
+    *   `create_agent` -> `POST /agents`
+    *   `load_agent` -> `GET /agents/{uid}`
+    *   `list_agents` -> `GET /agents`
+
+*   **Project API (`vespe-api-server/src/handlers/project.rs`):**
+    *   `load_project_config` -> `GET /project/config`
+    *   `save_project_config` -> `PUT /project/config` (o `PATCH`)
+    *   `get_project_root_path` (non esporre direttamente, è interno allo stato del server)
+    *   `get_tasks_base_path`, `get_tools_base_path` (non esporre direttamente, sono interni)
+
+### Fase 3: Implementazione DTOs e Handler
+
+1.  **`vespe-api-server/src/models.rs`:**
+    *   Definire tutte le DTOs necessarie per gli endpoint sopra elencati.
+
+2.  **`vespe-api-server/src/handlers.rs`:**
+    *   Creare un modulo `handlers` con sottomoduli (es. `handlers::task`, `handlers::agent`, `handlers::tool`, `handlers::project`).
+    *   Implementare tutti gli handler Axum, assicurandosi che chiamino le funzioni appropriate in `vespe_project::api` e gestiscano correttamente le risposte e gli errori.
+
+3.  **`vespe-api-server/src/error.rs`:**
+    *   Assicurarsi che `map_project_error_to_http_response` gestisca tutti i `ProjectError` in modo appropriato.
+
+### Fase 4: Aggiornamento del Router in `main.rs`
+
+1.  Importare tutti gli handler dai moduli `handlers`.
+2.  Aggiungere tutte le nuove route al router Axum.
+
+## Prossimi Passi
+1.  Creare il file `doc/plan_2025_09_23l.txt` con questo piano.
+2.  **Commit:** Eseguire un commit per documentare il piano.
+3.  **Fase 1:** Ristrutturare i moduli (`models.rs`, `error.rs`, `handlers.rs`, `main.rs`).
+4.  **Commit:** Eseguire un commit per la ristrutturazione.
+5.  **Fase 2 & 3 (Iterativo):** Implementare DTOs e handler per ciascun gruppo di API (Task, Tool, Agent, Project), con commit frequenti per ogni gruppo o anche per ogni endpoint significativo.
+6.  **Fase 4:** Aggiornare il router in `main.rs`.
+7.  **Commit:** Eseguire un commit per la mappatura completa.
+8.  **Verifica:** Eseguire `cargo build` e testare gli endpoint.

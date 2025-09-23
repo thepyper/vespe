@@ -1,5 +1,7 @@
 use clap::Parser;
 use vespe::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
+use vespe::cli::resolve::resolve_task;
+use project::api; // Import the api module
 use project::utils::{find_project_root, initialize_project_root};
 use std::path::PathBuf;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
@@ -15,7 +17,6 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     // The `init` command is special as it might be run outside of a project root.
-    // We handle it before attempting to find the project root.
     if let Commands::Project(project_command) = &cli.command {
         if let ProjectSubcommand::Init { path } = &project_command.command {
             let target_dir = path.clone().unwrap_or(std::env::current_dir()?);
@@ -53,24 +54,61 @@ async fn main() -> anyhow::Result<()> {
         },
         Commands::Task(task_command) => match &task_command.command {
             TaskSubcommand::Create { name, template, parent } => {
-                println!("Creating task: {}, template: {}, parent: {:?}", name, template, parent);
-                // Implementation for `task create` will go here
+                // For now, created_by is hardcoded. This could be taken from config in the future.
+                match api::create_task(&project_root, parent.clone(), name.clone(), "user".to_string(), template.clone()) {
+                    Ok(task) => {
+                        println!("Task created successfully:");
+                        println!("  UID: {}", task.uid);
+                        println!("  Name: {}", task.config.name);
+                        println!("  State: {:?}", task.status.current_state);
+                    }
+                    Err(e) => eprintln!("Error creating task: {}", e),
+                }
             }
             TaskSubcommand::Show { identifier } => {
-                println!("Showing task: {}", identifier);
-                // Implementation for `task show` will go here
+                match resolve_task(&project_root, identifier) {
+                    Ok(task) => {
+                        println!("Task Details:");
+                        println!("  UID: {}", task.uid);
+                        println!("  Name: {}", task.config.name);
+                        println!("  State: {:?}", task.status.current_state);
+                        println!("  Created At: {}", task.config.created_at);
+                        println!("  Objective: {}", task.objective);
+                    }
+                    Err(e) => eprintln!("Error: {}", e),
+                }
             }
             TaskSubcommand::DefineObjective { identifier, objective } => {
-                println!("Defining objective for task: {}, objective: {}", identifier, objective);
-                // Implementation for `task define-objective` will go here
+                match api::define_objective(&project_root, identifier, objective.clone()) {
+                    Ok(task) => {
+                        println!("Objective defined for task {}. New state: {:?}", task.uid, task.status.current_state);
+                    }
+                    Err(e) => eprintln!("Error defining objective: {}", e),
+                }
             }
             TaskSubcommand::DefinePlan { identifier, plan } => {
-                println!("Defining plan for task: {}, plan: {}", identifier, plan);
-                // Implementation for `task define-plan` will go here
+                match api::define_plan(&project_root, identifier, plan.clone()) {
+                    Ok(task) => {
+                        println!("Plan defined for task {}. New state: {:?}", task.uid, task.status.current_state);
+                    }
+                    Err(e) => eprintln!("Error defining plan: {}", e),
+                }
             }
             TaskSubcommand::List => {
-                println!("Listing all tasks");
-                // Implementation for `task list` will go here
+                match api::list_all_tasks(&project_root) {
+                    Ok(tasks) => {
+                        if tasks.is_empty() {
+                            println!("No tasks found.");
+                        } else {
+                            println!("{:<38} {:<25} {:<20}", "UID", "Name", "State");
+                            println!("{:-<38} {:-<25} {:-<20}", "", "", "");
+                            for task in tasks {
+                                println!("{:<38} {:<25} {:<20?}", task.uid, task.config.name, task.status.current_state);
+                            }
+                        }
+                    }
+                    Err(e) => eprintln!("Error listing tasks: {}", e),
+                }
             }
         },
         Commands::Tool(tool_command) => match &tool_command.command {

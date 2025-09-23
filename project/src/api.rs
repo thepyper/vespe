@@ -343,6 +343,31 @@ pub fn list_available_tools(
     Ok(available_tools)
 }
 
+/// Lists all tasks in the project.
+pub fn list_all_tasks(project_root_path: &Path) -> Result<Vec<Task>, ProjectError> {
+    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let mut tasks = Vec::new();
+
+    if !tasks_base_path.exists() {
+        return Ok(tasks);
+    }
+
+    for entry in fs::read_dir(tasks_base_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
+                match load_task(project_root_path, uid_str) {
+                    Ok(task) => tasks.push(task),
+                    Err(e) => eprintln!("Warning: Could not load task {}: {}", uid_str, e),
+                }
+            }
+        }
+    }
+
+    Ok(tasks)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -515,5 +540,21 @@ mod tests {
         } else {
             panic!("Expected InvalidStateTransition error");
         }
+    }
+
+    #[test]
+    fn test_list_all_tasks() {
+        let project_root_path = setup_test_env();
+
+        // Create two tasks
+        create_task(&project_root_path, None, "Task A".to_string(), "user1".to_string(), "default".to_string()).unwrap();
+        create_task(&project_root_path, None, "Task B".to_string(), "user2".to_string(), "default".to_string()).unwrap();
+
+        let tasks = list_all_tasks(&project_root_path).unwrap();
+        assert_eq!(tasks.len(), 2);
+
+        // Check if we can find the tasks by name (case-sensitive)
+        assert!(tasks.iter().any(|t| t.config.name == "Task A"));
+        assert!(tasks.iter().any(|t| t.config.name == "Task B"));
     }
 }

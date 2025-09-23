@@ -1,10 +1,11 @@
+mod cli;
+
 use clap::Parser;
 use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
 use crate::cli::resolve::{resolve_task, resolve_tool};
 use vespe::api; // Import the api module
 use vespe::utils::{find_project_root, initialize_project_root};
 use std::fs;
-use std::path::PathBuf;
 use vespe::ProjectConfig;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 

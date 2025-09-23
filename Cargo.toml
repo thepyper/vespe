@@ -31,6 +31,7 @@ path = "src/bin/test_task_api.rs"
 
 
 [dependencies]
+vespe = { path = "./vespe" }
 rand = "0.8"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
@@ -52,5 +53,4 @@ once_cell = "1.19.0"
 serde-xml-rs = "0.6"
 tokio-stream = "0.1"
 futures-util = "0.3"
-vespe-project = { path = "vespe-project" }
 tempfile = "3.22"

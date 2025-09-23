@@ -1,7 +1,7 @@
 use chrono::Utc;
 
 use vespe::api;
-use vespe_project::models::PersistentEvent;
+use vespe::models::PersistentEvent;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Starting Task API CLI Mock...");

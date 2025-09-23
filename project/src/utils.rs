@@ -35,38 +35,30 @@ pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
     None
 }
 
-/// Initializes a new Vespe project at the target directory.
 pub fn initialize_project_root(target_dir: &Path) -> Result<(), ProjectError> {
-    println!("DEBUG: initialize_project_root called with target_dir: {}", target_dir.display());
     // Create the target directory if it doesn't exist
     fs::create_dir_all(target_dir).map_err(|e| ProjectError::Io(e))?;
 
     let absolute_target_dir = target_dir.canonicalize()
-        .map_err(|e| ProjectError::InvalidPath(target_dir.to_path_buf()))?; // Convert anyhow to ProjectError
-    println!("DEBUG: absolute_target_dir: {}", absolute_target_dir.display());
+        .map_err(|e| ProjectError::InvalidPath(target_dir.to_path_buf()))?;
 
     // Check if target_dir is already part of an existing Vespe project
     if let Some(found_root) = find_project_root(&absolute_target_dir) {
-        println!("DEBUG: Found existing root: {}", found_root.display());
         return Err(ProjectError::InvalidProjectConfig(format!(
             "Cannot initialize a Vespe project inside an existing project. Existing root: {}",
             found_root.display()
-        ))); // Convert anyhow to ProjectError
+        )));
     }
 
     let vespe_dir = absolute_target_dir.join(VESPE_DIR);
     let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
-    println!("DEBUG: Creating vespe_dir: {}", vespe_dir.display());
 
     fs::create_dir_all(&vespe_dir).map_err(|e| ProjectError::Io(e))?;
-    println!("DEBUG: vespe_dir created.");
 
     fs::write(&vespe_root_marker, "Feel The BuZZ!!!!").map_err(|e| ProjectError::Io(e))?;
-    println!("DEBUG: vespe_root_marker created.");
 
     let vespe_gitignore = vespe_dir.join(".gitignore");
     fs::write(&vespe_gitignore, "log/").map_err(|e| ProjectError::Io(e))?;
-    println!("DEBUG: .gitignore created.");
 
     Ok(())
 }

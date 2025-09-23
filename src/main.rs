@@ -1,6 +1,6 @@
 use vespe::cli::commands::{Cli, Commands};
 // use vespe::project_root::{self, is_project_root}; // Commented out
-use vespe::statistics;
+// use vespe::statistics; // Commented out
 use project::utils::{find_project_root, is_project_root}; // New import
 
 #[tokio::main]
@@ -61,14 +61,14 @@ async fn main() -> Result<()> {
 
     info!("Project root at {}", project_root.display());
 
-    // Load statistics
-    let stats = Arc::new(Mutex::new(statistics::load_statistics(&project_root).await?));
+    // // Load statistics (Commented out)
+    // let stats = Arc::new(Mutex::new(statistics::load_statistics(&project_root).await?));
 
     // Call the main run function from the library
-    let result = vespe::run(project_root.clone(), cli.command, stats.clone()).await;
+    let result = vespe::run(project_root.clone(), cli.command /*, stats.clone()*/).await; // stats argument commented out
 
-    // Save statistics before exiting
-    statistics::save_statistics(&project_root, &*stats.lock().await).await?;
+    // // Save statistics before exiting (Commented out)
+    // statistics::save_statistics(&project_root, &*stats.lock().await).await?;
 
     result
 }

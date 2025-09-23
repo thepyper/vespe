@@ -2,8 +2,8 @@ use clap::Parser;
 use vespe::cli::commands::{Cli, Commands};
 // use vespe::project_root::get_project_root_path; // Commented out
 use project::utils::{find_project_root, initialize_project_root}; // New import
-use vespe::statistics; // New import
-use vespe::statistics::models::UsageStatistics;
+// use vespe::statistics; // Commented out
+// use vespe::statistics::models::UsageStatistics; // Commented out
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
@@ -46,11 +46,12 @@ async fn main() -> anyhow::Result<()> {
 
 
 
-                // Initialize statistics
-                let stats = Arc::new(Mutex::new(statistics::load_statistics(&project_root).await?)); // Updated call
-        vespe::run(project_root.clone(), cli.command, stats.clone()).await?;
+            // // Initialize statistics (Commented out)
+            // let stats = Arc::new(Mutex::new(statistics::load_statistics(&project_root).await?)); // Updated call
 
-                // Save statistics before exiting
-                statistics::save_statistics(&project_root, &*stats.lock().await).await?; // Updated call
+                    vespe::run(project_root.clone(), cli.command /*, stats.clone()*/).await?; // stats argument commented out
+            // // Save statistics before exiting (Commented out)
+            // statistics::save_statistics(&project_root, &*stats.lock().await).await?; // Updated call
+
         Ok(())
 }

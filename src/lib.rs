@@ -18,15 +18,15 @@ pub mod prompt_templating;
 use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;
 use crate::tools::impls::read_file_tool::ReadFileTool;
-use crate::statistics::models::UsageStatistics;
-use crate::statistics::STATS_FILE_NAME; // Import STATS_FILE_NAME
+// use crate::statistics::models::UsageStatistics; // Commented out
+// use crate::statistics::STATS_FILE_NAME; // Commented out
 
 use crate::prompt_templating::PromptTemplater;
 use project::api as project_api; // Import project API
 use crate::cli::commands::TaskCommands; // Import TaskCommands
 use project::models::TaskState; // Import TaskState for listing
 
-pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats: Arc<Mutex<UsageStatistics>>) -> Result<()> {
+pub async fn run(project_root: PathBuf, command: cli::commands::Commands /*, stats: Arc<Mutex<UsageStatistics>>*/) -> Result<()> { // stats parameter commented out
     println!("╔═══════════════════════════════════════════════════════╗");
     println!("║ Vespe - Version {}                                    ║", env!("CARGO_PKG_VERSION"));
     println!("║ Copyright (c) ThePyper                                  ║");
@@ -48,7 +48,7 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
         cli::commands::Commands::Chat { agent_name, message } => {
             info!("Chat command received for agent: {}, message: {}", agent_name, message);
 
-            let agent_manager = agent::agent_manager::AgentManager::new(project_root, tool_registry, prompt_templater, stats)?;
+            let agent_manager = agent::agent_manager::AgentManager::new(project_root, tool_registry, prompt_templater /*, stats*/)?;
             let agent_definition = agent_manager.load_agent_definition(&agent_name).await?;
             let agent = agent_manager.create_agent(&agent_definition)?;
 
@@ -65,15 +65,15 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
         //     println!("Vespe project initialized at: {}", target_dir.display());
         // },
         cli::commands::Commands::Init { .. } => { /* Handled by vespe_cli.rs */ }, // Explicitly ignore Init command
-        cli::commands::Commands::ResetStats => {
-            let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);
-            if stats_path.exists() {
-                fs::remove_file(&stats_path).await?;
-                println!("Statistics file deleted: {}", stats_path.display());
-            } else {
-                println!("No statistics file found at: {}. Nothing to reset.", stats_path.display());
-            }
-        },
+        // cli::commands::Commands::ResetStats => { // Commented out
+        //     let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);
+        //     if stats_path.exists() {
+        //         fs::remove_file(&stats_path).await?;
+        //         println!("Statistics file deleted: {}", stats_path.display());
+        //     } else {
+        //         println!("No statistics file found at: {}. Nothing to reset.", stats_path.display());
+        //     }
+        // },
         cli::commands::Commands::Task { command } => {
             match command {
                 TaskCommands::Create { parent_uid, name, created_by, template_name } => {

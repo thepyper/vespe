@@ -64,6 +64,7 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
         //     project::utils::initialize_project_root(&target_dir)?; // Updated call
         //     println!("Vespe project initialized at: {}", target_dir.display());
         // },
+        cli::commands::Commands::Init { .. } => { /* Handled by vespe_cli.rs */ }, // Explicitly ignore Init command
         cli::commands::Commands::ResetStats => {
             let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);
             if stats_path.exists() {

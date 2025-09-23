@@ -6,6 +6,7 @@ use std::fs; // Added for fs operations
 
 use crate::error::ProjectError;
 use crate::models::{TaskStatus, TaskState};
+use crate::project_models::{Project, ProjectConfig};
 
 // Constants for project root detection
 const VESPE_DIR: &str = ".vespe";
@@ -23,19 +24,19 @@ pub fn is_project_root(dir: &Path) -> bool {
 }
 
 /// Finds the project root by traversing up the directory tree until a .vespe/ directory is found.
-pub fn find_project_root(start_dir: &Path) -> Option<PathBuf> {
+pub fn find_project_root(start_dir: &Path) -> Option<Project> {
     let mut current_dir = Some(start_dir);
 
     while let Some(dir) = current_dir {
         if is_project_root(dir) {
-            return Some(dir.to_path_buf());
+            return Some(Project::load(dir).ok()?);
         }
         current_dir = dir.parent();
     }
     None
 }
 
-pub fn initialize_project_root(target_dir: &Path) -> Result<(), ProjectError> {
+pub fn initialize_project_root(target_dir: &Path) -> Result<Project, ProjectError> {
     // Create the target directory if it doesn't exist
     fs::create_dir_all(target_dir).map_err(|e| ProjectError::Io(e))?;
 
@@ -43,10 +44,10 @@ pub fn initialize_project_root(target_dir: &Path) -> Result<(), ProjectError> {
         .map_err(|e| ProjectError::InvalidPath(target_dir.to_path_buf()))?;
 
     // Check if target_dir is already part of an existing Vespe project
-    if let Some(found_root) = find_project_root(&absolute_target_dir) {
+    if let Some(found_project) = find_project_root(&absolute_target_dir) {
         return Err(ProjectError::InvalidProjectConfig(format!(
             "Cannot initialize a Vespe project inside an existing project. Existing root: {}",
-            found_root.display()
+            found_project.root_path.display()
         )));
     }
 
@@ -60,27 +61,25 @@ pub fn initialize_project_root(target_dir: &Path) -> Result<(), ProjectError> {
     let vespe_gitignore = vespe_dir.join(".gitignore");
     fs::write(&vespe_gitignore, "log/").map_err(|e| ProjectError::Io(e))?;
 
-    Ok(())
+    // Create a default ProjectConfig and save it
+    let project_config = ProjectConfig::default();
+    let project = Project {
+        root_path: absolute_target_dir.clone(),
+        config: project_config,
+    };
+    project.save_config()?;
+
+    // Create tasks, tools, agents directories
+    fs::create_dir_all(project.tasks_dir()).map_err(|e| ProjectError::Io(e))?;
+    fs::create_dir_all(project.tools_dir()).map_err(|e| ProjectError::Io(e))?;
+    fs::create_dir_all(project.agents_dir()).map_err(|e| ProjectError::Io(e))?;
+
+    Ok(project)
 }
 
 /// Constructs the full path for a given entity UID within a base path.
 pub fn get_entity_path(base_path: &Path, uid: &str) -> Result<PathBuf, ProjectError> {
     Ok(base_path.join(uid))
-}
-
-/// Returns the base path for tasks within a project.
-pub fn get_tasks_base_path(project_root_path: &Path) -> PathBuf {
-    project_root_path.join(VESPE_DIR).join("tasks")
-}
-
-/// Returns the base path for agents within a project.
-pub fn get_agents_base_path(project_root_path: &Path) -> PathBuf {
-    project_root_path.join(VESPE_DIR).join("agents")
-}
-
-/// Returns the base path for project-specific tools within a project.
-pub fn get_tools_base_path(project_root_path: &Path) -> PathBuf {
-    project_root_path.join(VESPE_DIR).join("tools")
 }
 
 /// Reads the content of a file as a String.

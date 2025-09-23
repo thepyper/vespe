@@ -7,7 +7,7 @@ use sha2::{Sha256, Digest};
 use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent};
 use crate::tool_models::{Tool, ToolConfig};
 use crate::project_models::ProjectConfig;
-use crate::error::ProjectError;
+use crate::vespe_project_error::ProjectError;
 use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file, get_tasks_base_path, get_tools_base_path};
 
 /// Creates a new task or subtask.

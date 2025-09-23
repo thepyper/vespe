@@ -4,7 +4,7 @@ use chrono::Utc;
 use sha2::{Sha256, Digest};
 use std::fs; // Added for fs operations
 
-use crate::error::ProjectError;
+use crate::vespe_project_error::ProjectError;
 use crate::models::{TaskStatus, TaskState};
 
 // Constants for project root detection

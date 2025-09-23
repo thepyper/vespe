@@ -1,4 +1,10 @@
-pub mod models;
+pub mod vespe_project_models;
+pub mod vespe_project_error;
+pub mod vespe_project_api;
+pub mod vespe_project_utils;
+pub mod vespe_project_tool_models;
+pub mod vespe_project_project_models;
+
 pub mod error;
 pub mod api;
 pub mod utils;

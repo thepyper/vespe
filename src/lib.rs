@@ -22,6 +22,9 @@ use crate::statistics::models::UsageStatistics;
 use crate::statistics::STATS_FILE_NAME; // Import STATS_FILE_NAME
 
 use crate::prompt_templating::PromptTemplater;
+use project::api as project_api; // Import project API
+use crate::cli::commands::TaskCommands; // Import TaskCommands
+use project::models::TaskState; // Import TaskState for listing
 
 pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats: Arc<Mutex<UsageStatistics>>) -> Result<()> {
     println!("╔═══════════════════════════════════════════════════════╗");
@@ -69,7 +72,40 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
             } else {
                 println!("No statistics file found at: {}. Nothing to reset.", stats_path.display());
             }
-        }
+        },
+        cli::commands::Commands::Task { command } => {
+            match command {
+                TaskCommands::Create { parent_uid, name, created_by, template_name } => {
+                    let task = project_api::create_task(&project_root, parent_uid, name, created_by, template_name).await?;
+                    println!("Task created: {} (UID: {})", task.config.name, task.uid);
+                },
+                TaskCommands::Show { uid } => {
+                    let task = project_api::load_task(&project_root, &uid).await?; // Await here
+                    println!("Task Details for UID: {}", task.uid);
+                    println!("  Name: {}", task.config.name);
+                    println!("  State: {:?}", task.status.current_state);
+                    println!("  Objective:\n{}", task.objective);
+                    if let Some(plan) = task.plan {
+                        println!("  Plan:\n{}", plan);
+                    }
+                    println!("  Created By: {}", task.config.created_by);
+                    println!("  Created At: {}", task.config.created_at);
+                },
+                TaskCommands::DefineObjective { uid, content } => {
+                    let task = project_api::define_objective(&project_root, &uid, content).await?; // Await here
+                    println!("Objective defined for task: {} (UID: {})", task.config.name, task.uid);
+                },
+                TaskCommands::DefinePlan { uid, content } => {
+                    let task = project_api::define_plan(&project_root, &uid, content).await?; // Await here
+                    println!("Plan defined for task: {} (UID: {})", task.config.name, task.uid);
+                },
+                TaskCommands::List => {
+                    // This will require a new function in project_api to list all tasks
+                    // For now, let's just print a placeholder
+                    println!("Listing all tasks (not yet implemented in project_api)");
+                },
+            }
+        },
     }
 
     Ok(())

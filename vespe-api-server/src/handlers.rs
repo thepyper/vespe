@@ -15,8 +15,10 @@ use super::models::{
     AddResultFileRequest, AddResultFileResponse,
     ReviewTaskRequest, ReviewTaskResponse,
     CreateToolRequest, CreateToolResponse, LoadToolResponse, ResolveToolResponse,
-    ListAvailableToolsResponse,
+    ListAvailableToolsResponse, LoadProjectConfigResponse,
+    SaveProjectConfigRequest, SaveProjectConfigResponse,
 };
+use vespe_project::ProjectConfig;
 use vespe_project::PersistentEvent;
 use chrono::Utc;
 use super::error::map_project_error_to_http_response;
@@ -297,6 +299,31 @@ pub async fn list_available_tools_handler(
 
     match result {
         Ok(tools) => Ok(Json(ListAvailableToolsResponse { tools })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn load_project_config_handler(
+    State(app_state): State<AppState>,
+) -> Result<Json<LoadProjectConfigResponse>, (StatusCode, String)> {
+    let result = api::load_project_config(&app_state.project_root);
+
+    match result {
+        Ok(config) => Ok(Json(LoadProjectConfigResponse { config })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn save_project_config_handler(
+    State(app_state): State<AppState>,
+    Json(payload): Json<SaveProjectConfigRequest>,
+) -> Result<Json<SaveProjectConfigResponse>, (StatusCode, String)> {
+    let result = api::save_project_config(&app_state.project_root, &payload.config);
+
+    match result {
+        Ok(_) => Ok(Json(SaveProjectConfigResponse {
+            message: "Project configuration saved successfully".to_string(),
+        })),
         Err(e) => Err(map_project_error_to_http_response(e)),
     }
 }

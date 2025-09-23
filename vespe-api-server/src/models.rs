@@ -145,3 +145,13 @@ pub struct ListAvailableToolsResponse {
 pub struct LoadProjectConfigResponse {
     pub config: vespe_project::ProjectConfig,
 }
+
+#[derive(Deserialize)]
+pub struct SaveProjectConfigRequest {
+    pub config: vespe_project::ProjectConfig,
+}
+
+#[derive(Serialize)]
+pub struct SaveProjectConfigResponse {
+    pub message: String,
+}

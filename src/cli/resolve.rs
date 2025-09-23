@@ -1,4 +1,4 @@
-'''use std::path::Path;
+use std::path::Path;
 use project::Task;
 use project::api::{load_task, list_all_tasks};
 use anyhow::{anyhow, Result};
@@ -39,4 +39,29 @@ pub fn resolve_task(project_root: &Path, identifier: &str) -> Result<Task> {
         )),
     }
 }
-'''
+
+use project::Tool;
+use project::api::list_available_tools;
+
+/// Resolves a tool identifier (which can be a UID or a name) to a Tool.
+///
+/// This function is a placeholder and needs to be adapted once `load_tool` by UID is available.
+pub fn resolve_tool(project_root: &Path, identifier: &str) -> Result<Tool> {
+    // For now, we only resolve by name as `load_tool` takes a path, not a UID.
+    // This will be updated once a `load_tool_by_uid` function is available.
+
+    let all_tools = list_available_tools(project_root, &project::ProjectConfig { kits: vec![] })?;
+    let matching_tools: Vec<Tool> = all_tools
+        .into_iter()
+        .filter(|t| t.config.name == identifier || t.uid == identifier)
+        .collect();
+
+    match matching_tools.len() {
+        0 => Err(anyhow!("Tool '{}' not found.", identifier)),
+        1 => Ok(matching_tools.into_iter().next().unwrap()),
+        _ => Err(anyhow!(
+            "Multiple tools found with the name '{}'. Please use a unique UID.",
+            identifier
+        )),
+    }
+}

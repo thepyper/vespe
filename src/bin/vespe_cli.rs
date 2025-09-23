@@ -1,8 +1,9 @@
 use clap::Parser;
 use vespe::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
-use vespe::cli::resolve::resolve_task;
+use vespe::cli::resolve::{resolve_task, resolve_tool};
 use project::api; // Import the api module
 use project::utils::{find_project_root, initialize_project_root};
+use std::fs;
 use std::path::PathBuf;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
@@ -113,16 +114,60 @@ async fn main() -> anyhow::Result<()> {
         },
         Commands::Tool(tool_command) => match &tool_command.command {
             ToolSubcommand::Create { name, description, schema } => {
-                println!("Creating tool: {}, desc: {}, schema: {}", name, description, schema.display());
-                // Implementation for `tool create` will go here
+                let schema_content = match fs::read_to_string(schema) {
+                    Ok(content) => content,
+                    Err(e) => {
+                        eprintln!("Error reading schema file: {}", e);
+                        return Ok(()); // Exit gracefully
+                    }
+                };
+                let schema_json: serde_json::Value = match serde_json::from_str(&schema_content) {
+                    Ok(json) => json,
+                    Err(e) => {
+                        eprintln!("Error parsing schema JSON: {}", e);
+                        return Ok(()); // Exit gracefully
+                    }
+                };
+
+                // Implementation_details is hardcoded for now
+                let implementation_details = serde_json::json!({ "type": "command_line" });
+
+                match api::create_tool(&project_root, name.clone(), description.clone(), schema_json, implementation_details) {
+                    Ok(tool) => {
+                        println!("Tool created successfully:");
+                        println!("  UID: {}", tool.uid);
+                        println!("  Name: {}", tool.config.name);
+                    }
+                    Err(e) => eprintln!("Error creating tool: {}", e),
+                }
             }
             ToolSubcommand::Show { identifier } => {
-                println!("Showing tool: {}", identifier);
-                // Implementation for `tool show` will go here
+                match resolve_tool(&project_root, identifier) {
+                    Ok(tool) => {
+                        println!("Tool Details:");
+                        println!("  UID: {}", tool.uid);
+                        println!("  Name: {}", tool.config.name);
+                        println!("  Description: {}", tool.config.description);
+                        println!("  Schema: {:#}", tool.config.schema);
+                    }
+                    Err(e) => eprintln!("Error: {}", e),
+                }
             }
             ToolSubcommand::List => {
-                println!("Listing all tools");
-                // Implementation for `tool list` will go here
+                match api::list_available_tools(&project_root, &project::ProjectConfig { kits: vec![] }) {
+                    Ok(tools) => {
+                        if tools.is_empty() {
+                            println!("No tools found.");
+                        } else {
+                            println!("{:<38} {:<25}", "UID", "Name");
+                            println!("{:-<38} {:-<25}", "", "");
+                            for tool in tools {
+                                println!("{:<38} {:<25}", tool.uid, tool.config.name);
+                            }
+                        }
+                    }
+                    Err(e) => eprintln!("Error listing tools: {}", e),
+                }
             }
         },
     }

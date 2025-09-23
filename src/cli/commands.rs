@@ -1,4 +1,4 @@
-'''use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 /// A fictional versioning CLI
@@ -108,4 +108,3 @@ pub enum ToolSubcommand {
     /// List all available tools
     List,
 }
-''

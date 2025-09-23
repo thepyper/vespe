@@ -40,6 +40,8 @@ pub enum ProjectSubcommand {
     Info,
     /// Validate the project structure and files
     Validate,
+    /// Chat with a project-specific agent
+    Chat(ChatCommand),
 }
 
 #[derive(Debug, Parser)]
@@ -94,6 +96,8 @@ pub enum TaskSubcommand {
         #[arg(long, requires = "reject")]
         new_name: Option<String>,
     },
+    /// Chat with a task-specific agent
+    Chat(ChatCommand),
 }
 
 #[derive(Debug, Parser)]
@@ -121,4 +125,24 @@ pub enum ToolSubcommand {
     },
     /// List all available tools
     List,
+    /// Chat with a tool-specific agent
+    Chat(ChatCommand),
+}
+
+#[derive(Debug, Parser)]
+pub struct ChatCommand {
+    #[command(subcommand)]
+    pub command: ChatSubcommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ChatSubcommand {
+    /// Start a new chat session
+    Start,
+    /// Continue an existing chat session
+    Continue {
+        /// The ID of the chat session to continue
+        #[arg(long)]
+        session_id: String,
+    },
 }

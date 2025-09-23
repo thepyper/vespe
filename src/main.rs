@@ -81,6 +81,9 @@ async fn main() -> anyhow::Result<()> {
                 } else {
                     println!("Project structure is invalid.");
                 }
+            },
+            ProjectSubcommand::Chat(chat_command) => {
+                println!("Project Chat command called: {:?}", chat_command);
             }
         },
         Commands::Task(task_command) => match &task_command.command {
@@ -187,6 +190,9 @@ async fn main() -> anyhow::Result<()> {
                     }
                     Err(e) => eprintln!("Error: {}", e),
                 }
+            },
+            TaskSubcommand::Chat(chat_command) => {
+                println!("Task Chat command called: {:?}", chat_command);
             }
         },
         Commands::Tool(tool_command) => match &tool_command.command {
@@ -245,6 +251,9 @@ async fn main() -> anyhow::Result<()> {
                     }
                     Err(e) => eprintln!("Error listing tools: {}", e),
                 }
+            },
+            ToolSubcommand::Chat(chat_command) => {
+                println!("Tool Chat command called: {:?}", chat_command);
             }
         },
     }

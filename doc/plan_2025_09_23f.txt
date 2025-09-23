@@ -1,0 +1,36 @@
+# Piano di Refactoring: Naming Crates - 2025-09-23f
+
+## Obiettivo
+Rinominare i sub-crates `project` e `buzz` in `vespe-project` e `vespe-buzz` per allinearsi alle best practice di Rust, migliorando chiarezza e manutenibilità del workspace.
+
+---
+
+### Fase 0: Commit del Piano
+1.  **Aggiungere Piano a Git:** Aggiungere questo file del piano al version control.
+2.  **Commit Iniziale:** Creare un commit per registrare l'inizio del refactoring.
+
+---
+
+### Fase 1: Rinomina delle Cartelle e dei Pacchetti
+1.  **Rinomina Cartelle:** Usare i comandi di sistema per rinominare le cartelle:
+    *   `project` -> `vespe-project`
+    *   `buzz` -> `vespe-buzz`
+2.  **Aggiorna `vespe-project/Cargo.toml`:** Modificare il file `Cargo.toml` del crate rinominato per cambiare il nome del pacchetto.
+    *   `name = "project"` -> `name = "vespe-project"`
+3.  **Aggiorna `vespe-buzz/Cargo.toml`:** Fare lo stesso per il crate `buzz`.
+    *   `name = "buzz"` -> `name = "vespe-buzz"`
+4.  **Commit di Fase:** Eseguire un commit per registrare la rinomina dei pacchetti e delle cartelle.
+
+---
+
+### Fase 2: Aggiornamento Dipendenze e Codice Sorgente
+1.  **Aggiorna `Cargo.toml` Radice:** Modificare il `Cargo.toml` principale per riflettere i nuovi nomi:
+    *   Nella sezione `[workspace].members`, cambiare i percorsi.
+    *   Nella sezione `[dependencies]`, aggiornare il nome e il percorso della dipendenza `project`.
+2.  **Aggiorna `use` Statements:** Cercare in tutto il codice sorgente (principalmente in `src/main.rs`) le occorrenze di `use project::` e sostituirle con `use vespe_project::`.
+
+---
+
+### Fase 3: Verifica e Commit Finale
+1.  **Verifica Build:** Eseguire `cargo build` e `cargo test` per assicurarsi che il progetto compili correttamente e che tutte le dipendenze vengano risolte senza errori.
+2.  **Commit Finale:** Eseguire un commit finale con un messaggio che descrive il refactoring completato.

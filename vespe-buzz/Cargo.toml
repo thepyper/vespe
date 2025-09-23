@@ -1,5 +1,5 @@
 [package]
-name = "buzz"
+name = "vespe-buzz"
 version = "0.1.0"
 edition = "2024"
 

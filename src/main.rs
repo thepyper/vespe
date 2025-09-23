@@ -140,6 +140,53 @@ async fn main() -> anyhow::Result<()> {
                     }
                     Err(e) => eprintln!("Error listing tasks: {}", e),
                 }
+            },
+            TaskSubcommand::Review { identifier, approve, reject, new_name } => {
+                if *approve && *reject {
+                    eprintln!("Error: Cannot approve and reject a task simultaneously.");
+                    return Ok(());
+                }
+                if !*approve && !*reject {
+                    eprintln!("Error: Must specify either --approve or --reject.");
+                    return Ok(();
+                }
+
+                match resolve_task(&project_root, identifier) {
+                    Ok(task) => {
+                        if task.status.current_state != vespe_project::models::TaskState::NeedsReview {
+                            eprintln!("Error: Task must be in 'NeedsReview' state to be reviewed. Current state: {:?}", task.status.current_state);
+                            return Ok(());
+                        }
+
+                        if *approve {
+                            match api::review_task(&project_root, &task.uid, true) {
+                                Ok(updated_task) => {
+                                    println!("Task {} approved. New state: {:?}", updated_task.uid, updated_task.status.current_state);
+                                }
+                                Err(e) => eprintln!("Error approving task: {}", e),
+                            }
+                        } else if *reject {
+                            match api::review_task(&project_root, &task.uid, false) {
+                                Ok(updated_task) => {
+                                    println!("Task {} rejected. New state: {:?}", updated_task.uid, updated_task.status.current_state);
+                                    // If rejected, create a new task for replanning
+                                    if let Some(name) = new_name {
+                                        match api::create_task(&project_root, Some(task.uid.clone()), name.clone(), "user".to_string(), "default".to_string()) {
+                                            Ok(new_task) => {
+                                                println!("New task created for replanning: {} (UID: {})", new_task.config.name, new_task.uid);
+                                            }
+                                            Err(e) => eprintln!("Error creating new task for replanning: {}", e),
+                                        }
+                                    } else {
+                                        eprintln!("Warning: Task rejected, but no new name provided for replanning. A new task was not created.");
+                                    }
+                                }
+                                Err(e) => eprintln!("Error rejecting task: {}", e),
+                            }
+                        }
+                    }
+                    Err(e) => eprintln!("Error: {}", e),
+                }
             }
         },
         Commands::Tool(tool_command) => match &tool_command.command {

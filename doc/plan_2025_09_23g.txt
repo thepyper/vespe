@@ -1,0 +1,33 @@
+Refactoring del Workflow di Task Review e Re-planning
+
+Obiettivo: Semplificare il processo di review dei task e migliorare la tracciabilità delle modifiche ai piani, adottando un approccio più iterativo e storico.
+
+Dettagli delle Proposte:
+
+1.  **Semplificazione del Workflow di Review:**
+    *   **Stato Attuale:** Un task in `needs_review` attende un'azione esplicita di "review" prima di passare ad altri stati.
+    *   **Proposta:** Eliminare lo stato intermedio di "review esplicita". Un task che `needs_review` può essere direttamente approvato e passare a `ready`, oppure essere rifiutato e passare a `replanned` (vedi punto 2).
+    *   **Motivazione:** Ridurre la complessità del workflow e il numero di transizioni, rendendo il processo più snello se la fase di review è spesso implicita o leggera.
+
+2.  **Gestione del Re-planning tramite Nuovi Task:**
+    *   **Stato Attuale:** Il re-planning di un task potrebbe sovrascrivere il piano esistente, rendendo difficile tracciare le iterazioni precedenti.
+    *   **Proposta:** Quando un task necessita di un re-planning (ad esempio, dopo un rifiuto in review, o per una revisione significativa del piano), non si modifica il task originale. Invece:
+        *   Viene creato un **nuovo task** che rappresenta la nuova iterazione del piano.
+        *   Il task originale viene marcato con un nuovo stato terminale, ad esempio `replanned` (o `changed`), indicando che il suo lavoro è stato continuato in un altro task.
+        *   Il nuovo task avrà un riferimento al task originale (`parent_task_id` o `replaces_task_id`) per mantenere la tracciabilità.
+    *   **Motivazione:**
+        *   **Tracciabilità Chiara:** Ogni versione del piano e del suo stato è un'entità separata, facilitando l'auditing e la comprensione dell'evoluzione del lavoro.
+        *   **Immutabilità del Piano:** Il piano di un task, una volta definito, rimane immutabile, garantendo l'integrità storica.
+        *   **Coerenza con `aborted`:** Il task `replanned` si comporta in modo simile a un task `aborted` (terminale), ma con un significato specifico di "continuato altrove".
+
+Implicazioni Tecniche:
+
+*   **Modifiche agli Stati dei Task:** Aggiungere un nuovo stato `replanned` (o `changed`) all'enum degli stati dei task.
+*   **Modifiche all'API `define_plan`:** L'API `define_plan` non modificherà più un task esistente, ma creerà un nuovo task collegato.
+*   **Modifiche all'API `review`:** L'API di review dovrà supportare la transizione a `ready` o la creazione di un nuovo task `replanned`.
+*   **Interfaccia Utente/CLI:** Aggiornare la CLI per guidare l'utente nella creazione di nuovi task per il re-planning e per visualizzare chiaramente i collegamenti tra task `replanned` e i loro successori.
+
+Prossimi Passi:
+
+1.  Attendere l'approvazione di questo piano.
+2.  Se approvato, procedere con l'implementazione delle modifiche agli stati e alle API dei task.

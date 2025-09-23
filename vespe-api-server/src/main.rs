@@ -48,7 +48,6 @@ pub async fn main() {
         // Project Endpoints
         .route("/project/config", get(load_project_config_handler))
         .route("/project/config", put(save_project_config_handler))
-        .route("/project/config", put(save_project_config_handler))
         // Agent Endpoints
         .route("/agents", post(create_agent_handler))
         .route("/agents", get(list_agents_handler))

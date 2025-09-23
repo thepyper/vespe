@@ -1,11 +1,11 @@
 [workspace]
 members = [
     "vespe-buzz", "vespe-cli",
-    "vespe", "vespe-tui",
+    "vespe-tui",
 ]
 
 [package]
-name = "vespe-lib"
+name = "vespe"
 version = "0.1.0"
 edition = "2021"
 
@@ -31,7 +31,6 @@ path = "src/bin/test_task_api.rs"
 
 
 [dependencies]
-vespe = { path = "./vespe" }
 rand = "0.8"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }

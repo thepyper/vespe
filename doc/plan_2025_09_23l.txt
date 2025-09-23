@@ -1,0 +1,54 @@
+Refactoring Plan: Consolidate Core Logic into Root Crate
+
+**Goal:** To move the core business logic (currently in the `vespe` sub-crate) directly into the `src/` directory of the root crate, making the root crate itself the primary `vespe` library.
+
+**Current State (after previous refactoring):**
+*   Root directory contains `vespe-lib` crate (defined in root `Cargo.toml`).
+*   `vespe` sub-crate (formerly `vespe-project`) contains the core business logic.
+*   `vespe-cli` and `vespe-tui` depend on the `vespe` sub-crate.
+*   `vespe-lib/src/lib.rs` currently re-exports `pub use vespe::*;`.
+
+**Desired State:**
+*   Root directory contains the `vespe` crate (the core library).
+*   All core business logic files (api.rs, models.rs, etc.) are directly under `src/` of the root crate.
+*   `vespe-cli` and `vespe-tui` depend on the root `vespe` crate.
+*   The `vespe` sub-crate directory is removed.
+
+**Phase 1: Move `vespe` sub-crate content to root `src/` and remove `vespe` sub-crate**
+
+1.  **Move `vespe/src/*` to `src/` (root crate):**
+    *   Move all files and directories from `c:/Proj/xxx/025_006.Vespe/vespe/vespe/src/` to `c:/Proj/xxx/025_006.Vespe/vespe/src/`.
+    *   This includes `api.rs`, `agent_api.rs`, `error.rs`, `lib.rs`, `models.rs`, `project_models.rs`, `tool_models.rs`, `utils.rs`.
+    *   *Note:* The `lib.rs` in the root `src/` will be overwritten by the `lib.rs` from the `vespe` sub-crate. This is intended, as the `vespe` sub-crate's `lib.rs` contains the actual module declarations for the core logic.
+
+2.  **Remove `vespe` sub-crate directory:**
+    *   Remove the directory `c:/Proj/xxx/025_006.Vespe/vespe/vespe/`.
+
+3.  **Update Root `Cargo.toml` (`vespe-lib`'s Cargo.toml):**
+    *   Remove `vespe = { path = "./vespe" }` from `[dependencies]`.
+    *   Remove `"vespe"` from `[workspace.members]`.
+    *   Change `name = "vespe-lib"` back to `name = "vespe"`.
+    *   Add `[[bin]]` entries for `ollama_test_client`, `ollama_agent_client`, `data-generator`, `tool-format-tester`, `test_task_api` back to the root `Cargo.toml` (as they are now part of the main `vespe` crate).
+
+**Phase 2: Update Dependencies in Other Crates**
+
+1.  **Update `vespe-cli/Cargo.toml`:**
+    *   Change `vespe = { path = "../vespe" }` to `vespe = { path = ".." }` (since the core library is now the root crate).
+
+2.  **Update `vespe-tui/Cargo.toml`:**
+    *   Change `vespe = { path = "../vespe" }` to `vespe = { path = ".." }`.
+
+3.  **Update `vespe-buzz/Cargo.toml` (if it depends on `vespe`):**
+    *   Update its dependency path if necessary.
+
+4.  **Update `use` statements in `vespe-cli` and `vespe-tui`:**
+    *   Change `use vespe::...` to `use vespe::...` (no change in the `use` statement itself, but the underlying path resolution will change).
+
+**Verification Steps (after each phase/major step):**
+*   Run `cargo check --workspace` to ensure all crates compile.
+*   Run `cargo build --workspace`.
+*   Test `vespe-cli` by running `cargo run --package vespe-cli -- --help`.
+*   Test `vespe-tui` by running `cargo run --package vespe-tui`.
+
+**Approval:**
+I await your approval before proceeding with this refactoring plan.

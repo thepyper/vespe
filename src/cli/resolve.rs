@@ -40,8 +40,8 @@ pub fn resolve_task(project_root: &Path, identifier: &str) -> Result<Task> {
     }
 }
 
-use project::Tool;
-use project::api::list_available_tools;
+
+use crate::api::list_available_tools;
 
 /// Resolves a tool identifier (which can be a UID or a name) to a Tool.
 ///

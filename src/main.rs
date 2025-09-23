@@ -1,10 +1,11 @@
 use clap::Parser;
 use vespe::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
 use vespe::cli::resolve::{resolve_task, resolve_tool};
-use crate::api; // Import the api module
+use vespe::api; // Import the api module
 use vespe_project::utils::{find_project_root, initialize_project_root};
 use std::fs;
 use std::path::PathBuf;
+use vespe_project::ProjectConfig;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[tokio::main]
@@ -52,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
                 let task_count = api::list_all_tasks(&project_root).map_or(0, |t| t.len());
                 println!("Task Count: {}", task_count);
 
-                let tool_count = api::list_available_tools(&project_root, &project::ProjectConfig::default()).map_or(0, |t| t.len());
+                let tool_count = api::list_available_tools(&project_root, &ProjectConfig::default()).map_or(0, |t| t.len());
                 println!("Tool Count: {}", tool_count);
             }
             ProjectSubcommand::Validate => {
@@ -183,7 +184,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             ToolSubcommand::List => {
-                match api::list_available_tools(&project_root, &project::ProjectConfig::default()) {
+                match api::list_available_tools(&project_root, &ProjectConfig::default()) {
                     Ok(tools) => {
                         if tools.is_empty() {
                             println!("No tools found.");

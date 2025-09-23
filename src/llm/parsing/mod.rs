@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use crate::llm::parsing::match_source::ParserSource;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::statistics::models::UsageStatistics;
+// use crate::statistics::models::UsageStatistics; // Commented out
 
 pub mod parser_trait;
 pub mod json_parser;
@@ -31,30 +31,30 @@ fn find_first_match_in_text<'a>(
 pub async fn parse_response(
     response: &str,
     parsers: &[Box<dyn SnippetParser>],
-    global_stats: Arc<Mutex<UsageStatistics>>,
+    // global_stats: Arc<Mutex<UsageStatistics>>, // Commented out
     provider: &str,
     model_id: &str,
 ) -> (Vec<AssistantContent>, HashSet<ParserSource>) {
     let mut blocks: Vec<AssistantContent> = vec![AssistantContent::Text(response.to_string())];
     let mut used_parsers = HashSet::new();
 
-    // Increment LLM invocation count and handle fading
-    let mut stats = global_stats.lock().await;
-    let llm_key = format!("{}::{}", provider, model_id);
+    // // Increment LLM invocation count and handle fading (Commented out)
+    // let mut stats = global_stats.lock().await;
+    // let llm_key = format!("{}::{}", provider, model_id);
 
-    let model_entry = stats.model_stats.entry(llm_key.clone()).or_default();
-    model_entry.invocations += 1;
-    model_entry.fading_invocations += 1.0;
+    // let model_entry = stats.model_stats.entry(llm_key.clone()).or_default();
+    // model_entry.invocations += 1;
+    // model_entry.fading_invocations += 1.0;
 
-    // Logica di fading: se il conteggio LLM supera la soglia, dimezza tutto
-    if model_entry.fading_invocations > 100.0 {
-        model_entry.fading_invocations /= 2.0;
-        // Dimezza anche tutte le statistiche di parser_stats per questa llm_key
-        for (_, parser_stats) in model_entry.parser_stats.iter_mut() {
-            parser_stats.fading_usage /= 2.0;
-        }
-    }
-    drop(stats); // Release the lock early
+    // // Logica di fading: se il conteggio LLM supera la soglia, dimezza tutto
+    // if model_entry.fading_invocations > 100.0 {
+    //     model_entry.fading_invocations /= 2.0;
+    //     // Dimezza anche tutte le statistiche di parser_stats per questa llm_key
+    //     for (_, parser_stats) in model_entry.parser_stats.iter_mut() {
+    //         parser_stats.fading_usage /= 2.0;
+    //     }
+    // }
+    // drop(stats); // Release the lock early
 
     loop {
         let mut split_occurred = false;
@@ -73,16 +73,16 @@ pub async fn parse_response(
                     next_blocks.push(m.content);
                     used_parsers.insert(m.source.clone()); // Record the parser source
 
-                    // Update parser usage statistics
-                    let mut stats = global_stats.lock().await;
-                    let llm_key = format!("{}::{}", provider, model_id);
+                    // // Update parser usage statistics (Commented out)
+                    // let mut stats = global_stats.lock().await;
+                    // let llm_key = format!("{}::{}", provider, model_id);
 
-                    let parser_entry = stats.model_stats.entry(llm_key.clone()).or_default()
-                        .parser_stats.entry(m.source.clone()).or_default();
-                    parser_entry.usage += 1;
-                    parser_entry.fading_usage += 1.0;
+                    // let parser_entry = stats.model_stats.entry(llm_key.clone()).or_default()
+                    //     .parser_stats.entry(m.source.clone()).or_default();
+                    // parser_entry.usage += 1;
+                    // parser_entry.fading_usage += 1.0;
 
-                    drop(stats); // Release the lock early
+                    // drop(stats); // Release the lock early
 
                     let post_text = &text[m.end..];
                     if !post_text.is_empty() {

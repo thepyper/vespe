@@ -10,7 +10,7 @@ use crate::llm::llm_client::LlmClient;
 use crate::llm::messages::{AssistantContent, Message, ToolOutput};
 use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
-use crate::statistics::models::UsageStatistics;
+// use crate::statistics::models::UsageStatistics; // Commented out
 
 use crate::llm::markup_policy::MarkupPolicy;
 
@@ -20,7 +20,7 @@ pub struct BasicAgent {
     tool_registry: ToolRegistry,
     prompt_templater: PromptTemplater,
     markup_policy: Box<dyn MarkupPolicy>,
-    stats: Arc<Mutex<UsageStatistics>>,
+    // stats: Arc<Mutex<UsageStatistics>>, // Commented out
 }
 
 impl BasicAgent {
@@ -30,7 +30,7 @@ impl BasicAgent {
         tool_registry: ToolRegistry,
         prompt_templater: PromptTemplater,
         markup_policy: Box<dyn MarkupPolicy>,
-        stats: Arc<Mutex<UsageStatistics>>,
+        // stats: Arc<Mutex<UsageStatistics>>, // Commented out
     ) -> Self {
         Self {
             name,
@@ -38,7 +38,7 @@ impl BasicAgent {
             tool_registry,
             prompt_templater,
             markup_policy,
-            stats,
+            // stats,
         }
     }
 

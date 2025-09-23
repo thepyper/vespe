@@ -14,13 +14,13 @@ use crate::llm::parsing::{FencedXmlParser, ToolCodeXmlParser};
 use crate::llm::impls::markup_policies::JsonMarkupPolicy;
 use crate::prompt_templating::PromptTemplater;
 use crate::tools::tool_registry::ToolRegistry;
-use crate::statistics::models::UsageStatistics;
+// use crate::statistics::models::UsageStatistics; // Commented out
 
 pub struct AgentManager {
     project_root: PathBuf,
     tool_registry: ToolRegistry,
     prompt_templater: PromptTemplater,
-    stats: Arc<Mutex<UsageStatistics>>,
+    // stats: Arc<Mutex<UsageStatistics>>, // Commented out
 }
 
 impl AgentManager {
@@ -28,13 +28,13 @@ impl AgentManager {
         project_root: PathBuf,
         tool_registry: ToolRegistry,
         prompt_templater: PromptTemplater,
-        stats: Arc<Mutex<UsageStatistics>>,
+        // stats: Arc<Mutex<UsageStatistics>>, // Commented out
     ) -> Result<Self> {
         Ok(Self {
             project_root,
             tool_registry,
             prompt_templater,
-            stats,
+            // stats,
         })
     }
 
@@ -60,7 +60,7 @@ impl AgentManager {
         parsers.push(Box::new(FencedXmlParser));
         parsers.push(Box::new(ToolCodeXmlParser));
 
-        let llm_client = LlmClient::new(agent_definition.llm_config.clone(), parsers, self.stats.clone());
+        let llm_client = LlmClient::new(agent_definition.llm_config.clone(), parsers /*, self.stats.clone()*/); // stats argument commented out
         let default_markup_policy = JsonMarkupPolicy;
 
         Ok(Box::new(BasicAgent::new(
@@ -69,7 +69,7 @@ impl AgentManager {
             self.tool_registry.clone(),
             self.prompt_templater.clone(),
             Box::new(default_markup_policy),
-            self.stats.clone(),
+            // self.stats.clone(), // stats argument commented out
         )))
     }
 }

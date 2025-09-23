@@ -45,12 +45,41 @@ async fn main() -> anyhow::Result<()> {
         Commands::Project(project_command) => match &project_command.command {
             ProjectSubcommand::Init { .. } => { /* Handled above */ }
             ProjectSubcommand::Info => {
-                println!("Project info for: {}", project_root.display());
-                // Implementation for `project info` will go here
+                println!("Vespe Project Information");
+                println!("-------------------------");
+                println!("Root Path: {}", project_root.display());
+
+                let task_count = api::list_all_tasks(&project_root).map_or(0, |t| t.len());
+                println!("Task Count: {}", task_count);
+
+                let tool_count = api::list_available_tools(&project_root, &project::ProjectConfig::default()).map_or(0, |t| t.len());
+                println!("Tool Count: {}", tool_count);
             }
             ProjectSubcommand::Validate => {
-                println!("Validating project at: {}", project_root.display());
-                // Implementation for `project validate` will go here
+                println!("Validating Vespe project...");
+                let vespe_dir = project_root.join(".vespe");
+                let tasks_dir = vespe_dir.join("tasks");
+                let tools_dir = vespe_dir.join("tools");
+
+                let mut is_valid = true;
+                if !vespe_dir.exists() {
+                    eprintln!("Error: .vespe directory not found.");
+                    is_valid = false;
+                }
+                if !tasks_dir.exists() {
+                    eprintln!("Error: .vespe/tasks directory not found.");
+                    is_valid = false;
+                }
+                if !tools_dir.exists() {
+                    eprintln!("Error: .vespe/tools directory not found.");
+                    is_valid = false;
+                }
+
+                if is_valid {
+                    println!("Project structure is valid.");
+                } else {
+                    println!("Project structure is invalid.");
+                }
             }
         },
         Commands::Task(task_command) => match &task_command.command {
@@ -154,7 +183,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             ToolSubcommand::List => {
-                match api::list_available_tools(&project_root, &project::ProjectConfig { kits: vec![] }) {
+                match api::list_available_tools(&project_root, &project::ProjectConfig::default()) {
                     Ok(tools) => {
                         if tools.is_empty() {
                             println!("No tools found.");

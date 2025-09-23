@@ -1,0 +1,34 @@
+# Plan: Remove Statistics Logic from `vespe_cli` and Comment Out from Old Sources
+
+## Objective
+
+To remove all statistics-related code from the `vespe_cli` binary and comment out its usage in `src/main.rs`, `src/lib.rs`, and `src/bin/vespe_cli.rs`. This will clean up the current CLI implementation by removing obsolete features without permanently deleting the code.
+
+## Proposed Steps
+
+1.  **Modify `src/bin/vespe_cli.rs`:**
+    *   Comment out imports related to `statistics` (e.g., `use vespe::statistics;`, `use vespe::statistics::models::UsageStatistics;`).
+    *   Comment out the `stats` variable initialization (`let stats = Arc::new(Mutex::new(statistics::load_statistics(&project_root).await?));`).
+    *   Comment out the `stats` argument when calling `vespe::run`.
+    *   Comment out the `statistics::save_statistics` call.
+
+2.  **Modify `src/lib.rs`:**
+    *   Comment out imports related to `statistics` (e.g., `use crate::statistics::models::UsageStatistics;`, `use crate::statistics::STATS_FILE_NAME;`).
+    *   Comment out the `stats` parameter in the `run` function signature.
+    *   Comment out the `stats` argument when creating `AgentManager`.
+    *   Comment out the `cli::commands::Commands::ResetStats` arm in the `match` statement.
+
+3.  **Modify `src/main.rs`:**
+    *   Comment out imports related to `statistics` (e.g., `use vespe::statistics;`).
+    *   Comment out the `stats` variable initialization (`let stats = Arc::new(Mutex::new(statistics::load_statistics(&project_root).await?));`).
+    *   Comment out the `stats` argument when calling `vespe::run`.
+    *   Comment out the `statistics::save_statistics` call.
+
+4.  **Modify `src/cli/commands.rs`:**
+    *   Comment out the `Commands::ResetStats` variant.
+
+## Verification
+
+*   Compile the project (`cargo build`).
+*   Run existing tests (`cargo test`).
+*   Manually test `vespe_cli` commands to ensure they still function correctly without statistics.

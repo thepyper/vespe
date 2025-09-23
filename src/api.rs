@@ -6,22 +6,22 @@ use sha2::{Sha256, Digest};
 
 use crate::models::{Task, TaskConfig, TaskStatus, TaskState, TaskDependencies, PersistentEvent, Agent, AgentType};
 use crate::tool_models::{Tool, ToolConfig};
-use crate::project_models::ProjectConfig;
+use crate::project_models::{Project, ProjectConfig};
 use crate::error::ProjectError;
-use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file, get_tasks_base_path, get_tools_base_path};
+use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file};
 
 /// Creates a new task or subtask.
 /// Initializes the task directory with config.json, empty objective.md, etc.
 /// The task is created in the `CREATED` state.
 pub fn create_task(
-    project_root_path: &Path,
+    project: &Project,
     parent_uid: Option<String>,
     name: String,
     created_by_agent_uid: String,
     _template_name: String, // Template not yet implemented, ignored for now
 ) -> Result<Task, ProjectError> {
     let uid = generate_uid("tsk")?;
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, &uid)?;
 
     // Create task directory and subdirectories
@@ -59,15 +59,15 @@ pub fn create_task(
     write_json_file(&task_path.join("dependencies.json"), &dependencies)?;
 
     // Load the newly created task to return it
-    load_task(project_root_path, &uid)
+    load_task(project, &uid)
 }
 
 /// Loads a task from the filesystem given its UID.
 pub fn load_task(
-    project_root_path: &Path,
+    project: &Project,
     uid: &str
 ) -> Result<Task, ProjectError> {
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, uid)?;
 
     if !task_path.exists() {
@@ -94,12 +94,12 @@ pub fn load_task(
 /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
 /// Writes the objective content to `objective.md`.
 pub fn define_objective(
-    project_root_path: &Path,
+    project: &Project,
     task_uid: &str,
     objective_content: String
 ) -> Result<Task, ProjectError> {
-    let mut task = load_task(project_root_path, task_uid)?;
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let mut task = load_task(project, task_uid)?;
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
 
     // Update objective.md
@@ -115,12 +115,12 @@ pub fn define_objective(
 /// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.
 /// Writes the plan content to `plan.md`.
 pub fn define_plan(
-    project_root_path: &Path,
+    project: &Project,
     task_uid: &str,
     plan_content: String
 ) -> Result<Task, ProjectError> {
-    let mut task = load_task(project_root_path, task_uid)?;
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let mut task = load_task(project, task_uid)?;
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
 
     // Prevent defining a plan for a replanned task
@@ -143,11 +143,11 @@ pub fn define_plan(
 
 /// Adds a new event to the `persistent/` folder of the task.
 pub fn add_persistent_event(
-    project_root_path: &Path,
+    project: &Project,
     task_uid: &str,
     event: PersistentEvent
 ) -> Result<(), ProjectError> {
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let persistent_path = task_path.join("persistent");
 
@@ -162,10 +162,10 @@ pub fn add_persistent_event(
 
 /// Retrieves all persistent events for a task, sorted by timestamp.
 pub fn get_all_persistent_events(
-    project_root_path: &Path,
+    project: &Project,
     task_uid: &str
 ) -> Result<Vec<PersistentEvent>, ProjectError> {
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let persistent_path = task_path.join("persistent");
 
@@ -191,10 +191,10 @@ pub fn get_all_persistent_events(
 /// Calculates the SHA256 hash of the `result/` folder content for a task.
 /// The hash is based on the content of all files and their relative paths within the folder.
 pub fn calculate_result_hash(
-    project_root_path: &Path,
+    project: &Project,
     task_uid: &str
 ) -> Result<String, ProjectError> {
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let result_path = task_path.join("result");
 
@@ -232,12 +232,12 @@ pub fn calculate_result_hash(
 
 /// Adds a file to the `result/` folder of the task.
 pub fn add_result_file(
-    project_root_path: &Path,
+    project: &Project,
     task_uid: &str,
     filename: &str,
     content: Vec<u8>
 ) -> Result<(), ProjectError> {
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
     let result_path = task_path.join("result");
 
@@ -252,14 +252,14 @@ pub fn add_result_file(
 
 /// Creates a new tool.
 pub fn create_tool(
-    project_root_path: &Path,
+    project: &Project,
     name: String,
     description: String,
     schema: serde_json::Value,
     implementation_details: serde_json::Value,
 ) -> Result<Tool, ProjectError> {
     let uid = generate_uid("tool")?;
-    let tools_base_path = get_tools_base_path(project_root_path);
+    let tools_base_path = project.tasks_dir();
     let tool_path = get_entity_path(&tools_base_path, &uid)?;
 
     fs::create_dir_all(&tool_path).map_err(|e| ProjectError::Io(e))?;
@@ -325,11 +325,11 @@ fn list_all_tools_in_path(base_path: &Path) -> Result<Vec<Tool>, ProjectError> {
 /// Resolves a tool given its name and project configuration.
 /// For now, only resolves project-specific tools.
 pub fn resolve_tool(
-    project_root_path: &Path,
+    project: &Project,
     _project_config: &ProjectConfig, // project_config is not used for now as kits are out of scope
     tool_name: &str
 ) -> Result<Tool, ProjectError> {
-    let tools_base_path = get_tools_base_path(project_root_path);
+    let tools_base_path = project.tasks_dir();
     let project_tools = list_all_tools_in_path(&tools_base_path)?;
     if let Some(tool) = project_tools.into_iter().find(|t| t.config.name == tool_name) {
         return Ok(tool);
@@ -341,10 +341,10 @@ pub fn resolve_tool(
 /// Lists all tools available for a given project.
 /// For now, only lists project-specific tools.
 pub fn list_available_tools(
-    project_root_path: &Path,
+    project: &Project,
     _project_config: &ProjectConfig // project_config is not used for now as kits are out of scope
 ) -> Result<Vec<Tool>, ProjectError> {
-    let tools_base_path = get_tools_base_path(project_root_path);
+    let tools_base_path = project.tasks_dir();
     let available_tools = list_all_tools_in_path(&tools_base_path)?;
 
     // No deduplication needed as only project-specific tools are listed.
@@ -352,8 +352,8 @@ pub fn list_available_tools(
 }
 
 /// Lists all tasks in the project.
-pub fn list_all_tasks(project_root_path: &Path) -> Result<Vec<Task>, ProjectError> {
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+pub fn list_all_tasks(project: &Project) -> Result<Vec<Task>, ProjectError> {
+    let tasks_base_path = project.tasks_dir();
     let mut tasks = Vec::new();
 
     if !tasks_base_path.exists() {
@@ -365,7 +365,7 @@ pub fn list_all_tasks(project_root_path: &Path) -> Result<Vec<Task>, ProjectErro
         let path = entry.path();
         if path.is_dir() {
             if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                match load_task(project_root_path, uid_str) {
+                match load_task(project, uid_str) {
                     Ok(task) => tasks.push(task),
                     Err(e) => eprintln!("Warning: Could not load task {}: {}", uid_str, e),
                 }
@@ -378,12 +378,12 @@ pub fn list_all_tasks(project_root_path: &Path) -> Result<Vec<Task>, ProjectErro
 
 /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
 pub fn review_task(
-    project_root_path: &Path,
+    project: &Project,
     task_uid: &str,
     approved: bool, // true for approve, false for reject
 ) -> Result<Task, ProjectError> {
-    let mut task = load_task(project_root_path, task_uid)?;
-    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let mut task = load_task(project, task_uid)?;
+    let tasks_base_path = project.tasks_dir();
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
 
     if task.status.current_state != TaskState::NeedsReview {
@@ -413,7 +413,7 @@ pub fn review_task(
 
 /// Creates a new agent (AI or human).
 pub fn create_agent(
-    project_root_path: &Path,
+    project: &Project,
     agent_type: AgentType,
     name: String,
     // ... other initial configuration fields
@@ -423,7 +423,7 @@ pub fn create_agent(
         AgentType::AI => "agt",
     };
     let uid = generate_uid(uid_prefix)?;
-    let agents_base_path = project_root_path.join(".vespe").join("agents"); // Assuming this path
+    let agents_base_path = project.agents_dir();
     let agent_path = get_entity_path(&agents_base_path, &uid)?;
 
     fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
@@ -452,10 +452,10 @@ pub fn create_agent(
 
 /// Loads an agent from the filesystem given its UID.
 pub fn load_agent(
-    project_root_path: &Path,
+    project: &Project,
     agent_uid: &str,
 ) -> Result<Agent, ProjectError> {
-    let agents_base_path = project_root_path.join(".vespe").join("agents");
+    let agents_base_path = project.agents_dir();
     let agent_path = get_entity_path(&agents_base_path, agent_uid)?;
 
     if !agent_path.exists() {
@@ -469,9 +469,9 @@ pub fn load_agent(
 
 /// Lists all agents available in the project.
 pub fn list_agents(
-    project_root_path: &Path,
+    project: &Project,
 ) -> Result<Vec<Agent>, ProjectError> {
-    let agents_base_path = project_root_path.join(".vespe").join("agents");
+    let agents_base_path = project.agents_dir();
     let mut agents = Vec::new();
 
     if !agents_base_path.exists() {
@@ -483,7 +483,7 @@ pub fn list_agents(
         let path = entry.path();
         if path.is_dir() {
             if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                match load_agent(project_root_path, uid_str) {
+                match load_agent(project, uid_str) {
                     Ok(agent) => agents.push(agent),
                     Err(e) => eprintln!("Warning: Could not load agent {}: {}", uid_str, e),
                 }
@@ -696,7 +696,7 @@ mod tests {
         assert_eq!(agent.name, agent_name);
         assert_eq!(agent.agent_type, agent_type);
         assert!(agent.uid.starts_with("usr-"));
-        assert!(project_root_path.join(".vespe").join("agents").join(&agent.uid).join("config.json").exists());
+        assert!(project.agents_dir().join(&agent.uid).join("config.json").exists());
 
         let ai_agent_name = "Test AI Agent".to_string();
         let ai_agent_type = AgentType::AI;
@@ -706,7 +706,7 @@ mod tests {
         assert_eq!(ai_agent.name, ai_agent_name);
         assert_eq!(ai_agent.agent_type, ai_agent_type);
         assert!(ai_agent.uid.starts_with("agt-"));
-        assert!(project_root_path.join(".vespe").join("agents").join(&ai_agent.uid).join("config.json").exists());
+        assert!(project.agents_dir().join(&ai_agent.uid).join("config.json").exists());
     }
 
     #[test]

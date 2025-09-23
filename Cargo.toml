@@ -25,11 +25,6 @@ path = "src/bin/data_generator/main.rs"
 name = "tool-format-tester"
 path = "src/bin/tool-format-tester/main.rs"
 
-[[bin]]
-name = "test_task_api"
-path = "src/bin/test_task_api.rs"
-
-
 [dependencies]
 rand = "0.8"
 tokio = { version = "1", features = ["full"] }

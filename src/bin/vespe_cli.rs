@@ -1,6 +1,7 @@
 use clap::Parser;
-use vespe::cli::commands::Cli;
-use vespe::project_root::get_project_root_path;
+use vespe::cli::commands::{Cli, Commands};
+// use vespe::project_root::get_project_root_path; // Commented out
+use project::utils::{find_project_root, initialize_project_root}; // New import
 use vespe::statistics::models::UsageStatistics;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -16,14 +17,23 @@ async fn main() -> anyhow::Result<()> {
 
     let cli = Cli::parse();
 
+    // Handle Init command here, as it's now part of vespe_cli
+    if let Commands::Init { path } = &cli.command {
+        let target_dir = if let Some(p) = path {
+            p.clone()
+        } else {
+            std::env::current_dir()? // Use current directory if no path is specified
+        };
+        initialize_project_root(&target_dir)?;
+        println!("Vespe project initialized at: {}", target_dir.display());
+        return Ok(());
+    }
+
     let project_root = if let Some(path) = cli.project_root {
         path
     } else {
-        get_project_root_path()?;
-        // If get_project_root_path() succeeds, it means .vespe exists somewhere up the hierarchy.
-        // We need to return the actual root path found by get_project_root_path().
-        // Let's re-call it to get the value.
-        get_project_root_path()? 
+        find_project_root(&std::env::current_dir()?) // Use new find_project_root
+            .ok_or_else(|| anyhow::anyhow!("Project root not found. Please run 'vespe init' or specify --project-root."))?
     };
 
     // Initialize statistics

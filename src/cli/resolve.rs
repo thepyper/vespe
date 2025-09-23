@@ -1,5 +1,5 @@
 use std::path::Path;
-use project::Task;
+use crate::{Task, Tool};
 use crate::api::{load_task, list_all_tasks};
 use anyhow::{anyhow, Result};
 

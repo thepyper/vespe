@@ -7,13 +7,33 @@ use crossterm::{
 use ratatui::{prelude::*, widgets::*};
 use std::io::{stdout, Stdout};
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 enum Page {
     #[default]
     Tasks,
     Tools,
     Agents,
     Chat,
+}
+
+impl Page {
+    fn title(&self) -> &str {
+        match self {
+            Page::Tasks => "Tasks",
+            Page::Tools => "Tools",
+            Page::Agents => "Agents",
+            Page::Chat => "Chat",
+        }
+    }
+
+    fn color(&self) -> Color {
+        match self {
+            Page::Tasks => Color::LightBlue,
+            Page::Tools => Color::LightCyan,
+            Page::Agents => Color::LightMagenta,
+            Page::Chat => Color::LightYellow,
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -120,24 +140,32 @@ fn render_chat_page(frame: &mut Frame, area: Rect) {
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
-    let footer_text = Line::from(vec![
-        Span::styled(" F1 ", Style::default().fg(Color::Black).bg(if *current_page == Page::Tasks { Color::LightGreen } else { Color::Gray })),
-        Span::raw(" Tasks "),
-        Span::styled(" F2 ", Style::default().fg(Color::Black).bg(if *current_page == Page::Tools { Color::LightGreen } else { Color::Gray })),
-        Span::raw(" Tools "),
-        Span::styled(" F3 ", Style::default().fg(Color::Black).bg(if *current_page == Page::Agents { Color::LightGreen } else { Color::Gray })),
-        Span::raw(" Agents "),
-        Span::styled(" F4 ", Style::default().fg(Color::Black).bg(if *current_page == Page::Chat { Color::LightGreen } else { Color::Gray })),
-        Span::raw(" Chat "),
-        Span::raw(" | "),
-        Span::styled(" Q ", Style::default().fg(Color::Black).bg(Color::Red)),
-        Span::raw(" Quit "),
-    ]);
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(vec![
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+        ])
+        .split(area);
 
-    frame.render_widget(
-        Paragraph::new(footer_text)
-            .alignment(Alignment::Center)
-            .block(Block::default().borders(Borders::TOP)),
-        area,
-    );
+    let pages = [
+        (Page::Tasks, KeyCode::F(1)),
+        (Page::Tools, KeyCode::F(2)),
+        (Page::Agents, KeyCode::F(3)),
+        (Page::Chat, KeyCode::F(4)),
+    ];
+
+    for (i, (page, _key_code)) in pages.iter().enumerate() {
+        let is_selected = page == current_page;
+        let background_color = if is_selected { page.color() } else { Color::DarkGray };
+        let foreground_color = if is_selected { Color::Black } else { Color::White };
+
+        let text = format!("F{} {}", i + 1, page.title());
+        let paragraph = Paragraph::new(text)
+            .style(Style::default().fg(foreground_color).bg(background_color))
+            .alignment(Alignment::Center);
+        frame.render_widget(paragraph, chunks[i]);
+    }
 }

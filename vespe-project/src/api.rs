@@ -494,6 +494,22 @@ pub fn list_agents(
     Ok(agents)
 }
 
+/// Loads the project configuration from the filesystem.
+pub fn load_project_config(project_root_path: &Path) -> Result<ProjectConfig, ProjectError> {
+    let config_path = project_root_path.join(".vespe").join("project_config.json");
+    if !config_path.exists() {
+        // If config file doesn't exist, return a default config
+        return Ok(ProjectConfig::default());
+    }
+    read_json_file(&config_path)
+}
+
+/// Saves the project configuration to the filesystem.
+pub fn save_project_config(project_root_path: &Path, config: &ProjectConfig) -> Result<(), ProjectError> {
+    let config_path = project_root_path.join(".vespe").join("project_config.json");
+    write_json_file(&config_path, config)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

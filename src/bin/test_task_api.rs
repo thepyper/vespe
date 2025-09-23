@@ -1,6 +1,6 @@
 use chrono::Utc;
 
-use vespe_project::api;
+use crate::api;
 use vespe_project::models::PersistentEvent;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

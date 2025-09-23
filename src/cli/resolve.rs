@@ -1,6 +1,6 @@
 use std::path::Path;
 use project::Task;
-use project::api::{load_task, list_all_tasks};
+use crate::api::{load_task, list_all_tasks};
 use anyhow::{anyhow, Result};
 
 /// Resolves a task identifier (which can be a UID or a name) to a Task.

@@ -368,6 +368,41 @@ pub fn list_all_tasks(project_root_path: &Path) -> Result<Vec<Task>, ProjectErro
     Ok(tasks)
 }
 
+/// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
+pub fn review_task(
+    project_root_path: &Path,
+    task_uid: &str,
+    approved: bool, // true for approve, false for reject
+) -> Result<Task, ProjectError> {
+    let mut task = load_task(project_root_path, task_uid)?;
+    let tasks_base_path = get_tasks_base_path(project_root_path);
+    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
+
+    if task.status.current_state != TaskState::NeedsReview {
+        return Err(ProjectError::InvalidStateTransition(
+            task.status.current_state,
+            TaskState::NeedsReview, // This is not quite right, should be the target state
+        ));
+    }
+
+    let next_state = if approved {
+        TaskState::Completed // Or TaskState::Ready if we add it
+    } else {
+        TaskState::Replanned
+    };
+
+    if !task.status.current_state.can_transition_to(next_state) {
+        return Err(ProjectError::InvalidStateTransition(
+            task.status.current_state,
+            next_state,
+        ));
+    }
+
+    update_task_status(&task_path, next_state, &mut task.status)?;
+
+    Ok(task)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

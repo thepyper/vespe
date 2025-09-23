@@ -123,6 +123,14 @@ pub fn define_plan(
     let tasks_base_path = get_tasks_base_path(project_root_path);
     let task_path = get_entity_path(&tasks_base_path, task_uid)?;
 
+    // Prevent defining a plan for a replanned task
+    if task.status.current_state == TaskState::Replanned {
+        return Err(ProjectError::InvalidStateTransition(
+            task.status.current_state,
+            TaskState::PlanDefined, // Attempted target state
+        ));
+    }
+
     // Update plan.md
     write_file_content(&task_path.join("plan.md"), &plan_content)?;
     task.plan = Some(plan_content);

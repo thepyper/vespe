@@ -1,6 +1,6 @@
 use std::path::Path;
-use crate::{Task, Tool};
-use crate::api::{load_task, list_all_tasks};
+use vespe::{Task, Tool};
+use vespe::api::{load_task, list_all_tasks};
 use anyhow::{anyhow, Result};
 
 /// Resolves a task identifier (which can be a UID or a name) to a Task.
@@ -41,7 +41,7 @@ pub fn resolve_task(project_root: &Path, identifier: &str) -> Result<Task> {
 }
 
 
-use crate::api::list_available_tools;
+use vespe::api::list_available_tools;
 
 /// Resolves a tool identifier (which can be a UID or a name) to a Tool.
 ///
@@ -50,7 +50,7 @@ pub fn resolve_tool(project_root: &Path, identifier: &str) -> Result<Tool> {
     // For now, we only resolve by name as `load_tool` takes a path, not a UID.
     // This will be updated once a `load_tool_by_uid` function is available.
 
-    let all_tools = list_available_tools(project_root, &vespe_project::ProjectConfig::default())?;
+    let all_tools = list_available_tools(project_root, &vespe::ProjectConfig::default())?;
     let matching_tools: Vec<Tool> = all_tools
         .into_iter()
         .filter(|t| t.config.name == identifier || t.uid == identifier)

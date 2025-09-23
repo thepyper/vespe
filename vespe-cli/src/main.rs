@@ -1,11 +1,11 @@
 use clap::Parser;
 use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
 use crate::cli::resolve::{resolve_task, resolve_tool};
-use vespe_project::api; // Import the api module
-use vespe_project::utils::{find_project_root, initialize_project_root};
+use vespe::api; // Import the api module
+use vespe::utils::{find_project_root, initialize_project_root};
 use std::fs;
 use std::path::PathBuf;
-use vespe_project::ProjectConfig;
+use vespe::ProjectConfig;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[tokio::main]
@@ -156,7 +156,7 @@ async fn main() -> anyhow::Result<()> {
 
                 match resolve_task(&project_root, identifier) {
                     Ok(task) => {
-                        if task.status.current_state != vespe_project::models::TaskState::NeedsReview {
+                        if task.status.current_state != vespe::models::TaskState::NeedsReview {
                             eprintln!("Error: Task must be in 'NeedsReview' state to be reviewed. Current state: {:?}", task.status.current_state);
                             return Ok(());
                         }

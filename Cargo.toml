@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "vespe-buzz", "vespe-cli",
-    "vespe-project", "vespe-tui",
+    "vespe", "vespe-tui",
 ]
 
 [package]

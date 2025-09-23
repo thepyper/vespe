@@ -1,5 +1,5 @@
 [package]
-name = "vespe-project"
+name = "vespe"
 version = "0.1.0"
 edition = "2021"
 

@@ -109,3 +109,39 @@ pub struct ReviewTaskResponse {
     pub task_uid: String,
     pub new_state: String,
 }
+
+// Tool DTOs
+#[derive(Deserialize)]
+pub struct CreateToolRequest {
+    pub name: String,
+    pub description: String,
+    pub schema: serde_json::Value,
+    pub implementation_details: serde_json::Value,
+}
+
+#[derive(Serialize)]
+pub struct CreateToolResponse {
+    pub tool_uid: String,
+    pub tool_name: String,
+}
+
+#[derive(Serialize)]
+pub struct LoadToolResponse {
+    pub tool: vespe_project::Tool,
+}
+
+#[derive(Serialize)]
+pub struct ResolveToolResponse {
+    pub tool: vespe_project::Tool,
+}
+
+#[derive(Serialize)]
+pub struct ListAvailableToolsResponse {
+    pub tools: Vec<vespe_project::Tool>,
+}
+
+// Project DTOs
+#[derive(Serialize)]
+pub struct LoadProjectConfigResponse {
+    pub config: vespe_project::ProjectConfig,
+}

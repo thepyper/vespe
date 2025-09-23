@@ -10,7 +10,7 @@ mod error; // Declare the error module
 mod handlers; // Declare the handlers module
 
 use crate::handlers::{
-    create_agent_handler, create_task_handler, list_agents_handler, list_tasks_handler, load_task_handler, define_objective_handler, define_plan_handler, add_persistent_event_handler, get_all_persistent_events_handler, calculate_result_hash_handler, add_result_file_handler, AppState,
+    create_agent_handler, create_task_handler, list_agents_handler, list_tasks_handler, load_task_handler, define_objective_handler, define_plan_handler, add_persistent_event_handler, get_all_persistent_events_handler, calculate_result_hash_handler, add_result_file_handler, review_task_handler, create_tool_handler, load_tool_handler, resolve_tool_handler, list_available_tools_handler, AppState,
 };
 
 #[tokio::main]
@@ -39,6 +39,12 @@ pub async fn main() {
         .route("/tasks/:task_uid/events", get(get_all_persistent_events_handler))
         .route("/tasks/:task_uid/result/hash", get(calculate_result_hash_handler))
         .route("/tasks/:task_uid/result/files", post(add_result_file_handler))
+        .route("/tasks/:task_uid/review", post(review_task_handler))
+        // Tool Endpoints
+        .route("/tools", post(create_tool_handler))
+        .route("/tools/:tool_uid", get(load_tool_handler))
+        .route("/tools/resolve/:tool_name", get(resolve_tool_handler))
+        .route("/tools", get(list_available_tools_handler))
         // Agent Endpoints
         .route("/agents", post(create_agent_handler))
         .route("/agents", get(list_agents_handler))

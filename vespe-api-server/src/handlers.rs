@@ -14,6 +14,8 @@ use super::models::{
     GetAllPersistentEventsResponse, CalculateResultHashResponse,
     AddResultFileRequest, AddResultFileResponse,
     ReviewTaskRequest, ReviewTaskResponse,
+    CreateToolRequest, CreateToolResponse, LoadToolResponse, ResolveToolResponse,
+    ListAvailableToolsResponse,
 };
 use vespe_project::PersistentEvent;
 use chrono::Utc;
@@ -224,6 +226,77 @@ pub async fn review_task_handler(
             task_uid: task.uid,
             new_state: task.status.current_state.to_string(),
         })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn create_tool_handler(
+    State(app_state): State<AppState>,
+    Json(payload): Json<CreateToolRequest>,
+) -> Result<Json<CreateToolResponse>, (StatusCode, String)> {
+    let result = api::create_tool(
+        &app_state.project_root,
+        payload.name,
+        payload.description,
+        payload.schema,
+        payload.implementation_details,
+    );
+
+    match result {
+        Ok(tool) => Ok(Json(CreateToolResponse {
+            tool_uid: tool.uid,
+            tool_name: tool.config.name,
+        })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn load_tool_handler(
+    State(app_state): State<AppState>,
+    Path(tool_uid): Path<String>,
+) -> Result<Json<LoadToolResponse>, (StatusCode, String)> {
+    // In vespe_project::api::load_tool, it expects a Path to the tool's root_path.
+    // We need to construct that path from project_root and tool_uid.
+    // This requires a helper function in vespe_project::utils or similar.
+    // For now, we'll mock it or assume a direct load by UID is possible.
+    // Based on vespe_project::api::load_tool, it takes `tool_path: &Path`.
+    // We need to get the full path to the tool's directory.
+    // `create_tool` uses `get_entity_path` to construct the tool_path.
+    // So, we need to construct the tool_path here.
+
+    let tools_base_path = app_state.project_root.join(".vespe").join("tools");
+    let tool_path = tools_base_path.join(&tool_uid);
+
+    let result = api::load_tool(&tool_path);
+
+    match result {
+        Ok(tool) => Ok(Json(LoadToolResponse { tool })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn resolve_tool_handler(
+    State(app_state): State<AppState>,
+    Path(tool_name): Path<String>,
+) -> Result<Json<ResolveToolResponse>, (StatusCode, String)> {
+    // vespe_project::api::resolve_tool requires a ProjectConfig, but for now we'll use default.
+    let project_config = vespe_project::ProjectConfig::default();
+    let result = api::resolve_tool(&app_state.project_root, &project_config, &tool_name);
+
+    match result {
+        Ok(tool) => Ok(Json(ResolveToolResponse { tool })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn list_available_tools_handler(
+    State(app_state): State<AppState>,
+) -> Result<Json<ListAvailableToolsResponse>, (StatusCode, String)> {
+    let project_config = vespe_project::ProjectConfig::default();
+    let result = api::list_available_tools(&app_state.project_root, &project_config);
+
+    match result {
+        Ok(tools) => Ok(Json(ListAvailableToolsResponse { tools })),
         Err(e) => Err(map_project_error_to_http_response(e)),
     }
 }

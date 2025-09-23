@@ -2,7 +2,7 @@
 members = [
     ".",
     "vespe-buzz",
-    "vespe-project",
+    "vespe-project", "vespe-tui",
 ]
 
 [package]

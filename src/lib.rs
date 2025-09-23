@@ -12,8 +12,10 @@ pub mod llm;
 pub mod tools;
 pub mod statistics;
 
-pub mod prompt_templating;
-pub mod project_root;
+pub mod statistics;
+
+// pub mod prompt_templating; // Commented out
+// pub mod project_root; // Commented out
 
 use crate::tools::tool_registry::ToolRegistry;
 use crate::tools::impls::echo_tool::EchoTool;
@@ -55,15 +57,15 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
             let response = agent.execute(&message).await?;
             println!("Agent {}: {}", agent.name(), response);
         },
-        cli::commands::Commands::Init { path } => {
-            let target_dir = if let Some(p) = path {
-                p
-            } else {
-                std::env::current_dir()? // Use current directory if no path is specified
-            };
-            project_root::initialize_project_root(&target_dir)?;
-            println!("Vespe project initialized at: {}", target_dir.display());
-        },
+        // cli::commands::Commands::Init { path } => { // Commented out
+        //     let target_dir = if let Some(p) = path {
+        //         p
+        //     } else {
+        //         std::env::current_dir()? // Use current directory if no path is specified
+        //     };
+        //     project::utils::initialize_project_root(&target_dir)?; // Updated call
+        //     println!("Vespe project initialized at: {}", target_dir.display());
+        // },
         cli::commands::Commands::ResetStats => {
             let stats_path = project_root.join(".vespe").join(STATS_FILE_NAME);
             if stats_path.exists() {

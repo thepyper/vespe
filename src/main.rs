@@ -1,24 +1,18 @@
-use anyhow::{Result, anyhow};
-use tracing_subscriber::{fmt, filter::EnvFilter, Layer, Registry};
-use tracing_subscriber::prelude::*;
-use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use clap::Parser;
-use tracing::info;
-use std::sync::Arc;
-use tokio::sync::Mutex;
-
 use vespe::cli::commands::{Cli, Commands};
-use vespe::project_root::{self, is_project_root};
+// use vespe::project_root::{self, is_project_root}; // Commented out
 use vespe::statistics;
+use project::utils::{find_project_root, is_project_root}; // New import
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let current_dir = std::env::current_dir()?;
-    let current_project_root = project_root::find_project_root(&current_dir);
+    let current_project_root = find_project_root(&current_dir); // Use new find_project_root
 
     // Handle Init command separately, as it doesn't require an existing project root
+    // This block is commented out as Init command is now handled by vespe_cli
+    /*
     if let Commands::Init { path } = &cli.command {
         let target_dir = if let Some(p) = path {
             p.clone()
@@ -29,6 +23,7 @@ async fn main() -> Result<()> {
         println!("Vespe project initialized at: {}", target_dir.display());
         return Ok(());
     }
+    */
 
     let project_root = if let Some(path) = cli.project_root {
         path
@@ -39,7 +34,7 @@ async fn main() -> Result<()> {
     };
     
     // Check if it actually is a root
-    if !is_project_root(&project_root) {
+    if !is_project_root(&project_root) { // Use new is_project_root
         return Err(anyhow!("Not a vespe project."));
     }
 

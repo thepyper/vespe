@@ -1,8 +1,8 @@
 [workspace]
 members = [
     ".",
-    "buzz",
-    "project",
+    "vespe-buzz",
+    "vespe-project",
 ]
 
 [package]
@@ -53,5 +53,5 @@ once_cell = "1.19.0"
 serde-xml-rs = "0.6"
 tokio-stream = "0.1"
 futures-util = "0.3"
-project = { path = "project" }
+vespe-project = { path = "vespe-project" }
 tempfile = "3.22"

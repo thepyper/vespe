@@ -1,0 +1,22 @@
+Obiettivo: Rinominare le crate `project` e `buzz` in `vespe-project` e `vespe-buzz` e ottimizzare le importazioni per ridurre la verbosità.
+
+Passi:
+
+1.  **Rinominazione delle directory:**
+    *   Rinominare la directory `project/` in `vespe-project/`.
+    *   Rinominare la directory `buzz/` in `vespe-buzz/`.
+
+2.  **Aggiornamento dei file `Cargo.toml`:**
+    *   Nel `Cargo.toml` principale del progetto `vespe`, aggiornare i percorsi delle dipendenze per `vespe-project` e `vespe-buzz`.
+    *   Nei file `Cargo.toml` all'interno di `vespe-project/` e `vespe-buzz/`, aggiornare il campo `name` per riflettere i nuovi nomi delle crate.
+
+3.  **Aggiornamento delle importazioni nel codice Rust:**
+    *   Cercare tutte le occorrenze di `use project::` e sostituirle con `use vespe_project::`.
+    *   Cercare tutte le occorrenze di `use buzz::` e sostituirle con `use vespe_buzz::`.
+    *   Questo verrà applicato a tutti i file `.rs` all'interno della directory `src` della crate principale `vespe`.
+
+4.  **Ottimizzazione della verbosità (post-rinominazione):**
+    *   Dopo aver completato la rinominazione e l'aggiornamento delle importazioni, analizzerò le importazioni più comuni da `vespe-project` e `vespe-buzz` all'interno della crate `vespe`.
+    *   Proporrò l'uso di alias (`use ... as ...;`) o re-export (`pub use ...;`) nel file `vespe/src/lib.rs` per semplificare le importazioni e ridurre la verbosità nel resto del codice, se opportuno.
+
+Attenderò la tua approvazione prima di procedere con l'implementazione.

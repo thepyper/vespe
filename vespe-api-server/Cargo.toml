@@ -10,5 +10,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = "0.4" # Added dependency
+base64 = "0.21" # Added dependency
 # Dipendenza locale da vespe-project
 vespe-project = { path = "../vespe-project" }

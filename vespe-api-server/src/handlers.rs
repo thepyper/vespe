@@ -1,15 +1,23 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{extract::{State, Path}, http::StatusCode, Json};
 use std::path::PathBuf;
 
 use vespe_project::api;
 use vespe_project::error::ProjectError;
 use vespe_project::{Agent, AgentType, Task};
 
-use crate::models::{
+use super::models::{
     CreateAgentRequest, CreateAgentResponse, CreateTaskRequest, CreateTaskResponse,
-    ListAgentsResponse, ListTasksResponse,
+    ListAgentsResponse, ListTasksResponse, LoadTaskResponse,
+    DefineObjectiveRequest, DefineObjectiveResponse,
+    DefinePlanRequest, DefinePlanResponse,
+    AddPersistentEventRequest, AddPersistentEventResponse,
+    GetAllPersistentEventsResponse, CalculateResultHashResponse,
+    AddResultFileRequest, AddResultFileResponse,
+    ReviewTaskRequest, ReviewTaskResponse,
 };
-use crate::error::map_project_error_to_http_response;
+use vespe_project::PersistentEvent;
+use chrono::Utc;
+use super::error::map_project_error_to_http_response;
 
 // --- App State ---
 #[derive(Clone)]
@@ -75,6 +83,147 @@ pub async fn list_agents_handler(
 
     match result {
         Ok(agents) => Ok(Json(ListAgentsResponse { agents })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn load_task_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+) -> Result<Json<LoadTaskResponse>, (StatusCode, String)> {
+    let result = api::load_task(&app_state.project_root, &task_uid);
+
+    match result {
+        Ok(task) => Ok(Json(LoadTaskResponse { task })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn define_objective_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+    Json(payload): Json<DefineObjectiveRequest>,
+) -> Result<Json<DefineObjectiveResponse>, (StatusCode, String)> {
+    let result = api::define_objective(
+        &app_state.project_root,
+        &task_uid,
+        payload.objective_content,
+    );
+
+    match result {
+        Ok(task) => Ok(Json(DefineObjectiveResponse {
+            task_uid: task.uid,
+            new_state: task.status.current_state.to_string(), // Assuming TaskState can be converted to String
+        })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn define_plan_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+    Json(payload): Json<DefinePlanRequest>,
+) -> Result<Json<DefinePlanResponse>, (StatusCode, String)> {
+    let result = api::define_plan(
+        &app_state.project_root,
+        &task_uid,
+        payload.plan_content,
+    );
+
+    match result {
+        Ok(task) => Ok(Json(DefinePlanResponse {
+            task_uid: task.uid,
+            new_state: task.status.current_state.to_string(), // Assuming TaskState can be converted to String
+        })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn add_persistent_event_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+    Json(payload): Json<AddPersistentEventRequest>,
+) -> Result<Json<AddPersistentEventResponse>, (StatusCode, String)> {
+    let event = PersistentEvent {
+        timestamp: Utc::now(),
+        event_type: payload.event_type,
+        acting_agent_uid: payload.acting_agent_uid,
+        content: payload.content,
+    };
+
+    let result = api::add_persistent_event(&app_state.project_root, &task_uid, event);
+
+    match result {
+        Ok(_) => Ok(Json(AddPersistentEventResponse {
+            message: "Persistent event added successfully".to_string(),
+        })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn get_all_persistent_events_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+) -> Result<Json<GetAllPersistentEventsResponse>, (StatusCode, String)> {
+    let result = api::get_all_persistent_events(&app_state.project_root, &task_uid);
+
+    match result {
+        Ok(events) => Ok(Json(GetAllPersistentEventsResponse { events })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn calculate_result_hash_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+) -> Result<Json<CalculateResultHashResponse>, (StatusCode, String)> {
+    let result = api::calculate_result_hash(&app_state.project_root, &task_uid);
+
+    match result {
+        Ok(hash) => Ok(Json(CalculateResultHashResponse { hash })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn add_result_file_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+    Json(payload): Json<AddResultFileRequest>,
+) -> Result<Json<AddResultFileResponse>, (StatusCode, String)> {
+    let content_bytes = base64::decode(payload.content.as_bytes())
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid base64 content: {}", e)))?;
+
+    let result = api::add_result_file(
+        &app_state.project_root,
+        &task_uid,
+        &payload.filename,
+        content_bytes,
+    );
+
+    match result {
+        Ok(_) => Ok(Json(AddResultFileResponse {
+            message: format!("File {} added successfully to task {}", payload.filename, task_uid),
+        })),
+        Err(e) => Err(map_project_error_to_http_response(e)),
+    }
+}
+
+pub async fn review_task_handler(
+    State(app_state): State<AppState>,
+    Path(task_uid): Path<String>,
+    Json(payload): Json<ReviewTaskRequest>,
+) -> Result<Json<ReviewTaskResponse>, (StatusCode, String)> {
+    let result = api::review_task(
+        &app_state.project_root,
+        &task_uid,
+        payload.approved,
+    );
+
+    match result {
+        Ok(task) => Ok(Json(ReviewTaskResponse {
+            task_uid: task.uid,
+            new_state: task.status.current_state.to_string(),
+        })),
         Err(e) => Err(map_project_error_to_http_response(e)),
     }
 }

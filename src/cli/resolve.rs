@@ -50,7 +50,7 @@ pub fn resolve_tool(project_root: &Path, identifier: &str) -> Result<Tool> {
     // For now, we only resolve by name as `load_tool` takes a path, not a UID.
     // This will be updated once a `load_tool_by_uid` function is available.
 
-    let all_tools = list_available_tools(project_root, &project::ProjectConfig::default())?;
+    let all_tools = list_available_tools(project_root, &vespe_project::ProjectConfig::default())?;
     let matching_tools: Vec<Tool> = all_tools
         .into_iter()
         .filter(|t| t.config.name == identifier || t.uid == identifier)

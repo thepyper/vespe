@@ -1,8 +1,8 @@
 use clap::Parser;
 use vespe::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
 use vespe::cli::resolve::{resolve_task, resolve_tool};
-use project::api; // Import the api module
-use project::utils::{find_project_root, initialize_project_root};
+use vespe_project::api; // Import the api module
+use vespe_project::utils::{find_project_root, initialize_project_root};
 use std::fs;
 use std::path::PathBuf;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};

@@ -12,9 +12,7 @@ pub mod llm;
 pub mod tools;
 pub mod statistics;
 
-pub mod statistics;
-
-// pub mod prompt_templating; // Commented out
+pub mod prompt_templating;
 // pub mod project_root; // Commented out
 
 use crate::tools::tool_registry::ToolRegistry;
@@ -78,11 +76,11 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
         cli::commands::Commands::Task { command } => {
             match command {
                 TaskCommands::Create { parent_uid, name, created_by, template_name } => {
-                    let task = project_api::create_task(&project_root, parent_uid, name, created_by, template_name).await?;
+                    let task = project_api::create_task(&project_root, parent_uid, name, created_by, template_name)?;
                     println!("Task created: {} (UID: {})", task.config.name, task.uid);
                 },
                 TaskCommands::Show { uid } => {
-                    let task = project_api::load_task(&project_root, &uid).await?; // Await here
+                    let task = project_api::load_task(&project_root, &uid)?;
                     println!("Task Details for UID: {}", task.uid);
                     println!("  Name: {}", task.config.name);
                     println!("  State: {:?}", task.status.current_state);
@@ -94,11 +92,11 @@ pub async fn run(project_root: PathBuf, command: cli::commands::Commands, stats:
                     println!("  Created At: {}", task.config.created_at);
                 },
                 TaskCommands::DefineObjective { uid, content } => {
-                    let task = project_api::define_objective(&project_root, &uid, content).await?; // Await here
+                    let task = project_api::define_objective(&project_root, &uid, content)?;
                     println!("Objective defined for task: {} (UID: {})", task.config.name, task.uid);
                 },
                 TaskCommands::DefinePlan { uid, content } => {
-                    let task = project_api::define_plan(&project_root, &uid, content).await?; // Await here
+                    let task = project_api::define_plan(&project_root, &uid, content)?;
                     println!("Plan defined for task: {} (UID: {})", task.config.name, task.uid);
                 },
                 TaskCommands::List => {

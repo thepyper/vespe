@@ -175,7 +175,7 @@ async fn main() -> anyhow::Result<()> {
                                     println!("Task {} rejected. New state: {:?}", updated_task.uid, updated_task.status.current_state);
                                     // If rejected, create a new task for replanning
                                     if let Some(name) = new_name {
-                                        match api::create_task(&project_root, Some(task.uid.clone()), name.clone(), "user".to_string(), "default".to_string()) {
+                                        match project_root.create_task(Some(task.uid.clone()), name.clone(), "user".to_string(), "default".to_string()) {
                                             Ok(new_task) => {
                                                 println!("New task created for replanning: {} (UID: {})", new_task.config.name, new_task.uid);
                                             }

@@ -1,0 +1,23 @@
+Piano di Refactoring: Spostare `list_all_tasks` in `Project`
+
+Obiettivo: Spostare la funzione `list_all_tasks` da `src/api.rs` a un metodo statico della struct `Project` in `src/project_models.rs`.
+
+Fasi:
+
+1.  **Analisi Iniziale:**
+    *   Leggere il contenuto di `src/api.rs` per analizzare la funzione `list_all_tasks`.
+    *   Leggere il contenuto di `src/project_models.rs` per analizzare la struct `Project`.
+
+2.  **Spostamento Atomico (Primo Commit):**
+    *   Rimuovere la funzione `list_all_tasks` da `src/api.rs`.
+    *   Aggiungere la stessa logica come metodo statico `pub fn list_all_tasks(project_root: &Path) -> Result<Vec<Task>>` all'interno del blocco `impl Project` in `src/project_models.rs`.
+    *   Creare un commit per registrare lo spostamento.
+
+3.  **Aggiornamento dei Chiamanti (Secondo Commit):**
+    *   Cercare nel codebase i punti in cui `api::list_all_tasks` viene chiamata.
+    *   Modificare i file individuati per chiamare il nuovo metodo `Project::list_all_tasks`.
+    *   Aggiornare le dichiarazioni `use` necessarie.
+    *   Creare un commit per registrare l'aggiornamento.
+
+4.  **Verifica Finale:**
+    *   Eseguire `cargo check --all` per assicurarsi che il refactoring non abbia introdotto errori di compilazione.

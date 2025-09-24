@@ -351,31 +351,6 @@ pub fn list_available_tools(
     Ok(available_tools)
 }
 
-/// Lists all tasks in the project.
-pub fn list_all_tasks(project: &Project) -> Result<Vec<Task>, ProjectError> {
-    let tasks_base_path = project.tasks_dir();
-    let mut tasks = Vec::new();
-
-    if !tasks_base_path.exists() {
-        return Ok(tasks);
-    }
-
-    for entry in fs::read_dir(tasks_base_path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                match load_task(project, uid_str) {
-                    Ok(task) => tasks.push(task),
-                    Err(e) => eprintln!("Warning: Could not load task {}: {}", uid_str, e),
-                }
-            }
-        }
-    }
-
-    Ok(tasks)
-}
-
 /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
 pub fn review_task(
     project: &Project,

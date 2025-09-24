@@ -1,10 +1,9 @@
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
-use crate::utils::{read_json_file, write_json_file};
-use crate::{Task, TaskConfig, TaskDependencies, TaskState, TaskStatus, Tool};
+use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_path, read_file_content, write_file_content};
+use crate::models::{Task, TaskConfig, TaskDependencies, TaskState, TaskStatus, Tool, Agent, AgentType, PersistentEvent};
 use crate::api::{load_tool};
-use crate::utils::{generate_uid, get_entity_path, read_file_content, read_json_file, write_file_content, write_json_file};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 
@@ -88,7 +87,7 @@ impl Project {
             let path = entry.path();
             if path.is_dir() {
                 if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                    match load_task(self, uid_str) {
+                    match self.load_task(uid_str) {
                         Ok(task) => tasks.push(task),
                         Err(e) => eprintln!("Warning: Could not load task {}: {}", uid_str, e),
                     }

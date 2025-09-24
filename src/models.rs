@@ -1,9 +1,13 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use crate::error::ProjectError;
 use crate::utils::{write_file_content, update_task_status};
+use uuid::Uuid;
+use sha2::{Sha256, Digest};
+use walkdir;
+use std::fs;
 
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]

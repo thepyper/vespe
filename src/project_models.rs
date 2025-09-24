@@ -185,7 +185,7 @@ impl Project {
             let path = entry.path();
             if path.is_dir() {
                 if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                    match load_tool(&path) {
+                    match self.load_tool(uid_str) {
                         Ok(tool) => tools.push(tool),
                         Err(e) => eprintln!("Warning: Could not load tool {}: {}", uid_str, e),
                     }

@@ -314,4 +314,13 @@ impl Project {
         let tools_base_path = self.tools_dir();
         Tool::create(name, description, schema, implementation_details, &tools_base_path)
     }
+
+    /// Loads a tool from the filesystem given its UID.
+    pub fn load_tool(
+        &self,
+        uid: &str
+    ) -> Result<Tool, ProjectError> {
+        let tool_path = self.tools_dir().join(uid);
+        crate::api::load_tool(&tool_path)
+    }
 }

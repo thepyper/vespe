@@ -8,8 +8,9 @@ use crate::api::{load_task, list_all_tasks, list_available_tools};
 use anyhow::{anyhow, Result};
 
 // Constants for project root detection
-const VESPE_DIR: &str = ".vespe";
-const PROJECT_CONFIG_FILE: &str = "config.json";
+pub const VESPE_DIR: &str = ".vespe";
+pub const PROJECT_CONFIG_FILE: &str = "config.json";
+pub const VESPE_ROOT_MARKER: &str = ".vespe_root";
 
 // Corresponds to project_config.json
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -70,6 +71,24 @@ impl Project {
 
     pub fn agents_dir(&self) -> PathBuf {
         self.vespe_dir().join("agents")
+    }
+
+    /// Checks if a given directory is a Vespe project root by looking for the .vespe/.vespe_root marker file.
+    pub fn is_root(dir: &Path) -> bool {
+        dir.join(VESPE_DIR).join(VESPE_ROOT_MARKER).exists()
+    }
+
+    /// Finds the project root by traversing up the directory tree until a .vespe/ directory is found.
+    pub fn find_root(start_dir: &Path) -> Option<Project> {
+        let mut current_dir = Some(start_dir);
+
+        while let Some(dir) = current_dir {
+            if Self::is_root(dir) {
+                return Some(Project::load(dir).ok()?);
+            }
+            current_dir = dir.parent();
+        }
+        None
     }
 
     /// Resolves a task identifier (which can be a UID or a name) to a Task.

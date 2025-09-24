@@ -3,7 +3,8 @@ mod cli;
 use clap::Parser;
 use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
 use vespe::api; // Import the api module
-use vespe::utils::{find_project_root, initialize_project_root};
+use vespe::utils::initialize_project_root;
+use vespe::project_models::Project;
 use std::fs;
 use vespe::ProjectConfig;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
@@ -38,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     let project_root = if let Some(path) = cli.project_root {
         vespe::Project::load(&path)?
     } else {
-        find_project_root(&std::env::current_dir()?)
+        Project::find_root(&std::env::current_dir()?)
             .ok_or_else(|| anyhow::anyhow!("Project root not found. Please run 'vespe project init' or specify --project-root."))?
     };
 

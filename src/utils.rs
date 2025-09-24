@@ -6,34 +6,12 @@ use std::fs; // Added for fs operations
 
 use crate::error::ProjectError;
 use crate::models::{TaskStatus, TaskState};
-use crate::project_models::{Project, ProjectConfig};
-
-// Constants for project root detection
-const VESPE_DIR: &str = ".vespe";
-const VESPE_ROOT_MARKER: &str = ".vespe_root";
+use crate::project_models::*;
 
 /// Generates a unique UID for a task, agent, or tool.
 pub fn generate_uid(prefix: &str) -> Result<String, ProjectError> {
     let uuid = Uuid::new_v4();
     Ok(format!("{}-{}", prefix, uuid.to_string().replace("-", "")))
-}
-
-/// Checks if a given directory is a Vespe project root by looking for the .vespe/.vespe_root marker file.
-pub fn is_project_root(dir: &Path) -> bool {
-    dir.join(VESPE_DIR).join(VESPE_ROOT_MARKER).exists()
-}
-
-/// Finds the project root by traversing up the directory tree until a .vespe/ directory is found.
-pub fn find_project_root(start_dir: &Path) -> Option<Project> {
-    let mut current_dir = Some(start_dir);
-
-    while let Some(dir) = current_dir {
-        if is_project_root(dir) {
-            return Some(Project::load(dir).ok()?);
-        }
-        current_dir = dir.parent();
-    }
-    None
 }
 
 pub fn initialize_project_root(target_dir: &Path) -> Result<Project, ProjectError> {
@@ -44,7 +22,7 @@ pub fn initialize_project_root(target_dir: &Path) -> Result<Project, ProjectErro
         .map_err(|e| ProjectError::InvalidPath(target_dir.to_path_buf()))?;
 
     // Check if target_dir is already part of an existing Vespe project
-    if let Some(found_project) = find_project_root(&absolute_target_dir) {
+    if let Some(found_project) = Project::find_root(&absolute_target_dir) {
         return Err(ProjectError::InvalidProjectConfig(format!(
             "Cannot initialize a Vespe project inside an existing project. Existing root: {}",
             found_project.root_path.display()

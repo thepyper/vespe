@@ -5,7 +5,7 @@ use sha2::{Sha256, Digest};
 use std::fs; // Added for fs operations
 
 use crate::error::ProjectError;
-use crate::llm::models::{TaskStatus, TaskState};
+use crate::task::{TaskStatus, TaskState};
 use crate::project_models::*;
 
 /// Generates a unique UID for a task, agent, or tool.

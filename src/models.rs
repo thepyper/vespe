@@ -119,6 +119,29 @@ impl Task {
 
         Ok(())
     }
+
+    /// Retrieves all persistent events for a task, sorted by timestamp.
+    pub fn get_all_persistent_events(&self) -> Result<Vec<PersistentEvent>, ProjectError> {
+        let persistent_path = self.root_path.join("persistent");
+
+        if !persistent_path.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut events = Vec::new();
+        for entry in std::fs::read_dir(&persistent_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
+                let event: PersistentEvent = crate::utils::read_json_file(&path)?;
+                events.push(event);
+            }
+        }
+
+        events.sort_by_key(|event| event.timestamp);
+
+        Ok(events)
+    }
 }
 
 // Struttura per gli eventi persistenti (da persistent/)

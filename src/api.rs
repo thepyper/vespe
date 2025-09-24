@@ -13,34 +13,6 @@ use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_co
 
 
 
-/// Retrieves all persistent events for a task, sorted by timestamp.
-pub fn get_all_persistent_events(
-    project: &Project,
-    task_uid: &str
-) -> Result<Vec<PersistentEvent>, ProjectError> {
-    let tasks_base_path = project.tasks_dir();
-    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
-    let persistent_path = task_path.join("persistent");
-
-    if !persistent_path.exists() {
-        return Ok(Vec::new());
-    }
-
-    let mut events = Vec::new();
-    for entry in fs::read_dir(&persistent_path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
-            let event: PersistentEvent = read_json_file(&path)?;
-            events.push(event);
-        }
-    }
-
-    events.sort_by_key(|event| event.timestamp);
-
-    Ok(events)
-}
-
 /// Calculates the SHA256 hash of the `result/` folder content for a task.
 /// The hash is based on the content of all files and their relative paths within the folder.
 pub fn calculate_result_hash(

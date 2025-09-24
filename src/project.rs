@@ -334,7 +334,7 @@ impl Project {
         uid: &str
     ) -> Result<Tool, ProjectError> {
         let tool_path = self.tools_dir().join(uid);
-        crate::api::load_tool(&tool_path)
+        crate::Tool::load(&tool_path)
     }
 
     /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).

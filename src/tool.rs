@@ -54,14 +54,11 @@ impl Tool {
 
     /// Loads a tool from the filesystem given its UID.
     pub fn load(
-        project_root: &Path,
-        uid: &str
+        tool_path: &Path        
     ) -> Result<Self, ProjectError> {
-        let tools_base_path = project_root.join(".vespe").join("tools");
-        let tool_path = get_entity_path(&tools_base_path, uid)?;
-
+      
         if !tool_path.exists() {
-            return Err(ProjectError::ToolNotFound(uid.to_string()));
+            return Err(ProjectError::ToolNotFound("sticazzi TODO".to_string()));
         }
 
         let config: ToolConfig = crate::utils::read_json_file(&tool_path.join("config.json"))?;
@@ -69,7 +66,7 @@ impl Tool {
 
         Ok(Tool {
             uid: config.uid.clone(),
-            root_path: tool_path,
+            root_path: tool_path.into(),
             config,
         })
     }

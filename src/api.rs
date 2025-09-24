@@ -299,58 +299,6 @@ pub fn load_tool(
     })
 }
 
-/// Lists all tools in a given base path.
-fn list_all_tools_in_path(base_path: &Path) -> Result<Vec<Tool>, ProjectError> {
-    let mut tools = Vec::new();
-    if !base_path.exists() {
-        return Ok(tools);
-    }
-
-    for entry in fs::read_dir(base_path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                // Attempt to load the tool using its direct path
-                match load_tool(&path) {
-                    Ok(tool) => tools.push(tool),
-                    Err(e) => eprintln!("Warning: Could not load tool {}: {}", uid_str, e),
-                }
-            }
-        }
-    }
-    Ok(tools)
-}
-
-/// Resolves a tool given its name and project configuration.
-/// For now, only resolves project-specific tools.
-pub fn resolve_tool(
-    project: &Project,
-    _project_config: &ProjectConfig, // project_config is not used for now as kits are out of scope
-    tool_name: &str
-) -> Result<Tool, ProjectError> {
-    let tools_base_path = project.tasks_dir();
-    let project_tools = list_all_tools_in_path(&tools_base_path)?;
-    if let Some(tool) = project_tools.into_iter().find(|t| t.config.name == tool_name) {
-        return Ok(tool);
-    }
-
-    Err(ProjectError::ToolNotFound(tool_name.to_string()))
-}
-
-/// Lists all tools available for a given project.
-/// For now, only lists project-specific tools.
-pub fn list_available_tools(
-    project: &Project,
-    _project_config: &ProjectConfig // project_config is not used for now as kits are out of scope
-) -> Result<Vec<Tool>, ProjectError> {
-    let tools_base_path = project.tasks_dir();
-    let available_tools = list_all_tools_in_path(&tools_base_path)?;
-
-    // No deduplication needed as only project-specific tools are listed.
-    Ok(available_tools)
-}
-
 /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
 pub fn review_task(
     project: &Project,

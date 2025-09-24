@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
 use crate::utils::{read_json_file, write_json_file};
 use crate::{Task, Tool};
-use crate::api::{load_task, list_available_tools};
+use crate::api::{load_task, load_tool};
 use anyhow::{anyhow, Result};
 
 // Constants for project root detection
@@ -151,26 +151,45 @@ impl Project {
         }
     }
 
-    /// Resolves a tool identifier (which can be a UID or a name) to a Tool.
-    ///
-    /// This function is a placeholder and needs to be adapted once `load_tool` by UID is available.
+    /// or if the name is ambiguous.
     pub fn resolve_tool(&self, identifier: &str) -> Result<Tool> {
-        // For now, we only resolve by name as `load_tool` takes a path, not a UID.
-        // This will be updated once a `load_tool_by_uid` function is available.
-
-        let all_tools = list_available_tools(self, &ProjectConfig::default())?;
+        let all_tools = self.list_available_tools()?;
         let matching_tools: Vec<Tool> = all_tools
             .into_iter()
             .filter(|t| t.config.name == identifier || t.uid == identifier)
             .collect();
 
         match matching_tools.len() {
-            0 => Err(anyhow!("Tool \'{}\' not found.", identifier)),
+            0 => Err(anyhow!("Tool '{}' not found.", identifier)),
             1 => Ok(matching_tools.into_iter().next().unwrap()),
             _ => Err(anyhow!(
-                "Multiple tools found with the name \'{}\'. Please use a unique UID.",
+                "Multiple tools found with the name '{}'. Please use a unique UID.",
                 identifier
             )),
         }
+    }
+
+    /// Lists all tools available for the project.
+    /// This method corrects a bug from the previous implementation where it looked in `tasks_dir` instead of `tools_dir`.
+    pub fn list_available_tools(&self) -> Result<Vec<Tool>, ProjectError> {
+        let tools_base_path = self.tools_dir();
+        let mut tools = Vec::new();
+        if !tools_base_path.exists() {
+            return Ok(tools);
+        }
+
+        for entry in std::fs::read_dir(tools_base_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
+                    match load_tool(&path) {
+                        Ok(tool) => tools.push(tool),
+                        Err(e) => eprintln!("Warning: Could not load tool {}: {}", uid_str, e),
+                    }
+                }
+            }
+        }
+        Ok(tools)
     }
 }

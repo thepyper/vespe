@@ -246,7 +246,7 @@ impl Project {
         // Load the newly created task to return it
         self.load_task(&uid)
     }
-
+    
     /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
     /// Writes the objective content to `objective.md`.
     pub fn define_objective(

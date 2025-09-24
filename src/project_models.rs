@@ -2,9 +2,9 @@ use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
 use crate::utils::{read_json_file, write_json_file};
-use crate::{Task, Tool};
+use crate::{Task, TaskConfig, TaskDependencies, TaskState, TaskStatus, Tool};
 use crate::api::{load_tool};
-use crate::utils::{generate_uid, get_entity_path, write_file_content, write_json_file};
+use crate::utils::{generate_uid, get_entity_path, read_file_content, read_json_file, write_file_content, write_json_file};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 
@@ -130,7 +130,7 @@ impl Project {
     pub fn resolve_task(&self, identifier: &str) -> Result<Task> {
         // 1. Try to load directly as a UID.
         if identifier.starts_with("tsk-") {
-            if let Ok(task) = load_task(self, identifier) {
+            if let Ok(task) = self.load_task(identifier) {
                 return Ok(task);
             }
         }
@@ -244,6 +244,35 @@ impl Project {
         write_json_file(&task_path.join("dependencies.json"), &dependencies)?;
 
         // Load the newly created task to return it
-        load_task(self, &uid)
+        self.load_task(&uid)
+    }
+
+    /// Loads a task from the filesystem given its UID.
+    pub fn load_task(
+        &self,
+        uid: &str
+    ) -> Result<Task, ProjectError> {
+        let tasks_base_path = self.tasks_dir();
+        let task_path = get_entity_path(&tasks_base_path, uid)?;
+
+        if !task_path.exists() {
+            return Err(ProjectError::TaskNotFound(uid.to_string()));
+        }
+
+        let config: TaskConfig = read_json_file(&task_path.join("config.json"))?;
+        let status: TaskStatus = read_json_file(&task_path.join("status.json"))?;
+        let dependencies: TaskDependencies = read_json_file(&task_path.join("dependencies.json"))?;
+        let objective = read_file_content(&task_path.join("objective.md"))?;
+        let plan = Some(read_file_content(&task_path.join("plan.md"))?);
+
+        Ok(Task {
+            uid: uid.to_string(),
+            root_path: task_path,
+            config,
+            status,
+            objective,
+            plan,
+            dependencies,
+        })
     }
 }

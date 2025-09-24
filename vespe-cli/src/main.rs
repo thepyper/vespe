@@ -122,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             TaskSubcommand::DefinePlan { identifier, plan } => {
-                match api::define_plan(&project_root, identifier, plan.clone()) {
+                match project_root.define_plan(identifier, plan.clone()) {
                     Ok(task) => {
                         println!("Plan defined for task {}. New state: {:?}", task.uid, task.status.current_state);
                     }

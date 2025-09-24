@@ -228,6 +228,42 @@ impl Task {
     }
 }
 
+impl Agent {
+    /// Creates a new agent (AI or human).
+    pub fn create(
+        agent_type: AgentType,
+        name: String,
+        agents_base_path: &Path,
+    ) -> Result<Self, ProjectError> {
+        let uid_prefix = match agent_type {
+            AgentType::Human => "usr", // Or "human"
+            AgentType::AI => "agt",
+        };
+        let uid = crate::utils::generate_uid(uid_prefix)?;
+        let agent_path = crate::utils::get_entity_path(agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+
+        let now = chrono::Utc::now();
+
+        let agent_config = Agent {
+            uid: uid.clone(),
+            name: name.clone(),
+            agent_type,
+            created_at: now,
+            parent_agent_uid: None,
+            model_id: None,
+            temperature: None,
+            top_p: None,
+            default_tools: None,
+            context_strategy: None,
+        };
+        crate::utils::write_json_file(&agent_path.join("config.json"), &agent_config)?;
+
+        Ok(agent_config)
+    }
+}
+
 // Struttura per gli eventi persistenti (da persistent/)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PersistentEvent {

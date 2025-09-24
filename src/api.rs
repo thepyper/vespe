@@ -33,45 +33,6 @@ pub fn load_tool(
 
 
 
-/// Creates a new agent (AI or human).
-pub fn create_agent(
-    project: &Project,
-    agent_type: AgentType,
-    name: String,
-    // ... other initial configuration fields
-) -> Result<Agent, ProjectError> {
-    let uid_prefix = match agent_type {
-        AgentType::Human => "usr", // Or "human"
-        AgentType::AI => "agt",
-    };
-    let uid = generate_uid(uid_prefix)?;
-    let agents_base_path = project.agents_dir();
-    let agent_path = get_entity_path(&agents_base_path, &uid)?;
-
-    fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
-
-    let now = Utc::now();
-
-    let agent_config = Agent {
-        uid: uid.clone(),
-        name: name.clone(),
-        agent_type,
-        created_at: now,
-        parent_agent_uid: None, // For now, no parent on creation
-        model_id: None,
-        temperature: None,
-        top_p: None,
-        default_tools: None,
-        context_strategy: None,
-    };
-    write_json_file(&agent_path.join("config.json"), &agent_config)?;
-
-    // For human agents, we might not need a system_prompt.md or description.md initially
-    // For AI agents, these would be created. For now, we'll skip.
-
-    Ok(agent_config)
-}
-
 /// Loads an agent from the filesystem given its UID.
 pub fn load_agent(
     project: &Project,

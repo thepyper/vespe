@@ -282,6 +282,17 @@ impl Project {
         Ok(())
     }
 
+    /// Retrieves all persistent events for a task, sorted by timestamp.
+    pub fn get_all_persistent_events(
+        &self,
+        task_uid: &str
+    ) -> Result<Vec<PersistentEvent>, ProjectError> {
+        let task = self.load_task(task_uid)?;
+        task.get_all_persistent_events()
+    }
+
+
+
     /// Loads a task from the filesystem given its UID.
     pub fn load_task(
         &self,

@@ -5,6 +5,7 @@ use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, Too
  // Import the api module
 use vespe::utils::initialize_project_root;
 use vespe::project::Project;
+use vespe::TaskState;
 use std::fs;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 

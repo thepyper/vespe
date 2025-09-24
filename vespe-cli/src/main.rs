@@ -114,7 +114,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             TaskSubcommand::DefineObjective { identifier, objective } => {
-                match api::define_objective(&project_root, identifier, objective.clone()) {
+                match project_root.define_objective(identifier, objective.clone()) {
                     Ok(task) => {
                         println!("Objective defined for task {}. New state: {:?}", task.uid, task.status.current_state);
                     }

@@ -13,48 +13,6 @@ use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_co
 
 
 
-/// Calculates the SHA256 hash of the `result/` folder content for a task.
-/// The hash is based on the content of all files and their relative paths within the folder.
-pub fn calculate_result_hash(
-    project: &Project,
-    task_uid: &str
-) -> Result<String, ProjectError> {
-    let tasks_base_path = project.tasks_dir();
-    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
-    let result_path = task_path.join("result");
-
-    if !result_path.exists() {
-        return Ok(format!("{:x}", Sha256::new().finalize())); // Hash of empty content
-    }
-
-    let mut hasher = Sha256::new();
-    let mut file_hashes: Vec<(String, String)> = Vec::new(); // (relative_path, hash)
-
-    for entry in walkdir::WalkDir::new(&result_path) {
-        let entry = entry.map_err(|e| ProjectError::ContentHashError(result_path.clone(), e.to_string()))?;
-        let path = entry.path();
-
-        if path.is_file() {
-            let relative_path = path.strip_prefix(&result_path)
-                .map_err(|_e| ProjectError::InvalidPath(path.to_path_buf()))?
-                .to_string_lossy()
-                .into_owned();
-            let file_hash = hash_file(path)?;
-            file_hashes.push((relative_path, file_hash));
-        }
-    }
-
-    // Sort to ensure canonical representation regardless of filesystem iteration order
-    file_hashes.sort_by(|a, b| a.0.cmp(&b.0));
-
-    for (relative_path, file_hash) in file_hashes {
-        hasher.update(relative_path.as_bytes());
-        hasher.update(file_hash.as_bytes());
-    }
-
-    Ok(format!("{:x}", hasher.finalize()))
-}
-
 /// Adds a file to the `result/` folder of the task.
 pub fn add_result_file(
     project: &Project,

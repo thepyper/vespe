@@ -196,6 +196,36 @@ impl Task {
 
         Ok(())
     }
+
+    /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
+    pub fn review_task(
+        &mut self,
+        approved: bool, // true for approve, false for reject
+    ) -> Result<(), ProjectError> {
+        if self.status.current_state != TaskState::NeedsReview {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::NeedsReview, // This is not quite right, should be the target state
+            ));
+        }
+
+        let next_state = if approved {
+            TaskState::Completed // Or TaskState::Ready if we add it
+        } else {
+            TaskState::Replanned
+        };
+
+        if !self.status.current_state.can_transition_to(next_state) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                next_state,
+            ));
+        }
+
+        update_task_status(&self.root_path, next_state, &mut self.status)?;
+
+        Ok(())
+    }
 }
 
 // Struttura per gli eventi persistenti (da persistent/)

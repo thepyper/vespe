@@ -14,46 +14,6 @@ pub fn generate_uid(prefix: &str) -> Result<String, ProjectError> {
     Ok(format!("{}-{}", prefix, uuid.to_string().replace("-", "")))
 }
 
-pub fn initialize_project_root(target_dir: &Path) -> Result<Project, ProjectError> {
-    // Create the target directory if it doesn't exist
-    fs::create_dir_all(target_dir).map_err(|e| ProjectError::Io(e))?;
-
-    let absolute_target_dir = target_dir.canonicalize()
-        .map_err(|e| ProjectError::InvalidPath(target_dir.to_path_buf()))?;
-
-    // Check if target_dir is already part of an existing Vespe project
-    if let Some(found_project) = Project::find_root(&absolute_target_dir) {
-        return Err(ProjectError::InvalidProjectConfig(format!(
-            "Cannot initialize a Vespe project inside an existing project. Existing root: {}",
-            found_project.root_path.display()
-        )));
-    }
-
-    let vespe_dir = absolute_target_dir.join(VESPE_DIR);
-    let vespe_root_marker = vespe_dir.join(VESPE_ROOT_MARKER);
-
-    fs::create_dir_all(&vespe_dir).map_err(|e| ProjectError::Io(e))?;
-
-    fs::write(&vespe_root_marker, "Feel The BuZZ!!!!").map_err(|e| ProjectError::Io(e))?;
-
-    let vespe_gitignore = vespe_dir.join(".gitignore");
-    fs::write(&vespe_gitignore, "log/").map_err(|e| ProjectError::Io(e))?;
-
-    // Create a default ProjectConfig and save it
-    let project_config = ProjectConfig::default();
-    let project = Project {
-        root_path: absolute_target_dir.clone(),
-        config: project_config,
-    };
-    project.save_config()?;
-
-    // Create tasks, tools, agents directories
-    fs::create_dir_all(project.tasks_dir()).map_err(|e| ProjectError::Io(e))?;
-    fs::create_dir_all(project.tools_dir()).map_err(|e| ProjectError::Io(e))?;
-    fs::create_dir_all(project.agents_dir()).map_err(|e| ProjectError::Io(e))?;
-
-    Ok(project)
-}
 
 /// Constructs the full path for a given entity UID within a base path.
 pub fn get_entity_path(base_path: &Path, uid: &str) -> Result<PathBuf, ProjectError> {

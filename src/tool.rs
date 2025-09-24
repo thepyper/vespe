@@ -53,7 +53,7 @@ impl Tool {
     }
 
     /// Loads a tool from the filesystem given its UID.
-    pub fn load(
+    pub fn from_path(
         tool_path: &Path        
     ) -> Result<Self, ProjectError> {
       

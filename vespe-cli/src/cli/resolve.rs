@@ -1,4 +1,3 @@
-use std::path::Path;
 use vespe::{Task, Tool};
 use vespe::api::{load_task, list_all_tasks};
 use anyhow::{anyhow, Result};
@@ -14,7 +13,7 @@ use anyhow::{anyhow, Result};
 ///
 /// A `Result` containing the resolved `Task` or an error if the task cannot be found
 /// or if the name is ambiguous.
-pub fn resolve_task(project_root: &Path, identifier: &str) -> Result<Task> {
+pub fn resolve_task(project_root: &vespe::Project, identifier: &str) -> Result<Task> {
     // 1. Try to load directly as a UID.
     if identifier.starts_with("tsk-") {
         if let Ok(task) = load_task(project_root, identifier) {
@@ -46,7 +45,7 @@ use vespe::api::list_available_tools;
 /// Resolves a tool identifier (which can be a UID or a name) to a Tool.
 ///
 /// This function is a placeholder and needs to be adapted once `load_tool` by UID is available.
-pub fn resolve_tool(project_root: &Path, identifier: &str) -> Result<Tool> {
+pub fn resolve_tool(project_root: &vespe::Project, identifier: &str) -> Result<Tool> {
     // For now, we only resolve by name as `load_tool` takes a path, not a UID.
     // This will be updated once a `load_tool_by_uid` function is available.
 

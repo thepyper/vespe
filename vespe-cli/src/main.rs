@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
 
     // For all other commands, we need to be inside a project root.
     let project_root = if let Some(path) = cli.project_root {
-        path
+        vespe::Project::load(&path)?
     } else {
         find_project_root(&std::env::current_dir()?)
             .ok_or_else(|| anyhow::anyhow!("Project root not found. Please run 'vespe project init' or specify --project-root."))?
@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
             ProjectSubcommand::Info => {
                 println!("Vespe Project Information");
                 println!("-------------------------");
-                println!("Root Path: {}", project_root.display());
+                println!("Root Path: {}", project_root.root_path.display());
 
                 let task_count = api::list_all_tasks(&project_root).map_or(0, |t| t.len());
                 println!("Task Count: {}", task_count);
@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
             }
             ProjectSubcommand::Validate => {
                 println!("Validating Vespe project...");
-                let vespe_dir = project_root.join(".vespe");
+                let vespe_dir = project_root.root_path.join(".vespe");
                 let tasks_dir = vespe_dir.join("tasks");
                 let tools_dir = vespe_dir.join("tools");
 

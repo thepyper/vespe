@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
                 println!("-------------------------");
                 println!("Root Path: {}", project_root.root_path.display());
 
-                let task_count = api::list_all_tasks(&project_root).map_or(0, |t| t.len());
+                let task_count = project_root.list_all_tasks().map_or(0, |t| t.len());
                 println!("Task Count: {}", task_count);
 
                 let tool_count = api::list_available_tools(&project_root, &ProjectConfig::default()).map_or(0, |t| t.len());
@@ -130,7 +130,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             TaskSubcommand::List => {
-                match api::list_all_tasks(&project_root) {
+                match project_root.list_all_tasks() {
                     Ok(tasks) => {
                         if tasks.is_empty() {
                             println!("No tasks found.");

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
 use crate::utils::{read_json_file, write_json_file};
 use crate::{Task, Tool};
-use crate::api::{load_task, list_all_tasks, list_available_tools};
+use crate::api::{load_task, list_available_tools};
 use anyhow::{anyhow, Result};
 
 // Constants for project root detection
@@ -73,8 +73,8 @@ impl Project {
     }
 
     /// Lists all tasks in the project.
-    pub fn list_all_tasks(project: &Project) -> Result<Vec<Task>, ProjectError> {
-        let tasks_base_path = project.tasks_dir();
+    pub fn list_all_tasks(&self) -> Result<Vec<Task>, ProjectError> {
+        let tasks_base_path = self.tasks_dir();
         let mut tasks = Vec::new();
 
         if !tasks_base_path.exists() {
@@ -86,7 +86,7 @@ impl Project {
             let path = entry.path();
             if path.is_dir() {
                 if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                    match load_task(project, uid_str) {
+                    match load_task(self, uid_str) {
                         Ok(task) => tasks.push(task),
                         Err(e) => eprintln!("Warning: Could not load task {}: {}", uid_str, e),
                     }
@@ -133,8 +133,8 @@ impl Project {
             }
         }
 
-        // 2. If that fails or it\'s not a UID, search by name.
-        let all_tasks = list_all_tasks(self)?;
+        // 2. If that fails or it's not a UID, search by name.
+        let all_tasks = self.list_all_tasks()?;
         let matching_tasks: Vec<Task> = all_tasks
             .into_iter()
             .filter(|t| t.config.name == identifier)

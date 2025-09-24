@@ -2,7 +2,9 @@ pub mod models;
 pub mod error;
 pub mod api;
 pub mod utils;
-pub mod tool_models;
+pub mod tool;
+
+pub use tool::*;
 pub mod project;
 
 pub use project::*;

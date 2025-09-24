@@ -1,6 +1,6 @@
 use std::path::Path;
 use crate::error::ProjectError;
-use crate::tool_models::{Tool, ToolConfig};
+use crate::tool::{Tool, ToolConfig};
 use crate::utils::{read_json_file, read_file_content};
 
 

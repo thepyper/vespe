@@ -5,7 +5,7 @@ use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_pat
 use crate::models::{TaskConfig, TaskDependencies, TaskState, TaskStatus, PersistentEvent};
 use crate::task::Task;
 use crate::agent::{Agent, AgentType};
-use crate::tool_models::Tool;
+use crate::tool::Tool;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 

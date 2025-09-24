@@ -1,7 +1,6 @@
 pub mod agent;
 pub mod task;
 pub mod error;
-pub mod api;
 pub mod utils;
 pub mod tool;
 

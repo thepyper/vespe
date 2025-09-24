@@ -291,44 +291,14 @@ impl Project {
         task.calculate_result_hash()
     }
 
-
-    /// Retrieves all persistent events for a task, sorted by timestamp.
-    pub fn get_all_persistent_events(
+    /// Adds a file to the `result/` folder of the task.
+    pub fn add_result_file(
         &self,
-        task_uid: &str
-    ) -> Result<Vec<PersistentEvent>, ProjectError> {
-        let task = self.load_task(task_uid)?;
-        task.get_all_persistent_events()
+        task_uid: &str,
+        filename: &str,
+        content: Vec<u8>
+    ) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.add_result_file(filename, content)?;
+        Ok(())
     }
-
-
-
-    /// Loads a task from the filesystem given its UID.
-    pub fn load_task(
-        &self,
-        uid: &str
-    ) -> Result<Task, ProjectError> {
-        let tasks_base_path = self.tasks_dir();
-        let task_path = get_entity_path(&tasks_base_path, uid)?;
-
-        if !task_path.exists() {
-            return Err(ProjectError::TaskNotFound(uid.to_string()));
-        }
-
-        let config: TaskConfig = read_json_file(&task_path.join("config.json"))?;
-        let status: TaskStatus = read_json_file(&task_path.join("status.json"))?;
-        let dependencies: TaskDependencies = read_json_file(&task_path.join("dependencies.json"))?;
-        let objective = read_file_content(&task_path.join("objective.md"))?;
-        let plan = Some(read_file_content(&task_path.join("plan.md"))?);
-
-        Ok(Task {
-            uid: uid.to_string(),
-            root_path: task_path,
-            config,
-            status,
-            objective,
-            plan,
-            dependencies,
-        })
-    }
-}

@@ -33,29 +33,3 @@ pub fn load_tool(
 
 
 
-/// Lists all agents available in the project.
-pub fn list_agents(
-    project: &Project,
-) -> Result<Vec<Agent>, ProjectError> {
-    let agents_base_path = project.agents_dir();
-    let mut agents = Vec::new();
-
-    if !agents_base_path.exists() {
-        return Ok(agents);
-    }
-
-    for entry in fs::read_dir(agents_base_path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                match project.load_agent(uid_str) {
-                    Ok(agent) => agents.push(agent),
-                    Err(e) => eprintln!("Warning: Could not load agent {}: {}", uid_str, e),
-                }
-            }
-        }
-    }
-
-    Ok(agents)
-}

@@ -51,4 +51,26 @@ impl Tool {
             config,
         })
     }
+
+    /// Loads a tool from the filesystem given its UID.
+    pub fn load(
+        project_root: &Path,
+        uid: &str
+    ) -> Result<Self, ProjectError> {
+        let tools_base_path = project_root.join(".vespe").join("tools");
+        let tool_path = get_entity_path(&tools_base_path, uid)?;
+
+        if !tool_path.exists() {
+            return Err(ProjectError::ToolNotFound(uid.to_string()));
+        }
+
+        let config: ToolConfig = crate::utils::read_json_file(&tool_path.join("config.json"))?;
+        // description.md is not loaded into the Tool struct directly, but can be read on demand.
+
+        Ok(Tool {
+            uid: config.uid.clone(),
+            root_path: tool_path,
+            config,
+        })
+    }
 }

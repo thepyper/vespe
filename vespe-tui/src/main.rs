@@ -15,7 +15,7 @@ const CHAT_COLOR: Color = Color::LightYellow;
 const DEFAULT_FOOTER_BG_COLOR: Color = Color::Rgb(0x22, 0x22, 0x22);
 const SELECTED_FOOTER_FG_COLOR: Color = Color::Black;
 const DEFAULT_FOOTER_FG_COLOR: Color = Color::White;
-const QUIT_BUTTON_BG_COLOR: Color = Color::Red;
+const _QUIT_BUTTON_BG_COLOR: Color = Color::Red;
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 enum Page {

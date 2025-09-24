@@ -4,7 +4,6 @@ use crate::error::ProjectError;
 use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_path, read_file_content, write_file_content};
 use crate::models::{Task, TaskConfig, TaskDependencies, TaskState, TaskStatus, Agent, AgentType, PersistentEvent};
 use crate::tool_models::Tool;
-use crate::api::{load_tool};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 
@@ -247,34 +246,6 @@ impl Project {
         self.load_task(&uid)
     }
 
-    /// Loads a task from the filesystem given its UID.
-    pub fn load_task(
-        &self,
-        uid: &str
-    ) -> Result<Task, ProjectError> {
-        let tasks_base_path = self.tasks_dir();
-        let task_path = get_entity_path(&tasks_base_path, uid)?;
-
-        if !task_path.exists() {
-            return Err(ProjectError::TaskNotFound(uid.to_string()));
-        }
-
-        let config: TaskConfig = read_json_file(&task_path.join("config.json"))?;
-        let status: TaskStatus = read_json_file(&task_path.join("status.json"))?;
-        let dependencies: TaskDependencies = read_json_file(&task_path.join("dependencies.json"))?;
-        let objective = read_file_content(&task_path.join("objective.md"))?;
-        let plan = Some(read_file_content(&task_path.join("plan.md"))?);
-
-        Ok(Task {
-            uid: uid.to_string(),
-            root_path: task_path,
-            config,
-            status,
-            objective,
-            plan,
-            dependencies,
-        })
-    }
 
     
     /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
@@ -307,7 +278,7 @@ impl Project {
         task_uid: &str,
         event: PersistentEvent
     ) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let task = self.load_task(task_uid)?;
         task.add_persistent_event(event)?;
         Ok(())
     }
@@ -328,7 +299,7 @@ impl Project {
         filename: &str,
         content: Vec<u8>
     ) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let task = self.load_task(task_uid)?;
         task.add_result_file(filename, content)?;
         Ok(())
     }

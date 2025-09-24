@@ -7,7 +7,6 @@ use crate::utils::{write_file_content, update_task_status, write_json_file};
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
-use std::fs;
 
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -229,6 +228,35 @@ impl Task {
         update_task_status(&self.root_path, next_state, &mut self.status)?;
 
         Ok(())
+    }
+
+    /// Loads a task from the filesystem given its UID.
+    pub fn load(
+        project_root: &Path,
+        uid: &str
+    ) -> Result<Self, ProjectError> {
+        let tasks_base_path = project_root.join(".vespe").join("tasks"); // Re-construct tasks_base_path
+        let task_path = crate::utils::get_entity_path(&tasks_base_path, uid)?;
+
+        if !task_path.exists() {
+            return Err(ProjectError::TaskNotFound(uid.to_string()));
+        }
+
+        let config: TaskConfig = crate::utils::read_json_file(&task_path.join("config.json"))?;
+        let status: TaskStatus = crate::utils::read_json_file(&task_path.join("status.json"))?;
+        let dependencies: TaskDependencies = crate::utils::read_json_file(&task_path.join("dependencies.json"))?;
+        let objective = crate::utils::read_file_content(&task_path.join("objective.md"))?;
+        let plan = Some(crate::utils::read_file_content(&task_path.join("plan.md"))?);
+
+        Ok(Task {
+            uid: uid.to_string(),
+            root_path: task_path,
+            config,
+            status,
+            objective,
+            plan,
+            dependencies,
+        })
     }
 }
 

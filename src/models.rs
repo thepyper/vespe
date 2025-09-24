@@ -106,6 +106,19 @@ impl Task {
 
         Ok(())
     }
+
+    /// Adds a new event to the `persistent/` folder of the task.
+    pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {
+        let persistent_path = self.root_path.join("persistent");
+
+        // Use UUID for filename to guarantee uniqueness, append timestamp for sorting
+        let filename = format!("{}_{}_{}.json", event.timestamp.format("%Y%m%d%H%M%S%3f"), Uuid::new_v4().as_simple(), event.event_type);
+        let file_path = persistent_path.join(filename);
+
+        write_json_file(&file_path, &event)?;
+
+        Ok(())
+    }
 }
 
 // Struttura per gli eventi persistenti (da persistent/)

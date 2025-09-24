@@ -13,25 +13,6 @@ use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_co
 
 
 
-/// Adds a new event to the `persistent/` folder of the task.
-pub fn add_persistent_event(
-    project: &Project,
-    task_uid: &str,
-    event: PersistentEvent
-) -> Result<(), ProjectError> {
-    let tasks_base_path = project.tasks_dir();
-    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
-    let persistent_path = task_path.join("persistent");
-
-    // Use UUID for filename to guarantee uniqueness, append timestamp for sorting
-    let filename = format!("{}_{}_{}.json", event.timestamp.format("%Y%m%d%H%M%S%3f"), Uuid::new_v4().as_simple(), event.event_type);
-    let file_path = persistent_path.join(filename);
-
-    write_json_file(&file_path, &event)?;
-
-    Ok(())
-}
-
 /// Retrieves all persistent events for a task, sorted by timestamp.
 pub fn get_all_persistent_events(
     project: &Project,

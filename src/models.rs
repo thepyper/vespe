@@ -179,6 +179,23 @@ impl Task {
 
         Ok(format!("{:x}", hasher.finalize()))
     }
+
+    /// Adds a file to the `result/` folder of the task.
+    pub fn add_result_file(
+        &self,
+        filename: &str,
+        content: Vec<u8>
+    ) -> Result<(), ProjectError> {
+        let result_path = self.root_path.join("result");
+
+        // Ensure the result directory exists
+        std::fs::create_dir_all(&result_path).map_err(|e| ProjectError::Io(e))?;
+
+        let file_path = result_path.join(filename);
+        std::fs::write(&file_path, content).map_err(|e| ProjectError::Io(e))?;
+
+        Ok(())
+    }
 }
 
 // Struttura per gli eventi persistenti (da persistent/)

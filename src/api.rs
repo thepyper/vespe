@@ -13,26 +13,6 @@ use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_co
 
 
 
-/// Adds a file to the `result/` folder of the task.
-pub fn add_result_file(
-    project: &Project,
-    task_uid: &str,
-    filename: &str,
-    content: Vec<u8>
-) -> Result<(), ProjectError> {
-    let tasks_base_path = project.tasks_dir();
-    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
-    let result_path = task_path.join("result");
-
-    // Ensure the result directory exists
-    fs::create_dir_all(&result_path).map_err(|e| ProjectError::Io(e))?;
-
-    let file_path = result_path.join(filename);
-    fs::write(&file_path, content).map_err(|e| ProjectError::Io(e))?;
-
-    Ok(())
-}
-
 /// Creates a new tool.
 pub fn create_tool(
     project: &Project,

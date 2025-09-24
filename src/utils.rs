@@ -6,7 +6,7 @@ use std::fs; // Added for fs operations
 
 use crate::error::ProjectError;
 use crate::task::{TaskStatus, TaskState};
-use crate::project_models::*;
+use crate::project::*;
 
 /// Generates a unique UID for a task, agent, or tool.
 pub fn generate_uid(prefix: &str) -> Result<String, ProjectError> {

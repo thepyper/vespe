@@ -259,6 +259,18 @@ impl Project {
         Ok(task)
     }
 
+    /// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.
+    /// Writes the plan content to `plan.md`.
+    pub fn define_plan(
+        &self,
+        task_uid: &str,
+        plan_content: String
+    ) -> Result<Task, ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.define_plan(plan_content)?;
+        Ok(task)
+    }
+
 
 
     /// Loads a task from the filesystem given its UID.

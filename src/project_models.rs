@@ -323,4 +323,15 @@ impl Project {
         let tool_path = self.tools_dir().join(uid);
         crate::api::load_tool(&tool_path)
     }
+
+    /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
+    pub fn review_task(
+        &self,
+        task_uid: &str,
+        approved: bool,
+    ) -> Result<Task, ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.review_task(approved)?;
+        Ok(task)
+    }
 }

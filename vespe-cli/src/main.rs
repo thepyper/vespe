@@ -216,7 +216,7 @@ async fn main() -> anyhow::Result<()> {
                 // Implementation_details is hardcoded for now
                 let implementation_details = serde_json::json!({ "type": "command_line" });
 
-                match api::create_tool(&project_root, name.clone(), description.clone(), schema_json, implementation_details) {
+                match project_root.create_tool(name.clone(), description.clone(), schema_json, implementation_details) {
                     Ok(tool) => {
                         println!("Tool created successfully:");
                         println!("  UID: {}", tool.uid);

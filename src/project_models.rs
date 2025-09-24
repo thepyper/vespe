@@ -344,3 +344,21 @@ impl Project {
         let agents_base_path = self.agents_dir();
         Agent::create(agent_type, name, &agents_base_path)
     }
+
+    /// Loads an agent from the filesystem given its UID.
+    pub fn load_agent(
+        &self,
+        agent_uid: &str,
+    ) -> Result<Agent, ProjectError> {
+        let agents_base_path = self.agents_dir();
+        let agent_path = get_entity_path(&agents_base_path, agent_uid)?;
+
+        if !agent_path.exists() {
+            return Err(ProjectError::AgentNotFound(agent_uid.to_string()));
+        }
+
+        let agent_config: Agent = read_json_file(&agent_path.join("config.json"))?;
+
+        Ok(agent_config)
+    }
+}

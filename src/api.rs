@@ -33,23 +33,6 @@ pub fn load_tool(
 
 
 
-/// Loads an agent from the filesystem given its UID.
-pub fn load_agent(
-    project: &Project,
-    agent_uid: &str,
-) -> Result<Agent, ProjectError> {
-    let agents_base_path = project.agents_dir();
-    let agent_path = get_entity_path(&agents_base_path, agent_uid)?;
-
-    if !agent_path.exists() {
-        return Err(ProjectError::AgentNotFound(agent_uid.to_string()));
-    }
-
-    let agent_config: Agent = read_json_file(&agent_path.join("config.json"))?;
-
-    Ok(agent_config)
-}
-
 /// Lists all agents available in the project.
 pub fn list_agents(
     project: &Project,

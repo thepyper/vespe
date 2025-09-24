@@ -334,4 +334,13 @@ impl Project {
         task.review_task(approved)?;
         Ok(task)
     }
-}
+
+    /// Creates a new agent (AI or human).
+    pub fn create_agent(
+        &self,
+        agent_type: AgentType,
+        name: String,
+    ) -> Result<Agent, ProjectError> {
+        let agents_base_path = self.agents_dir();
+        Agent::create(agent_type, name, &agents_base_path)
+    }

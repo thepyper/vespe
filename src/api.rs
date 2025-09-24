@@ -49,7 +49,7 @@ pub fn list_agents(
         let path = entry.path();
         if path.is_dir() {
             if let Some(uid_str) = path.file_name().and_then(|s| s.to_str()) {
-                match load_agent(project, uid_str) {
+                match project.load_agent(uid_str) {
                     Ok(agent) => agents.push(agent),
                     Err(e) => eprintln!("Warning: Could not load agent {}: {}", uid_str, e),
                 }

@@ -247,6 +247,20 @@ impl Project {
         self.load_task(&uid)
     }
 
+    /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
+    /// Writes the objective content to `objective.md`.
+    pub fn define_objective(
+        &self,
+        task_uid: &str,
+        objective_content: String
+    ) -> Result<Task, ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.define_objective(objective_content)?;
+        Ok(task)
+    }
+
+
+
     /// Loads a task from the filesystem given its UID.
     pub fn load_task(
         &self,

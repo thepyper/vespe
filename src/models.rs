@@ -85,6 +85,27 @@ impl Task {
 
         Ok(())
     }
+
+    /// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.
+    /// Writes the plan content to `plan.md`.
+    pub fn define_plan(&mut self, plan_content: String) -> Result<(), ProjectError> {
+        // Prevent defining a plan for a replanned task
+        if self.status.current_state == TaskState::Replanned {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::PlanDefined, // Attempted target state
+            ));
+        }
+
+        // Update plan.md
+        write_file_content(&self.root_path.join("plan.md"), &plan_content)?;
+        self.plan = Some(plan_content);
+
+        // Update status
+        update_task_status(&self.root_path, TaskState::PlanDefined, &mut self.status)?;
+
+        Ok(())
+    }
 }
 
 // Struttura per gli eventi persistenti (da persistent/)

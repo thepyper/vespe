@@ -12,34 +12,6 @@ use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_co
 
 
 
-/// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.
-/// Writes the plan content to `plan.md`.
-pub fn define_plan(
-    project: &Project,
-    task_uid: &str,
-    plan_content: String
-) -> Result<Task, ProjectError> {
-    let mut task = load_task(project, task_uid)?;
-    let tasks_base_path = project.tasks_dir();
-    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
-
-    // Prevent defining a plan for a replanned task
-    if task.status.current_state == TaskState::Replanned {
-        return Err(ProjectError::InvalidStateTransition(
-            task.status.current_state,
-            TaskState::PlanDefined, // Attempted target state
-        ));
-    }
-
-    // Update plan.md
-    write_file_content(&task_path.join("plan.md"), &plan_content)?;
-    task.plan = Some(plan_content);
-
-    // Update status
-    update_task_status(&task_path, TaskState::PlanDefined, &mut task.status)?;
-
-    Ok(task)
-}
 
 /// Adds a new event to the `persistent/` folder of the task.
 pub fn add_persistent_event(

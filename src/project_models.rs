@@ -282,6 +282,16 @@ impl Project {
         Ok(())
     }
 
+    /// Calculates the SHA256 hash of the `result/` folder content for a task.
+    pub fn calculate_result_hash(
+        &self,
+        task_uid: &str
+    ) -> Result<String, ProjectError> {
+        let task = self.load_task(task_uid)?;
+        task.calculate_result_hash()
+    }
+
+
     /// Retrieves all persistent events for a task, sorted by timestamp.
     pub fn get_all_persistent_events(
         &self,

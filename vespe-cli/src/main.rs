@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
                 let task_count = project_root.list_all_tasks().map_or(0, |t| t.len());
                 println!("Task Count: {}", task_count);
 
-                let tool_count = api::list_available_tools(&project_root, &ProjectConfig::default()).map_or(0, |t| t.len());
+                let tool_count = project_root.list_available_tools().map_or(0, |t| t.len());
                 println!("Tool Count: {}", tool_count);
             }
             ProjectSubcommand::Validate => {
@@ -238,7 +238,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             ToolSubcommand::List => {
-                match api::list_available_tools(&project_root, &ProjectConfig::default()) {
+                match project_root.list_available_tools() {
                     Ok(tools) => {
                         if tools.is_empty() {
                             println!("No tools found.");

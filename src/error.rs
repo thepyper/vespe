@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-use super::models::TaskState;
+use crate::llm::models::TaskState;
 
 #[derive(Debug, Error)]
 pub enum ProjectError {

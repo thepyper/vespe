@@ -1,4 +1,5 @@
-pub mod models;
+pub mod agent;
+pub mod task;
 pub mod error;
 pub mod api;
 pub mod utils;
@@ -8,9 +9,10 @@ pub use tool::*;
 pub mod project;
 
 pub use project::*;
-pub mod agent_api;
+//pub mod agent_api;
 
-pub use models::*;
+pub use task::*;
+pub use agent::*;
 pub use error::*;
 pub use utils::*;
 pub use tool_models::*;

@@ -256,6 +256,15 @@ impl Project {
         Task::load(&self.root_path, uid)
     }
 
+
+    /// Loads a task from the filesystem given its UID.
+    pub fn load_task(
+        &self,
+        uid: &str
+    ) -> Result<Task, ProjectError> {
+        Task::load(&self.root_path, uid)
+    }
+
     /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
     /// Writes the objective content to `objective.md`.
     pub fn define_objective(

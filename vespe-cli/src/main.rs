@@ -3,7 +3,6 @@ mod cli;
 use clap::Parser;
 use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
  // Import the api module
-use vespe::utils::initialize_project_root;
 use vespe::project::Project;
 use vespe::TaskState;
 use std::fs;
@@ -23,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
     if let Commands::Project(project_command) = &cli.command {
         if let ProjectSubcommand::Init { path } = &project_command.command {
             let target_dir = path.clone().unwrap_or(std::env::current_dir()?);
-            match initialize_project_root(&target_dir) {
+            match Project::initialize(&target_dir) {
                 Ok(_) => {
                     println!("Vespe project initialized at: {}", target_dir.display());
                 },

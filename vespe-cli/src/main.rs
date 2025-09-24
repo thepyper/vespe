@@ -2,11 +2,10 @@ mod cli;
 
 use clap::Parser;
 use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
-use vespe::api; // Import the api module
+ // Import the api module
 use vespe::utils::initialize_project_root;
 use vespe::project_models::Project;
 use std::fs;
-use vespe::ProjectConfig;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[tokio::main]

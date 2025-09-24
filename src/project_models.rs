@@ -254,9 +254,6 @@ impl Project {
         Task::load(&self.root_path, uid)
     }
 
-
-
-    
     /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
     /// Writes the objective content to `objective.md`.
     pub fn define_objective(

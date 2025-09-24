@@ -5,7 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
-use std::io::{stdout, Stdout};
+use std::io::stdout;
 
 // Color Constants
 const TASKS_COLOR: Color = Color::LightBlue;

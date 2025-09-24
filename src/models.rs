@@ -1,7 +1,9 @@
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
+use crate::error::ProjectError;
+use crate::utils::{write_file_content, update_task_status};
 
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -68,6 +70,21 @@ pub struct Task {
     pub plan: Option<String>, // Contenuto di plan.md
     pub dependencies: TaskDependencies,
     // Potrebbero esserci altri campi per subtask caricati, ecc.
+}
+
+impl Task {
+    /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
+    /// Writes the objective content to `objective.md`.
+    pub fn define_objective(&mut self, objective_content: String) -> Result<(), ProjectError> {
+        // Update objective.md
+        write_file_content(&self.root_path.join("objective.md"), &objective_content)?;
+        self.objective = objective_content;
+
+        // Update status
+        update_task_status(&self.root_path, TaskState::ObjectiveDefined, &mut self.status)?;
+
+        Ok(())
+    }
 }
 
 // Struttura per gli eventi persistenti (da persistent/)

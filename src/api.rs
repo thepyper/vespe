@@ -10,26 +10,7 @@ use crate::project_models::Project;
 use crate::error::ProjectError;
 use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_content, read_json_file, read_file_content, update_task_status, hash_file};
 
-/// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
-/// Writes the objective content to `objective.md`.
-pub fn define_objective(
-    project: &Project,
-    task_uid: &str,
-    objective_content: String
-) -> Result<Task, ProjectError> {
-    let mut task = load_task(project, task_uid)?;
-    let tasks_base_path = project.tasks_dir();
-    let task_path = get_entity_path(&tasks_base_path, task_uid)?;
 
-    // Update objective.md
-    write_file_content(&task_path.join("objective.md"), &objective_content)?;
-    task.objective = objective_content;
-
-    // Update status
-    update_task_status(&task_path, TaskState::ObjectiveDefined, &mut task.status)?;
-
-    Ok(task)
-}
 
 /// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.
 /// Writes the plan content to `plan.md`.

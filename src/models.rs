@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use crate::error::ProjectError;
-use crate::utils::{write_file_content, update_task_status};
+use crate::utils::{write_file_content, update_task_status, write_json_file};
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;

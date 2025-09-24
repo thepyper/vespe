@@ -157,7 +157,7 @@ async fn main() -> anyhow::Result<()> {
 
                 match project_root.resolve_task(identifier) {
                     Ok(task) => {
-                        if task.status.current_state != vespe::models::TaskState::NeedsReview {
+                        if task.status.current_state != TaskState::NeedsReview {
                             eprintln!("Error: Task must be in 'NeedsReview' state to be reviewed. Current state: {:?}", task.status.current_state);
                             return Ok(());
                         }

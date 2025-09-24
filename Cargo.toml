@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "vespe-buzz", "vespe-cli",
+    "vespe-cli",
     "vespe-tui",
 ]
 

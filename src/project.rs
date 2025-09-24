@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
-use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_path, read_file_content, write_file_content};
+use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_path, write_file_content};
 use crate::task::{TaskConfig, TaskDependencies, TaskState, TaskStatus};
 use crate::PersistentEvent;
 use crate::task::Task;
@@ -46,7 +46,7 @@ impl Project {
         std::fs::create_dir_all(target_dir).map_err(|e| ProjectError::Io(e))?;
 
         let absolute_target_dir = target_dir.canonicalize()
-            .map_err(|e| ProjectError::InvalidPath(target_dir.to_path_buf()))?;
+            .map_err(|_e| ProjectError::InvalidPath(target_dir.to_path_buf()))?;
 
         // Check if target_dir is already part of an existing Vespe project
         if let Some(found_project) = Project::find_root(&absolute_target_dir) {

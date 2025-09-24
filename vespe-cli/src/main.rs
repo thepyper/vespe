@@ -2,7 +2,6 @@ mod cli;
 
 use clap::Parser;
 use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
-use crate::cli::resolve::{resolve_task, resolve_tool};
 use vespe::api; // Import the api module
 use vespe::utils::{find_project_root, initialize_project_root};
 use std::fs;
@@ -101,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             TaskSubcommand::Show { identifier } => {
-                match resolve_task(&project_root, identifier) {
+                match project_root.resolve_task(identifier) {
                     Ok(task) => {
                         println!("Task Details:");
                         println!("  UID: {}", task.uid);
@@ -155,7 +154,7 @@ async fn main() -> anyhow::Result<()> {
                     return Ok(());
                 }
 
-                match resolve_task(&project_root, identifier) {
+                match project_root.resolve_task(identifier) {
                     Ok(task) => {
                         if task.status.current_state != vespe::models::TaskState::NeedsReview {
                             eprintln!("Error: Task must be in 'NeedsReview' state to be reviewed. Current state: {:?}", task.status.current_state);
@@ -226,7 +225,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             ToolSubcommand::Show { identifier } => {
-                match resolve_tool(&project_root, identifier) {
+                match project_root.resolve_tool(identifier) {
                     Ok(tool) => {
                         println!("Tool Details:");
                         println!("  UID: {}", tool.uid);

@@ -302,3 +302,16 @@ impl Project {
         task.add_result_file(filename, content)?;
         Ok(())
     }
+
+    /// Creates a new tool.
+    pub fn create_tool(
+        &self,
+        name: String,
+        description: String,
+        schema: serde_json::Value,
+        implementation_details: serde_json::Value,
+    ) -> Result<Tool, ProjectError> {
+        let tools_base_path = self.tools_dir();
+        Tool::create(name, description, schema, implementation_details, &tools_base_path)
+    }
+}

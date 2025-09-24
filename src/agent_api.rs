@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
-use crate::{Task, Tool, ProjectConfig}; // Assumendo che Task, Tool e ProjectConfig siano già definite e pubbliche
+use crate::{Tool, ProjectConfig}; // Assumendo che Task, Tool e ProjectConfig siano già definite e pubbliche
 
 /// Rappresenta il contesto fornito a un agente per l'esecuzione di un'azione.
 /// Contiene tutte le informazioni rilevanti che l'agente potrebbe necessitare.

@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
 
 // Corresponds to config.json for a Tool
 #[derive(Debug, Serialize, Deserialize, Clone)]

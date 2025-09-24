@@ -13,37 +13,6 @@ use crate::utils::{get_entity_path, generate_uid, write_json_file, write_file_co
 
 
 
-/// Creates a new tool.
-pub fn create_tool(
-    project: &Project,
-    name: String,
-    description: String,
-    schema: serde_json::Value,
-    implementation_details: serde_json::Value,
-) -> Result<Tool, ProjectError> {
-    let uid = generate_uid("tool")?;
-    let tools_base_path = project.tasks_dir();
-    let tool_path = get_entity_path(&tools_base_path, &uid)?;
-
-    fs::create_dir_all(&tool_path).map_err(|e| ProjectError::Io(e))?;
-
-    let config = ToolConfig {
-        uid: uid.clone(),
-        name: name.clone(),
-        description: description.clone(),
-        schema,
-        implementation_details,
-    };
-    write_json_file(&tool_path.join("config.json"), &config)?;
-    write_file_content(&tool_path.join("description.md"), &description)?;
-
-    Ok(Tool {
-        uid: uid.clone(),
-        root_path: tool_path,
-        config,
-    })
-}
-
 /// Loads a tool from the filesystem given its absolute path.
 pub fn load_tool(
     tool_path: &Path,

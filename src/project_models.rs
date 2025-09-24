@@ -271,7 +271,16 @@ impl Project {
         Ok(task)
     }
 
-
+    /// Adds a new event to the `persistent/` folder of the task.
+    pub fn add_persistent_event(
+        &self,
+        task_uid: &str,
+        event: PersistentEvent
+    ) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.add_persistent_event(event)?;
+        Ok(())
+    }
 
     /// Loads a task from the filesystem given its UID.
     pub fn load_task(

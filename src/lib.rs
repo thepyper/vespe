@@ -3,7 +3,9 @@ pub mod error;
 pub mod api;
 pub mod utils;
 pub mod tool_models;
-pub mod project_models;
+pub mod project;
+
+pub use project::*;
 pub mod agent_api;
 
 pub use models::*;

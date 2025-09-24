@@ -4,7 +4,7 @@ use clap::Parser;
 use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
  // Import the api module
 use vespe::utils::initialize_project_root;
-use vespe::project_models::Project;
+use vespe::project::Project;
 use std::fs;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 

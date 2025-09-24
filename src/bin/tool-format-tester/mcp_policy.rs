@@ -1,9 +1,8 @@
 use anyhow::{anyhow, Result};
 use handlebars::Handlebars;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 
-use crate::policies::{ParsedToolCall, StructuredOutputBlock, ToolCallPolicy};
+use crate::policies::{StructuredOutputBlock, ToolCallPolicy};
 
 pub struct McpPolicy;
 

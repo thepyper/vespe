@@ -1,6 +1,5 @@
 use anyhow::Result;
 use handlebars::Handlebars;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 // Represents a single, parsed tool call.

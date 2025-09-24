@@ -217,7 +217,7 @@ pub async fn save_labeled_example(
     
     let mut original_labeled_json: serde_json::Value = serde_json::from_str(&converted_json)?;
 
-    let mut debug_json = json!({
+    let debug_json = json!({
         "narrator_query": narrator_query,
         "narrator_response": narrator_response,
         "hero_query": hero_query,

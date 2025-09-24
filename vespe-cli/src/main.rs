@@ -163,14 +163,14 @@ async fn main() -> anyhow::Result<()> {
                         }
 
                         if *approve {
-                            match api::review_task(&project_root, &task.uid, true) {
+                            match project_root.review_task(&task.uid, true) {
                                 Ok(updated_task) => {
                                     println!("Task {} approved. New state: {:?}", updated_task.uid, updated_task.status.current_state);
                                 }
                                 Err(e) => eprintln!("Error approving task: {}", e),
                             }
                         } else if *reject {
-                            match api::review_task(&project_root, &task.uid, false) {
+                            match project_root.review_task(&task.uid, false) {
                                 Ok(updated_task) => {
                                     println!("Task {} rejected. New state: {:?}", updated_task.uid, updated_task.status.current_state);
                                     // If rejected, create a new task for replanning

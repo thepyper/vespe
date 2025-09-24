@@ -7,6 +7,7 @@ use crate::utils::{write_file_content, update_task_status, write_json_file};
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
+use crate::PersistentEvent;
 
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]

@@ -2815,10 +2815,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vespe-buzz"
-version = "0.1.0"
-
-[[package]]
 name = "vespe-cli"
 version = "0.1.0"
 dependencies = [

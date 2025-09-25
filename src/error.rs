@@ -31,10 +31,6 @@ pub enum ProjectError {
     UidGenerationError(String),
     #[error("Invalid path: {0}")]
     InvalidPath(PathBuf),
-    #[error("Subtask not found: {0}")]
-    SubtaskNotFound(String),
-    #[error("Invalid task type for operation: {0}")]
-    InvalidTaskType(String),
     #[error("Project root not found. Looked in {0}")]
     ProjectRootNotFound(PathBuf),
 }

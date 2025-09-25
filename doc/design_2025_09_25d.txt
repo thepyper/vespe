@@ -53,7 +53,7 @@ Le transizioni sono definite da azioni specifiche:
         *   Se `is_failure == true` -> **FAILED**
         *   Se `is_failure == false` -> **ERROR**
 *   **Da HARVESTING:**
-    *   (Transizione implicita, gestita dall'API di terminazione dei sub-task `subtask_terminated`):
+    *   (Transizione implicita, gestita dall'API di terminazione dei sub-task):
         *   Se tutti i sub-task completati con successo -> **COMPLETED**
         *   Se un qualsiasi sub-task fallisce/errore -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
     *   `error(details: String, is_failure: bool)`:
@@ -113,7 +113,6 @@ trait TaskLifecycle {
     fn error(&mut self, task_id: &str, details: String, is_failure: bool) -> Result<(), TaskError>; // General error API
     fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn abort(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>;
-    // Rimossi: replan_from_failed
     fn pause_task(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>;
     fn resume_task(&mut self, task_id: &str) -> Result<(), TaskError>;
 

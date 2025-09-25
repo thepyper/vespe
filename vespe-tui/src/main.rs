@@ -88,9 +88,23 @@ impl Page {
 struct App {
     current_page: Page,
     task_edit_state: pages::task_edit::TaskEditState,
+    tasks_page_state: pages::tasks::TasksPageState,
     project: Project,
     message: Option<String>,
     message_type: MessageType,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            current_page: Page::default(),
+            task_edit_state: pages::task_edit::TaskEditState::default(),
+            tasks_page_state: pages::tasks::TasksPageState::default(),
+            project: Project::load(std::path::Path::new("h:\\my\\github\\vespe")).expect("Failed to load project"), // TODO: Use a proper path
+            message: None,
+            message_type: MessageType::default(),
+        }
+    }
 }
 
 mod pages;
@@ -118,7 +132,7 @@ fn main() -> Result<()> {
 
             // Render main content based on current page
             match app.current_page {
-                Page::Tasks => pages::tasks::render_tasks_page(frame, layout[0]),
+                Page::Tasks => pages::tasks::render_tasks_page(frame, layout[0], &app.tasks_page_state),
                 Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
                 Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
                 Page::Chat => pages::chat::render_chat_page(frame, layout[1]),
@@ -149,6 +163,16 @@ fn handle_events(app: &mut App) -> Result<bool> {
                     KeyCode::F(1) => {
                         app.current_page = Page::Tasks;
                         app.message = None;
+                        match app.project.list_all_tasks() {
+                            Ok(tasks) => {
+                                app.tasks_page_state.tasks = tasks;
+                                app.tasks_page_state.selected_task_index = 0;
+                            }
+                            Err(e) => {
+                                app.message = Some(format!("Error loading tasks: {:?}", e));
+                                app.message_type = MessageType::Error;
+                            }
+                        }
                     }
                     KeyCode::F(2) => {
                         app.current_page = Page::Tools;

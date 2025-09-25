@@ -5,7 +5,7 @@ use crate::MessageType;
 use vespe::Task;
 use tracing::{info, warn, error, debug};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TasksPageState {
     pub tasks: Vec<Task>,
     pub selected_task_index: usize,

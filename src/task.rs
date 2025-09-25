@@ -191,9 +191,18 @@ impl Task {
         Ok(())
     }
 
+    pub fn work_completed(&mut self) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Completed) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Completed,
+            ));
+        }
 
+        update_task_status(&self.root_path, TaskState::Completed, &mut self.status)?;
 
-
+        Ok(())
+    }
 
 
 

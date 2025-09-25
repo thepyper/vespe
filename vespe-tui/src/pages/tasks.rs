@@ -48,9 +48,21 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
     match key_code {
         KeyCode::F(5) => {
             info!("Tasks: KeyCode::F(5) (New Task) pressed.");
-            // New Task
+            // Create a new task with a default name and the current agent as creator
+            let new_task_uid = app.project.create_task(
+                None, // parent_uid
+                "New Task".to_string(), // Default name
+                app.current_agent_uid.clone(), // Assuming current_agent_uid is available
+                "".to_string(), // _template_name
+            )?.uid;
+
+            // Initialize task_edit_state with the new task's UID and set mode to Editing
             app.task_edit_state = super::task_edit::TaskEditState::default();
+            app.task_edit_state.current_task_uid = Some(new_task_uid.clone());
+            app.task_edit_state.name = "New Task".to_string(); // Pre-fill name
+            app.task_edit_state.agent_uid = app.current_agent_uid.clone(); // Pre-fill agent UID
             app.task_edit_state.mode = super::task_edit::TaskEditMode::Editing;
+
             let next_page = Page::TaskEdit;
             app.current_page = next_page;
             next_page.entering(app)?;

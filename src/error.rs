@@ -33,4 +33,6 @@ pub enum ProjectError {
     InvalidPath(PathBuf),
     #[error("Project root not found. Looked in {0}")]
     ProjectRootNotFound(PathBuf),
+    #[error("Subtask not found: {0}")]
+    SubtaskNotFound(String),
 }

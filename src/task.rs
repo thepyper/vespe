@@ -231,6 +231,19 @@ impl Task {
         Ok(())
     }
 
+    /// Updates the task's name and objective.
+    pub fn update(&mut self, name: &str, objective: &str) -> Result<(), ProjectError> {
+        // Update in-memory representations
+        self.config.name = name.to_string();
+        self.objective = objective.to_string();
+
+        // Persist changes to the filesystem
+        write_json_file(&self.root_path.join("config.json"), &self.config)?;
+        write_file_content(&self.root_path.join("objective.md"), &self.objective)?;
+
+        Ok(())
+    }
+
     /// Loads a task from the filesystem given its UID.
     pub fn load(
         project_root: &Path,

@@ -81,6 +81,31 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             info!("TaskEdit: KeyCode::Tab pressed. Changing focus.");
             app.task_edit_state.input_focus = app.task_edit_state.input_focus.next();
         }
+        KeyCode::F(5) => {
+            info!("TaskEdit: KeyCode::F(5) pressed. Saving task.");
+            if let Some(uid) = &app.task_edit_state.current_task_uid {
+                match app.project.update_task(
+                    uid,
+                    app.task_edit_state.name.clone(),
+                    app.task_edit_state.objective.clone(),
+                ) {
+                    Ok(_) => {
+                        app.message = Some("Task saved successfully.".to_string());
+                        app.message_type = MessageType::Success;
+                        app.current_page = crate::Page::Tasks;
+                        crate::pages::tasks::load_tasks_into_state(app)?;
+                    }
+                    Err(e) => {
+                        app.message = Some(format!("Failed to save task: {}", e));
+                        app.message_type = MessageType::Error;
+                    }
+                }
+            }
+        }
+        KeyCode::F(6) => {
+            info!("TaskEdit: KeyCode::F(6) pressed. Cancelling edit.");
+            app.current_page = crate::Page::Tasks;
+        }
         _ => {},
     }
     Ok(())

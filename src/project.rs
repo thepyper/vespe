@@ -290,6 +290,18 @@ impl Project {
         self.load_task(&uid)
     }
 
+    /// Updates a task's name and objective.
+    pub fn update_task(
+        &self,
+        task_uid: &str,
+        name: String,
+        objective: String,
+    ) -> Result<Task, ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.update(&name, &objective)?;
+        Ok(task)
+    }
+
     /// Loads a task from the filesystem given its UID.
     pub fn load_task(
         &self,

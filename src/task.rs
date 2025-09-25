@@ -386,18 +386,30 @@ impl Task {
             })?;
 
         debug!("Loading objective.md for task: {}", uid);
-        let objective = crate::utils::read_file_content(&task_path.join("objective.md"))
-            .map_err(|e| {
+        let objective = match crate::utils::read_file_content(&task_path.join("objective.md")) {
+            Ok(content) => content,
+            Err(ProjectError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                warn!("objective.md not found for task {}. Initializing with empty string.", uid);
+                "".to_string()
+            },
+            Err(e) => {
                 error!("Failed to read objective.md for task {}: {:?}", uid, e);
-                e
-            })?;
+                return Err(e);
+            }
+        };
 
         debug!("Loading plan.md for task: {}", uid);
-        let plan = Some(crate::utils::read_file_content(&task_path.join("plan.md"))
-            .map_err(|e| {
+        let plan = match crate::utils::read_file_content(&task_path.join("plan.md")) {
+            Ok(content) => Some(content),
+            Err(ProjectError::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+                warn!("plan.md not found for task {}. Initializing with None.", uid);
+                None
+            },
+            Err(e) => {
                 error!("Failed to read plan.md for task {}: {:?}", uid, e);
-                e
-            })?);
+                return Err(e);
+            }
+        };
 
         Ok(Task {
             uid: uid.to_string(),

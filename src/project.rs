@@ -449,16 +449,7 @@ impl Project {
         crate::Tool::from_path(&tool_path)
     }
 
-    /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
-    pub fn review_task(
-        &self,
-        task_uid: &str,
-        approved: bool,
-    ) -> Result<Task, ProjectError> {
-        let mut task = self.load_task(task_uid)?;
-        task.review_task(approved)?;
-        Ok(task)
-    }
+
 
     /// Creates a new agent (AI or human).
     pub fn create_agent(

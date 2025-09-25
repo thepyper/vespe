@@ -29,11 +29,12 @@ Le transizioni sono definite da azioni specifiche:
     *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED**
 *   **Da OBJECTIVE_DEFINED:**
     *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED** (Aggiorna l'obiettivo esistente)
-    *   `define_plan(plan_content: String, is_monolithic: bool)` -> **PLAN_DEFINED**
+    *   `define_plan(plan_content: String, task_type: TaskType)` -> **PLAN_DEFINED**
 *   **Da PLAN_DEFINED:**
-    *   `accept_plan(task_type: TaskType)`:
-        *   Se `task_type == Monolithic` -> **WORKING**
-        *   Se `task_type == Subdivided` -> **SUBDIVIDING**
+    *   `define_plan(plan_content: String, task_type: TaskType)` -> **PLAN_DEFINED** (Aggiorna il piano esistente)
+    *   `accept_plan()`:
+        *   Se `task_type == Monolithic` (ricordato da `define_plan`) -> **WORKING**
+        *   Se `task_type == Subdivided` (ricordato da `define_plan`) -> **SUBDIVIDING**
     *   `reject_plan()` -> **OBJECTIVE_DEFINED**
 *   **Da SUBDIVIDING:**
     *   `subtasks_generated()` -> **WAITING_FOR_SUBTASKS** (Transizione automatica dopo la creazione dei sub-task)
@@ -79,9 +80,9 @@ enum TaskType {
 
 // API per la gestione del task
 trait TaskLifecycle {
-    fn define_objective(&mut self, task_id: &str, objective_content: String) -> Result<(), TaskError>; // Merged define_objective and update_objective
-    fn define_plan(&mut self, task_id: &str, plan_content: String, is_monolithic: bool) -> Result<(), TaskError>;
-    fn accept_plan(&mut self, task_id: &str, task_type: TaskType) -> Result<(), TaskError>;
+    fn define_objective(&mut self, task_id: &str, objective_content: String) -> Result<(), TaskError>;
+    fn define_plan(&mut self, task_id: &str, plan_content: String, task_type: TaskType) -> Result<(), TaskError>; // task_type moved here
+    fn accept_plan(&mut self, task_id: &str) -> Result<(), TaskError>; // task_type removed
     fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn subtasks_generated(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn subtask_generation_failed(&mut self, task_id: &str, error_details: String) -> Result<(), TaskError>;

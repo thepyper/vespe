@@ -5,6 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use ratatui::{prelude::*, widgets::*};
+use crate::pages::create_task::{InputFocus, PRIORITIES};
 use std::io::stdout;
 
 // Color Constants
@@ -85,6 +86,16 @@ impl Page {
 #[derive(Debug, Default)]
 struct App {
     current_page: Page,
+    create_task_state: pages::create_task::CreateTaskState,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            current_page: Page::default(),
+            create_task_state: pages::create_task::CreateTaskState::default(),
+        }
+    }
 }
 
 mod pages;
@@ -116,7 +127,7 @@ fn main() -> Result<()> {
                 Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
                 Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
                 Page::Chat => pages::chat::render_chat_page(frame, layout[0]),
-                Page::CreateTask => pages::create_task::render_create_task_page(frame, layout[0]),
+                Page::CreateTask => pages::create_task::render_create_task_page(frame, layout[0], &app.create_task_state),
             }
 
             // Render page-specific F5-F8 footer
@@ -164,8 +175,60 @@ fn handle_events(app: &mut App) -> Result<bool> {
                             }
                             _ => {},
                         }
+                    KeyCode::Char(c) => {
+                        if app.current_page == Page::CreateTask {
+                            match app.create_task_state.input_focus {
+                                pages::create_task::InputFocus::Title => app.create_task_state.title.push(c),
+                                pages::create_task::InputFocus::Description => app.create_task_state.description.push(c),
+                                pages::create_task::InputFocus::DueDate => app.create_task_state.due_date.push(c),
+                                pages::create_task::InputFocus::Tags => app.create_task_state.tags.push(c),
+                                _ => {},
+                            }
+                        }
                     }
-                    _ => {},
+                    KeyCode::Backspace => {
+                        if app.current_page == Page::CreateTask {
+                            match app.create_task_state.input_focus {
+                                pages::create_task::InputFocus::Title => {
+                                    app.create_task_state.title.pop();
+                                }
+                                pages::create_task::InputFocus::Description => {
+                                    app.create_task_state.description.pop();
+                                }
+                                pages::create_task::InputFocus::DueDate => {
+                                    app.create_task_state.due_date.pop();
+                                }
+                                pages::create_task::InputFocus::Tags => {
+                                    app.create_task_state.tags.pop();
+                                }
+                                _ => {},
+                            }
+                        }
+                    }
+                    KeyCode::Tab => {
+                        if app.current_page == Page::CreateTask {
+                            app.create_task_state.input_focus = app.create_task_state.input_focus.next();
+                        }
+                    }
+                    KeyCode::Up => {
+                        if app.current_page == Page::CreateTask {
+                            if let pages::create_task::InputFocus::Priority = app.create_task_state.input_focus {
+                                if app.create_task_state.priority > 0 {
+                                    app.create_task_state.priority -= 1;
+                                }
+                            }
+                        }
+                    }
+                    KeyCode::Down => {
+                        if app.current_page == Page::CreateTask {
+                            if let pages::create_task::InputFocus::Priority = app.create_task_state.input_focus {
+                                if app.create_task_state.priority < pages::create_task::PRIORITIES.len() - 1 {
+                                    app.create_task_state.priority += 1;
+                                }
+                            }
+                        }
+                    }
+
                 }
             }
         }

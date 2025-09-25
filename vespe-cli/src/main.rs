@@ -106,8 +106,20 @@ async fn main() -> anyhow::Result<()> {
                         println!("  UID: {}", task.uid);
                         println!("  Name: {}", task.config.name);
                         println!("  State: {:?}", task.status.current_state);
+                        println!("  Type: {:?}", task.config.task_type.map_or("N/A".to_string(), |t| format!("{:?}", t)));
+                        println!("  Paused: {}", task.status.is_paused);
+                        if let Some(details) = task.status.error_details {
+                            println!("  Error Details: {}", details);
+                        }
+                        if let Some(prev_state) = task.status.previous_state {
+                            println!("  Previous State: {:?}", prev_state);
+                        }
+                        println!("  Retry Count: {}", task.status.retry_count);
                         println!("  Created At: {}", task.config.created_at);
                         println!("  Objective: {}", task.objective);
+                        if let Some(plan_content) = task.plan {
+                            println!("  Plan: {}", plan_content);
+                        }
                     }
                     Err(e) => eprintln!("Error: {}", e),
                 }

@@ -25,6 +25,14 @@ pub struct TaskConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskStatus {
+    pub is_paused: bool,
+    pub error_details: Option<String>,
+    pub previous_state: Option<TaskState>,
+    pub retry_count: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: TaskId,
     pub description: String,

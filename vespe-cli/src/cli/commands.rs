@@ -79,6 +79,9 @@ pub enum TaskSubcommand {
         identifier: String,
         /// The plan content
         plan: String,
+        /// The type of task: "monolithic" or "subdivided"
+        #[arg(long)]
+        task_type: String,
     },
     /// List all tasks
     List,

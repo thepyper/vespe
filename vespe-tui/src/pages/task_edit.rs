@@ -196,3 +196,14 @@ pub fn render_plan_review_view(_frame: &mut Frame, _area: Rect, _state: &TaskEdi
     // Placeholder for plan review rendering
 }
 
+pub fn handle_plan_review_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Error> {
+    match key_code {
+        KeyCode::F(5) => {
+            info!("TaskEdit: KeyCode::F(5) (Back) pressed in PlanReview mode.");
+            app.current_page = crate::Page::Tasks;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+

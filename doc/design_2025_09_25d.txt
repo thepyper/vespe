@@ -70,7 +70,7 @@ Le transizioni sono definite da azioni specifiche:
         *   Se `is_failure == false` -> **ERROR** (Rimane in stato di errore recuperabile, ad esempio per aggiornare i dettagli dell'errore)
     *   (API di uscita TBD - da definire in seguito)
 *   **Da FAILED:**
-    *   `replan_from_failed()` -> **OBJECTIVE_DEFINED** (per ripartire da zero)
+    *   (Stato terminale, nessuna transizione in uscita)
 *   **Da COMPLETED:**
     *   (Stato finale, nessuna transizione in uscita)
 
@@ -113,7 +113,7 @@ trait TaskLifecycle {
     fn error(&mut self, task_id: &str, details: String, is_failure: bool) -> Result<(), TaskError>; // General error API
     fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn abort(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>;
-    fn replan_from_failed(&mut self, task_id: &str) -> Result<(), TaskError>;
+    // Rimossi: replan_from_failed
     fn pause_task(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>;
     fn resume_task(&mut self, task_id: &str) -> Result<(), TaskError>;
 

@@ -174,6 +174,24 @@ impl Task {
         Ok(())
     }
 
+    pub fn error(&mut self, details: String, is_failure: bool) -> Result<(), ProjectError> {
+        let next_state = if is_failure { TaskState::Failed } else { TaskState::Error };
+
+        if !self.status.current_state.can_transition_to(next_state) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                next_state,
+            ));
+        }
+
+        self.status.previous_state = Some(self.status.current_state);
+        self.status.error_details = Some(details);
+        update_task_status(&self.root_path, next_state, &mut self.status)?;
+
+        Ok(())
+    }
+
+
 
 
 

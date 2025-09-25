@@ -258,10 +258,23 @@ impl Project {
         let tasks_base_path = self.tasks_dir();
         let task_path = get_entity_path(&tasks_base_path, &uid)?;
 
-        // Create task directory and subdirectories
-        std::fs::create_dir_all(&task_path).map_err(|e| ProjectError::Io(e))?;
-        std::fs::create_dir_all(task_path.join("persistent")).map_err(|e| ProjectError::Io(e))?;
-        std::fs::create_dir_all(task_path.join("result")).map_err(|e| ProjectError::Io(e))?;
+        debug!("Project::create_task: Attempting to create task directory: {:?}", task_path);
+        std::fs::create_dir_all(&task_path).map_err(|e| {
+            error!("Project::create_task: Failed to create task directory {:?}: {:?}", task_path, e);
+            ProjectError::Io(e)
+        })?;
+
+        debug!("Project::create_task: Attempting to create persistent directory: {:?}", task_path.join("persistent"));
+        std::fs::create_dir_all(task_path.join("persistent")).map_err(|e| {
+            error!("Project::create_task: Failed to create persistent directory {:?}: {:?}", task_path.join("persistent"), e);
+            ProjectError::Io(e)
+        })?;
+
+        debug!("Project::create_task: Attempting to create result directory: {:?}", task_path.join("result"));
+        std::fs::create_dir_all(task_path.join("result")).map_err(|e| {
+            error!("Project::create_task: Failed to create result directory {:?}: {:?}", task_path.join("result"), e);
+            ProjectError::Io(e)
+        })?;
 
         let now = Utc::now();
 

@@ -59,8 +59,12 @@ pub struct TaskConfig {
 pub struct TaskStatus {
     pub current_state: TaskState,
     pub last_updated_at: DateTime<Utc>,
-    pub progress: Option<String>, // Es. "50% completato"
-    pub parent_content_hashes: HashMap<String, String>, // Key: UID_dipendenza, Value: hash_contenuto_result
+    pub progress: Option<String>,
+    pub parent_content_hashes: HashMap<String, String>,
+    pub is_paused: bool,
+    pub error_details: Option<String>,
+    pub previous_state: Option<TaskState>,
+    pub retry_count: u8,
 }
 
 // Corrisponde a dependencies.json

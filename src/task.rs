@@ -222,6 +222,14 @@ impl Task {
         Ok(())
     }
 
+    pub fn pause_task(&mut self, reason: String) -> Result<(), ProjectError> {
+        self.status.is_paused = true;
+        // Optionally, store the reason in error_details or a new field
+        // self.status.error_details = Some(format!("Paused: {}", reason));
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
+        Ok(())
+    }
+
 
 
 

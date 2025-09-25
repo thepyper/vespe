@@ -408,4 +408,5 @@ impl Task {
             dependencies,
             subtasks: HashMap::new(),
         })
+    }
 }

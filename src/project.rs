@@ -295,8 +295,7 @@ impl Project {
         write_json_file(&task_path.join("status.json"), &status)?;
 
         // Create empty objective.md and plan.md
-        write_file_content(&task_path.join("objective.md"), "")?;
-        write_file_content(&task_path.join("plan.md"), "")?;
+
 
         // Initialize dependencies.json
         let dependencies = TaskDependencies { depends_on: Vec::new() };

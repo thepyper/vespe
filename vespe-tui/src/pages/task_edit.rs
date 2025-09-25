@@ -189,8 +189,10 @@ pub fn handle_objective_editing_events(app: &mut App, key_code: KeyCode) -> Resu
                 };
                 crate::request_confirmation(app, "Save changes?".to_string(), action);
             }
-            _ => {}
-        },
-    }
     Ok(())
 }
+
+pub fn render_plan_review_view(_frame: &mut Frame, _area: Rect, _state: &TaskEditState) {
+    // Placeholder for plan review rendering
+}
+

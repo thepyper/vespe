@@ -230,6 +230,14 @@ impl Task {
         Ok(())
     }
 
+    pub fn resume_task(&mut self) -> Result<(), ProjectError> {
+        self.status.is_paused = false;
+        // Optionally, clear the reason if it was stored
+        // self.status.error_details = None;
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
+        Ok(())
+    }
+
 
 
 

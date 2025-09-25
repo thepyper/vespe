@@ -384,6 +384,12 @@ impl Project {
         Ok(())
     }
 
+    pub fn abort(&self, task_uid: &str, reason: String) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.abort(reason)?;
+        Ok(())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

@@ -153,6 +153,28 @@ impl Task {
         Ok(())
     }
 
+    pub fn add_subtask(&mut self, subtask_id: String, is_final: bool) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Delegating) &&
+           !(self.status.current_state == TaskState::Delegating && is_final) { // Allow transition to Harvesting from Delegating
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Delegating, // Or Harvesting
+            ));
+        }
+
+        self.subtasks.insert(subtask_id, TaskState::Created); // Add subtask with Created state
+
+        if is_final {
+            update_task_status(&self.root_path, TaskState::Harvesting, &mut self.status)?;
+        } else {
+            // If not final, stay in Delegating state, but ensure status is saved
+            write_json_file(&self.root_path.join("status.json"), &self.status)?;
+        }
+
+        Ok(())
+    }
+
+
 
 
 

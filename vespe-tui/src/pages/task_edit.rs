@@ -115,18 +115,28 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             KeyCode::F(6) => {
                 info!("TaskEdit: KeyCode::F(6) (Save) pressed in Editing mode.");
                 let action = |app: &mut App| {
-                    let result = if let Some(uid) = &app.task_edit_state.current_task_uid {
-                        app.project.update_task(
-                            uid,
-                            app.task_edit_state.name.clone(),
-                            app.task_edit_state.objective.clone(),
-                        )
+                    let result: Result<(), anyhow::Error> = if let Some(uid) = &app.task_edit_state.current_task_uid {
+                        // Existing task: update name, objective, and plan
+                        let task_uid = uid.clone();
+                        app.project.set_task_name(&task_uid, app.task_edit_state.name.clone())?;
+                        app.project.define_objective(&task_uid, app.task_edit_state.objective.clone())?;
+                        // Assuming a default TaskType for existing functionality, e.g., Monolithic
+                        // In a real UI, this would be selected by the user.
+                        app.project.define_plan(&task_uid, "".to_string(), TaskType::Monolithic)?; // Plan might be empty
+                        Ok(())
                     } else {
-                        app.project.create_and_define_task(
+                        // New task: create, then define objective and plan
+                        let new_task_uid = app.project.create_task(
+                            None, // parent_uid
                             app.task_edit_state.name.clone(),
-                            app.task_edit_state.objective.clone(),
                             app.task_edit_state.agent_uid.clone(),
-                        )
+                            "".to_string(), // _template_name
+                        )?.uid;
+                        app.project.define_objective(&new_task_uid, app.task_edit_state.objective.clone())?;
+                        // Assuming a default TaskType for existing functionality, e.g., Monolithic
+                        app.project.define_plan(&new_task_uid, "".to_string(), TaskType::Monolithic)?; // Plan might be empty
+                        app.task_edit_state.current_task_uid = Some(new_task_uid);
+                        Ok(())
                     };
 
                     match result {

@@ -12,8 +12,8 @@ Proposta di nomenclatura in inglese, con descrizione in italiano:
 *   **CREATED**: (Creato) Il task è stato appena inizializzato.
 *   **OBJECTIVE_DEFINED**: (Obiettivo Definito) Al task è stato assegnato un obiettivo.
 *   **PLAN_DEFINED**: (Piano Definito) Il task è stato pianificato.
-*   **SUBDIVIDING**: (Suddivisione in corso) Il task è non-monolitico e il suo piano viene usato per generare sub-task.
-*   **WAITING_FOR_SUBTASKS**: (In attesa di Sub-task) Il task genitore attende il completamento dei suoi sub-task.
+*   **DELEGATING**: (Delega in corso) Il task è non-monolitico e il suo piano viene usato per generare e assegnare sub-task.
+*   **HARVESTING**: (Raccolta Risultati) Il task genitore attende il completamento dei suoi sub-task e raccoglie i loro risultati.
 *   **WORKING**: (In Lavorazione) Il task monolitico è in esecuzione attiva.
 *   **ERROR**: (Errore Recuperabile) Il task ha incontrato un errore ma è potenzialmente recuperabile.
 *   **FAILED**: (Fallito Definitivamente) Il task è fallito in modo irreversibile.
@@ -34,12 +34,14 @@ Le transizioni sono definite da azioni specifiche:
     *   `define_plan(plan_content: String, task_type: TaskType)` -> **PLAN_DEFINED** (Aggiorna il piano esistente)
     *   `accept_plan()`:
         *   Se `task_type == Monolithic` (ricordato da `define_plan`) -> **WORKING**
-        *   Se `task_type == Subdivided` (ricordato da `define_plan`) -> **SUBDIVIDING**
+        *   Se `task_type == Subdivided` (ricordato da `define_plan`) -> **DELEGATING**
     *   `reject_plan()` -> **OBJECTIVE_DEFINED**
-*   **Da SUBDIVIDING:**
-    *   `subtasks_generated()` -> **WAITING_FOR_SUBTASKS** (Transizione automatica dopo la creazione dei sub-task)
+*   **Da DELEGATING:**
+    *   `add_subtask(subtask_id: String, is_final: bool)`:
+        *   Se `is_final == true` -> **HARVESTING**
+        *   Se `is_final == false` -> **DELEGATING** (rimane nello stesso stato, aggiungendo sub-task)
     *   `subtask_generation_failed(error_details: String)` -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
-*   **Da WAITING_FOR_SUBTASKS:**
+*   **Da HARVESTING:**
     *   `all_subtasks_completed_successfully()` -> **COMPLETED**
     *   `any_subtask_failed(failed_subtask_id: String, error_details: String)` -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
     *   `parent_aborted()` -> **FAILED**
@@ -48,7 +50,7 @@ Le transizioni sono definite da azioni specifiche:
     *   `work_failed(error_details: String)` -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
     *   `user_aborted()` -> **FAILED**
 *   **Da ERROR:**
-    *   `retry()` -> **WORKING** (se era in `WORKING` prima dell'errore) o **SUBDIVIDING** (se era in `SUBDIVIDING` prima dell'errore) o **WAITING_FOR_SUBTASKS** (se era in `WAITING_FOR_SUBTASKS` prima dell'errore)
+    *   `retry()` -> **WORKING** (se era in `WORKING` prima dell'errore) o **DELEGATING** (se era in `DELEGATING` prima dell'errore) o **HARVESTING** (se era in `HARVESTING` prima dell'errore)
     *   `replan_from_error()` -> **OBJECTIVE_DEFINED**
     *   `mark_as_failed()` -> **FAILED**
 *   **Da FAILED:**
@@ -81,10 +83,10 @@ enum TaskType {
 // API per la gestione del task
 trait TaskLifecycle {
     fn define_objective(&mut self, task_id: &str, objective_content: String) -> Result<(), TaskError>;
-    fn define_plan(&mut self, task_id: &str, plan_content: String, task_type: TaskType) -> Result<(), TaskError>; // task_type moved here
-    fn accept_plan(&mut self, task_id: &str) -> Result<(), TaskError>; // task_type removed
+    fn define_plan(&mut self, task_id: &str, plan_content: String, task_type: TaskType) -> Result<(), TaskError>;
+    fn accept_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
-    fn subtasks_generated(&mut self, task_id: &str) -> Result<(), TaskError>;
+    fn add_subtask(&mut self, task_id: &str, subtask_id: &str, is_final: bool) -> Result<(), TaskError>; // New API
     fn subtask_generation_failed(&mut self, task_id: &str, error_details: String) -> Result<(), TaskError>;
     fn all_subtasks_completed_successfully(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn any_subtask_failed(&mut self, task_id: &str, failed_subtask_id: &str, error_details: String) -> Result<(), TaskError>;
@@ -117,7 +119,7 @@ trait TaskLifecycle {
 *   **Gestione degli Errori:** Ogni transizione o operazione dovrebbe avere una gestione robusta degli errori.
 *   **Audit Trail:** Ogni transizione di stato e azione significativa dovrebbe essere loggata.
 *   **Interazione Agenti:** Chiarire quali transizioni sono innescate da azioni utente e quali da agenti automatizzati.
-*   **Progress Tracking:** Implementare un meccanismo di tracciamento del progresso per `WORKING` e `WAITING_FOR_SUBTASKS`.
+*   **Progress Tracking:** Implementare un meccanismo di tracciamento del progresso per `WORKING` e `HARVESTING`.
 *   **Contatore Retry:** Per lo stato `ERROR`, implementare un contatore di tentativi prima di transitare a `FAILED`.
 
 ---

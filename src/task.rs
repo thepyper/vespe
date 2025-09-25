@@ -140,6 +140,20 @@ impl Task {
         Ok(())
     }
 
+    pub fn reject_plan(&mut self) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::ObjectiveDefined) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::ObjectiveDefined,
+            ));
+        }
+
+        update_task_status(&self.root_path, TaskState::ObjectiveDefined, &mut self.status)?;
+
+        Ok(())
+    }
+
+
 
 
 

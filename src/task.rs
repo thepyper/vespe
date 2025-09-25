@@ -20,6 +20,11 @@ pub enum TaskType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskConfig {
+    pub task_type: Option<TaskType>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: TaskId,
     pub description: String,

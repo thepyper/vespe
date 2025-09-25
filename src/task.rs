@@ -13,6 +13,12 @@ pub enum TaskState {
     Completed,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
+pub enum TaskType {
+    Monolithic,
+    Subdivided,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: TaskId,

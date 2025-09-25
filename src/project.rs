@@ -407,6 +407,11 @@ impl Project {
         Ok(task.get_task_state())
     }
 
+    pub fn is_task_paused(&self, task_uid: &str) -> Result<bool, ProjectError> {
+        let task = self.load_task(task_uid)?;
+        Ok(task.is_task_paused())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

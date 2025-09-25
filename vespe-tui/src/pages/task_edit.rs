@@ -152,8 +152,11 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
                         Ok(())
                     };
 
+                    debug!("Save operation result: {:?}", result); // New log
+
                     match result {
                         Ok(_) => {
+                            debug!("Task save successful, updating UI messages."); // New log
                             app.message = Some("Task saved successfully.".to_string());
                             app.message_type = MessageType::Success;
                             let next_page = crate::Page::Tasks;

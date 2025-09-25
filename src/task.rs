@@ -34,8 +34,13 @@ impl TaskState {
             TaskState::Working => matches!(next_state, TaskState::Completed | TaskState::Error | TaskState::Failed),
             TaskState::Error => matches!(next_state, TaskState::Failed | TaskState::Error), // From Error, can transition to Failed or stay in Error
             TaskState::Failed | TaskState::Completed => false, // Final states, no transitions out
-        }
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub enum TaskType {
+    Monolithic,
+    Subdivided,
 }
 
 // Corrisponde a config.json

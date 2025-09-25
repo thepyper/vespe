@@ -98,10 +98,29 @@ impl Task {
         write_file_content(&self.root_path.join("objective.md"), &objective_content)?;
         self.objective = objective_content;
 
-        update_task_status(&self.root_path, TaskState::ObjectiveDefined, &mut self.status)?;
+        Ok(())
+    }
+
+    pub fn define_plan(&mut self, plan_content: String, task_type: TaskType) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::PlanDefined) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::PlanDefined,
+            ));
+        }
+
+        write_file_content(&self.root_path.join("plan.md"), &plan_content)?;
+        self.plan = Some(plan_content);
+
+        self.config.task_type = Some(task_type);
+        write_json_file(&self.root_path.join("config.json"), &self.config)?;
+
+        update_task_status(&self.root_path, TaskState::PlanDefined, &mut self.status)?;
 
         Ok(())
     }
+
+
 
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {

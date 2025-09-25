@@ -9,6 +9,17 @@ use tracing::{info, warn, error, debug};
 pub struct TasksPageState {
     pub tasks: Vec<Task>,
     pub selected_task_index: usize,
+    pub last_selected_task_uid: Option<String>,
+}
+
+impl Default for TasksPageState {
+    fn default() -> Self {
+        Self {
+            tasks: Vec::new(),
+            selected_task_index: 0,
+            last_selected_task_uid: None,
+        }
+    }
 }
 
 pub fn render_tasks_page(frame: &mut Frame, area: Rect, state: &TasksPageState) {
@@ -76,6 +87,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             if !app.tasks_page_state.tasks.is_empty() {
                 if app.tasks_page_state.selected_task_index > 0 {
                     app.tasks_page_state.selected_task_index -= 1;
+                    app.tasks_page_state.last_selected_task_uid = Some(app.tasks_page_state.tasks[app.tasks_page_state.selected_task_index].uid.clone());
                     info!("Tasks: Selected task index: {}.", app.tasks_page_state.selected_task_index);
                 }
             }
@@ -85,6 +97,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             if !app.tasks_page_state.tasks.is_empty() {
                 if app.tasks_page_state.selected_task_index < app.tasks_page_state.tasks.len() - 1 {
                     app.tasks_page_state.selected_task_index += 1;
+                    app.tasks_page_state.last_selected_task_uid = Some(app.tasks_page_state.tasks[app.tasks_page_state.selected_task_index].uid.clone());
                     info!("Tasks: Selected task index: {}.", app.tasks_page_state.selected_task_index);
                 }
             }
@@ -98,7 +111,25 @@ pub fn load_tasks_into_state(app: &mut App) -> Result<(), anyhow::Error> {
     match app.project.list_all_tasks() {
         Ok(tasks) => {
             app.tasks_page_state.tasks = tasks;
-            app.tasks_page_state.selected_task_index = 0;
+
+            // Try to restore the last selected task
+            if let Some(last_uid) = &app.tasks_page_state.last_selected_task_uid {
+                if let Some(index) = app.tasks_page_state.tasks.iter().position(|t| &t.uid == last_uid) {
+                    app.tasks_page_state.selected_task_index = index;
+                } else if !app.tasks_page_state.tasks.is_empty() {
+                    // If the last selected task is no longer available, select the first one
+                    app.tasks_page_state.selected_task_index = 0;
+                } else {
+                    // No tasks available
+                    app.tasks_page_state.selected_task_index = 0;
+                }
+            } else if !app.tasks_page_state.tasks.is_empty() {
+                // If no last selected UID, but tasks are available, select the first one
+                app.tasks_page_state.selected_task_index = 0;
+            } else {
+                // No tasks available
+                app.tasks_page_state.selected_task_index = 0;
+            }
             info!("Tasks loaded successfully.");
         }
         Err(e) => {

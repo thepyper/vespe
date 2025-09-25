@@ -150,8 +150,8 @@ fn main() -> Result<()> {
                 Page::Tasks => pages::tasks::render_tasks_page(frame, layout[0], &app.tasks_page_state),
                 Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
                 Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
-                Page::Chat => pages::chat::render_chat_page(frame, layout[1]),
-                Page::TaskEdit => pages::task_edit::render_task_edit_page(frame, layout[1], &app.task_edit_state),
+                Page::Chat => pages::chat::render_chat_page(frame, layout[0]),
+                Page::TaskEdit => pages::task_edit::render_task_edit_page(frame, layout[0], &app.task_edit_state),
             }
 
             // Render page-specific F5-F8 footer

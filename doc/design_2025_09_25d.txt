@@ -27,15 +27,24 @@ Le transizioni sono definite da azioni specifiche:
 
 *   **Da CREATED:**
     *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
 *   **Da OBJECTIVE_DEFINED:**
     *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED** (Aggiorna l'obiettivo esistente)
     *   `define_plan(plan_content: String, task_type: TaskType)` -> **PLAN_DEFINED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
 *   **Da PLAN_DEFINED:**
     *   `define_plan(plan_content: String, task_type: TaskType)` -> **PLAN_DEFINED** (Aggiorna il piano esistente)
     *   `accept_plan()`:
         *   Se `task_type == Monolithic` (ricordato da `define_plan`) -> **WORKING**
         *   Se `task_type == Subdivided` (ricordato da `define_plan`) -> **DELEGATING**
     *   `reject_plan()` -> **OBJECTIVE_DEFINED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
 *   **Da DELEGATING:**
     *   `add_subtask(subtask_id: String, is_final: bool)`:
         *   Se `is_final == true` -> **HARVESTING**
@@ -47,6 +56,9 @@ Le transizioni sono definite da azioni specifiche:
     *   (Transizione implicita, gestita dall'API di terminazione dei sub-task `subtask_terminated`):
         *   Se tutti i sub-task completati con successo -> **COMPLETED**
         *   Se un qualsiasi sub-task fallisce/errore -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
 *   **Da WORKING:**
     *   `work_completed()` -> **COMPLETED**
     *   `error(details: String, is_failure: bool)`:
@@ -97,9 +109,8 @@ trait TaskLifecycle {
     fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn add_subtask(&mut self, task_id: &str, subtask_id: &str, is_final: bool) -> Result<(), TaskError>;
     fn error(&mut self, task_id: &str, details: String, is_failure: bool) -> Result<(), TaskError>; // General error API
-    fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>; // Renamed
-    fn abort(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>; // Unified abort API
-    // Rimossi: subtask_generation_failed, work_failed, user_aborted, parent_aborted, retry, replan_from_error
+    fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>;
+    fn abort(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>;
     fn replan_from_failed(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn pause_task(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>;
     fn resume_task(&mut self, task_id: &str) -> Result<(), TaskError>;

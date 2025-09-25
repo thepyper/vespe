@@ -105,6 +105,10 @@ impl Project {
         self.root_path.join(VESPE_DIR)
     }
 
+    pub fn log_dir(&self) -> PathBuf {
+        self.vespe_dir().join("log")
+    }
+
     pub fn tasks_dir(&self) -> PathBuf {
         self.vespe_dir().join("tasks")
     }

@@ -6,10 +6,10 @@ use crossterm::{
 };
 use ratatui::{prelude::*, widgets::*};
 use std::io::stdout;
-use tracing_subscriber;
 use tracing::{info, warn, error, debug};
 use crate::pages::task_edit::InputFocus;
 use vespe::{Project, ProjectError};
+use tracing_subscriber::{fmt, prelude::*};
 
 // Color Constants
 const TASKS_COLOR: Color = Color::LightBlue;
@@ -107,11 +107,12 @@ pub enum MessageType {
 
 impl Default for App {
     fn default() -> Self {
+        let project = Project::find_root(&std::env::current_dir().unwrap()).expect("Failed to find project root");
         Self {
             current_page: Page::default(),
             task_edit_state: pages::task_edit::TaskEditState::default(),
             tasks_page_state: pages::tasks::TasksPageState::default(),
-            project: Project::load(std::path::Path::new("h:\\my\\github\\vespe")).expect("Failed to load project"), // TODO: Use a proper path
+            project,
             message: None,
             message_type: MessageType::default(),
         }
@@ -121,14 +122,22 @@ impl Default for App {
 mod pages;
 
 fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+    let mut app = App::default();
+
+    let log_dir = app.project.log_dir().join("tui");
+    std::fs::create_dir_all(&log_dir)?;
+    let log_file = tracing_appender::rolling::daily(log_dir, "tui.log");
+    let (non_blocking_writer, _guard) = tracing_appender::non_blocking(log_file);
+
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_writer(non_blocking_writer))
+        .init();
+
     info!("Application started.");
     // setup terminal
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
-
-    let mut app = App::default();
 
     pages::tasks::load_tasks_into_state(&mut app)?;
 

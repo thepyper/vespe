@@ -2843,6 +2843,7 @@ dependencies = [
  "ratatui",
  "tokio",
  "tracing",
+ "tracing-appender",
  "tracing-subscriber",
  "vespe",
 ]

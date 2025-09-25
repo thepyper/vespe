@@ -82,33 +82,37 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             app.task_edit_state.input_focus = app.task_edit_state.input_focus.next();
         }
         KeyCode::F(5) => {
-            info!("TaskEdit: KeyCode::F(5) pressed. Saving task.");
-            let result = if let Some(uid) = &app.task_edit_state.current_task_uid {
-                app.project.update_task(
-                    uid,
-                    app.task_edit_state.name.clone(),
-                    app.task_edit_state.objective.clone(),
-                ).map_err(anyhow::Error::from)
-            } else {
-                app.project.create_and_define_task(
-                    app.task_edit_state.name.clone(),
-                    app.task_edit_state.objective.clone(),
-                    app.task_edit_state.agent_uid.clone(),
-                ).map_err(anyhow::Error::from)
-            };
+            info!("TaskEdit: KeyCode::F(5) pressed. Requesting confirmation to save.");
+            let action = |app: &mut App| {
+                let result = if let Some(uid) = &app.task_edit_state.current_task_uid {
+                    app.project.update_task(
+                        uid,
+                        app.task_edit_state.name.clone(),
+                        app.task_edit_state.objective.clone(),
+                    ).map_err(anyhow::Error::from)
+                } else {
+                    app.project.create_and_define_task(
+                        app.task_edit_state.name.clone(),
+                        app.task_edit_state.objective.clone(),
+                        app.task_edit_state.agent_uid.clone(),
+                    ).map_err(anyhow::Error::from)
+                };
 
-            match result {
-                Ok(_) => {
-                    app.message = Some("Task saved successfully.".to_string());
-                    app.message_type = MessageType::Success;
-                    app.current_page = crate::Page::Tasks;
-                    crate::pages::tasks::load_tasks_into_state(app)?;
+                match result {
+                    Ok(_) => {
+                        app.message = Some("Task saved successfully.".to_string());
+                        app.message_type = MessageType::Success;
+                        app.current_page = crate::Page::Tasks;
+                        crate::pages::tasks::load_tasks_into_state(app)?;
+                    }
+                    Err(e) => {
+                        app.message = Some(format!("Failed to save task: {}", e));
+                        app.message_type = MessageType::Error;
+                    }
                 }
-                Err(e) => {
-                    app.message = Some(format!("Failed to save task: {}", e));
-                    app.message_type = MessageType::Error;
-                }
-            }
+                Ok(())
+            };
+            crate::request_confirmation(app, "Save changes?".to_string(), action);
         }
         KeyCode::F(6) => {
             info!("TaskEdit: KeyCode::F(6) pressed. Cancelling edit.");

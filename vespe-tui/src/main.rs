@@ -10,6 +10,7 @@ use tracing::{info, warn, error, debug};
 use crate::pages::task_edit::InputFocus;
 use vespe::{Project, ProjectError};
 use tracing_subscriber::{fmt, prelude::*};
+use std::sync::Arc;
 
 // Color Constants
 const TASKS_COLOR: Color = Color::LightBlue;
@@ -22,7 +23,7 @@ const DEFAULT_FOOTER_FG_COLOR: Color = Color::White;
 const _QUIT_BUTTON_BG_COLOR: Color = Color::Red;
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
-enum Page {
+pub enum Page {
     #[default]
     Tasks,
     Tools,
@@ -86,14 +87,36 @@ impl Page {
     }
 }
 
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+enum Mode {
+    #[default]
+    Normal,
+    Confirming,
+}
+
+struct Confirmation {
+    message: String,
+    action: Arc<dyn Fn(&mut App) -> Result<()>>,
+}
+
+impl std::fmt::Debug for Confirmation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Confirmation")
+            .field("message", &self.message)
+            .finish()
+    }
+}
+
 #[derive(Debug)]
-struct App {
+pub struct App {
+    mode: Mode,
     current_page: Page,
     task_edit_state: pages::task_edit::TaskEditState,
     tasks_page_state: pages::tasks::TasksPageState,
     project: Project,
     message: Option<String>,
     message_type: MessageType,
+    confirmation: Option<Confirmation>,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -104,17 +127,18 @@ pub enum MessageType {
     Error,
 }
 
-
 impl Default for App {
     fn default() -> Self {
         let project = Project::find_root(&std::env::current_dir().unwrap()).expect("Failed to find project root");
         Self {
+            mode: Mode::default(),
             current_page: Page::default(),
             task_edit_state: pages::task_edit::TaskEditState::default(),
             tasks_page_state: pages::tasks::TasksPageState::default(),
             project,
             message: None,
             message_type: MessageType::default(),
+            confirmation: None,
         }
     }
 }
@@ -168,6 +192,12 @@ fn main() -> Result<()> {
 
             // Render global F1-F4 footer
             render_global_footer(frame, layout[2], &app.current_page);
+
+            if app.mode == Mode::Confirming {
+                if let Some(confirmation) = &app.confirmation {
+                    render_confirmation_dialog(frame, &confirmation.message);
+                }
+            }
         })?;
         should_quit = handle_events(&mut app)?;
     }
@@ -182,35 +212,54 @@ fn handle_events(app: &mut App) -> Result<bool> {
     if event::poll(std::time::Duration::from_millis(50))? {
         if let Event::Key(key) = event::read()? {
             if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Char('q') => return Ok(true),
-                    KeyCode::F(1) => {
-                        app.current_page = Page::Tasks;
-                        app.message = None;
-                        info!("Navigated to Tasks page.");
-                        pages::tasks::load_tasks_into_state(app)?;
+                match app.mode {
+                    Mode::Normal => {
+                        match key.code {
+                            KeyCode::Char('q') => return Ok(true),
+                            KeyCode::F(1) => {
+                                app.current_page = Page::Tasks;
+                                app.message = None;
+                                info!("Navigated to Tasks page.");
+                                pages::tasks::load_tasks_into_state(app)?;
+                            }
+                            KeyCode::F(2) => {
+                                app.current_page = Page::Tools;
+                                app.message = None;
+                                info!("Navigated to Tools page.");
+                            }
+                            KeyCode::F(3) => {
+                                app.current_page = Page::Agents;
+                                app.message = None;
+                                info!("Navigated to Agents page.");
+                            }
+                            KeyCode::F(4) => {
+                                app.current_page = Page::Chat;
+                                app.message = None;
+                                info!("Navigated to Chat page.");
+                            }
+                            _ => {
+                                // Delegate page-specific events
+                                match app.current_page {
+                                    Page::Tasks => pages::tasks::handle_events(app, key.code)?,
+                                    Page::TaskEdit => pages::task_edit::handle_events(app, key.code)?,
+                                    _ => {},
+                                }
+                            }
+                        }
                     }
-                    KeyCode::F(2) => {
-                        app.current_page = Page::Tools;
-                        app.message = None;
-                        info!("Navigated to Tools page.");
-                    }
-                    KeyCode::F(3) => {
-                        app.current_page = Page::Agents;
-                        app.message = None;
-                        info!("Navigated to Agents page.");
-                    }
-                    KeyCode::F(4) => {
-                        app.current_page = Page::Chat;
-                        app.message = None;
-                        info!("Navigated to Chat page.");
-                    }
-                    _ => {
-                        // Delegate page-specific events
-                        match app.current_page {
-                            Page::Tasks => pages::tasks::handle_events(app, key.code)?,
-                            Page::TaskEdit => pages::task_edit::handle_events(app, key.code)?,
-                            _ => {},
+                    Mode::Confirming => {
+                        match key.code {
+                            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                                if let Some(confirmation) = app.confirmation.take() {
+                                    (confirmation.action)(app)?;
+                                }
+                                app.mode = Mode::Normal;
+                            }
+                            KeyCode::Char('n') | KeyCode::Char('N') => {
+                                app.mode = Mode::Normal;
+                                app.confirmation = None;
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -272,4 +321,52 @@ fn render_global_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
             .alignment(Alignment::Center);
         frame.render_widget(paragraph, chunks[i]);
     }
+}
+
+fn render_confirmation_dialog(frame: &mut Frame, message: &str) {
+    let area = centered_rect(60, 20, frame.size());
+    let block = Block::default()
+        .title("Confirm")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow));
+
+    let text = format!("{} (Y/n)", message);
+    let paragraph = Paragraph::new(text)
+        .wrap(Wrap { trim: true })
+        .block(block);
+    
+    frame.render_widget(Clear, area); //this clears the background
+    frame.render_widget(paragraph, area);
+}
+
+/// helper function to create a centered rect using up certain percentage of the available rect `r`
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
+}
+
+pub fn request_confirmation<F>(app: &mut App, message: String, action: F)
+where
+    F: Fn(&mut App) -> Result<()> + 'static,
+{
+    app.confirmation = Some(Confirmation {
+        message,
+        action: Arc::new(action),
+    });
+    app.mode = Mode::Confirming;
 }

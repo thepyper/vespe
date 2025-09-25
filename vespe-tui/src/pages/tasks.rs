@@ -39,6 +39,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             info!("Tasks: KeyCode::F(5) (New Task) pressed.");
             // New Task
             app.task_edit_state = super::task_edit::TaskEditState::default();
+            app.task_edit_state.mode = super::task_edit::TaskEditMode::Editing;
             app.current_page = Page::TaskEdit;
             app.message = None;
         }

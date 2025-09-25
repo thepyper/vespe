@@ -24,6 +24,7 @@ enum Page {
     Tools,
     Agents,
     Chat,
+    CreateTask,
 }
 
 impl Page {
@@ -33,6 +34,7 @@ impl Page {
             Page::Tools => "Tools",
             Page::Agents => "Agents",
             Page::Chat => "Chat",
+            Page::CreateTask => "Create Task",
         }
     }
 
@@ -42,6 +44,7 @@ impl Page {
             Page::Tools => TOOLS_COLOR,
             Page::Agents => AGENTS_COLOR,
             Page::Chat => CHAT_COLOR,
+            Page::CreateTask => Color::LightGreen,
         }
     }
 
@@ -70,6 +73,10 @@ impl Page {
                 ("History", KeyCode::F(6)),
                 ("Clear", KeyCode::F(7)),
                 ("Config", KeyCode::F(8)),
+            ],
+            Page::CreateTask => vec![
+                ("Save", KeyCode::F(5)),
+                ("Cancel", KeyCode::F(6)),
             ],
         }
     }
@@ -109,6 +116,7 @@ fn main() -> Result<()> {
                 Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
                 Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
                 Page::Chat => pages::chat::render_chat_page(frame, layout[0]),
+                Page::CreateTask => pages::create_task::render_create_task_page(frame, layout[0]),
             }
 
             // Render page-specific F5-F8 footer
@@ -136,7 +144,27 @@ fn handle_events(app: &mut App) -> Result<bool> {
                     KeyCode::F(2) => app.current_page = Page::Tools,
                     KeyCode::F(3) => app.current_page = Page::Agents,
                     KeyCode::F(4) => app.current_page = Page::Chat,
-                    // F5-F8 will be handled by page-specific logic later
+                    KeyCode::F(5) => {
+                        match app.current_page {
+                            Page::Tasks => app.current_page = Page::CreateTask,
+                            Page::CreateTask => {
+                                // Handle Save action for CreateTask page
+                                // For now, just go back to Tasks page
+                                app.current_page = Page::Tasks;
+                            }
+                            _ => {},
+                        }
+                    }
+                    KeyCode::F(6) => {
+                        match app.current_page {
+                            Page::CreateTask => {
+                                // Handle Cancel action for CreateTask page
+                                // For now, just go back to Tasks page
+                                app.current_page = Page::Tasks;
+                            }
+                            _ => {},
+                        }
+                    }
                     _ => {},
                 }
             }

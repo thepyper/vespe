@@ -15,27 +15,32 @@ pub enum TaskState {
     Created,
     ObjectiveDefined,
     PlanDefined,
-    Executing,
-    WaitingForSubtasks,
-    NeedsReview,
-    Completed,
+    Delegating,
+    Harvesting,
+    Working,
+    Error,
     Failed,
-    Aborted,
-    Replanned,
+    Completed,
 }
 
 impl TaskState {
     pub fn can_transition_to(self, next_state: TaskState) -> bool {
         match self {
-            TaskState::Created => matches!(next_state, TaskState::ObjectiveDefined | TaskState::Failed | TaskState::Aborted),
-            TaskState::ObjectiveDefined => matches!(next_state, TaskState::PlanDefined | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::PlanDefined => matches!(next_state, TaskState::Executing | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::Executing => matches!(next_state, TaskState::WaitingForSubtasks | TaskState::Completed | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::WaitingForSubtasks => matches!(next_state, TaskState::Executing | TaskState::Completed | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::NeedsReview => matches!(next_state, TaskState::ObjectiveDefined | TaskState::PlanDefined | TaskState::Executing | TaskState::Failed | TaskState::Aborted | TaskState::Completed),
-            TaskState::Completed | TaskState::Failed | TaskState::Aborted | TaskState::Replanned => false, // Final states, no transitions out
-        }
+            TaskState::Created => matches!(next_state, TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
+            TaskState::ObjectiveDefined => matches!(next_state, TaskState::ObjectiveDefined | TaskState::PlanDefined | TaskState::Error | TaskState::Failed),
+            TaskState::PlanDefined => matches!(next_state, TaskState::PlanDefined | TaskState::Working | TaskState::Delegating | TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
+            TaskState::Delegating => matches!(next_state, TaskState::Delegating | TaskState::Harvesting | TaskState::Error | TaskState::Failed),
+            TaskState::Harvesting => matches!(next_state, TaskState::Completed | TaskState::Error | TaskState::Failed),
+            TaskState::Working => matches!(next_state, TaskState::Completed | TaskState::Error | TaskState::Failed),
+            TaskState::Error => matches!(next_state, TaskState::Failed | TaskState::Error), // From Error, can transition to Failed or stay in Error
+            TaskState::Failed | TaskState::Completed => false, // Final states, no transitions out
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub enum TaskType {
+    Monolithic,
+    Subdivided,
 }
 
 // Corrisponde a config.json

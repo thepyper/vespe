@@ -71,6 +71,29 @@ pub fn render_task_edit_page(frame: &mut Frame, area: Rect, state: &TaskEditStat
     frame.render_widget(agent_uid_paragraph, layout[2]);
 }
 
+pub fn render_objective_editing_view(frame: &mut Frame, area: Rect, state: &TaskEditState) {
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Length(3), // Name
+            Constraint::Min(5),    // Objective
+            Constraint::Length(3), // Agent UID
+        ])
+        .split(area);
+
+    let name_block = Block::default().borders(Borders::ALL).title("Name");
+    let name_paragraph = Paragraph::new(state.name.as_str()).block(if state.mode == crate::pages::task_edit::TaskEditMode::Editing && state.input_focus == InputFocus::Name { name_block.border_style(Style::default().fg(Color::Yellow)) } else { name_block });
+    frame.render_widget(name_paragraph, layout[0]);
+
+    let objective_block = Block::default().borders(Borders::ALL).title("Objective");
+    let objective_paragraph = Paragraph::new(state.objective.as_str()).block(if state.mode == crate::pages::task_edit::TaskEditMode::Editing && state.input_focus == InputFocus::Objective { objective_block.border_style(Style::default().fg(Color::Yellow)) } else { objective_block });
+    frame.render_widget(objective_paragraph, layout[1]);
+
+    let agent_uid_block = Block::default().borders(Borders::ALL).title("Agent UID");
+    let agent_uid_paragraph = Paragraph::new(state.agent_uid.as_str()).block(if state.mode == crate::pages::task_edit::TaskEditMode::Editing && state.input_focus == InputFocus::AgentUid { agent_uid_block.border_style(Style::default().fg(Color::Yellow)) } else { agent_uid_block });
+    frame.render_widget(agent_uid_paragraph, layout[2]);
+}
+
 pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Error> {
     match app.task_edit_state.mode {
         TaskEditMode::ReadOnly => match key_code {

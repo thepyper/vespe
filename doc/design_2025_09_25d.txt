@@ -28,7 +28,7 @@ Le transizioni sono definite da azioni specifiche:
 *   **Da CREATED:**
     *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED**
 *   **Da OBJECTIVE_DEFINED:**
-    *   `update_objective(new_objective_content: String)` -> **OBJECTIVE_DEFINED**
+    *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED** (Aggiorna l'obiettivo esistente)
     *   `define_plan(plan_content: String, is_monolithic: bool)` -> **PLAN_DEFINED**
 *   **Da PLAN_DEFINED:**
     *   `accept_plan(task_type: TaskType)`:
@@ -79,8 +79,7 @@ enum TaskType {
 
 // API per la gestione del task
 trait TaskLifecycle {
-    fn define_objective(&mut self, task_id: &str, objective_content: String) -> Result<(), TaskError>;
-    fn update_objective(&mut self, task_id: &str, new_objective_content: String) -> Result<(), TaskError>;
+    fn define_objective(&mut self, task_id: &str, objective_content: String) -> Result<(), TaskError>; // Merged define_objective and update_objective
     fn define_plan(&mut self, task_id: &str, plan_content: String, is_monolithic: bool) -> Result<(), TaskError>;
     fn accept_plan(&mut self, task_id: &str, task_type: TaskType) -> Result<(), TaskError>;
     fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;

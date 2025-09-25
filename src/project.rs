@@ -372,6 +372,12 @@ impl Project {
         Ok(())
     }
 
+    pub fn error(&self, task_uid: &str, details: String, is_failure: bool) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.error(details, is_failure)?;
+        Ok(())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

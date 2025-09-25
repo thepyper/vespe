@@ -346,11 +346,12 @@ impl Project {
     pub fn define_plan(
         &self,
         task_uid: &str,
-        plan_content: String
-    ) -> Result<Task, ProjectError> {
+        plan_content: String,
+        task_type: crate::task::TaskType,
+    ) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;
-        task.define_plan(plan_content)?;
-        Ok(task)
+        task.define_plan(plan_content, task_type)?;
+        Ok(())
     }
 
     /// Adds a new event to the `persistent/` folder of the task.

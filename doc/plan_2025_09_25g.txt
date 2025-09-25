@@ -1,4 +1,4 @@
-## Plan for vespe-cli API Refactoring
+## Plan for vespe-cli API Refactoring 
 
 **Objective:** Update `vespe-cli` to utilize the new task lifecycle API implemented in the `vespe` crate, ensuring compatibility and restoring previous functionality.
 

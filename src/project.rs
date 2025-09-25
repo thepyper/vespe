@@ -402,6 +402,11 @@ impl Project {
         Ok(())
     }
 
+    pub fn get_task_state(&self, task_uid: &str) -> Result<crate::task::TaskState, ProjectError> {
+        let task = self.load_task(task_uid)?;
+        Ok(task.get_task_state())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

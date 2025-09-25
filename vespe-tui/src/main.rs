@@ -138,6 +138,7 @@ pub struct App {
     message: Option<String>,
     message_type: MessageType,
     confirmation: Option<Confirmation>,
+    current_agent_uid: String,
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -160,6 +161,7 @@ impl Default for App {
             message: None,
             message_type: MessageType::default(),
             confirmation: None,
+            current_agent_uid: "usr-default".to_string(), // Initialize with a default value
         }
     }
 }

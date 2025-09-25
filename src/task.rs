@@ -204,6 +204,25 @@ impl Task {
         Ok(())
     }
 
+    pub fn abort(&mut self, reason: String) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Failed) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Failed,
+            ));
+        }
+
+        self.status.error_details = Some(format!("Aborted: {}", reason));
+        update_task_status(&self.root_path, TaskState::Failed, &mut self.status)?;
+
+        // TODO: Implement cascading abort for subtasks
+        // This will require loading subtasks and calling abort on them.
+        // For now, we just mark the parent as failed.
+
+        Ok(())
+    }
+
+
 
 
     /// Adds a new event to the `persistent/` folder of the task.

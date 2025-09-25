@@ -248,6 +248,12 @@ impl Task {
         self.status.is_paused
     }
 
+    pub fn set_name(&mut self, new_name: String) -> Result<(), ProjectError> {
+        self.config.name = new_name;
+        write_json_file(&self.root_path.join("config.json"), &self.config)?;
+        Ok(())
+    }
+
 
 
     /// Adds a new event to the `persistent/` folder of the task.

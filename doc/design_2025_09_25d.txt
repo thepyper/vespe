@@ -65,8 +65,10 @@ Le transizioni sono definite da azioni specifiche:
         *   Se `is_failure == true` -> **FAILED**
         *   Se `is_failure == false` -> **ERROR**
 *   **Da ERROR:**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED** (Transizione da errore recuperabile a fallimento definitivo)
+        *   Se `is_failure == false` -> **ERROR** (Rimane in stato di errore recuperabile, ad esempio per aggiornare i dettagli dell'errore)
     *   (API di uscita TBD - da definire in seguito)
-    *   `mark_as_failed()` -> **FAILED**
 *   **Da FAILED:**
     *   `replan_from_failed()` -> **OBJECTIVE_DEFINED** (per ripartire da zero)
 *   **Da COMPLETED:**

@@ -179,7 +179,7 @@ fn handle_events(app: &mut App) -> Result<bool> {
                         app.current_page = Page::Tasks;
                         app.message = None;
                         info!("Navigated to Tasks page.");
-                        pages::tasks::load_tasks_into_state(&mut app)?;
+                        pages::tasks::load_tasks_into_state(app)?;
                     }
                     KeyCode::F(2) => {
                         app.current_page = Page::Tools;

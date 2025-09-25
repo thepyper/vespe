@@ -2842,6 +2842,8 @@ dependencies = [
  "crossterm",
  "ratatui",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "vespe",
 ]
 

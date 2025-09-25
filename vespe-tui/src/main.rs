@@ -177,7 +177,7 @@ fn main() -> Result<()> {
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(log_file);
 
     tracing_subscriber::registry()
-        .with(fmt::layer().with_writer(non_blocking_writer))
+        .with(fmt::layer().with_writer(non_blocking_writer).with_max_level(tracing::Level::DEBUG))
         .init();
 
     info!("Application started.");

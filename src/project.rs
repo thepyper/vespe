@@ -272,6 +272,7 @@ impl Project {
             created_by_agent_uid: created_by_agent_uid.clone(),
             created_at: now,
             parent_uid,
+            task_type: None,
         };
         write_json_file(&task_path.join("config.json"), &config)?;
 

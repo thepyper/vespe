@@ -366,6 +366,12 @@ impl Project {
         Ok(())
     }
 
+    pub fn add_subtask(&self, parent_task_uid: &str, subtask_id: String, is_final: bool) -> Result<(), ProjectError> {
+        let mut parent_task = self.load_task(parent_task_uid)?;
+        parent_task.add_subtask(subtask_id, is_final)?;
+        Ok(())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

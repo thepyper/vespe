@@ -120,6 +120,27 @@ impl Task {
         Ok(())
     }
 
+    pub fn accept_plan(&mut self) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Working) &&
+           !self.status.current_state.can_transition_to(TaskState::Delegating) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Working, // Or Delegating, depending on task_type
+            ));
+        }
+
+        let next_state = match self.config.task_type {
+            Some(TaskType::Monolithic) => TaskState::Working,
+            Some(TaskType::Subdivided) => TaskState::Delegating,
+            None => return Err(ProjectError::InvalidProjectConfig("TaskType not defined for task when accepting plan.".to_string())),
+        };
+
+        update_task_status(&self.root_path, next_state, &mut self.status)?;
+
+        Ok(())
+    }
+
+
 
 
     /// Adds a new event to the `persistent/` folder of the task.

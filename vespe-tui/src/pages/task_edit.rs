@@ -1,6 +1,6 @@
 use ratatui::{prelude::*, widgets::*};
 use crossterm::event::KeyCode;
-use crate::App;
+use crate::{App, MessageType};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum InputFocus {

@@ -84,7 +84,7 @@ impl Page {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct App {
     current_page: Page,
     task_edit_state: pages::task_edit::TaskEditState,
@@ -93,6 +93,15 @@ struct App {
     message: Option<String>,
     message_type: MessageType,
 }
+
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum MessageType {
+    #[default]
+    Info,
+    Success,
+    Error,
+}
+
 
 impl Default for App {
     fn default() -> Self {

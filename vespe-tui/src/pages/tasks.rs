@@ -1,6 +1,7 @@
 use ratatui::{prelude::*, widgets::*};
 use crossterm::event::KeyCode;
-use crate::{App, Page, MessageType};
+use crate::{App, Page};
+use crate::MessageType;
 use vespe::Task;
 
 #[derive(Debug, Default)]

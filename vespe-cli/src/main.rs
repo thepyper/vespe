@@ -114,8 +114,8 @@ async fn main() -> anyhow::Result<()> {
             }
             TaskSubcommand::DefineObjective { identifier, objective } => {
                 match project_root.define_objective(identifier, objective.clone()) {
-                    Ok(task) => {
-                        println!("Objective defined for task {}. New state: {:?}", task.uid, task.status.current_state);
+                    Ok(_) => {
+                        println!("Objective defined for task {}.", identifier);
                     }
                     Err(e) => eprintln!("Error defining objective: {}", e),
                 }

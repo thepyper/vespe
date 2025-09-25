@@ -51,6 +51,7 @@ pub struct TaskConfig {
     pub created_by_agent_uid: String, // Riferimento all'UID dell'Agente
     pub created_at: DateTime<Utc>,
     pub parent_uid: Option<String>, // UID del task genitore, se è un subtask
+    pub task_type: Option<TaskType>,
 }
 
 // Corrisponde a status.json

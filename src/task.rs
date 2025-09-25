@@ -356,15 +356,47 @@ impl Task {
         let tasks_base_path = project_root.join(".vespe").join("tasks"); // Re-construct tasks_base_path
         let task_path = crate::utils::get_entity_path(&tasks_base_path, uid)?;
 
+        debug!("Attempting to load task from path: {:?}", task_path);
+
         if !task_path.exists() {
+            error!("Task path does not exist: {:?}", task_path);
             return Err(ProjectError::TaskNotFound(uid.to_string()));
         }
 
-        let config: TaskConfig = crate::utils::read_json_file(&task_path.join("config.json"))?;
-        let status: TaskStatus = crate::utils::read_json_file(&task_path.join("status.json"))?;
-        let dependencies: TaskDependencies = crate::utils::read_json_file(&task_path.join("dependencies.json"))?;
-        let objective = crate::utils::read_file_content(&task_path.join("objective.md"))?;
-        let plan = Some(crate::utils::read_file_content(&task_path.join("plan.md"))?);
+        debug!("Loading config.json for task: {}", uid);
+        let config: TaskConfig = crate::utils::read_json_file(&task_path.join("config.json"))
+            .map_err(|e| {
+                error!("Failed to read config.json for task {}: {:?}", uid, e);
+                e
+            })?;
+
+        debug!("Loading status.json for task: {}", uid);
+        let status: TaskStatus = crate::utils::read_json_file(&task_path.join("status.json"))
+            .map_err(|e| {
+                error!("Failed to read status.json for task {}: {:?}", uid, e);
+                e
+            })?;
+
+        debug!("Loading dependencies.json for task: {}", uid);
+        let dependencies: TaskDependencies = crate::utils::read_json_file(&task_path.join("dependencies.json"))
+            .map_err(|e| {
+                error!("Failed to read dependencies.json for task {}: {:?}", uid, e);
+                e
+            })?;
+
+        debug!("Loading objective.md for task: {}", uid);
+        let objective = crate::utils::read_file_content(&task_path.join("objective.md"))
+            .map_err(|e| {
+                error!("Failed to read objective.md for task {}: {:?}", uid, e);
+                e
+            })?;
+
+        debug!("Loading plan.md for task: {}", uid);
+        let plan = Some(crate::utils::read_file_content(&task_path.join("plan.md"))
+            .map_err(|e| {
+                error!("Failed to read plan.md for task {}: {:?}", uid, e);
+                e
+            })?);
 
         Ok(Task {
             uid: uid.to_string(),
@@ -376,5 +408,4 @@ impl Task {
             dependencies,
             subtasks: HashMap::new(),
         })
-    }
 }

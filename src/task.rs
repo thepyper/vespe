@@ -9,6 +9,24 @@ use sha2::{Sha256, Digest};
 use walkdir;
 use crate::PersistentEvent;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub enum TaskPriority {
+    Low,
+    Medium,
+    High,
+}
+
+impl TaskPriority {
+    pub fn from_usize(value: usize) -> Self {
+        match value {
+            0 => TaskPriority::Low,
+            1 => TaskPriority::Medium,
+            2 => TaskPriority::High,
+            _ => TaskPriority::Medium, // Default to Medium if out of bounds
+        }
+    }
+}
+
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum TaskState {

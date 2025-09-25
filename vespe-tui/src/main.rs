@@ -6,6 +6,7 @@ use crossterm::{
 };
 use ratatui::{prelude::*, widgets::*};
 use crate::pages::create_task::{InputFocus, PRIORITIES};
+use vespe::{Project, VespeError};
 use std::io::stdout;
 
 // Color Constants
@@ -87,6 +88,7 @@ impl Page {
 struct App {
     current_page: Page,
     create_task_state: pages::create_task::CreateTaskState,
+    project: Project,
 }
 
 impl Default for App {
@@ -94,6 +96,7 @@ impl Default for App {
         Self {
             current_page: Page::default(),
             create_task_state: pages::create_task::CreateTaskState::default(),
+            project: Project::new("h:\\my\\github\\vespe\").expect("Failed to create project"), // TODO: Use a proper path
         }
     }
 }
@@ -160,8 +163,25 @@ fn handle_events(app: &mut App) -> Result<bool> {
                             Page::Tasks => app.current_page = Page::CreateTask,
                             Page::CreateTask => {
                                 // Handle Save action for CreateTask page
-                                // For now, just go back to Tasks page
-                                app.current_page = Page::Tasks;
+                                let title = app.create_task_state.title.clone();
+                                let description = if app.create_task_state.description.is_empty() { None } else { Some(app.create_task_state.description.clone()) };
+                                let priority = Some(vespe::TaskPriority::from_usize(app.create_task_state.priority));
+                                // TODO: Parse due_date and tags
+                                let due_date = None;
+                                let tags = None;
+
+                                match app.project.create_task(title, description, priority, due_date, tags) {
+                                    Ok(task) => {
+                                        // TODO: Show success message in TUI
+                                        println!("Task created: {:?}", task);
+                                        app.current_page = Page::Tasks;
+                                        app.create_task_state = pages::create_task::CreateTaskState::default(); // Reset form
+                                    }
+                                    Err(e) => {
+                                        // TODO: Show error message in TUI
+                                        eprintln!("Error creating task: {:?}", e);
+                                    }
+                                }
                             }
                             _ => {},
                         }

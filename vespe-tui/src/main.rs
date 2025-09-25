@@ -176,9 +176,10 @@ fn main() -> Result<()> {
     let log_file = tracing_appender::rolling::daily(log_dir, "tui.log");
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(log_file);
 
-    let fmt_layer = fmt::layer().with_max_level(tracing::Level::DEBUG);
+    let fmt_layer = fmt::layer().with_writer(non_blocking_writer);
+    let fmt_layer_with_level = fmt_layer.with_max_level(tracing::Level::DEBUG);
     tracing_subscriber::registry()
-        .with(fmt_layer.with_writer(non_blocking_writer))
+        .with(fmt_layer_with_level)
         .init();
 
     info!("Application started.");

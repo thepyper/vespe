@@ -87,40 +87,6 @@ pub struct Task {
 }
 
 impl Task {
-    /// Transitions from `CREATED` to `OBJECTIVE_DEFINED`.
-    /// Writes the objective content to `objective.md`.
-    pub fn define_objective(&mut self, objective_content: String) -> Result<(), ProjectError> {
-        // Update objective.md
-        write_file_content(&self.root_path.join("objective.md"), &objective_content)?;
-        self.objective = objective_content;
-
-        // Update status
-        update_task_status(&self.root_path, TaskState::ObjectiveDefined, &mut self.status)?;
-
-        Ok(())
-    }
-
-    /// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.
-    /// Writes the plan content to `plan.md`.
-    pub fn define_plan(&mut self, plan_content: String) -> Result<(), ProjectError> {
-        // Prevent defining a plan for a replanned task
-        if self.status.current_state == TaskState::Replanned {
-            return Err(ProjectError::InvalidStateTransition(
-                self.status.current_state,
-                TaskState::PlanDefined, // Attempted target state
-            ));
-        }
-
-        // Update plan.md
-        write_file_content(&self.root_path.join("plan.md"), &plan_content)?;
-        self.plan = Some(plan_content);
-
-        // Update status
-        update_task_status(&self.root_path, TaskState::PlanDefined, &mut self.status)?;
-
-        Ok(())
-    }
-
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {
         let persistent_path = self.root_path.join("persistent");
@@ -211,48 +177,7 @@ impl Task {
         Ok(())
     }
 
-    /// Reviews a task, transitioning it to Completed (approved) or Replanned (rejected).
-    pub fn review_task(
-        &mut self,
-        approved: bool, // true for approve, false for reject
-    ) -> Result<(), ProjectError> {
-        if self.status.current_state != TaskState::NeedsReview {
-            return Err(ProjectError::InvalidStateTransition(
-                self.status.current_state,
-                TaskState::NeedsReview, // This is not quite right, should be the target state
-            ));
-        }
 
-        let next_state = if approved {
-            TaskState::Completed // Or TaskState::Ready if we add it
-        } else {
-            TaskState::Replanned
-        };
-
-        if !self.status.current_state.can_transition_to(next_state) {
-            return Err(ProjectError::InvalidStateTransition(
-                self.status.current_state,
-                next_state,
-            ));
-        }
-
-        update_task_status(&self.root_path, next_state, &mut self.status)?;
-
-        Ok(())
-    }
-
-    /// Updates the task's name and objective.
-    pub fn update(&mut self, name: &str, objective: &str) -> Result<(), ProjectError> {
-        // Update in-memory representations
-        self.config.name = name.to_string();
-        self.objective = objective.to_string();
-
-        // Persist changes to the filesystem
-        write_json_file(&self.root_path.join("config.json"), &self.config)?;
-        write_file_content(&self.root_path.join("objective.md"), &self.objective)?;
-
-        Ok(())
-    }
 
     /// Loads a task from the filesystem given its UID.
     pub fn load(

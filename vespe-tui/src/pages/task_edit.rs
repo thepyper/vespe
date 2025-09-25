@@ -29,6 +29,14 @@ pub enum TaskEditMode {
     Editing,
 }
 
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum TaskViewMode {
+    #[default]
+    ObjectiveEditing,
+    PlanReview,
+    // Add other modes as needed later
+}
+
 #[derive(Debug, Default)]
 pub struct TaskEditState {
     pub current_task_uid: Option<String>,

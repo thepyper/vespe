@@ -82,10 +82,9 @@ pub fn render_objective_editing_view(frame: &mut Frame, area: Rect, state: &Task
 pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Error> {
     match app.task_edit_state.task_view_mode {
         TaskViewMode::ObjectiveEditing => handle_objective_editing_events(app, key_code),
-        TaskViewMode::PlanReview => { /* Placeholder for plan review event handling */ },
+        TaskViewMode::PlanReview => { /* Placeholder for plan review event handling */ Ok(()) },
         // ... other modes
     }
-    Ok(())
 }
 
 pub fn handle_objective_editing_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Error> {

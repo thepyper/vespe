@@ -102,6 +102,20 @@ impl Page {
             Page::Tasks => {
                 pages::tasks::load_tasks_into_state(app)?;
             }
+            Page::TaskEdit => {
+                if let Some(task_uid) = &app.task_edit_state.current_task_uid {
+                    let task_state = app.project.get_task_state(task_uid)?;
+                    app.task_edit_state.task_view_mode = match task_state {
+                        TaskState::Created | TaskState::ObjectiveDefined => TaskViewMode::ObjectiveEditing,
+                        TaskState::PlanDefined => TaskViewMode::PlanReview,
+                        // Add other mappings as needed
+                        _ => TaskViewMode::ObjectiveEditing, // Default or error state
+                    };
+                } else {
+                    // If no task_uid, it's a new task, so start with ObjectiveEditing
+                    app.task_edit_state.task_view_mode = TaskViewMode::ObjectiveEditing;
+                }
+            }
             _ => {}
         }
         Ok(())

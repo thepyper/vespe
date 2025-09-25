@@ -36,7 +36,11 @@ pub struct TaskStatus {
 pub struct Task {
     pub id: TaskId,
     pub description: String,
-    pub status: String,
+    pub objective: Option<String>,
+    pub plan: Option<String>,
+    pub config: TaskConfig,
+    pub status: TaskStatus,
+    pub subtasks: HashMap<String, TaskState>,
 }
 
 impl Task {

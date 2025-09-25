@@ -10,9 +10,7 @@ Questo piano delinea i passaggi dettagliati per migrare l'API esistente del crat
         *   Aggiungere i nuovi stati (in CamelCase): `Created`, `ObjectiveDefined`, `PlanDefined`, `Delegating`, `Harvesting`, `Working`, `Error`, `Failed`, `Completed`.
         *   Aggiungere `#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]` all'enum.
     *   **Definire `TaskType` enum:**
-        *   Aggiungere `enum TaskType { Monolithic, Subdivided }` (o `is_monolithic: bool` come campo nel plan).
-    *   **Definire `SubtaskStatus` enum:**
-        *   Aggiungere `enum SubtaskStatus { Completed, Failed(String), Error(String) }`.
+        *   Aggiungere `enum TaskType { Monolithic, Subdivided }`.
     *   **Modificare `TaskConfig` struct:**
         *   Aggiungere `task_type: Option<TaskType>` (sarà `None` fino a `PlanDefined`).
     *   **Modificare `TaskStatus` struct:**
@@ -22,7 +20,7 @@ Questo piano delinea i passaggi dettagliati per migrare l'API esistente del crat
         *   Aggiungere `retry_count: u8` (per `Error`).
     *   **Modificare `Task` struct:**
         *   Rimuovere i metodi `define_objective`, `define_plan`, `update`, `review_task`.
-        *   Aggiungere un campo `subtasks: HashMap<String, SubtaskStatus>` per tenere traccia dei sub-task.
+        *   Aggiungere un campo `subtasks: HashMap<String, TaskState>` per tenere traccia dei sub-task (lo stato del sub-task sarà il suo `TaskState`).
 
 2.  **Aggiornare `vespe/src/error.rs`:**
     *   Aggiungere nuovi varianti a `ProjectError` per gestire errori specifici delle nuove transizioni di stato (es. `InvalidStateTransition`, `TaskNotFound`, `SubtaskNotFound`).
@@ -30,7 +28,7 @@ Questo piano delinea i passaggi dettagliati per migrare l'API esistente del crat
 ## FASE 1: Implementazione del Trait `TaskLifecycle` su `Project`
 
 1.  **Creare il trait `TaskLifecycle` in `vespe/src/project.rs` (o un nuovo file `vespe/src/task_manager.rs`):**
-    *   Definire il trait `TaskLifecycle` esattamente come specificato nel design `doc/design_2025_09_25d.txt`.
+    *   Definire il trait `TaskLifecycle` esattamente come specificato nel design `doc/design_2025_09_25d.txt`, ma senza `subtask_terminated`.
     *   Per ora, implementeremo questo trait direttamente sulla struct `Project`. Se la logica diventa troppo complessa, potremmo estrarre un `TaskManager` separato.
 
 2.  **Implementare `TaskLifecycle` per `Project` in `vespe/src/project.rs`:**
@@ -95,13 +93,8 @@ Questo piano delinea i passaggi dettagliati per migrare l'API esistente del crat
         *   Caricare il task e restituire `task.status.current_state`.
     *   **`is_task_paused(&self, task_id: &str)`:**
         *   Caricare il task e restituire `task.status.is_paused`.
-    *   **`subtask_terminated(&mut self, parent_task_id: &str, subtask_id: &str, status: SubtaskStatus)`:**
-        *   Caricare il task genitore.
-        *   Aggiornare lo stato del `subtask_id` nella mappa `task.subtasks`.
-        *   **Valutare lo stato del genitore:**
-            *   Se tutti i sub-task sono `Completed` -> Transizione del genitore a `Completed`.
-            *   Se un sub-task è `Failed` o `Error` -> Transizione del genitore a `Error` o `Failed` (usando l'API `error()` interna).
-        *   Salvare `status.json` e `config.json` (se `subtasks` è parte di `config`).
+    *   **(Rimosso) `subtask_terminated(&mut self, parent_task_id: &str, subtask_id: &str, status: SubtaskStatus)`:**
+        *   La logica di valutazione del genitore sarà gestita dalle chiamate `work_completed` o `error` sui sub-task stessi.
 
 ## FASE 2: Aggiornamento delle Funzioni Esistenti in `Project`
 
@@ -134,7 +127,11 @@ Questo piano delinea i passaggi dettagliati per migrare l'API esistente del crat
 
 **Dubbi/Considerazioni per il Piano:**
 
-*   **`TaskState` e Dati Associati:** La proposta di arricchire l'enum `TaskState` con dati associati (es. `Error(details: String, previous_state: TaskState)`) è molto potente. Questo influenzerà direttamente la definizione dell'enum in `src/task.rs` e come i dati vengono salvati/caricati. Per ora, il piano si concentra sulla transizione di stato, ma l'implementazione dovrà considerare questi dati.
+*   **`TaskState` e Dati Associati:** La proposta di arricchire l'enum `TaskState` con dati associati (es. `Error(details: String, previous_state: TaskState)`) è molto potente. Questo influenzerà direttamente la definizione dell'enum in `src/task.rs` e come i dati vengono salvati/caricati. L'implementazione dovrà considerare questi dati.
 *   **`TaskType` Storage:** Il `task_type` (Monolithic/Subdivided) deve essere persistito. La proposta è di aggiungerlo a `TaskConfig`.
 *   **`retry()` e `replan_from_error()`:** Queste API sono state rimosse dal design per ora. Il piano non le implementerà in questa fase.
 *   **`abort()` Cascading:** L'implementazione dell'aborto a cascata richiederà di caricare i sub-task e chiamare `abort()` su di essi. Questo implica che `abort()` deve essere ricorsivo o iterativo.
+*   **Interazione Agenti/Utente:** Le API saranno a disposizione sia dell'utente che degli agenti. L'utente è considerato un "agente in carne ed ossa".
+*   **Persistenza:** La persistenza dello stato del task è garantita dalla struttura `Task` esistente, che salva i dati su filesystem.
+*   **Concurrency:** Per ora, l'implementazione sarà single-threaded. La gestione della concorrenza sarà considerata in futuro se necessario.
+*   **Nomenclatura:** La nomenclatura degli stati e delle transizioni seguirà le convenzioni idiomatiche di Rust (CamelCase per gli enum variants).

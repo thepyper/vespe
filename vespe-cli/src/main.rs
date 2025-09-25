@@ -5,8 +5,10 @@ use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, Too
  // Import the api module
 use vespe::project::Project;
 use vespe::TaskState;
+use vespe::task::TaskType; // New import
 use std::fs;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
+use tracing::{info, debug, error}; // New import
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

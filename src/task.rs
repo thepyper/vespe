@@ -1,4 +1,34 @@
-use std::collections::HashMap;
+pub type TaskId = Uuid;
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
+pub enum TaskState {
+    Created,
+    ObjectiveDefined,
+    PlanDefined,
+    Delegating,
+    Harvesting,
+    Working,
+    Error,
+    Failed,
+    Completed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Task {
+    pub id: TaskId,
+    pub description: String,
+    pub status: String,
+}
+
+impl Task {
+    pub fn new(description: String) -> Self {
+        Task {
+            id: TaskId::new_v4(),
+            description,
+            status: "Pending".to_string(),
+        }
+    }
+}
 use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};

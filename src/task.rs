@@ -68,27 +68,12 @@ pub enum TaskState {
     Created,
     ObjectiveDefined,
     PlanDefined,
-    Executing,
-    WaitingForSubtasks,
-    NeedsReview,
-    Completed,
+    Delegating,
+    Harvesting,
+    Working,
+    Error,
     Failed,
-    Aborted,
-    Replanned,
-}
-
-impl TaskState {
-    pub fn can_transition_to(self, next_state: TaskState) -> bool {
-        match self {
-            TaskState::Created => matches!(next_state, TaskState::ObjectiveDefined | TaskState::Failed | TaskState::Aborted),
-            TaskState::ObjectiveDefined => matches!(next_state, TaskState::PlanDefined | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::PlanDefined => matches!(next_state, TaskState::Executing | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::Executing => matches!(next_state, TaskState::WaitingForSubtasks | TaskState::Completed | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::WaitingForSubtasks => matches!(next_state, TaskState::Executing | TaskState::Completed | TaskState::Failed | TaskState::Aborted | TaskState::NeedsReview),
-            TaskState::NeedsReview => matches!(next_state, TaskState::ObjectiveDefined | TaskState::PlanDefined | TaskState::Executing | TaskState::Failed | TaskState::Aborted | TaskState::Completed),
-            TaskState::Completed | TaskState::Failed | TaskState::Aborted | TaskState::Replanned => false, // Final states, no transitions out
-        }
-    }
+    Completed,
 }
 
 // Corrisponde a config.json

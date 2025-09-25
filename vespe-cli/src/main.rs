@@ -120,10 +120,18 @@ async fn main() -> anyhow::Result<()> {
                     Err(e) => eprintln!("Error defining objective: {}", e),
                 }
             }
-            TaskSubcommand::DefinePlan { identifier, plan } => {
-                match project_root.define_plan(identifier, plan.clone()) {
-                    Ok(task) => {
-                        println!("Plan defined for task {}. New state: {:?}", task.uid, task.status.current_state);
+            TaskSubcommand::DefinePlan { identifier, plan, task_type } => {
+                let parsed_task_type = match task_type.as_str() {
+                    "monolithic" => vespe::task::TaskType::Monolithic,
+                    "subdivided" => vespe::task::TaskType::Subdivided,
+                    _ => {
+                        eprintln!("Error: Invalid task type. Must be 'monolithic' or 'subdivided'.");
+                        return Ok(());
+                    }
+                };
+                match project_root.define_plan(identifier, plan.clone(), parsed_task_type) {
+                    Ok(_) => {
+                        println!("Plan defined for task {}.", identifier);
                     }
                     Err(e) => eprintln!("Error defining plan: {}", e),
                 }

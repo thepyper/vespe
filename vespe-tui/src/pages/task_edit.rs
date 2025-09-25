@@ -118,23 +118,36 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
                     let result: Result<(), anyhow::Error> = if let Some(uid) = &app.task_edit_state.current_task_uid {
                         // Existing task: update name, objective, and plan
                         let task_uid = uid.clone();
+                        debug!("Saving existing task: {}", task_uid);
+                        debug!("Calling set_task_name for task: {}", task_uid);
                         app.project.set_task_name(&task_uid, app.task_edit_state.name.clone())?;
+                        debug!("set_task_name successful.");
+                        debug!("Calling define_objective for task: {}", task_uid);
                         app.project.define_objective(&task_uid, app.task_edit_state.objective.clone())?;
+                        debug!("define_objective successful.");
                         // Assuming a default TaskType for existing functionality, e.g., Monolithic
                         // In a real UI, this would be selected by the user.
+                        debug!("Calling define_plan for task: {}", task_uid);
                         app.project.define_plan(&task_uid, "".to_string(), TaskType::Monolithic)?; // Plan might be empty
+                        debug!("define_plan successful.");
                         Ok(())
                     } else {
                         // New task: create, then define objective and plan
+                        debug!("Creating new task.");
                         let new_task_uid = app.project.create_task(
                             None, // parent_uid
                             app.task_edit_state.name.clone(),
                             app.task_edit_state.agent_uid.clone(),
                             "".to_string(), // _template_name
                         )?.uid;
+                        debug!("New task created with UID: {}", new_task_uid);
+                        debug!("Calling define_objective for new task: {}", new_task_uid);
                         app.project.define_objective(&new_task_uid, app.task_edit_state.objective.clone())?;
+                        debug!("define_objective successful for new task.");
                         // Assuming a default TaskType for existing functionality, e.g., Monolithic
+                        debug!("Calling define_plan for new task: {}", new_task_uid);
                         app.project.define_plan(&new_task_uid, "".to_string(), TaskType::Monolithic)?; // Plan might be empty
+                        debug!("define_plan successful for new task.");
                         app.task_edit_state.current_task_uid = Some(new_task_uid);
                         Ok(())
                     };

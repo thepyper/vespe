@@ -242,17 +242,7 @@ impl Project {
         Ok(tools)
     }
 
-    /// Creates a new task and defines its objective.
-    pub fn create_and_define_task(
-        &self,
-        name: String,
-        objective: String,
-        created_by_agent_uid: String,
-    ) -> Result<Task, ProjectError> {
-        let mut task = self.create_task(None, name, created_by_agent_uid, "".to_string())?;
-        task.define_objective(objective)?;
-        Ok(task)
-    }
+
 
     /// Creates a new task or subtask.
     /// Initializes the task directory with config.json, empty objective.md, etc.

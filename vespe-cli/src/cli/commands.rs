@@ -56,8 +56,8 @@ pub enum TaskSubcommand {
     Create {
         #[arg(long)]
         name: String,
-        #[arg(long, default_value = "default")]
-        template: String,
+        #[arg(long)]
+        agent_uid: String,
         #[arg(long)]
         parent: Option<String>,
     },

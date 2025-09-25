@@ -96,13 +96,6 @@ enum TaskType {
     Subdivided,
 }
 
-// Stato di terminazione di un sub-task
-enum SubtaskStatus {
-    Completed,
-    Failed(String), // Con dettagli sull'errore
-    Error(String),  // Con dettagli sull'errore recuperabile
-}
-
 // API per la gestione del task
 trait TaskLifecycle {
     fn define_objective(&mut self, task_id: &str, objective_content: String) -> Result<(), TaskError>;
@@ -119,9 +112,6 @@ trait TaskLifecycle {
     // Metodi di query per lo stato
     fn get_task_state(&self, task_id: &str) -> Result<TaskState, TaskError>;
     fn is_task_paused(&self, task_id: &str) -> Result<bool, TaskError>;
-
-    // API per la terminazione dei sub-task (che innescherà la valutazione del parent)
-    fn subtask_terminated(&mut self, parent_task_id: &str, subtask_id: &str, status: SubtaskStatus) -> Result<(), TaskError>;
 }
 ```
 

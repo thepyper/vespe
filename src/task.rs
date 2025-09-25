@@ -76,6 +76,12 @@ pub enum TaskState {
     Completed,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Serialize, Deserialize)]
+pub enum TaskType {
+    Monolithic,
+    Subdivided,
+}
+
 // Corrisponde a config.json
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TaskConfig {

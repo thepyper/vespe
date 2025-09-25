@@ -238,20 +238,24 @@ fn handle_events(app: &mut App) -> Result<bool> {
                         match key.code {
                             KeyCode::Char('q') => return Ok(true),
                             KeyCode::F(1) => {
-                                app.current_page = Page::Tasks;
-                                app.current_page.entering(app)?;
+                                let next_page = Page::Tasks;
+                                app.current_page = next_page;
+                                next_page.entering(app)?;
                             }
                             KeyCode::F(2) => {
-                                app.current_page = Page::Tools;
-                                app.current_page.entering(app)?;
+                                let next_page = Page::Tools;
+                                app.current_page = next_page;
+                                next_page.entering(app)?;
                             }
                             KeyCode::F(3) => {
-                                app.current_page = Page::Agents;
-                                app.current_page.entering(app)?;
+                                let next_page = Page::Agents;
+                                app.current_page = next_page;
+                                next_page.entering(app)?;
                             }
                             KeyCode::F(4) => {
-                                app.current_page = Page::Chat;
-                                app.current_page.entering(app)?;
+                                let next_page = Page::Chat;
+                                app.current_page = next_page;
+                                next_page.entering(app)?;
                             }
                             _ => {
                                 // Delegate page-specific events

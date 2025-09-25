@@ -40,8 +40,9 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             // New Task
             app.task_edit_state = super::task_edit::TaskEditState::default();
             app.task_edit_state.mode = super::task_edit::TaskEditMode::Editing;
-            app.current_page = Page::TaskEdit;
-            app.current_page.entering(app)?;
+            let next_page = Page::TaskEdit;
+            app.current_page = next_page;
+            next_page.entering(app)?;
             app.message = None;
         }
         KeyCode::F(6) => {
@@ -49,15 +50,21 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             // Edit Task
             if !app.tasks_page_state.tasks.is_empty() {
                 let selected_task = &app.tasks_page_state.tasks[app.tasks_page_state.selected_task_index];
-                app.task_edit_state.current_task_uid = Some(selected_task.uid.clone());
-                app.task_edit_state.name = selected_task.config.name.clone();
-                app.task_edit_state.objective = selected_task.objective.clone();
-                app.task_edit_state.agent_uid = selected_task.config.created_by_agent_uid.clone();
+                let selected_uid = selected_task.uid.clone();
+                let selected_name = selected_task.config.name.clone();
+                let selected_objective = selected_task.objective.clone();
+                let selected_agent_uid = selected_task.config.created_by_agent_uid.clone();
+
+                app.task_edit_state.current_task_uid = Some(selected_uid.clone());
+                app.task_edit_state.name = selected_name;
+                app.task_edit_state.objective = selected_objective;
+                app.task_edit_state.agent_uid = selected_agent_uid;
                 app.task_edit_state.mode = super::task_edit::TaskEditMode::ReadOnly;
-                app.current_page = Page::TaskEdit;
-                app.current_page.entering(app)?;
+                let next_page = Page::TaskEdit;
+                app.current_page = next_page;
+                next_page.entering(app)?;
                 app.message = None;
-                info!("Tasks: Loaded task {} for editing.", selected_task.uid);
+                info!("Tasks: Loaded task {} for editing.", selected_uid);
             } else {
                 app.message = Some("No task to edit.".to_string());
                 app.message_type = MessageType::Info;

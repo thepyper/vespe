@@ -104,8 +104,9 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             KeyCode::F(5) => {
                 info!("TaskEdit: KeyCode::F(5) (Cancel) pressed in Editing mode.");
                 let action = |app: &mut App| {
-                    app.current_page = crate::Page::Tasks;
-                    app.current_page.entering(app)?;
+                    let next_page = crate::Page::Tasks;
+                    app.current_page = next_page;
+                    next_page.entering(app)?;
                     Ok(())
                 };
                 crate::request_confirmation(app, "Discard changes?".to_string(), action);
@@ -131,8 +132,9 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
                         Ok(_) => {
                             app.message = Some("Task saved successfully.".to_string());
                             app.message_type = MessageType::Success;
-                            app.current_page = crate::Page::Tasks;
-                            app.current_page.entering(app)?;
+                            let next_page = crate::Page::Tasks;
+                            app.current_page = next_page;
+                            next_page.entering(app)?;
                         }
                         Err(e) => {
                             app.message = Some(format!("Failed to save task: {}", e));

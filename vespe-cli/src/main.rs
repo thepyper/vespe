@@ -87,9 +87,9 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Task(task_command) => match &task_command.command {
-            TaskSubcommand::Create { name, template, parent } => {
+            TaskSubcommand::Create { name, agent_uid, parent } => {
                 // For now, created_by is hardcoded. This could be taken from config in the future.
-                match project_root.create_task(parent.clone(), name.clone(), "user".to_string(), template.clone()) {
+                match project_root.create_task(parent.clone(), name.clone(), agent_uid.clone(), "".to_string()) {
                     Ok(task) => {
                         println!("Task created successfully:");
                         println!("  UID: {}", task.uid);

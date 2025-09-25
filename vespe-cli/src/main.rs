@@ -142,10 +142,16 @@ async fn main() -> anyhow::Result<()> {
                         if tasks.is_empty() {
                             println!("No tasks found.");
                         } else {
-                            println!("{:<38} {:<25} {:<20}", "UID", "Name", "State");
-                            println!("{:-<38} {:-<25} {:-<20}", "", "", "");
+                            println!("{:<38} {:<25} {:<20} {:<15} {:<10}", "UID", "Name", "State", "Type", "Paused");
+                            println!("{:-<38} {:-<25} {:-<20} {:-<15} {:-<10}", "", "", "", "", "");
                             for task in tasks {
-                                println!("{:<38} {:<25} {:<20?}", task.uid, task.config.name, task.status.current_state);
+                                println!("{:<38} {:<25} {:<20?} {:<15?} {:<10}",
+                                    task.uid,
+                                    task.config.name,
+                                    task.status.current_state,
+                                    task.config.task_type.map_or("N/A".to_string(), |t| format!("{:?}", t)),
+                                    task.status.is_paused
+                                );
                             }
                         }
                     }

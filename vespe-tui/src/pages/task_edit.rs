@@ -45,6 +45,7 @@ pub struct TaskEditState {
     pub agent_uid: String,
     pub input_focus: InputFocus,
     pub mode: TaskEditMode,
+    pub task_view_mode: TaskViewMode,
 }
 
 pub fn render_task_edit_page(frame: &mut Frame, area: Rect, state: &TaskEditState) {

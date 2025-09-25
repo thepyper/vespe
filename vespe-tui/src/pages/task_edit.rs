@@ -1,6 +1,7 @@
 use ratatui::{prelude::*, widgets::*};
 use crossterm::event::KeyCode;
 use crate::{App, MessageType};
+use tracing::{info, warn, error, debug};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum InputFocus {
@@ -55,6 +56,7 @@ pub fn render_task_edit_page(frame: &mut Frame, area: Rect, state: &TaskEditStat
 pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Error> {
     match key_code {
         KeyCode::Char(c) => {
+            info!("TaskEdit: KeyCode::Char({}) pressed.", c);
             match app.task_edit_state.input_focus {
                 InputFocus::Name => app.task_edit_state.name.push(c),
                 InputFocus::Objective => app.task_edit_state.objective.push(c),
@@ -62,6 +64,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             }
         }
         KeyCode::Backspace => {
+            info!("TaskEdit: KeyCode::Backspace pressed.");
             match app.task_edit_state.input_focus {
                 InputFocus::Name => {
                     app.task_edit_state.name.pop();
@@ -75,6 +78,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             }
         }
         KeyCode::Tab => {
+            info!("TaskEdit: KeyCode::Tab pressed. Changing focus.");
             app.task_edit_state.input_focus = app.task_edit_state.input_focus.next();
         }
         _ => {},

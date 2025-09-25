@@ -6,6 +6,8 @@ use crossterm::{
 };
 use ratatui::{prelude::*, widgets::*};
 use std::io::stdout;
+use tracing_subscriber;
+use tracing::{info, warn, error, debug};
 use crate::pages::task_edit::InputFocus;
 use vespe::{Project, ProjectError};
 
@@ -119,12 +121,16 @@ impl Default for App {
 mod pages;
 
 fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
+    info!("Application started.");
     // setup terminal
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
 
     let mut app = App::default();
+
+    pages::tasks::load_tasks_into_state(&mut app)?;
 
     // run app
     let mut should_quit = false;
@@ -172,28 +178,23 @@ fn handle_events(app: &mut App) -> Result<bool> {
                     KeyCode::F(1) => {
                         app.current_page = Page::Tasks;
                         app.message = None;
-                        match app.project.list_all_tasks() {
-                            Ok(tasks) => {
-                                app.tasks_page_state.tasks = tasks;
-                                app.tasks_page_state.selected_task_index = 0;
-                            }
-                            Err(e) => {
-                                app.message = Some(format!("Error loading tasks: {:?}", e));
-                                app.message_type = MessageType::Error;
-                            }
-                        }
+                        info!("Navigated to Tasks page.");
+                        pages::tasks::load_tasks_into_state(&mut app)?;
                     }
                     KeyCode::F(2) => {
                         app.current_page = Page::Tools;
                         app.message = None;
+                        info!("Navigated to Tools page.");
                     }
                     KeyCode::F(3) => {
                         app.current_page = Page::Agents;
                         app.message = None;
+                        info!("Navigated to Agents page.");
                     }
                     KeyCode::F(4) => {
                         app.current_page = Page::Chat;
                         app.message = None;
+                        info!("Navigated to Chat page.");
                     }
                     _ => {
                         // Delegate page-specific events

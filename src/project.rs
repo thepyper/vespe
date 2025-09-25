@@ -9,6 +9,7 @@ use crate::agent::{Agent, AgentType};
 use crate::tool::Tool;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
+use tracing::{debug, error};
 
 // Constants for project root detection
 pub const VESPE_DIR: &str = ".vespe";

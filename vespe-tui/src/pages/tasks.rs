@@ -41,6 +41,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             app.task_edit_state = super::task_edit::TaskEditState::default();
             app.task_edit_state.mode = super::task_edit::TaskEditMode::Editing;
             app.current_page = Page::TaskEdit;
+            app.current_page.entering(app)?;
             app.message = None;
         }
         KeyCode::F(6) => {
@@ -54,6 +55,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
                 app.task_edit_state.agent_uid = selected_task.config.created_by_agent_uid.clone();
                 app.task_edit_state.mode = super::task_edit::TaskEditMode::ReadOnly;
                 app.current_page = Page::TaskEdit;
+                app.current_page.entering(app)?;
                 app.message = None;
                 info!("Tasks: Loaded task {} for editing.", selected_task.uid);
             } else {

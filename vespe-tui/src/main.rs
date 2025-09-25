@@ -96,6 +96,16 @@ impl Page {
             },
         }
     }
+
+    pub fn entering(&self, app: &mut App) -> Result<()> {
+        match self {
+            Page::Tasks => {
+                pages::tasks::load_tasks_into_state(app)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -229,24 +239,19 @@ fn handle_events(app: &mut App) -> Result<bool> {
                             KeyCode::Char('q') => return Ok(true),
                             KeyCode::F(1) => {
                                 app.current_page = Page::Tasks;
-                                app.message = None;
-                                info!("Navigated to Tasks page.");
-                                pages::tasks::load_tasks_into_state(app)?;
+                                app.current_page.entering(app)?;
                             }
                             KeyCode::F(2) => {
                                 app.current_page = Page::Tools;
-                                app.message = None;
-                                info!("Navigated to Tools page.");
+                                app.current_page.entering(app)?;
                             }
                             KeyCode::F(3) => {
                                 app.current_page = Page::Agents;
-                                app.message = None;
-                                info!("Navigated to Agents page.");
+                                app.current_page.entering(app)?;
                             }
                             KeyCode::F(4) => {
                                 app.current_page = Page::Chat;
-                                app.message = None;
-                                info!("Navigated to Chat page.");
+                                app.current_page.entering(app)?;
                             }
                             _ => {
                                 // Delegate page-specific events

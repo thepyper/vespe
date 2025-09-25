@@ -109,8 +109,8 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
                 };
                 crate::request_confirmation(app, "Discard changes?".to_string(), action);
             }
-            KeyCode::F(7) => {
-                info!("TaskEdit: KeyCode::F(7) (Save) pressed in Editing mode.");
+            KeyCode::F(6) => {
+                info!("TaskEdit: KeyCode::F(6) (Save) pressed in Editing mode.");
                 let action = |app: &mut App| {
                     let result = if let Some(uid) = &app.task_edit_state.current_task_uid {
                         app.project.update_task(

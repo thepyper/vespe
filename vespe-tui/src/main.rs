@@ -91,7 +91,7 @@ impl Page {
                 ],
                 pages::task_edit::TaskEditMode::Editing => vec![
                     ("Cancel", KeyCode::F(5)),
-                    ("Save", KeyCode::F(7)),
+                    ("Save", KeyCode::F(6)),
                 ],
             },
         }

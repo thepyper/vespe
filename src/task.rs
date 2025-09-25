@@ -15,13 +15,12 @@ pub enum TaskState {
     Created,
     ObjectiveDefined,
     PlanDefined,
-    Executing,
-    WaitingForSubtasks,
-    NeedsReview,
-    Completed,
+    Delegating,
+    Harvesting,
+    Working,
+    Error,
     Failed,
-    Aborted,
-    Replanned,
+    Completed,
 }
 
 impl TaskState {

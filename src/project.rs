@@ -396,6 +396,12 @@ impl Project {
         Ok(task.is_task_paused())
     }
 
+    pub fn set_task_name(&self, task_uid: &str, new_name: String) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.set_name(new_name)?;
+        Ok(())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

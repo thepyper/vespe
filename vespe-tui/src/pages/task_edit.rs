@@ -115,8 +115,12 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
             crate::request_confirmation(app, "Save changes?".to_string(), action);
         }
         KeyCode::F(6) => {
-            info!("TaskEdit: KeyCode::F(6) pressed. Cancelling edit.");
-            app.current_page = crate::Page::Tasks;
+            info!("TaskEdit: KeyCode::F(6) pressed. Requesting confirmation to cancel.");
+            let action = |app: &mut App| {
+                app.current_page = crate::Page::Tasks;
+                Ok(())
+            };
+            crate::request_confirmation(app, "Discard changes?".to_string(), action);
         }
         _ => {},
     }

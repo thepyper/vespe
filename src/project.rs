@@ -282,6 +282,10 @@ impl Project {
             last_updated_at: now,
             progress: None,
             parent_content_hashes: std::collections::HashMap::new(),
+            is_paused: false,
+            error_details: None,
+            previous_state: None,
+            retry_count: 0,
         };
         write_json_file(&task_path.join("status.json"), &status)?;
 

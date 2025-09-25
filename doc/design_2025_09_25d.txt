@@ -40,17 +40,20 @@ Le transizioni sono definite da azioni specifiche:
     *   `add_subtask(subtask_id: String, is_final: bool)`:
         *   Se `is_final == true` -> **HARVESTING**
         *   Se `is_final == false` -> **DELEGATING** (rimane nello stesso stato, aggiungendo sub-task)
-    *   `subtask_generation_failed(error_details: String)` -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
 *   **Da HARVESTING:**
     *   (Transizione implicita, gestita dall'API di terminazione dei sub-task `subtask_terminated`):
         *   Se tutti i sub-task completati con successo -> **COMPLETED**
         *   Se un qualsiasi sub-task fallisce/errore -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
 *   **Da WORKING:**
-    *   `work_completed_successfully()` -> **COMPLETED**
-    *   `work_failed(error_details: String)` -> **ERROR** (se recuperabile) o **FAILED** (se definitivo)
+    *   `work_completed()` -> **COMPLETED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
 *   **Da ERROR:**
-    *   `retry()` -> **WORKING** (se era in `WORKING` prima dell'errore) o **DELEGATING** (se era in `DELEGATING` prima dell'errore) o **HARVESTING** (se era in `HARVESTING` prima dell'errore)
-    *   `replan_from_error()` -> **OBJECTIVE_DEFINED**
+    *   (API di uscita TBD - da definire in seguito)
     *   `mark_as_failed()` -> **FAILED**
 *   **Da FAILED:**
     *   `replan_from_failed()` -> **OBJECTIVE_DEFINED** (per ripartire da zero)
@@ -93,15 +96,10 @@ trait TaskLifecycle {
     fn accept_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn add_subtask(&mut self, task_id: &str, subtask_id: &str, is_final: bool) -> Result<(), TaskError>;
-    fn subtask_generation_failed(&mut self, task_id: &str, error_details: String) -> Result<(), TaskError>;
-    // Rimossi: all_subtasks_completed_successfully, any_subtask_failed
-    fn start_work(&mut self, task_id: &str) -> Result<(), TaskError>;
-    fn work_completed_successfully(&mut self, task_id: &str) -> Result<(), TaskError>;
-    fn work_failed(&mut self, task_id: &str, error_details: String) -> Result<(), TaskError>;
+    fn error(&mut self, task_id: &str, details: String, is_failure: bool) -> Result<(), TaskError>; // General error API
+    fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>; // Renamed
     fn abort(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>; // Unified abort API
-    fn retry(&mut self, task_id: &str) -> Result<(), TaskError>;
-    fn replan_from_error(&mut self, task_id: &str) -> Result<(), TaskError>;
-    fn mark_as_failed(&mut self, task_id: &str) -> Result<(), TaskError>;
+    // Rimossi: subtask_generation_failed, work_failed, user_aborted, parent_aborted, retry, replan_from_error
     fn replan_from_failed(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn pause_task(&mut self, task_id: &str, reason: String) -> Result<(), TaskError>;
     fn resume_task(&mut self, task_id: &str) -> Result<(), TaskError>;

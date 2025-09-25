@@ -7,6 +7,7 @@ use crossterm::{
 use ratatui::{prelude::*, widgets::*};
 use crate::pages::create_task::{InputFocus, PRIORITIES};
 use vespe::{Project, VespeError};
+use chrono::NaiveDateTime;
 use std::io::stdout;
 
 // Color Constants
@@ -89,6 +90,16 @@ struct App {
     current_page: Page,
     create_task_state: pages::create_task::CreateTaskState,
     project: Project,
+    message: Option<String>,
+    message_type: MessageType,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum MessageType {
+    #[default]
+    Info,
+    Success,
+    Error,
 }
 
 impl Default for App {
@@ -97,6 +108,8 @@ impl Default for App {
             current_page: Page::default(),
             create_task_state: pages::create_task::CreateTaskState::default(),
             project: Project::new("h:\\my\\github\\vespe\").expect("Failed to create project"), // TODO: Use a proper path
+            message: None,
+            message_type: MessageType::default(),
         }
     }
 }
@@ -118,26 +131,40 @@ fn main() -> Result<()> {
             let layout = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints(vec![
+                    Constraint::Length(1),   // Message area
                     Constraint::Min(1),      // Main content area
                     Constraint::Length(1),   // Page-specific F5-F8 footer
                     Constraint::Length(1),   // Global F1-F4 footer
                 ])
                 .split(frame.size());
 
+            // Render message area
+            if let Some(msg) = &app.message {
+                let background_color = match app.message_type {
+                    MessageType::Info => Color::Blue,
+                    MessageType::Success => Color::Green,
+                    MessageType::Error => Color::Red,
+                };
+                let message_paragraph = Paragraph::new(msg.as_str())
+                    .style(Style::default().fg(Color::White).bg(background_color))
+                    .alignment(Alignment::Center);
+                frame.render_widget(message_paragraph, layout[0]);
+            }
+
             // Render main content based on current page
             match app.current_page {
-                Page::Tasks => pages::tasks::render_tasks_page(frame, layout[0]),
-                Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
-                Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
-                Page::Chat => pages::chat::render_chat_page(frame, layout[0]),
-                Page::CreateTask => pages::create_task::render_create_task_page(frame, layout[0], &app.create_task_state),
+                Page::Tasks => pages::tasks::render_tasks_page(frame, layout[1]),
+                Page::Tools => pages::tools::render_tools_page(frame, layout[1]),
+                Page::Agents => pages::agents::render_agents_page(frame, layout[1]),
+                Page::Chat => pages::chat::render_chat_page(frame, layout[1]),
+                Page::CreateTask => pages::create_task::render_create_task_page(frame, layout[1], &app.create_task_state),
             }
 
             // Render page-specific F5-F8 footer
-            render_page_footer(frame, layout[1], &app.current_page);
+            render_page_footer(frame, layout[2], &app.current_page);
 
             // Render global F1-F4 footer
-            render_global_footer(frame, layout[2], &app.current_page);
+            render_global_footer(frame, layout[3], &app.current_page);
         })?;
         should_quit = handle_events(&mut app)?;
     }
@@ -154,10 +181,22 @@ fn handle_events(app: &mut App) -> Result<bool> {
             if key.kind == KeyEventKind::Press {
                 match key.code {
                     KeyCode::Char('q') => return Ok(true),
-                    KeyCode::F(1) => app.current_page = Page::Tasks,
-                    KeyCode::F(2) => app.current_page = Page::Tools,
-                    KeyCode::F(3) => app.current_page = Page::Agents,
-                    KeyCode::F(4) => app.current_page = Page::Chat,
+                    KeyCode::F(1) => {
+                        app.current_page = Page::Tasks;
+                        app.message = None;
+                    }
+                    KeyCode::F(2) => {
+                        app.current_page = Page::Tools;
+                        app.message = None;
+                    }
+                    KeyCode::F(3) => {
+                        app.current_page = Page::Agents;
+                        app.message = None;
+                    }
+                    KeyCode::F(4) => {
+                        app.current_page = Page::Chat;
+                        app.message = None;
+                    }
                     KeyCode::F(5) => {
                         match app.current_page {
                             Page::Tasks => app.current_page = Page::CreateTask,
@@ -166,20 +205,19 @@ fn handle_events(app: &mut App) -> Result<bool> {
                                 let title = app.create_task_state.title.clone();
                                 let description = if app.create_task_state.description.is_empty() { None } else { Some(app.create_task_state.description.clone()) };
                                 let priority = Some(vespe::TaskPriority::from_usize(app.create_task_state.priority));
-                                // TODO: Parse due_date and tags
-                                let due_date = None;
-                                let tags = None;
+                                let due_date = app.create_task_state.due_date.parse::<chrono::NaiveDateTime>().ok();
+                                let tags = if app.create_task_state.tags.is_empty() { None } else { Some(app.create_task_state.tags.split(',').map(|s| s.trim().to_string()).collect()) };
 
                                 match app.project.create_task(title, description, priority, due_date, tags) {
                                     Ok(task) => {
-                                        // TODO: Show success message in TUI
-                                        println!("Task created: {:?}", task);
+                                        app.message = Some(format!("Task '{}' created successfully!", task.config.name));
+                                        app.message_type = MessageType::Success;
                                         app.current_page = Page::Tasks;
                                         app.create_task_state = pages::create_task::CreateTaskState::default(); // Reset form
                                     }
                                     Err(e) => {
-                                        // TODO: Show error message in TUI
-                                        eprintln!("Error creating task: {:?}", e);
+                                        app.message = Some(format!("Error creating task: {:?}", e));
+                                        app.message_type = MessageType::Error;
                                     }
                                 }
                             }

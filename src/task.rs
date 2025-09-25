@@ -8,6 +8,7 @@ use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
 use crate::PersistentEvent;
+use tracing::{debug, error};
 
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]

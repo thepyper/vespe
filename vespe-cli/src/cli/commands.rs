@@ -85,19 +85,15 @@ pub enum TaskSubcommand {
     },
     /// List all tasks
     List,
-    /// Review a task
-    Review {
+    /// Accept the plan for a task
+    AcceptPlan {
         /// The UID or name of the task
         identifier: String,
-        /// Approve the task
-        #[arg(long, conflicts_with = "reject")]
-        approve: bool,
-        /// Reject the task and mark for replanning
-        #[arg(long, conflicts_with = "approve")]
-        reject: bool,
-        /// Optional: New name for the replanned task (if rejected)
-        #[arg(long, requires = "reject")]
-        new_name: Option<String>,
+    },
+    /// Reject the plan for a task
+    RejectPlan {
+        /// The UID or name of the task
+        identifier: String,
     },
     /// Chat with a task-specific agent
     Chat(ChatCommand),

@@ -368,6 +368,7 @@ impl Task {
             objective,
             plan,
             dependencies,
+            subtasks: HashMap::new(),
         })
     }
 }

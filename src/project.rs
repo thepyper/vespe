@@ -360,6 +360,12 @@ impl Project {
         Ok(())
     }
 
+    pub fn reject_plan(&self, task_uid: &str) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.reject_plan()?;
+        Ok(())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

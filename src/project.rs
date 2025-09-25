@@ -335,10 +335,10 @@ impl Project {
         &self,
         task_uid: &str,
         objective_content: String
-    ) -> Result<Task, ProjectError> {
+    ) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;
         task.define_objective(objective_content)?;
-        Ok(task)
+        Ok(())
     }
 
     /// Transitions from `OBJECTIVE_DEFINED` to `PLAN_DEFINED`.

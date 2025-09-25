@@ -87,6 +87,22 @@ pub struct Task {
 }
 
 impl Task {
+    pub fn define_objective(&mut self, objective_content: String) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::ObjectiveDefined) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::ObjectiveDefined,
+            ));
+        }
+
+        write_file_content(&self.root_path.join("objective.md"), &objective_content)?;
+        self.objective = objective_content;
+
+        update_task_status(&self.root_path, TaskState::ObjectiveDefined, &mut self.status)?;
+
+        Ok(())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {
         let persistent_path = self.root_path.join("persistent");

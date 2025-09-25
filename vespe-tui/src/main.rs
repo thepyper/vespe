@@ -21,6 +21,8 @@ const DEFAULT_FOOTER_BG_COLOR: Color = Color::Rgb(0x22, 0x22, 0x22);
 const SELECTED_FOOTER_FG_COLOR: Color = Color::Black;
 const DEFAULT_FOOTER_FG_COLOR: Color = Color::White;
 const _QUIT_BUTTON_BG_COLOR: Color = Color::Red;
+const TASK_EDIT_VIEW_COLOR: Color = Color::Rgb(0x44, 0x44, 0x44);
+const TASK_EDIT_EDIT_COLOR: Color = Color::Rgb(0x66, 0x44, 0x44);
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum Page {
@@ -43,21 +45,24 @@ impl Page {
         }
     }
 
-    fn color(&self) -> Color {
+    fn color(&self, task_edit_state: &pages::task_edit::TaskEditState) -> Color {
         match self {
             Page::Tasks => TASKS_COLOR,
             Page::Tools => TOOLS_COLOR,
             Page::Agents => AGENTS_COLOR,
             Page::Chat => CHAT_COLOR,
-            Page::TaskEdit => Color::LightGreen,
+            Page::TaskEdit => match task_edit_state.mode {
+                pages::task_edit::TaskEditMode::ReadOnly => TASK_EDIT_VIEW_COLOR,
+                pages::task_edit::TaskEditMode::Editing => TASK_EDIT_EDIT_COLOR,
+            },
         }
     }
 
-    fn page_footer_actions(&self) -> Vec<(&str, KeyCode)> {
+    fn page_footer_actions(&self, task_edit_state: &pages::task_edit::TaskEditState) -> Vec<(&str, KeyCode)> {
         match self {
             Page::Tasks => vec![
                 ("New", KeyCode::F(5)),
-                ("Edit", KeyCode::F(6)),
+                ("Inspect", KeyCode::F(6)),
                 ("Delete", KeyCode::F(7)),
                 ("View", KeyCode::F(8)),
             ],
@@ -79,10 +84,16 @@ impl Page {
                 ("Clear", KeyCode::F(7)),
                 ("Config", KeyCode::F(8)),
             ],
-            Page::TaskEdit => vec![
-                ("Save", KeyCode::F(5)),
-                ("Cancel", KeyCode::F(6)),
-            ],
+            Page::TaskEdit => match task_edit_state.mode {
+                pages::task_edit::TaskEditMode::ReadOnly => vec![
+                    ("Back", KeyCode::F(5)),
+                    ("Edit", KeyCode::F(6)),
+                ],
+                pages::task_edit::TaskEditMode::Editing => vec![
+                    ("Cancel", KeyCode::F(5)),
+                    ("Save", KeyCode::F(7)),
+                ],
+            },
         }
     }
 }
@@ -188,10 +199,10 @@ fn main() -> Result<()> {
             }
 
             // Render page-specific F5-F8 footer
-            render_page_footer(frame, layout[1], &app.current_page);
+            render_page_footer(frame, layout[1], &app);
 
             // Render global F1-F4 footer
-            render_global_footer(frame, layout[2], &app.current_page);
+            render_global_footer(frame, layout[2], &app);
 
             if app.mode == Mode::Confirming {
                 if let Some(confirmation) = &app.confirmation {
@@ -269,7 +280,7 @@ fn handle_events(app: &mut App) -> Result<bool> {
     Ok(false)
 }
 
-fn render_page_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
+fn render_page_footer(frame: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![
@@ -280,8 +291,8 @@ fn render_page_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
         ])
         .split(area);
 
-    let actions = current_page.page_footer_actions();
-    let background_color = current_page.color();
+    let actions = app.current_page.page_footer_actions(&app.task_edit_state);
+    let background_color = app.current_page.color(&app.task_edit_state);
 
     for (i, (label, _key_code)) in actions.iter().enumerate() {
         let text = format!("F{} {}", i + 5, label);
@@ -292,7 +303,7 @@ fn render_page_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
     }
 }
 
-fn render_global_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
+fn render_global_footer(frame: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![
@@ -311,8 +322,8 @@ fn render_global_footer(frame: &mut Frame, area: Rect, current_page: &Page) {
     ];
 
     for (i, (page, _key_code)) in pages.iter().enumerate() {
-        let is_selected = page == current_page;
-        let background_color = if is_selected { page.color() } else { DEFAULT_FOOTER_BG_COLOR };
+        let is_selected = page == &app.current_page;
+        let background_color = if is_selected { page.color(&app.task_edit_state) } else { DEFAULT_FOOTER_BG_COLOR };
         let foreground_color = if is_selected { SELECTED_FOOTER_FG_COLOR } else { DEFAULT_FOOTER_FG_COLOR };
 
         let text = format!("F{} {}", i + 1, page.title());

@@ -51,6 +51,7 @@ pub fn handle_events(app: &mut App, key_code: KeyCode) -> Result<(), anyhow::Err
                 app.task_edit_state.name = selected_task.config.name.clone();
                 app.task_edit_state.objective = selected_task.objective.clone();
                 app.task_edit_state.agent_uid = selected_task.config.created_by_agent_uid.clone();
+                app.task_edit_state.mode = super::task_edit::TaskEditMode::ReadOnly;
                 app.current_page = Page::TaskEdit;
                 app.message = None;
                 info!("Tasks: Loaded task {} for editing.", selected_task.uid);

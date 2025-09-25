@@ -2,6 +2,7 @@ use ratatui::{prelude::*, widgets::*};
 use crossterm::event::KeyCode;
 use crate::{App, MessageType};
 use tracing::{info, warn, error, debug};
+use vespe::task::{TaskType, TaskState};
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum InputFocus {

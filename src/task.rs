@@ -83,7 +83,7 @@ pub struct Task {
     pub objective: String, // Contenuto di objective.md
     pub plan: Option<String>, // Contenuto di plan.md
     pub dependencies: TaskDependencies,
-    // Potrebbero esserci altri campi per subtask caricati, ecc.
+    pub subtasks: HashMap<String, TaskState>,
 }
 
 impl Task {

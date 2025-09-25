@@ -390,6 +390,12 @@ impl Project {
         Ok(())
     }
 
+    pub fn pause_task(&self, task_uid: &str, reason: String) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.pause_task(reason)?;
+        Ok(())
+    }
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(
         &self,

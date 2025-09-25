@@ -6,6 +6,8 @@ use crossterm::{
 };
 use ratatui::{prelude::*, widgets::*};
 use std::io::stdout;
+use crate::pages::task_edit::InputFocus;
+use vespe::{Project, ProjectError};
 
 // Color Constants
 const TASKS_COLOR: Color = Color::LightBlue;
@@ -24,6 +26,7 @@ enum Page {
     Tools,
     Agents,
     Chat,
+    TaskEdit,
 }
 
 impl Page {
@@ -33,6 +36,7 @@ impl Page {
             Page::Tools => "Tools",
             Page::Agents => "Agents",
             Page::Chat => "Chat",
+            Page::TaskEdit => "Edit Task",
         }
     }
 
@@ -42,6 +46,7 @@ impl Page {
             Page::Tools => TOOLS_COLOR,
             Page::Agents => AGENTS_COLOR,
             Page::Chat => CHAT_COLOR,
+            Page::TaskEdit => Color::LightGreen,
         }
     }
 
@@ -71,6 +76,10 @@ impl Page {
                 ("Clear", KeyCode::F(7)),
                 ("Config", KeyCode::F(8)),
             ],
+            Page::TaskEdit => vec![
+                ("Save", KeyCode::F(5)),
+                ("Cancel", KeyCode::F(6)),
+            ],
         }
     }
 }
@@ -78,6 +87,10 @@ impl Page {
 #[derive(Debug, Default)]
 struct App {
     current_page: Page,
+    task_edit_state: pages::task_edit::TaskEditState,
+    project: Project,
+    message: Option<String>,
+    message_type: MessageType,
 }
 
 mod pages;
@@ -108,7 +121,8 @@ fn main() -> Result<()> {
                 Page::Tasks => pages::tasks::render_tasks_page(frame, layout[0]),
                 Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
                 Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
-                Page::Chat => pages::chat::render_chat_page(frame, layout[0]),
+                Page::Chat => pages::chat::render_chat_page(frame, layout[1]),
+                Page::TaskEdit => pages::task_edit::render_task_edit_page(frame, layout[1], &app.task_edit_state),
             }
 
             // Render page-specific F5-F8 footer
@@ -132,12 +146,30 @@ fn handle_events(app: &mut App) -> Result<bool> {
             if key.kind == KeyEventKind::Press {
                 match key.code {
                     KeyCode::Char('q') => return Ok(true),
-                    KeyCode::F(1) => app.current_page = Page::Tasks,
-                    KeyCode::F(2) => app.current_page = Page::Tools,
-                    KeyCode::F(3) => app.current_page = Page::Agents,
-                    KeyCode::F(4) => app.current_page = Page::Chat,
-                    // F5-F8 will be handled by page-specific logic later
-                    _ => {},
+                    KeyCode::F(1) => {
+                        app.current_page = Page::Tasks;
+                        app.message = None;
+                    }
+                    KeyCode::F(2) => {
+                        app.current_page = Page::Tools;
+                        app.message = None;
+                    }
+                    KeyCode::F(3) => {
+                        app.current_page = Page::Agents;
+                        app.message = None;
+                    }
+                    KeyCode::F(4) => {
+                        app.current_page = Page::Chat;
+                        app.message = None;
+                    }
+                    _ => {
+                        // Delegate page-specific events
+                        match app.current_page {
+                            Page::Tasks => pages::tasks::handle_events(app, key.code)?,
+                            Page::TaskEdit => pages::task_edit::handle_events(app, key.code)?,
+                            _ => {},
+                        }
+                    }
                 }
             }
         }

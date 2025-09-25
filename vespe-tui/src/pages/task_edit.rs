@@ -188,7 +188,6 @@ pub fn handle_objective_editing_events(app: &mut App, key_code: KeyCode) -> Resu
                     Ok(())
                 };
                 crate::request_confirmation(app, "Save changes?".to_string(), action);
-            }
     Ok(())
 }
 

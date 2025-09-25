@@ -243,6 +243,12 @@ impl Task {
         self.status.current_state
     }
 
+    pub fn is_task_paused(&self) -> bool {
+        self.status.is_paused
+    }
+
+
+
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {
         let persistent_path = self.root_path.join("persistent");

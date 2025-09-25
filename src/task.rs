@@ -239,7 +239,9 @@ impl Task {
     }
 
 
-
+    pub fn get_task_state(&self) -> TaskState {
+        self.status.current_state
+    }
 
     /// Adds a new event to the `persistent/` folder of the task.
     pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {

@@ -14,7 +14,6 @@ Di seguito sono elencati gli stati principali che un task può assumere:
 *   **SUBDIVIDE**: (Nuovo stato) Il task è stato identificato come non monolitico e il suo plan viene utilizzato per generare uno o più sub-task. Questo è uno stato attivo in cui il sistema (o un agente) sta creando i sub-task. Il task genitore non esegue lavoro diretto dopo questa fase; il suo compito è interamente delegato ai sub-task.
 *   **WAITING_SUBTASKS**: (Nuovo stato) Il task genitore ha generato i suoi sub-task e ora attende il loro completamento. Il task genitore è inattivo in termini di esecuzione diretta del lavoro.
 *   **WORKING**: Il task è in fase di esecuzione attiva. Questo stato è riservato ai task monolitici che eseguono direttamente il proprio lavoro.
-*   **READY**: Il task è pronto per essere eseguito. Questo stato è raggiunto dopo che il plan è stato accettato, o dopo che un task è stato ripianificato e attende di essere ripreso.
 *   **FAILURE**: Il task è fallito. Questo può accadere per un errore nell'esecuzione, il fallimento di un sub-task, o un aborto da parte dell'utente/sistema.
 *   **SUCCESS**: Il task è stato completato con successo.
 
@@ -30,7 +29,7 @@ Le transizioni tra gli stati sono definite come segue:
     *   `update_objective` (rimane in **GOT_OBJECTIVE**)
     *   `define_plan` -> **GOT_PLAN**
 *   **Da GOT_PLAN:**
-    *   `accept_plan` (se task monolitico) -> **READY**
+    *   `accept_plan` (se task monolitico) -> **WORKING**
     *   `accept_plan` (se task non monolitico) -> **SUBDIVIDE**
     *   `reject_plan` -> **GOT_OBJECTIVE** (l'obiettivo può essere nuovamente modificato)
 *   **Da SUBDIVIDE:**
@@ -39,15 +38,13 @@ Le transizioni tra gli stati sono definite come segue:
     *   `all_subtasks_completed_successfully` -> **SUCCESS**
     *   `any_subtask_failed` -> **FAILURE**
     *   `parent_aborted` -> **FAILURE**
-*   **Da READY:**
-    *   `start_work` -> **WORKING**
 *   **Da WORKING:**
     *   `work_completed_successfully` -> **SUCCESS**
     *   `work_failed` -> **FAILURE**
     *   `user_aborted` -> **FAILURE**
 *   **Da FAILURE:**
     *   `replan` -> **GOT_OBJECTIVE** (o un nuovo stato `REPLANNING` per una gestione più granulare del recupero)
-    *   `retry` (se possibile, per fallimenti transitori) -> **READY** (o **WORKING** se era in esecuzione)
+    *   `retry` (se possibile, per fallimenti transitori) -> **WORKING** (se era in esecuzione)
 *   **Da SUCCESS:**
     *   (Stato finale, nessuna transizione in uscita)
 
@@ -73,7 +70,7 @@ Lo stato `PAUSED` non farà parte della state machine principale, ma sarà gesti
 *   **Audit Trail:** Ogni transizione di stato e azione significativa dovrebbe essere loggata, includendo l'autore (utente/agente) e il timestamp.
 *   **Interazione Agenti:** Definire chiaramente quali transizioni sono innescate da azioni utente e quali da agenti automatizzati.
 *   **Progress Tracking:** Per gli stati `WORKING` e `WAITING_SUBTASKS`, considerare l'implementazione di un meccanismo di tracciamento del progresso più granulare.
-*   **Recupero da FAILURE:** Dallo stato `FAILURE`, il task può essere ripianificato (tornando a `GOT_OBJECTIVE` o un nuovo stato `REPLANNING`) o, in caso di fallimenti transitori, ritentato (tornando a `READY` o `WORKING`).
+*   **Recupero da FAILURE:** Dallo stato `FAILURE`, il task può essere ripianificato (tornando a `GOT_OBJECTIVE` o un nuovo stato `REPLANNING`) o, in caso di fallimenti transitori, ritentato (tornando a `WORKING`).
 
 ---
 

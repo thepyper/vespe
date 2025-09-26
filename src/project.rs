@@ -577,4 +577,15 @@ impl Project {
 
         Ok(agents)
     }
+
+    /// Saves an agent's state to its state.json file.
+    pub fn save_agent_state(
+        &self,
+        agent: &Agent,
+    ) -> Result<(), ProjectError> {
+        let agents_base_path = self.agents_dir();
+        let agent_path = get_entity_path(&agents_base_path, &agent.metadata.uid)?;
+        write_json_file(&agent_path.join("state.json"), &agent.state)?;
+        Ok(())
+    }
 }

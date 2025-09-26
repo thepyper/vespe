@@ -1,0 +1,156 @@
+Ho letto e analizzato il documento. È un'ottima base di partenza che introduce concetti chiave come la separazione tra `Tool`, `ToolAdapter` e `Agent`. Tuttavia, è ancora a uno stadio concettuale e manca la formalizzazione necessaria per un'implementazione robusta.
+
+Ecco la mia analisi dettagliata, seguita da una proposta di API.
+
+---
+
+### Analisi del Design degli Agenti
+
+#### Punti di Forza
+
+1.  **Separazione dei Concetti**: La distinzione tra `Tool` (la logica pura), `ToolAdapter` (l'adattatore specifico per l'LLM) e `Agent` (il provider dell'LLM) è eccellente. Questa è una best practice che garantisce modularità e flessibilità. Permette di supportare nuovi LLM o nuove convenzioni di tool-calling senza dover modificare la logica dei tool o degli agenti.
+2.  **Manifesto dei Tool**: L'idea di un manifesto JSON per descrivere i tool è solida. Rende i tool auto-descrittivi e permette una validazione automatica e una generazione dinamica dei prompt.
+3.  **Contesto Strutturato**: Definire diverse fonti di contesto (`LocalTaskContext`, `InherithedTaskContext`, etc.) e fornirle in modo strutturato (`Vec<Message>`) all'agente è un approccio potente. Permette all'agente di avere una visione completa e di decidere strategicamente quali informazioni utilizzare.
+
+#### Punti Critici e Mancanze
+
+1.  **Ciclo di Vita dell'Agente**: Il documento non definisce un ciclo di vita per l'agente. Un agente è stateless o ha uno stato? Può essere "avviato", "fermato", "messo in pausa"? Come viene gestita la sua configurazione (es. chiavi API, endpoint) in modo sicuro?
+2.  **Mancanza di un "Motore" (Agent Engine)**: Il documento descrive l'agente come un "provider di LLM" che risponde a prompt. Manca il concetto di un "motore" o "runtime" dell'agente che orchestra il flusso di lavoro principale:
+    *   Riceve un obiettivo (da un task).
+    *   Entra in un ciclo di pensiero/azione (Reasoning Loop).
+    *   Usa i tool a disposizione.
+    *   Interpreta i risultati.
+    *   Decide il passo successivo (usare un altro tool, rispondere all'utente, dichiarare il lavoro finito).
+    L'agente descritto sembra passivo, mentre un agente autonomo dovrebbe essere proattivo.
+3.  **Comunicazione e Memoria**: Come comunica un agente con gli altri? Come persiste la sua "memoria" a breve e lungo termine (es. la cronologia di una conversazione o le decisioni passate)? Il documento menziona i `PersistentEvent` nel task, ma l'agente stesso potrebbe necessitare di un proprio storage per la memoria di lavoro.
+4.  **Gerarchia e Controllo**: Il design attuale in `src/agent.rs` prevede un `parent_agent_uid`, ma il documento non spiega come funziona questa gerarchia. Un agente genitore come delega un task a un figlio? Come ne monitora il progresso? Chi ha il controllo?
+
+#### Dubbi e Critiche
+
+*   **Agent = Provider di LLM?**: Definire un agente solo come un "provider di LLM" è riduttivo. Un agente è più di un wrapper per un'API. È un'entità che *usa* un LLM per ragionare e agire. Il provider LLM dovrebbe essere un *componente* dell'agente, non l'agente stesso.
+*   **Fuzzy Parsing**: L'idea di "parser fuzzy" per i `ToolAdapter` è interessante ma potenzialmente pericolosa. Aumenta la complessità e può portare a comportamenti imprevedibili. Una best practice è pretendere che l'LLM aderisca a uno schema rigido (JSON) e gestire gli errori di parsing come fallimenti del modello, magari con una logica di "retry".
+*   **System Prompt Templating**: L'uso di Handlebars è una buona idea concreta, ma il documento non specifica *quali* variabili standardizzate verranno passate al template. Definirle è cruciale. Esempi potrebbero essere: `{{objective}}`, `{{available_tools}}`, `{{context_messages}}`, `{{current_date}}`.
+
+---
+
+### Proposta per Formalizzare le API
+
+Per superare queste mancanze, propongo di strutturare l'ecosistema degli agenti in modo più formale, simile a quanto fatto per i task.
+
+#### 1. Strutture Dati Rifinite
+
+Manteniamo la separazione tra configurazione (statica) e stato (dinamico).
+
+```rust
+// --- In src/agent.rs ---
+
+// Configurazione statica dell'agente (agent.json)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AgentConfig {
+    pub uid: String,
+    pub name: String,
+    pub role: String, // Es. "Project Manager", "Software Engineer", "QA Tester"
+    pub parent_uid: Option<String>,
+    pub llm_provider: LLMProviderConfig, // Configurazione specifica del provider LLM
+    pub allowed_tools: Vec<String>, // Lista di UID dei tool che l'agente può usare
+}
+
+// Configurazione specifica per il provider LLM
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum LLMProviderConfig {
+    Ollama { model: String, endpoint: String },
+    OpenAI { model: String, api_key_env: String },
+    // etc.
+}
+
+// Stato dinamico dell'agente (state.json)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AgentState {
+    pub last_seen_at: DateTime<Utc>,
+    pub status: AgentStatus, // Es. Idle, Working, Error
+    pub current_task_uid: Option<String>, // Task su cui sta lavorando
+    pub short_term_memory: Vec<Message>, // Cronologia recente
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+pub enum AgentStatus {
+    Idle,      // In attesa di un task
+    Working,   // Sta eseguendo un task
+    Paused,    // Messo in pausa da un utente o da un altro agente
+    Error,     // Errore recuperabile
+    Failed,    // Fallimento definitivo
+}
+
+// L'agente caricato in memoria
+#[derive(Debug, Clone)]
+pub struct Agent {
+    pub config: AgentConfig,
+    pub state: AgentState,
+    // NON memorizziamo qui il project root, ma lo passiamo ai metodi
+}
+```
+
+#### 2. API per il Ciclo di Vita e le Azioni (AgentLifecycle Trait)
+
+Propongo un trait `AgentLifecycle` che potrebbe essere implementato da `Project`.
+
+```rust
+// --- Proposta per un nuovo file, es. src/agent_api.rs ---
+
+use crate::{Agent, Task, ProjectError, Message};
+
+// API per la gestione di alto livello degli agenti
+pub trait AgentLifecycle {
+    // --- Gestione CRUD ---
+    fn create_agent(&self, name: String, role: String, config: LLMProviderConfig) -> Result<Agent, ProjectError>;
+    fn load_agent(&self, agent_uid: &str) -> Result<Agent, ProjectError>;
+    fn save_agent_state(&self, agent: &Agent) -> Result<(), ProjectError>;
+
+    // --- Assegnazione e Controllo Task ---
+    /// Assegna un task a un agente, facendolo passare da Idle a Working.
+    fn assign_task(&self, agent_uid: &str, task_uid: &str) -> Result<(), ProjectError>;
+
+    /// Rimuove l'assegnazione di un task, facendo tornare l'agente a Idle.
+    fn unassign_task(&self, agent_uid: &str) -> Result<(), ProjectError>;
+
+    // --- Esecuzione (il "motore") ---
+    /// Esegue un singolo ciclo di "ragionamento" per il task assegnato.
+    /// Questo è il cuore dell'agente.
+    /// 1. Raccoglie il contesto (dal task, dai tool, dalla memoria).
+    /// 2. Formula un prompt per l'LLM.
+    /// 3. Esegue la query all'LLM.
+    /// 4. Interpreta la risposta (es. una chiamata a un tool).
+    /// 5. Esegue l'azione (es. chiama il ToolAdapter).
+    /// 6. Aggiorna il suo stato e il task.
+    fn tick(&self, agent_uid: &str) -> Result<AgentTickResult, ProjectError>;
+
+    // --- Comunicazione ---
+    /// Invia un messaggio a un agente (da un utente o da un altro agente).
+    fn send_message(&self, agent_uid: &str, message: Message) -> Result<(), ProjectError>;
+}
+
+// Rappresenta il risultato di un ciclo di `tick`
+pub enum AgentTickResult {
+    /// L'agente ha eseguito un'azione e ha un nuovo pensiero o status da riportare.
+    MadeProgress { thought: String },
+    /// L'agente crede di aver completato il task.
+    TaskCompleted,
+    /// L'agente ha generato dei subtask e li ha delegati.
+    SubtasksCreated(Vec<String>), // Vec<task_uid>
+    /// L'agente è in attesa (es. di un subtask o di input esterno).
+    Waiting,
+    /// L'agente ha incontrato un errore.
+    Error(String),
+}
+```
+
+### Conclusione e Prossimi Passi
+
+Questo design più formale introduce concetti chiave mancanti (ciclo di vita, motore di esecuzione) e fornisce una base solida per l'implementazione.
+
+**Prossimi passi suggeriti:**
+1.  Discutere e rifinire le strutture dati e il trait `AgentLifecycle` proposti.
+2.  Creare un nuovo piano di implementazione (simile a `plan_2025_09_26b.txt`) per applicare queste modifiche al codice esistente in `src/agent.rs` e `src/project.rs`.
+3.  Implementare il piano passo dopo passo, con commit granulari.
+
+Attendo il tuo feedback su questa analisi e proposta.

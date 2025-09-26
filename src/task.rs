@@ -135,22 +135,64 @@ impl Task {
         Ok(())
     }
 
+    pub fn spawn_subtask(&mut self, subtask_uid: String) -> Result<(), ProjectError> {
+        self.status.subtask_uids.push(subtask_uid);
 
-
-    pub fn error(&mut self, details: String, is_failure: bool) -> Result<(), ProjectError> {
-        let next_state = if is_failure { TaskState::Failed } else { TaskState::Error };
-
-        if !self.status.current_state.can_transition_to(next_state) {
-            return Err(ProjectError::InvalidStateTransition(
-                self.status.current_state,
-                next_state,
-            ));
+        if !self.status.is_paused {
+            self.status.previous_state = Some(self.status.current_state);
+            self.status.is_paused = true;
         }
 
-        self.status.previous_state = Some(self.status.current_state);
-        self.status.error_details = Some(details);
-        update_task_status(&self.root_path, next_state, &mut self.status)?;
+        // Save the updated status to status.json
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
 
+        Ok(())
+    }
+
+    /// Called by an external event handler when a subtask completes successfully.
+    pub fn on_subtask_completed(&mut self, subtask_uid: &str) -> Result<(), ProjectError> {
+        self.status.subtask_uids.retain(|uid| uid != subtask_uid);
+
+        if self.status.subtask_uids.is_empty() {
+            if let Some(previous_state) = self.status.previous_state {
+                self.status.current_state = previous_state;
+                self.status.previous_state = None;
+            }
+            self.status.is_paused = false;
+        }
+
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
+        Ok(())
+    }
+
+    /// Called by an external event handler when a subtask fails.
+    pub fn on_subtask_failed(&mut self, subtask_uid: &str, details: String) -> Result<(), ProjectError> {
+        let failure_details = format!("Subtask {} failed: {}", subtask_uid, details);
+        self.failure(failure_details)?; // Use failure() for terminal state
+        Ok(())
+    }
+
+    pub fn failure(&mut self, details: String) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Failed) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Failed,
+            ));
+        }
+        self.status.error_details = Some(details);
+        update_task_status(&self.root_path, TaskState::Failed, &mut self.status)?;
+        Ok(())
+    }
+
+    pub fn error(&mut self, details: String) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Error) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Error,
+            ));
+        }
+        self.status.error_details = Some(details);
+        update_task_status(&self.root_path, TaskState::Error, &mut self.status)?;
         Ok(())
     }
 
@@ -185,21 +227,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn pause_task(&mut self, reason: String) -> Result<(), ProjectError> {
-        self.status.is_paused = true;
-        // Optionally, store the reason in error_details or a new field
-        // self.status.error_details = Some(format!("Paused: {}", reason));
-        write_json_file(&self.root_path.join("status.json"), &self.status)?;
-        Ok(())
-    }
 
-    pub fn resume_task(&mut self) -> Result<(), ProjectError> {
-        self.status.is_paused = false;
-        // Optionally, clear the reason if it was stored
-        // self.status.error_details = None;
-        write_json_file(&self.root_path.join("status.json"), &self.status)?;
-        Ok(())
-    }
 
 
     pub fn get_task_state(&self) -> TaskState {
@@ -380,7 +408,6 @@ impl Task {
             objective,
             plan,
             dependencies,
-            subtask_uids: Vec::new(),
         })
     }
 }

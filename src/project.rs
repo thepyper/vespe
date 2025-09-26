@@ -365,9 +365,15 @@ impl Project {
 
 
 
-    pub fn error(&self, task_uid: &str, details: String, is_failure: bool) -> Result<(), ProjectError> {
+    pub fn error(&self, task_uid: &str, details: String) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;
-        task.error(details, is_failure)?;
+        task.error(details)?;
+        Ok(())
+    }
+
+    pub fn failure(&self, task_uid: &str, details: String) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.failure(details)?;
         Ok(())
     }
 
@@ -383,17 +389,7 @@ impl Project {
         Ok(())
     }
 
-    pub fn pause_task(&self, task_uid: &str, reason: String) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
-        task.pause_task(reason)?;
-        Ok(())
-    }
 
-    pub fn resume_task(&self, task_uid: &str) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
-        task.resume_task()?;
-        Ok(())
-    }
 
     pub fn get_task_state(&self, task_uid: &str) -> Result<crate::task::TaskState, ProjectError> {
         let task = self.load_task(task_uid)?;

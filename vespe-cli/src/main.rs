@@ -1,5 +1,7 @@
+mod cli;
+
 use clap::Parser;
-use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand, AgentSubcommand};
+use cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand, AgentSubcommand};
  // Import the api module
 use vespe::project::Project;
 use vespe::TaskState;
@@ -39,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
         vespe::Project::load(&path)?
     } else {
         Project::find_root(&std::env::current_dir()?)
-            .ok_or_else(|| anyhow::anyihow!("Project root not found. Please run 'vespe project init' or specify --project-root."))?
+            .ok_or_else(|| anyhow::anyhow!("Project root not found. Please run 'vespe project init' or specify --project-root."))?
     };
 
     match &cli.command {

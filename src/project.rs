@@ -3,11 +3,11 @@ use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
 use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_path, write_file_content};
 use crate::task::{TaskConfig, TaskDependencies, TaskState, TaskStatus};
-use crate::PersistentEvent;
 use crate::task::Task;
 use crate::agent::{Agent, AgentMetadata, AgentDetails, AIConfig, HumanConfig, LLMProviderConfig, AgentState};
 use crate::tool::Tool;
-use crate::memory::{Memory, Message, MemoryError};
+use crate::memory::{Memory, Message, MessageContent, MemoryError};
+use crate::error::AgentTickResult;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use tracing::{debug, error};
@@ -409,16 +409,7 @@ impl Project {
         Ok(())
     }
 
-    /// Adds a new event to the `persistent/` folder of the task.
-    pub fn add_persistent_event(
-        &self,
-        task_uid: &str,
-        event: PersistentEvent
-    ) -> Result<(), ProjectError> {
-        let task = self.load_task(task_uid)?;
-        task.add_persistent_event(event)?;
-        Ok(())
-    }
+
 
     /// Calculates the SHA256 hash of the `result/` folder content for a task.
     pub fn calculate_result_hash(
@@ -646,3 +637,4 @@ impl Project {
 
         Ok(AgentTickResult::Waiting)
     }
+}

@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use std::path::{Path, PathBuf};
 use crate::utils::{read_json_file, write_json_file, generate_uid};
 use std::fs;
+use crate::error::ProjectError;
 
 // 1. MESSAGE: L'unità atomica di memoria.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -35,7 +36,7 @@ pub enum MessageStatus {
 }
 
 // 4. MEMORY: Il gestore di una collezione di messaggi.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Memory {
     pub root_path: PathBuf, // Path alla directory che contiene i file msg-*.json
     messages: Vec<Message>, // Cache in-memory
@@ -65,7 +66,11 @@ impl Memory {
             let entry = entry?;
             let entry_path = entry.path();
             if entry_path.is_file() && entry_path.extension().map_or(false, |ext| ext == "json") {
-                let message: Message = read_json_file(&entry_path)?;
+                let message: Message = read_json_file(&entry_path).map_err(|e| match e {
+                    ProjectError::Io(io_err) => MemoryError::Io(io_err),
+                    ProjectError::Json(json_err) => MemoryError::Json(json_err),
+                    _ => MemoryError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Unexpected project error: {}", e))),
+                })?;
                 messages.push(message);
             }
         }
@@ -91,7 +96,11 @@ impl Memory {
             status: MessageStatus::Enabled,
         };
         let message_path = self.root_path.join(format!("{}.json", uid));
-        write_json_file(&message_path, &message)?;
+        write_json_file(&message_path, &message).map_err(|e| match e {
+            ProjectError::Io(io_err) => MemoryError::Io(io_err),
+            ProjectError::Json(json_err) => MemoryError::Json(json_err),
+            _ => MemoryError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Unexpected project error: {}", e))),
+        })?;
         self.messages.push(message);
         self.messages.sort_by_key(|m| m.timestamp);
         Ok(self.messages.last().unwrap())
@@ -114,7 +123,11 @@ impl Memory {
         if let Some(message) = self.messages.iter_mut().find(|m| m.uid == message_uid) {
             message.status = MessageStatus::Enabled;
             let message_path = self.root_path.join(format!("{}.json", message_uid));
-            write_json_file(&message_path, message)?;
+            write_json_file(&message_path, message).map_err(|e| match e {
+                ProjectError::Io(io_err) => MemoryError::Io(io_err),
+                ProjectError::Json(json_err) => MemoryError::Json(json_err),
+                _ => MemoryError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Unexpected project error: {}", e))),
+            })?;
             Ok(())
         } else {
             Err(MemoryError::MessageNotFound(message_uid.to_string()))
@@ -126,7 +139,11 @@ impl Memory {
         if let Some(message) = self.messages.iter_mut().find(|m| m.uid == message_uid) {
             message.status = MessageStatus::Disabled;
             let message_path = self.root_path.join(format!("{}.json", message_uid));
-            write_json_file(&message_path, message)?;
+            write_json_file(&message_path, message).map_err(|e| match e {
+                ProjectError::Io(io_err) => MemoryError::Io(io_err),
+                ProjectError::Json(json_err) => MemoryError::Json(json_err),
+                _ => MemoryError::Io(std::io::Error::new(std::io::ErrorKind::Other, format!("Unexpected project error: {}", e))),
+            })?;
             Ok(())
         } else {
             Err(MemoryError::MessageNotFound(message_uid.to_string()))

@@ -186,7 +186,6 @@ impl Default for App {
         }
     }
 }
-}
 
 mod pages;
 

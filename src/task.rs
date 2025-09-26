@@ -7,7 +7,6 @@ use crate::utils::{write_file_content, update_task_status, write_json_file};
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
-use crate::PersistentEvent;
 use tracing::{debug, error, warn};
 
 // Rappresenta lo stato attuale del task
@@ -244,44 +243,6 @@ impl Task {
         self.config.name = new_name;
         write_json_file(&self.root_path.join("config.json"), &self.config)?;
         Ok(())
-    }
-
-
-
-    /// Adds a new event to the `persistent/` folder of the task.
-    pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {
-        let persistent_path = self.root_path.join("persistent");
-
-        // Use UUID for filename to guarantee uniqueness, append timestamp for sorting
-        let filename = format!("{}_{}_{}.json", event.timestamp.format("%Y%m%d%H%M%S%3f"), Uuid::new_v4().as_simple(), event.event_type);
-        let file_path = persistent_path.join(filename);
-
-        write_json_file(&file_path, &event)?;
-
-        Ok(())
-    }
-
-    /// Retrieves all persistent events for a task, sorted by timestamp.
-    pub fn get_all_persistent_events(&self) -> Result<Vec<PersistentEvent>, ProjectError> {
-        let persistent_path = self.root_path.join("persistent");
-
-        if !persistent_path.exists() {
-            return Ok(Vec::new());
-        }
-
-        let mut events = Vec::new();
-        for entry in std::fs::read_dir(&persistent_path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
-                let event: PersistentEvent = crate::utils::read_json_file(&path)?;
-                events.push(event);
-            }
-        }
-
-        events.sort_by_key(|event| event.timestamp);
-
-        Ok(events)
     }
 
     /// Calculates the SHA256 hash of the `result/` folder content for a task.

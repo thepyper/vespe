@@ -5,8 +5,9 @@ use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_pat
 use crate::task::{TaskConfig, TaskDependencies, TaskState, TaskStatus};
 use crate::PersistentEvent;
 use crate::task::Task;
-use crate::agent::{Agent, AgentType};
+use crate::agent::{Agent, AgentMetadata, AgentDetails, AIConfig, HumanConfig, LLMProviderConfig, AgentState};
 use crate::tool::Tool;
+use crate::memory::{Memory, Message, MemoryError};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use tracing::{debug, error};
@@ -461,16 +462,68 @@ impl Project {
         crate::Tool::from_path(&tool_path)
     }
 
-
-
-    /// Creates a new agent (AI or human).
-    pub fn create_agent(
+    /// Creates a new AI agent.
+    pub fn create_ai_agent(
         &self,
-        agent_type: AgentType,
         name: String,
+        config: AIConfig,
     ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("agt")?;
         let agents_base_path = self.agents_dir();
-        Agent::create(agent_type, name, &agents_base_path)
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::AI(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        self.load_agent(&uid)
+    }
+
+    /// Creates a new human agent.
+    pub fn create_human_agent(
+        &self,
+        name: String,
+        config: HumanConfig,
+    ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("usr")?;
+        let agents_base_path = self.agents_dir();
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::Human(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        self.load_agent(&uid)
     }
 
     /// Loads an agent from the filesystem given its UID.
@@ -485,9 +538,17 @@ impl Project {
             return Err(ProjectError::AgentNotFound(agent_uid.to_string()));
         }
 
-        let agent_config: Agent = read_json_file(&agent_path.join("config.json"))?;
+        let metadata: AgentMetadata = read_json_file(&agent_path.join("metadata.json"))?;
+        let details: AgentDetails = read_json_file(&agent_path.join("details.json"))?;
+        let state: AgentState = read_json_file(&agent_path.join("state.json"))?;
+        let memory = Memory::load(&agent_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
 
-        Ok(agent_config)
+        Ok(Agent {
+            metadata,
+            details,
+            state,
+            memory,
+        })
     }
 
     /// Lists all agents available in the project.

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 
 use crate::task::TaskState;
+use crate::memory::MemoryError;
 
 #[derive(Debug, Error)]
 pub enum ProjectError {
@@ -35,4 +36,17 @@ pub enum ProjectError {
     ProjectRootNotFound(PathBuf),
     #[error("Subtask not found: {0}")]
     SubtaskNotFound(String),
+    #[error("Memory error: {0}")]
+    Memory(#[from] MemoryError),
+    #[error("Invalid operation: {0}")]
+    InvalidOperation(String),
+}
+
+// Rappresenta il risultato di un ciclo di `tick`
+pub enum AgentTickResult {
+    MadeProgress { thought: String },
+    TaskCompleted,
+    SubtasksCreated(Vec<String>), // Vec<task_uid>
+    Waiting,
+    Error(String),
 }

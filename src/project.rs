@@ -614,3 +614,35 @@ impl Project {
         write_json_file(&task.root_path.join("status.json"), &task.status)?;
         Ok(())
     }
+
+    /// Adds a message to an agent's memory.
+    pub fn add_message_to_agent_memory(
+        &self,
+        agent_uid: &str,
+        content: MessageContent,
+    ) -> Result<Message, ProjectError> {
+        let mut agent = self.load_agent(agent_uid)?;
+        let message = agent.memory.add_message(agent_uid.to_string(), content).map_err(|e| ProjectError::Memory(e))?;
+        Ok(message.clone())
+    }
+
+    /// Executes a single reasoning cycle for a given task, using the assigned agent.
+    pub fn tick_task(
+        &self,
+        task_uid: &str,
+    ) -> Result<AgentTickResult, ProjectError> {
+        let task = self.load_task(task_uid)?;
+        let agent_uid = task.status.assigned_agent_uid.ok_or_else(|| ProjectError::InvalidOperation(format!("Task {} has no agent assigned.", task_uid)))?;
+        let agent = self.load_agent(&agent_uid)?;
+
+        // For now, this is a placeholder. The actual reasoning logic will go here.
+        // It would involve:
+        // 1. Getting context from task and agent memory.
+        // 2. Calling the LLM.
+        // 3. Parsing the LLM response (tool call, thought, final answer).
+        // 4. Executing tools or updating task state.
+
+        debug!("Ticking task {} with agent {}. Agent details: {:?}", task_uid, agent_uid, agent.details);
+
+        Ok(AgentTickResult::Waiting)
+    }

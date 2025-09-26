@@ -1,10 +1,9 @@
-mod cli;
-
 use clap::Parser;
-use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand};
+use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand, AgentSubcommand};
  // Import the api module
 use vespe::project::Project;
 use vespe::TaskState;
+use vespe::{AIConfig, HumanConfig, LLMProviderConfig};
 use std::fs;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use tracing::{info, debug, error}; // New import
@@ -40,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
         vespe::Project::load(&path)?
     } else {
         Project::find_root(&std::env::current_dir()?)
-            .ok_or_else(|| anyhow::anyhow!("Project root not found. Please run 'vespe project init' or specify --project-root."))?
+            .ok_or_else(|| anyhow::anyihow!("Project root not found. Please run 'vespe project init' or specify --project-root."))?
     };
 
     match &cli.command {
@@ -54,6 +53,9 @@ async fn main() -> anyhow::Result<()> {
                 let task_count = project_root.list_all_tasks().map_or(0, |t| t.len());
                 println!("Task Count: {}", task_count);
 
+                let agent_count = project_root.list_agents().map_or(0, |a| a.len());
+                println!("Agent Count: {}", agent_count);
+
                 let tool_count = project_root.list_available_tools().map_or(0, |t| t.len());
                 println!("Tool Count: {}", tool_count);
             }
@@ -62,6 +64,7 @@ async fn main() -> anyhow::Result<()> {
                 let vespe_dir = project_root.root_path.join(".vespe");
                 let tasks_dir = vespe_dir.join("tasks");
                 let tools_dir = vespe_dir.join("tools");
+                let agents_dir = vespe_dir.join("agents");
 
                 let mut is_valid = true;
                 if !vespe_dir.exists() {
@@ -74,6 +77,10 @@ async fn main() -> anyhow::Result<()> {
                 }
                 if !tools_dir.exists() {
                     eprintln!("Error: .vespe/tools directory not found.");
+                    is_valid = false;
+                }
+                if !agents_dir.exists() {
+                    eprintln!("Error: .vespe/agents directory not found.");
                     is_valid = false;
                 }
 
@@ -239,6 +246,91 @@ async fn main() -> anyhow::Result<()> {
             },
             ToolSubcommand::Chat(chat_command) => {
                 println!("Tool Chat command called: {:?}", chat_command);
+            }
+        },
+        Commands::Agent(agent_command) => match &agent_command.command {
+            AgentSubcommand::CreateAI { name, role, model, endpoint, allowed_tools } => {
+                let llm_config = LLMProviderConfig::Ollama { model: model.clone(), endpoint: endpoint.clone() };
+                let ai_config = AIConfig { role: role.clone(), llm_provider: llm_config, allowed_tools: allowed_tools.clone() };
+                match project_root.create_ai_agent(name.clone(), ai_config) {
+                    Ok(agent) => {
+                        println!("AI Agent created successfully:");
+                        println!("  UID: {}", agent.metadata.uid);
+                        println!("  Name: {}", agent.metadata.name);
+                        if let vespe::AgentDetails::AI(ai_details) = agent.details {
+                            println!("  Role: {}", ai_details.role);
+                            println!("  Model: {:?}", ai_details.llm_provider);
+                        }
+                    }
+                    Err(e) => eprintln!("Error creating AI agent: {}", e),
+                }
+            }
+            AgentSubcommand::CreateHuman { name } => {
+                let human_config = HumanConfig {};
+                match project_root.create_human_agent(name.clone(), human_config) {
+                    Ok(agent) => {
+                        println!("Human Agent created successfully:");
+                        println!("  UID: {}", agent.metadata.uid);
+                        println!("  Name: {}", agent.metadata.name);
+                    }
+                    Err(e) => eprintln!("Error creating Human agent: {}", e),
+                }
+            }
+            AgentSubcommand::Show { identifier } => {
+                match project_root.load_agent(identifier) {
+                    Ok(agent) => {
+                        println!("Agent Details:");
+                        println!("  UID: {}", agent.metadata.uid);
+                        println!("  Name: {}", agent.metadata.name);
+                        println!("  Created At: {}", agent.metadata.created_at);
+                        if let Some(parent) = agent.metadata.parent_uid {
+                            println!("  Parent UID: {}", parent);
+                        }
+                        match agent.details {
+                            vespe::AgentDetails::AI(ai_config) => {
+                                println!("  Type: AI");
+                                println!("  Role: {}", ai_config.role);
+                                println!("  LLM Provider: {:?}", ai_config.llm_provider);
+                                println!("  Allowed Tools: {:?}", ai_config.allowed_tools);
+                            }
+                            vespe::AgentDetails::Human(_) => {
+                                println!("  Type: Human");
+                            }
+                        }
+                        println!("  Last Seen At: {}", agent.state.last_seen_at);
+                        println!("  Memory Messages: {}", agent.memory.get_all_messages().len());
+                    }
+                    Err(e) => eprintln!("Error: {}", e),
+                }
+            }
+            AgentSubcommand::List => {
+                match project_root.list_agents() {
+                    Ok(agents) => {
+                        if agents.is_empty() {
+                            println!("No agents found.");
+                        } else {
+                            println!("{:<38} {:<25} {:<10} {:<20}", "UID", "Name", "Type", "Role/Status");
+                            println!("{:-<38} {:-<25} {:-<10} {:-<20}", "", "", "", "");
+                            for agent in agents {
+                                let agent_type_str = match agent.details {
+                                    vespe::AgentDetails::AI(_) => "AI",
+                                    vespe::AgentDetails::Human(_) => "Human",
+                                };
+                                let role_status = match agent.details {
+                                    vespe::AgentDetails::AI(ai_config) => ai_config.role,
+                                    vespe::AgentDetails::Human(_) => "N/A".to_string(),
+                                };
+                                println!("{:<38} {:<25} {:<10} {:<20}",
+                                    agent.metadata.uid,
+                                    agent.metadata.name,
+                                    agent_type_str,
+                                    role_status
+                                );
+                            }
+                        }
+                    }
+                    Err(e) => eprintln!("Error listing agents: {}", e),
+                }
             }
         },
     }

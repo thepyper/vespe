@@ -7,7 +7,6 @@ use crate::utils::{write_file_content, update_task_status, write_json_file};
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
-use crate::PersistentEvent;
 use tracing::{debug, error, warn};
 
 // Rappresenta lo stato attuale del task
@@ -16,8 +15,6 @@ pub enum TaskState {
     Created,
     ObjectiveDefined,
     PlanDefined,
-    Delegating,
-    Harvesting,
     Working,
     Error,
     Failed,
@@ -29,20 +26,12 @@ impl TaskState {
         match self {
             TaskState::Created => matches!(next_state, TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
             TaskState::ObjectiveDefined => matches!(next_state, TaskState::ObjectiveDefined | TaskState::PlanDefined | TaskState::Error | TaskState::Failed),
-            TaskState::PlanDefined => matches!(next_state, TaskState::PlanDefined | TaskState::Working | TaskState::Delegating | TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
-            TaskState::Delegating => matches!(next_state, TaskState::Delegating | TaskState::Harvesting | TaskState::Error | TaskState::Failed),
-            TaskState::Harvesting => matches!(next_state, TaskState::Completed | TaskState::Error | TaskState::Failed),
+            TaskState::PlanDefined => matches!(next_state, TaskState::PlanDefined | TaskState::Working | TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
             TaskState::Working => matches!(next_state, TaskState::Completed | TaskState::Error | TaskState::Failed),
             TaskState::Error => matches!(next_state, TaskState::Failed | TaskState::Error), // From Error, can transition to Failed or stay in Error
             TaskState::Failed | TaskState::Completed => false, // Final states, no transitions out
         }
     }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum TaskType {
-    Monolithic,
-    Subdivided,
 }
 
 // Corrisponde a config.json
@@ -53,7 +42,6 @@ pub struct TaskConfig {
     pub created_by_agent_uid: String, // Riferimento all'UID dell'Agente
     pub created_at: DateTime<Utc>,
     pub parent_uid: Option<String>, // UID del task genitore, se è un subtask
-    pub task_type: Option<TaskType>,
 }
 
 // Corrisponde a status.json
@@ -67,6 +55,10 @@ pub struct TaskStatus {
     pub error_details: Option<String>,
     pub previous_state: Option<TaskState>,
     pub retry_count: u8,
+    #[serde(default)] // For backward compatibility
+    pub subtask_uids: Vec<String>,
+    #[serde(default)] // For backward compatibility
+    pub assigned_agent_uid: Option<String>,
 }
 
 // Corrisponde a dependencies.json
@@ -85,7 +77,6 @@ pub struct Task {
     pub objective: String, // Contenuto di objective.md
     pub plan: Option<String>, // Contenuto di plan.md
     pub dependencies: TaskDependencies,
-    pub subtasks: HashMap<String, TaskState>,
 }
 
 impl Task {
@@ -103,7 +94,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn define_plan(&mut self, plan_content: String, task_type: TaskType) -> Result<(), ProjectError> {
+    pub fn define_plan(&mut self, plan_content: String) -> Result<(), ProjectError> {
         if !self.status.current_state.can_transition_to(TaskState::PlanDefined) {
             return Err(ProjectError::InvalidStateTransition(
                 self.status.current_state,
@@ -114,30 +105,20 @@ impl Task {
         write_file_content(&self.root_path.join("plan.md"), &plan_content)?;
         self.plan = Some(plan_content);
 
-        self.config.task_type = Some(task_type);
-        write_json_file(&self.root_path.join("config.json"), &self.config)?;
-
         update_task_status(&self.root_path, TaskState::PlanDefined, &mut self.status)?;
 
         Ok(())
     }
 
     pub fn accept_plan(&mut self) -> Result<(), ProjectError> {
-        if !self.status.current_state.can_transition_to(TaskState::Working) &&
-           !self.status.current_state.can_transition_to(TaskState::Delegating) {
+        if !self.status.current_state.can_transition_to(TaskState::Working) {
             return Err(ProjectError::InvalidStateTransition(
                 self.status.current_state,
-                TaskState::Working, // Or Delegating, depending on task_type
+                TaskState::Working,
             ));
         }
 
-        let next_state = match self.config.task_type {
-            Some(TaskType::Monolithic) => TaskState::Working,
-            Some(TaskType::Subdivided) => TaskState::Delegating,
-            None => return Err(ProjectError::InvalidProjectConfig("TaskType not defined for task when accepting plan.".to_string())),
-        };
-
-        update_task_status(&self.root_path, next_state, &mut self.status)?;
+        update_task_status(&self.root_path, TaskState::Working, &mut self.status)?;
 
         Ok(())
     }
@@ -155,41 +136,64 @@ impl Task {
         Ok(())
     }
 
-    pub fn add_subtask(&mut self, subtask_id: String, is_final: bool) -> Result<(), ProjectError> {
-        if !self.status.current_state.can_transition_to(TaskState::Delegating) &&
-           !(self.status.current_state == TaskState::Delegating && is_final) { // Allow transition to Harvesting from Delegating
-            return Err(ProjectError::InvalidStateTransition(
-                self.status.current_state,
-                TaskState::Delegating, // Or Harvesting
-            ));
+    pub fn spawn_subtask(&mut self, subtask_uid: String) -> Result<(), ProjectError> {
+        self.status.subtask_uids.push(subtask_uid);
+
+        if !self.status.is_paused {
+            self.status.previous_state = Some(self.status.current_state);
+            self.status.is_paused = true;
         }
 
-        self.subtasks.insert(subtask_id, TaskState::Created); // Add subtask with Created state
-
-        if is_final {
-            update_task_status(&self.root_path, TaskState::Harvesting, &mut self.status)?;
-        } else {
-            // If not final, stay in Delegating state, but ensure status is saved
-            write_json_file(&self.root_path.join("status.json"), &self.status)?;
-        }
+        // Save the updated status to status.json
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
 
         Ok(())
     }
 
-    pub fn error(&mut self, details: String, is_failure: bool) -> Result<(), ProjectError> {
-        let next_state = if is_failure { TaskState::Failed } else { TaskState::Error };
+    /// Called by an external event handler when a subtask completes successfully.
+    pub fn on_subtask_completed(&mut self, subtask_uid: &str) -> Result<(), ProjectError> {
+        self.status.subtask_uids.retain(|uid| uid != subtask_uid);
 
-        if !self.status.current_state.can_transition_to(next_state) {
-            return Err(ProjectError::InvalidStateTransition(
-                self.status.current_state,
-                next_state,
-            ));
+        if self.status.subtask_uids.is_empty() {
+            if let Some(previous_state) = self.status.previous_state {
+                self.status.current_state = previous_state;
+                self.status.previous_state = None;
+            }
+            self.status.is_paused = false;
         }
 
-        self.status.previous_state = Some(self.status.current_state);
-        self.status.error_details = Some(details);
-        update_task_status(&self.root_path, next_state, &mut self.status)?;
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
+        Ok(())
+    }
 
+    /// Called by an external event handler when a subtask fails.
+    pub fn on_subtask_failed(&mut self, subtask_uid: &str, details: String) -> Result<(), ProjectError> {
+        let failure_details = format!("Subtask {} failed: {}", subtask_uid, details);
+        self.failure(failure_details)?; // Use failure() for terminal state
+        Ok(())
+    }
+
+    pub fn failure(&mut self, details: String) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Failed) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Failed,
+            ));
+        }
+        self.status.error_details = Some(details);
+        update_task_status(&self.root_path, TaskState::Failed, &mut self.status)?;
+        Ok(())
+    }
+
+    pub fn error(&mut self, details: String) -> Result<(), ProjectError> {
+        if !self.status.current_state.can_transition_to(TaskState::Error) {
+            return Err(ProjectError::InvalidStateTransition(
+                self.status.current_state,
+                TaskState::Error,
+            ));
+        }
+        self.status.error_details = Some(details);
+        update_task_status(&self.root_path, TaskState::Error, &mut self.status)?;
         Ok(())
     }
 
@@ -224,21 +228,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn pause_task(&mut self, reason: String) -> Result<(), ProjectError> {
-        self.status.is_paused = true;
-        // Optionally, store the reason in error_details or a new field
-        // self.status.error_details = Some(format!("Paused: {}", reason));
-        write_json_file(&self.root_path.join("status.json"), &self.status)?;
-        Ok(())
-    }
 
-    pub fn resume_task(&mut self) -> Result<(), ProjectError> {
-        self.status.is_paused = false;
-        // Optionally, clear the reason if it was stored
-        // self.status.error_details = None;
-        write_json_file(&self.root_path.join("status.json"), &self.status)?;
-        Ok(())
-    }
 
 
     pub fn get_task_state(&self) -> TaskState {
@@ -253,44 +243,6 @@ impl Task {
         self.config.name = new_name;
         write_json_file(&self.root_path.join("config.json"), &self.config)?;
         Ok(())
-    }
-
-
-
-    /// Adds a new event to the `persistent/` folder of the task.
-    pub fn add_persistent_event(&self, event: PersistentEvent) -> Result<(), ProjectError> {
-        let persistent_path = self.root_path.join("persistent");
-
-        // Use UUID for filename to guarantee uniqueness, append timestamp for sorting
-        let filename = format!("{}_{}_{}.json", event.timestamp.format("%Y%m%d%H%M%S%3f"), Uuid::new_v4().as_simple(), event.event_type);
-        let file_path = persistent_path.join(filename);
-
-        write_json_file(&file_path, &event)?;
-
-        Ok(())
-    }
-
-    /// Retrieves all persistent events for a task, sorted by timestamp.
-    pub fn get_all_persistent_events(&self) -> Result<Vec<PersistentEvent>, ProjectError> {
-        let persistent_path = self.root_path.join("persistent");
-
-        if !persistent_path.exists() {
-            return Ok(Vec::new());
-        }
-
-        let mut events = Vec::new();
-        for entry in std::fs::read_dir(&persistent_path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "json") {
-                let event: PersistentEvent = crate::utils::read_json_file(&path)?;
-                events.push(event);
-            }
-        }
-
-        events.sort_by_key(|event| event.timestamp);
-
-        Ok(events)
     }
 
     /// Calculates the SHA256 hash of the `result/` folder content for a task.
@@ -419,7 +371,6 @@ impl Task {
             objective,
             plan,
             dependencies,
-            subtasks: HashMap::new(),
         })
     }
 }

@@ -1,0 +1,91 @@
+### Design Preliminare: Lo Scheduler / Orchestrator
+
+**Data:** 26 Settembre 2025
+
+Questo documento cattura l'idea di un componente `Scheduler` (o `Worker`/`Orchestrator`) responsabile dell'esecuzione proattiva dei task. L'implementazione è rimandata, ma il design guida l'architettura generale.
+
+#### 1. Motivazioni e Principi
+
+L'idea nasce dall'esigenza di avere un componente proattivo che gestisca il ciclo di vita dei task, invece di inserire questa logica nel `Project`.
+
+1.  **Single Responsibility Principle (SRP)**: Si separa la gestione dei dati (responsabilità del `Project`) dalla logica di esecuzione dei processi (responsabilità dello `Scheduler`). `Project` è il "database", `Scheduler` è il "motore".
+
+2.  **Testabilità**: Uno `Scheduler` disaccoppiato è più semplice da testare in isolamento.
+
+3.  **Scalabilità e Asincronia**: Questo design è il prerequisito per un'esecuzione concorrente dei task. Lo `Scheduler` può gestire un pool di worker (es. `tokio::spawn`) per eseguire più task in parallelo, gestendo priorità e dipendenze.
+
+#### 2. Struttura Proposta
+
+Si propone una struct `Scheduler` che contiene un riferimento al `Project` per accedere ai dati e orchestrare le operazioni.
+
+```rust
+// --- In un nuovo file: src/scheduler.rs ---
+
+use crate::{Project, Task, TaskState, ProjectError};
+
+/// Lo Scheduler è responsabile di orchestrare l'esecuzione dei task.
+pub struct Scheduler {
+    project: Project,
+}
+
+impl Scheduler {
+    pub fn new(project: Project) -> Self {
+        Self { project }
+    }
+
+    /// Il "main loop" dell'applicazione. Esegue i task finché c'è lavoro da fare.
+    /// Questa è l'implementazione concettuale di `tick_project`.
+    pub fn run(&self) -> Result<(), ProjectError> {
+        loop {
+            // 1. Trova tutti i task che sono pronti per essere eseguiti.
+            let runnable_tasks = self.find_runnable_tasks()?;
+
+            if runnable_tasks.is_empty() {
+                println!("Nessun task eseguibile al momento. In attesa...");
+                // In un'applicazione reale, qui si potrebbe attendere input esterno
+                // o semplicemente terminare. Per ora, usciamo dal loop.
+                break;
+            }
+
+            // 2. Esegui un "tick" per ogni task eseguibile.
+            // Per ora in modo sequenziale. In futuro, questo potrebbe lanciare
+            // tanti `tokio::spawn` per eseguirli in parallelo.
+            for task in runnable_tasks {
+                println!("Ticking task: {} ({})", task.config.name, task.uid);
+                match self.project.tick_task(&task.uid) {
+                    Ok(result) => {
+                        // Logga il risultato del tick
+                        println!("  -> Result: {:?}", result);
+                    }
+                    Err(e) => {
+                        eprintln!("  -> Error ticking task {}: {}", task.uid, e);
+                        // Potremmo voler impostare il task in stato Error qui.
+                        self.project.error(task.uid, e.to_string())?;
+                    }
+                }
+            }
+
+            // Preveniamo un loop troppo veloce in caso di test
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+        Ok(())
+    }
+
+    /// Trova i task che sono pronti per un ciclo di esecuzione.
+    fn find_runnable_tasks(&self) -> Result<Vec<Task>, ProjectError> {
+        let all_tasks = self.project.list_all_tasks()?;
+        let runnable: Vec<Task> = all_tasks.into_iter().filter(|task| {
+            // Un task è "runnable" se:
+            // 1. È nello stato `Working`.
+            // 2. Non è in pausa (in attesa di subtask).
+            // 3. (Futuro): Le sue dipendenze sono state soddisfatte.
+            task.status.current_state == TaskState::Working && !task.status.is_paused
+        }).collect();
+        Ok(runnable)
+    }
+}
+```
+
+#### 3. Conclusione
+
+Questo design definisce l'architettura di esecuzione. Anche se l'implementazione di uno `Scheduler` concorrente è rimandata, la separazione dei concetti tra `Project` e `Scheduler` deve guidare lo sviluppo fin da ora. Le API definite in `AgentLifecycle` (es. `tick_task`) sono pensate per essere chiamate da questo `Scheduler`.

@@ -3,10 +3,11 @@ use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
 use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_path, write_file_content};
 use crate::task::{TaskConfig, TaskDependencies, TaskState, TaskStatus};
-use crate::PersistentEvent;
 use crate::task::Task;
-use crate::agent::{Agent, AgentType};
+use crate::agent::{Agent, AgentMetadata, AgentDetails, AIConfig, HumanConfig, LLMProviderConfig, AgentState};
 use crate::tool::Tool;
+use crate::memory::{Memory, Message, MessageContent, MemoryError};
+use crate::error::AgentTickResult;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use tracing::{debug, error};
@@ -286,7 +287,6 @@ impl Project {
             created_by_agent_uid: created_by_agent_uid.clone(),
             created_at: now,
             parent_uid,
-            task_type: None,
         };
         write_json_file(&task_path.join("config.json"), &config)?;
 
@@ -300,6 +300,8 @@ impl Project {
             error_details: None,
             previous_state: None,
             retry_count: 0,
+            subtask_uids: Vec::new(),
+            assigned_agent_uid: None,
         };
         write_json_file(&task_path.join("status.json"), &status)?;
 
@@ -345,10 +347,9 @@ impl Project {
         &self,
         task_uid: &str,
         plan_content: String,
-        task_type: crate::task::TaskType,
     ) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;
-        task.define_plan(plan_content, task_type)?;
+        task.define_plan(plan_content)?;
         Ok(())
     }
 
@@ -364,15 +365,17 @@ impl Project {
         Ok(())
     }
 
-    pub fn add_subtask(&self, parent_task_uid: &str, subtask_id: String, is_final: bool) -> Result<(), ProjectError> {
-        let mut parent_task = self.load_task(parent_task_uid)?;
-        parent_task.add_subtask(subtask_id, is_final)?;
+
+
+    pub fn error(&self, task_uid: &str, details: String) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.error(details)?;
         Ok(())
     }
 
-    pub fn error(&self, task_uid: &str, details: String, is_failure: bool) -> Result<(), ProjectError> {
+    pub fn failure(&self, task_uid: &str, details: String) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;
-        task.error(details, is_failure)?;
+        task.failure(details)?;
         Ok(())
     }
 
@@ -388,17 +391,7 @@ impl Project {
         Ok(())
     }
 
-    pub fn pause_task(&self, task_uid: &str, reason: String) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
-        task.pause_task(reason)?;
-        Ok(())
-    }
 
-    pub fn resume_task(&self, task_uid: &str) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
-        task.resume_task()?;
-        Ok(())
-    }
 
     pub fn get_task_state(&self, task_uid: &str) -> Result<crate::task::TaskState, ProjectError> {
         let task = self.load_task(task_uid)?;
@@ -416,16 +409,7 @@ impl Project {
         Ok(())
     }
 
-    /// Adds a new event to the `persistent/` folder of the task.
-    pub fn add_persistent_event(
-        &self,
-        task_uid: &str,
-        event: PersistentEvent
-    ) -> Result<(), ProjectError> {
-        let task = self.load_task(task_uid)?;
-        task.add_persistent_event(event)?;
-        Ok(())
-    }
+
 
     /// Calculates the SHA256 hash of the `result/` folder content for a task.
     pub fn calculate_result_hash(
@@ -469,16 +453,68 @@ impl Project {
         crate::Tool::from_path(&tool_path)
     }
 
-
-
-    /// Creates a new agent (AI or human).
-    pub fn create_agent(
+    /// Creates a new AI agent.
+    pub fn create_ai_agent(
         &self,
-        agent_type: AgentType,
         name: String,
+        config: AIConfig,
     ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("agt")?;
         let agents_base_path = self.agents_dir();
-        Agent::create(agent_type, name, &agents_base_path)
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::AI(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        self.load_agent(&uid)
+    }
+
+    /// Creates a new human agent.
+    pub fn create_human_agent(
+        &self,
+        name: String,
+        config: HumanConfig,
+    ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("usr")?;
+        let agents_base_path = self.agents_dir();
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::Human(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        self.load_agent(&uid)
     }
 
     /// Loads an agent from the filesystem given its UID.
@@ -493,9 +529,17 @@ impl Project {
             return Err(ProjectError::AgentNotFound(agent_uid.to_string()));
         }
 
-        let agent_config: Agent = read_json_file(&agent_path.join("config.json"))?;
+        let metadata: AgentMetadata = read_json_file(&agent_path.join("metadata.json"))?;
+        let details: AgentDetails = read_json_file(&agent_path.join("details.json"))?;
+        let state: AgentState = read_json_file(&agent_path.join("state.json"))?;
+        let memory = Memory::load(&agent_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
 
-        Ok(agent_config)
+        Ok(Agent {
+            metadata,
+            details,
+            state,
+            memory,
+        })
     }
 
     /// Lists all agents available in the project.
@@ -523,5 +567,74 @@ impl Project {
         }
 
         Ok(agents)
+    }
+
+    /// Saves an agent's state to its state.json file.
+    pub fn save_agent_state(
+        &self,
+        agent: &Agent,
+    ) -> Result<(), ProjectError> {
+        let agents_base_path = self.agents_dir();
+        let agent_path = get_entity_path(&agents_base_path, &agent.metadata.uid)?;
+        write_json_file(&agent_path.join("state.json"), &agent.state)?;
+        Ok(())
+    }
+
+    /// Assigns a task to an agent. This modifies the Task's status.
+    pub fn assign_task_to_agent(
+        &self,
+        task_uid: &str,
+        agent_uid: &str,
+    ) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        // Check if agent exists
+        self.load_agent(agent_uid)?;
+
+        task.status.assigned_agent_uid = Some(agent_uid.to_string());
+        write_json_file(&task.root_path.join("status.json"), &task.status)?;
+        Ok(())
+    }
+
+    /// Unassigns an agent from a task. This modifies the Task's status.
+    pub fn unassign_agent_from_task(
+        &self,
+        task_uid: &str,
+    ) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.status.assigned_agent_uid = None;
+        write_json_file(&task.root_path.join("status.json"), &task.status)?;
+        Ok(())
+    }
+
+    /// Adds a message to an agent's memory.
+    pub fn add_message_to_agent_memory(
+        &self,
+        agent_uid: &str,
+        content: MessageContent,
+    ) -> Result<Message, ProjectError> {
+        let mut agent = self.load_agent(agent_uid)?;
+        let message = agent.memory.add_message(agent_uid.to_string(), content).map_err(|e| ProjectError::Memory(e))?;
+        Ok(message.clone())
+    }
+
+    /// Executes a single reasoning cycle for a given task, using the assigned agent.
+    pub fn tick_task(
+        &self,
+        task_uid: &str,
+    ) -> Result<AgentTickResult, ProjectError> {
+        let task = self.load_task(task_uid)?;
+        let agent_uid = task.status.assigned_agent_uid.ok_or_else(|| ProjectError::InvalidOperation(format!("Task {} has no agent assigned.", task_uid)))?;
+        let agent = self.load_agent(&agent_uid)?;
+
+        // For now, this is a placeholder. The actual reasoning logic will go here.
+        // It would involve:
+        // 1. Getting context from task and agent memory.
+        // 2. Calling the LLM.
+        // 3. Parsing the LLM response (tool call, thought, final answer).
+        // 4. Executing tools or updating task state.
+
+        debug!("Ticking task {} with agent {}. Agent details: {:?}", task_uid, agent_uid, agent.details);
+
+        Ok(AgentTickResult::Waiting)
     }
 }

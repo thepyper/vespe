@@ -21,6 +21,44 @@ pub enum Commands {
     Task(TaskCommand),
     /// Manage tools
     Tool(ToolCommand),
+    /// Manage agents
+    Agent(AgentCommand),
+}
+
+#[derive(Debug, Parser)]
+pub struct AgentCommand {
+    #[command(subcommand)]
+    pub command: AgentSubcommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum AgentSubcommand {
+    /// Create a new AI agent
+    CreateAI {
+        #[arg(long)]
+        name: String,
+        #[arg(long)]
+        role: String,
+        #[arg(long)]
+        model: String,
+        #[arg(long)]
+        endpoint: String,
+        #[arg(long, value_delimiter = ' ')] // Allows multiple values separated by space
+        allowed_tools: Vec<String>,
+    },
+    /// Create a new human agent
+    CreateHuman {
+        #[arg(long)]
+        name: String,
+        // HumanConfig is empty for now, so no specific args needed
+    },
+    /// Show details for a specific agent
+    Show {
+        /// The UID or name of the agent
+        identifier: String,
+    },
+    /// List all agents
+    List,
 }
 
 #[derive(Debug, Parser)]
@@ -79,9 +117,6 @@ pub enum TaskSubcommand {
         identifier: String,
         /// The plan content
         plan: String,
-        /// The type of task: "monolithic" or "subdivided"
-        #[arg(long)]
-        task_type: String,
     },
     /// List all tasks
     List,

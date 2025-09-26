@@ -299,6 +299,7 @@ impl Project {
             error_details: None,
             previous_state: None,
             retry_count: 0,
+            subtask_uids: Vec::new(),
         };
         write_json_file(&task_path.join("status.json"), &status)?;
 

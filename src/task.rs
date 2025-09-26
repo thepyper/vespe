@@ -56,6 +56,8 @@ pub struct TaskStatus {
     pub error_details: Option<String>,
     pub previous_state: Option<TaskState>,
     pub retry_count: u8,
+    #[serde(default)] // For backward compatibility
+    pub subtask_uids: Vec<String>,
 }
 
 // Corrisponde a dependencies.json
@@ -74,7 +76,6 @@ pub struct Task {
     pub objective: String, // Contenuto di objective.md
     pub plan: Option<String>, // Contenuto di plan.md
     pub dependencies: TaskDependencies,
-    pub subtask_uids: Vec<String>,
 }
 
 impl Task {

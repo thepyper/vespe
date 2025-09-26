@@ -86,6 +86,16 @@ impl Task {
 }
 
 impl Task {
+    pub fn new(description: String) -> Self {
+        Task {
+            id: Uuid::new_v4(),
+            description,
+            status: TaskStatus::Pending,
+        }
+    }
+}
+
+impl Task {
     pub fn define_objective(&mut self, objective_content: String) -> Result<(), ProjectError> {
         if !self.status.current_state.can_transition_to(TaskState::ObjectiveDefined) {
             return Err(ProjectError::InvalidStateTransition(

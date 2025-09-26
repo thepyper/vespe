@@ -33,18 +33,16 @@ Ecco la mia analisi dettagliata, seguita da una proposta di API.
 
 ---
 
-### Proposta per Formalizzare le API (Revisione B)
+### Proposta per Formalizzare le API (Revisione C)
 
-Per superare queste mancanze e incorporare la distinzione fondamentale tra agenti AI e Umani, propongo di strutturare l'ecosistema degli agenti in modo più formale.
+Questa revisione incorpora la distinzione AI/Umano e il principio che lo stato di esecuzione risiede nel Task, non nell'Agente.
 
 #### 1. Strutture Dati Rifinite
-
-Il modello si basa su una struct di metadati comune e una `enum` per i dettagli specifici di ogni tipo di agente.
 
 ```rust
 // --- In src/agent.rs ---
 
-// 1. METADATA COMUNI: Contiene i dati condivisi da TUTTI gli agenti.
+// 1. METADATA COMUNI: Dati condivisi da tutti gli agenti.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentMetadata {
     pub uid: String,
@@ -60,7 +58,7 @@ pub enum AgentDetails {
     Human(HumanConfig),
 }
 
-// 3. CONFIGURAZIONE AI: Solo i campi specifici per l'AI.
+// 3. CONFIGURAZIONE AI: Campi specifici per l'AI.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AIConfig {
     pub role: String,
@@ -68,36 +66,21 @@ pub struct AIConfig {
     pub allowed_tools: Vec<String>,
 }
 
-// Configurazione specifica per il provider LLM
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum LLMProviderConfig {
     Ollama { model: String, endpoint: String },
     OpenAI { model: String, api_key_env: String },
-    // etc.
 }
 
 // 4. CONFIGURAZIONE HUMAN: Campi specifici per l'umano.
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct HumanConfig {
-    // Per ora può essere vuota, ma in futuro: email, permissions, etc.
-}
+pub struct HumanConfig { /* ...email, permissions, etc. */ }
 
-// 5. STATO DINAMICO: Comune a tutti gli agenti.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+// 5. STATO DINAMICO DELL'AGENTE (SEMPLIFICATO)
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct AgentState {
     pub last_seen_at: DateTime<Utc>,
-    pub status: AgentStatus,
-    pub current_task_uid: Option<String>,
-    pub short_term_memory: Vec<Message>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum AgentStatus {
-    Idle,      // In attesa di un task
-    Working,   // Sta eseguendo un task
-    Paused,    // Messo in pausa
-    Error,     // Errore recuperabile
-    Failed,    // Fallimento definitivo
+    pub short_term_memory: Vec<Message>, // Memoria specifica dell'agente
 }
 
 // L'AGENTE COMPLETO: Oggetto costruito in memoria.
@@ -107,32 +90,45 @@ pub struct Agent {
     pub details: AgentDetails,
     pub state: AgentState,
 }
+
+// --- In src/task.rs ---
+
+// STATO DINAMICO DEL TASK (AGGIORNATO)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskStatus {
+    // ... campi esistenti come current_state, is_paused, etc.
+    pub assigned_agent_uid: Option<String>, // NUOVO: L'agente che sta lavorando su questo task
+    // ...
+}
 ```
 
 #### 2. API per il Ciclo di Vita e le Azioni (AgentLifecycle Trait)
 
-Il trait `AgentLifecycle` riflette questa nuova struttura, con metodi più specifici.
+Le API ora agiscono primariamente sui Task, usando gli Agenti come esecutori.
 
 ```rust
 // --- Proposta per un nuovo file, es. src/agent_api.rs ---
 
 use crate::{Agent, Task, ProjectError, Message, AIConfig, HumanConfig};
 
-// API per la gestione di alto livello degli agenti
 pub trait AgentLifecycle {
-    // --- Gestione CRUD --- 
+    // --- Gestione Agenti (CRUD) ---
     fn create_ai_agent(&self, name: String, config: AIConfig) -> Result<Agent, ProjectError>;
     fn create_human_agent(&self, name: String, config: HumanConfig) -> Result<Agent, ProjectError>;
     fn load_agent(&self, agent_uid: &str) -> Result<Agent, ProjectError>;
     fn save_agent_state(&self, agent: &Agent) -> Result<(), ProjectError>;
 
-    // --- Assegnazione e Controllo Task ---
-    fn assign_task(&self, agent_uid: &str, task_uid: &str) -> Result<(), ProjectError>;
-    fn unassign_task(&self, agent_uid: &str) -> Result<(), ProjectError>;
+    // --- Assegnazione Task ---
+    /// Assegna un task a un agente. Modifica il Task.
+    fn assign_task_to_agent(&self, task_uid: &str, agent_uid: &str) -> Result<(), ProjectError>;
 
-    // --- Esecuzione (il "motore") ---
-    /// Esegue un singolo ciclo di "ragionamento" per un agente AI.
-    fn tick(&self, agent_uid: &str) -> Result<AgentTickResult, ProjectError>;
+    /// Rimuove l'assegnazione di un agente da un task.
+    fn unassign_agent_from_task(&self, task_uid: &str) -> Result<(), ProjectError>;
+
+    // --- Esecuzione Task ---
+    /// Esegue un singolo ciclo di "ragionamento" per un dato task,
+    /// usando l'agente assegnato.
+    fn tick_task(&self, task_uid: &str) -> Result<AgentTickResult, ProjectError>;
 
     // --- Comunicazione ---
     fn send_message(&self, agent_uid: &str, message: Message) -> Result<(), ProjectError>;

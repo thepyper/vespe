@@ -104,6 +104,9 @@ impl Page {
             Page::Tasks => {
                 pages::tasks::load_tasks_into_state(app)?;
             }
+            Page::Agents => {
+                pages::agents::load_agents_into_state(app)?;
+            }
             Page::TaskEdit => {
                 if let Some(task_uid) = &app.task_edit_state.current_task_uid {
                     let task_state = app.project.get_task_state(task_uid)?;
@@ -150,6 +153,7 @@ pub struct App {
     current_page: Page,
     task_edit_state: pages::task_edit::TaskEditState,
     tasks_page_state: pages::tasks::TasksPageState,
+    agents_page_state: pages::agents::AgentsPageState,
     project: Project,
     message: Option<String>,
     message_type: MessageType,
@@ -173,6 +177,7 @@ impl Default for App {
             current_page: Page::default(),
             task_edit_state: pages::task_edit::TaskEditState::default(),
             tasks_page_state: pages::tasks::TasksPageState::default(),
+            agents_page_state: pages::agents::AgentsPageState::default(),
             project,
             message: None,
             message_type: MessageType::default(),
@@ -180,6 +185,7 @@ impl Default for App {
             current_agent_uid: "usr-default".to_string(), // Initialize with a default value
         }
     }
+}
 }
 
 mod pages;
@@ -225,7 +231,7 @@ fn main() -> Result<()> {
             match app.current_page {
                 Page::Tasks => pages::tasks::render_tasks_page(frame, layout[0], &app.tasks_page_state),
                 Page::Tools => pages::tools::render_tools_page(frame, layout[0]),
-                Page::Agents => pages::agents::render_agents_page(frame, layout[0]),
+                Page::Agents => pages::agents::render_agents_page(frame, layout[0], &app.agents_page_state),
                 Page::Chat => pages::chat::render_chat_page(frame, layout[0]),
                 Page::TaskEdit => pages::task_edit::render_task_edit_page(frame, layout[0], &app.task_edit_state),
             }

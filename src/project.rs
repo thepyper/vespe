@@ -588,4 +588,29 @@ impl Project {
         write_json_file(&agent_path.join("state.json"), &agent.state)?;
         Ok(())
     }
-}
+
+    /// Assigns a task to an agent. This modifies the Task's status.
+    pub fn assign_task_to_agent(
+        &self,
+        task_uid: &str,
+        agent_uid: &str,
+    ) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        // Check if agent exists
+        self.load_agent(agent_uid)?;
+
+        task.status.assigned_agent_uid = Some(agent_uid.to_string());
+        write_json_file(&task.root_path.join("status.json"), &task.status)?;
+        Ok(())
+    }
+
+    /// Unassigns an agent from a task. This modifies the Task's status.
+    pub fn unassign_agent_from_task(
+        &self,
+        task_uid: &str,
+    ) -> Result<(), ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        task.status.assigned_agent_uid = None;
+        write_json_file(&task.root_path.join("status.json"), &task.status)?;
+        Ok(())
+    }

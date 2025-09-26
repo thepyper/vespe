@@ -33,54 +33,86 @@ Ecco la mia analisi dettagliata, seguita da una proposta di API.
 
 ---
 
-### Proposta per Formalizzare le API (Revisione C)
+### Proposta per Formalizzare le API (Revisione D)
 
-Questa revisione incorpora la distinzione AI/Umano e il principio che lo stato di esecuzione risiede nel Task, non nell'Agente.
+Questa revisione finale formalizza il concetto di `Memory` e finalizza la struttura dei messaggi, incorporando tutte le discussioni precedenti.
 
-#### 1. Strutture Dati Rifinite
+#### 1. Strutture Dati Fondamentali
+
+##### 1.1. `Memory` e `Message`
+
+Introduciamo `Memory` come un componente di prima classe per la gestione del contesto e della cronologia. L'autore di un messaggio (`Message`) è sempre un agente.
+
+```rust
+// --- In un nuovo file: src/memory.rs ---
+
+use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
+use std::path::{Path, PathBuf};
+
+// 1. MESSAGE: L'unità atomica di memoria.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Message {
+    pub uid: String, // "msg-..."
+    pub timestamp: DateTime<Utc>,
+    pub author_agent_uid: String, // L'autore è SEMPRE un agente
+    pub content: MessageContent,  // Il contenuto è strutturato
+    #[serde(default)]
+    pub status: MessageStatus,
+}
+
+// 2. MESSAGECONTENT: Enum per descrivere il TIPO di contenuto.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum MessageContent {
+    Text(String),    // Input utente, output finale dell'agente, messaggi di sistema
+    Thought(String), // Ragionamento interno dell'agente (non mostrato di default)
+    ToolResult {
+        tool_uid: String,
+        result: serde_json::Value,
+    },
+}
+
+// 3. MESSAGESTATUS: Lo stato di un messaggio nel contesto.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+pub enum MessageStatus {
+    #[default]
+    Enabled,
+    Disabled, // Ignorato dal contesto di default, ma conservato per la cronologia
+}
+
+// 4. MEMORY: Il gestore di una collezione di messaggi.
+#[derive(Debug)]
+pub struct Memory {
+    pub root_path: PathBuf, // Path alla directory che contiene i file msg-*.json
+    messages: Vec<Message>, // Cache in-memory
+}
+
+impl Memory {
+    pub fn load(path: &Path) -> Result<Self, MemoryError> { /* ... */ }
+    pub fn new(path: &Path) -> Result<Self, MemoryError> { /* ... */ }
+    pub fn add_message(&mut self, author_agent_uid: String, content: MessageContent) -> Result<&Message, MemoryError> { /* ... */ }
+    pub fn delete_message(&mut self, message_uid: &str) -> Result<(), MemoryError> { /* ... */ }
+    pub fn enable_message(&mut self, message_uid: &str) -> Result<(), MemoryError> { /* ... */ }
+    pub fn disable_message(&mut self, message_uid: &str) -> Result<(), MemoryError> { /* ... */ }
+    pub fn get_all_messages(&self) -> &Vec<Message> { &self.messages }
+    pub fn get_context(&self) -> Vec<&Message> { /* ... */ }
+}
+```
+
+##### 1.2. Strutture dell'Agente
+
+L'Agente ora include la sua `Memory` personale.
 
 ```rust
 // --- In src/agent.rs ---
 
-// 1. METADATA COMUNI: Dati condivisi da tutti gli agenti.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AgentMetadata {
-    pub uid: String,
-    pub name: String,
-    pub created_at: DateTime<Utc>,
-    pub parent_uid: Option<String>,
-}
+// ... Metadati, Details, Configs come da Revisione C ...
 
-// 2. DETTAGLI SPECIFICI: L'enum che modella la differenza chiave.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum AgentDetails {
-    AI(AIConfig),
-    Human(HumanConfig),
-}
-
-// 3. CONFIGURAZIONE AI: Campi specifici per l'AI.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AIConfig {
-    pub role: String,
-    pub llm_provider: LLMProviderConfig,
-    pub allowed_tools: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum LLMProviderConfig {
-    Ollama { model: String, endpoint: String },
-    OpenAI { model: String, api_key_env: String },
-}
-
-// 4. CONFIGURAZIONE HUMAN: Campi specifici per l'umano.
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct HumanConfig { /* ...email, permissions, etc. */ }
-
-// 5. STATO DINAMICO DELL'AGENTE (SEMPLIFICATO)
+// STATO DINAMICO DELL'AGENTE (semplificato)
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct AgentState {
     pub last_seen_at: DateTime<Utc>,
-    pub short_term_memory: Vec<Message>, // Memoria specifica dell'agente
+    // La memoria non è più un campo qui, ma un oggetto a sé stante.
 }
 
 // L'AGENTE COMPLETO: Oggetto costruito in memoria.
@@ -89,27 +121,26 @@ pub struct Agent {
     pub metadata: AgentMetadata,
     pub details: AgentDetails,
     pub state: AgentState,
+    pub memory: Memory, // La memoria a breve termine specifica dell'agente
 }
 
 // --- In src/task.rs ---
 
-// STATO DINAMICO DEL TASK (AGGIORNATO)
+// STATO DINAMICO DEL TASK (con assegnazione agente)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TaskStatus {
-    // ... campi esistenti come current_state, is_paused, etc.
-    pub assigned_agent_uid: Option<String>, // NUOVO: L'agente che sta lavorando su questo task
+    // ... campi esistenti ...
+    pub assigned_agent_uid: Option<String>,
     // ...
 }
 ```
 
 #### 2. API per il Ciclo di Vita e le Azioni (AgentLifecycle Trait)
 
-Le API ora agiscono primariamente sui Task, usando gli Agenti come esecutori.
-
 ```rust
-// --- Proposta per un nuovo file, es. src/agent_api.rs ---
+// --- In src/agent_api.rs ---
 
-use crate::{Agent, Task, ProjectError, Message, AIConfig, HumanConfig};
+use crate::{Agent, Task, ProjectError, Message, AIConfig, HumanConfig, MessageContent};
 
 pub trait AgentLifecycle {
     // --- Gestione Agenti (CRUD) ---
@@ -119,29 +150,18 @@ pub trait AgentLifecycle {
     fn save_agent_state(&self, agent: &Agent) -> Result<(), ProjectError>;
 
     // --- Assegnazione Task ---
-    /// Assegna un task a un agente. Modifica il Task.
     fn assign_task_to_agent(&self, task_uid: &str, agent_uid: &str) -> Result<(), ProjectError>;
-
-    /// Rimuove l'assegnazione di un agente da un task.
     fn unassign_agent_from_task(&self, task_uid: &str) -> Result<(), ProjectError>;
 
     // --- Esecuzione Task ---
-    /// Esegue un singolo ciclo di "ragionamento" per un dato task,
-    /// usando l'agente assegnato.
     fn tick_task(&self, task_uid: &str) -> Result<AgentTickResult, ProjectError>;
 
     // --- Comunicazione ---
-    fn send_message(&self, agent_uid: &str, message: Message) -> Result<(), ProjectError>;
+    /// Aggiunge un messaggio alla memoria di un agente.
+    fn add_message_to_agent_memory(&self, agent_uid: &str, content: MessageContent) -> Result<Message, ProjectError>;
 }
 
-// Rappresenta il risultato di un ciclo di `tick`
-pub enum AgentTickResult {
-    MadeProgress { thought: String },
-    TaskCompleted,
-    SubtasksCreated(Vec<String>), // Vec<task_uid>
-    Waiting,
-    Error(String),
-}
+// ... AgentTickResult rimane invariato ...
 ```
 
 ### Conclusione e Prossimi Passi

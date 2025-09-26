@@ -16,7 +16,6 @@ Proposta di nomenclatura in inglese, con descrizione in italiano:
 *   **ERROR**: (Errore Recuperabile) Il task ha incontrato un errore ma è potenzialmente recuperabile.
 *   **FAILED**: (Fallito Definitivamente) Il task è fallito in modo irreversibile.
 *   **COMPLETED**: (Completato) Il task è stato completato con successo.
-*   **REPLANNED**: (Ripianto) Il task è stato rifiutato in fase di review e necessita di una nuova pianificazione.
 
 ---
 
@@ -60,13 +59,7 @@ Le transizioni sono definite da azioni specifiche. La gestione dei subtask è or
 *   **Da FAILED:**
     *   (Stato terminale, nessuna transizione in uscita)
 *   **Da COMPLETED:**
-    *   `review_rejected()` -> **REPLANNED**
-    *   (Stato finale se review accettata, nessuna transizione in uscita)
-*   **Da REPLANNED:**
-    *   `define_plan(plan_content: String)` -> **PLAN_DEFINED** (Il task viene ri-pianificato)
-    *   `error(details: String, is_failure: bool)`:
-        *   Se `is_failure == true` -> **FAILED**
-        *   Se `is_failure == false` -> **ERROR**
+    *   (Stato finale, nessuna transizione in uscita)
 
 ---
 
@@ -104,7 +97,6 @@ trait TaskLifecycle {
     fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn error(&mut self, task_id: &str, details: String, is_failure: bool) -> Result<(), TaskError>; // General error API
     fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>;
-    fn review_rejected(&mut self, task_id: &str) -> Result<(), TaskError>; // Nuova API per la review
 
     // API per la gestione dei subtask
     fn spawn_subtask(&mut self, parent_task_id: &str, subtask_id: &str) -> Result<(), TaskError>;
@@ -133,7 +125,6 @@ pub enum TaskState {
     Error,
     Failed,
     Completed,
-    Replanned,
 }
 ```
 

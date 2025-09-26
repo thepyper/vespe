@@ -74,6 +74,7 @@ pub struct Task {
     pub objective: String, // Contenuto di objective.md
     pub plan: Option<String>, // Contenuto di plan.md
     pub dependencies: TaskDependencies,
+    pub subtask_uids: Vec<String>,
 }
 
 impl Task {
@@ -378,6 +379,7 @@ impl Task {
             objective,
             plan,
             dependencies,
+            subtask_uids: Vec::new(),
         })
     }
 }

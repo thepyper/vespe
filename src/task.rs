@@ -68,15 +68,21 @@ pub struct TaskDependencies {
 }
 
 // Rappresenta un task completo caricato in memoria
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Task {
-    pub uid: String,
-    pub root_path: PathBuf, // Percorso alla directory tsk-UID/
-    pub config: TaskConfig,
+    pub id: Uuid,
+    pub description: String,
     pub status: TaskStatus,
-    pub objective: String, // Contenuto di objective.md
-    pub plan: Option<String>, // Contenuto di plan.md
-    pub dependencies: TaskDependencies,
+    // Add other fields as necessary
+}
+
+impl Task {
+    pub fn new(description: String) -> Self {
+        Task {
+            id: Uuid::new_v4(),
+            description,
+            status: TaskStatus::Pending,
+        }
+    }
 }
 
 impl Task {

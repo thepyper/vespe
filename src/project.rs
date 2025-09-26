@@ -300,6 +300,7 @@ impl Project {
             previous_state: None,
             retry_count: 0,
             subtask_uids: Vec::new(),
+            assigned_agent_uid: None,
         };
         write_json_file(&task_path.join("status.json"), &status)?;
 

@@ -58,6 +58,8 @@ pub struct TaskStatus {
     pub retry_count: u8,
     #[serde(default)] // For backward compatibility
     pub subtask_uids: Vec<String>,
+    #[serde(default)] // For backward compatibility
+    pub assigned_agent_uid: Option<String>,
 }
 
 // Corrisponde a dependencies.json

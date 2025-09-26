@@ -5,7 +5,6 @@ use crate::cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, Too
  // Import the api module
 use vespe::project::Project;
 use vespe::TaskState;
-use vespe::task::TaskType; // New import
 use std::fs;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 use tracing::{info, debug, error}; // New import
@@ -108,7 +107,6 @@ async fn main() -> anyhow::Result<()> {
                         println!("  UID: {}", task.uid);
                         println!("  Name: {}", task.config.name);
                         println!("  State: {:?}", task.status.current_state);
-                        println!("  Type: {:?}", task.config.task_type.map_or("N/A".to_string(), |t| format!("{:?}", t)));
                         println!("  Paused: {}", task.status.is_paused);
                         if let Some(details) = task.status.error_details {
                             println!("  Error Details: {}", details);
@@ -134,16 +132,8 @@ async fn main() -> anyhow::Result<()> {
                     Err(e) => eprintln!("Error defining objective: {}", e),
                 }
             }
-            TaskSubcommand::DefinePlan { identifier, plan, task_type } => {
-                let parsed_task_type = match task_type.as_str() {
-                    "monolithic" => vespe::task::TaskType::Monolithic,
-                    "subdivided" => vespe::task::TaskType::Subdivided,
-                    _ => {
-                        eprintln!("Error: Invalid task type. Must be 'monolithic' or 'subdivided'.");
-                        return Ok(());
-                    }
-                };
-                match project_root.define_plan(identifier, plan.clone(), parsed_task_type) {
+            TaskSubcommand::DefinePlan { identifier, plan } => {
+                match project_root.define_plan(identifier, plan.clone()) {
                     Ok(_) => {
                         println!("Plan defined for task {}.", identifier);
                     }
@@ -156,14 +146,13 @@ async fn main() -> anyhow::Result<()> {
                         if tasks.is_empty() {
                             println!("No tasks found.");
                         } else {
-                            println!("{:<38} {:<25} {:<20} {:<15} {:<10}", "UID", "Name", "State", "Type", "Paused");
-                            println!("{:-<38} {:-<25} {:-<20} {:-<15} {:-<10}", "", "", "", "", "");
+                            println!("{:<38} {:<25} {:<20} {:<10}", "UID", "Name", "State", "Paused");
+                            println!("{:-<38} {:-<25} {:-<20} {:-<10}", "", "", "", "");
                             for task in tasks {
-                                println!("{:<38} {:<25} {:<20?} {:<15?} {:<10}",
+                                println!("{:<38} {:<25} {:<20?} {:<10}",
                                     task.uid,
                                     task.config.name,
                                     task.status.current_state,
-                                    task.config.task_type.map_or("N/A".to_string(), |t| format!("{:?}", t)),
                                     task.status.is_paused
                                 );
                             }

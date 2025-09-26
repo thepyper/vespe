@@ -1,44 +1,127 @@
-# Design Document: Semplificazione della Gestione dei Task e dei Subtask
+### Design del Ciclo di Vita di un Task (State Machine)
 
-**Data:** 26 Settembre 2025
-**Autore:** Gemini CLI Agent
+**Introduzione:**
+Questo documento sintetizza il design del ciclo di vita di un task, definendo stati, transizioni, API e considerazioni aggiuntive per una gestione robusta e chiara, incorporando la semplificazione della gestione dei subtask.
 
-## 1. Introduzione e Obiettivi
+---
 
-Questo documento descrive le modifiche proposte al sistema di gestione dei task all'interno del progetto Vespe. L'obiettivo principale è semplificare la distinzione tra task "monolitici" e "suddivisi" e razionalizzare la gestione dei subtask, sfruttando un meccanismo di pausa già esistente.
+#### 1. Stati del Task (Nomenclature e Descrizione)
 
-Gli obiettivi specifici sono:
-*   Eliminare la necessità di pre-definire un task come "monolitico" o "suddiviso".
-*   Consentire la generazione dinamica di subtask in qualsiasi fase del ciclo di vita di un task genitore.
-*   Utilizzare il flag `is_paused` del `TaskStatus` per indicare che un task genitore è in attesa del completamento dei suoi subtask, evitando l'introduzione di nuovi stati dedicati.
-*   Definire chiaramente il comportamento del task genitore in relazione al successo o al fallimento dei suoi subtask.
+Proposta di nomenclatura in inglese, con descrizione in italiano:
 
-## 2. Modifiche alla Gestione dei Task
+*   **CREATED**: (Creato) Il task è stato appena inizializzato.
+*   **OBJECTIVE_DEFINED**: (Obiettivo Definito) Al task è stato assegnato un obiettivo.
+*   **PLAN_DEFINED**: (Piano Definito) Il task è stato pianificato.
+*   **WORKING**: (In Lavorazione) Il task è in esecuzione attiva. Può generare subtask e attendere il loro completamento, utilizzando il flag `is_paused`.
+*   **ERROR**: (Errore Recuperabile) Il task ha incontrato un errore ma è potenzialmente recuperabile.
+*   **FAILED**: (Fallito Definitivamente) Il task è fallito in modo irreversibile.
+*   **COMPLETED**: (Completato) Il task è stato completato con successo.
+*   **REPLANNED**: (Ripianto) Il task è stato rifiutato in fase di review e necessita di una nuova pianificazione.
 
-### 2.1. Eliminazione della Distinzione Monolitico/Suddiviso
+---
 
-La distinzione esplicita tra `TaskType::Monolithic` e `TaskType::Subdivided` verrà rimossa o ignorata. Ogni task sarà intrinsecamente capace di generare e gestire subtask. Questo significa che il campo `task_type` nella `TaskConfig` diventerà obsoleto e potrà essere rimosso o marcato per deprecazione.
+#### 2. Transizioni di Stato (Nomi e Logica)
 
-### 2.2. Comportamento del Task Genitore con i Subtask
+Le transizioni sono definite da azioni specifiche. La gestione dei subtask è ora ortogonale allo stato principale, gestita dal flag `is_paused` e dal campo `subtask_uids`.
 
-Quando un task genitore genera uno o più subtask, seguirà la seguente logica:
+*   **Da CREATED:**
+    *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
+*   **Da OBJECTIVE_DEFINED:**
+    *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED** (Aggiorna l'obiettivo esistente)
+    *   `define_plan(plan_content: String)` -> **PLAN_DEFINED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
+*   **Da PLAN_DEFINED:**
+    *   `define_plan(plan_content: String)` -> **PLAN_DEFINED** (Aggiorna il piano esistente)
+    *   `accept_plan()` -> **WORKING**
+    *   `reject_plan()` -> **OBJECTIVE_DEFINED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
+*   **Da WORKING:**
+    *   `work_completed()` -> **COMPLETED**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
+    *   **Gestione Subtask (Ortogonale):**
+        *   `spawn_subtask(subtask_uid: String)`: Il task genitore rimane in `WORKING`, ma imposta `is_paused = true` e salva il suo stato corrente in `previous_state`. Aggiunge `subtask_uid` a `subtask_uids`.
+        *   `handle_subtask_completion(subtask_uid: String, success: bool)`:
+            *   Se `success == false` -> **FAILED** (il task genitore fallisce).
+            *   Se `success == true` e tutti i subtask sono completati -> `is_paused = false` e ripristina lo stato da `previous_state`.
+*   **Da ERROR:**
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED** (Transizione da errore recuperabile a fallimento definitivo)
+        *   Se `is_failure == false` -> **ERROR** (Rimane in stato di errore recuperabile, ad esempio per aggiornare i dettagli dell'errore)
+    *   `retry()` -> (Transizione TBD, es. a `WORKING` o `PLAN_DEFINED` a seconda del contesto)
+*   **Da FAILED:**
+    *   (Stato terminale, nessuna transizione in uscita)
+*   **Da COMPLETED:**
+    *   `review_rejected()` -> **REPLANNED**
+    *   (Stato finale se review accettata, nessuna transizione in uscita)
+*   **Da REPLANNED:**
+    *   `define_plan(plan_content: String)` -> **PLAN_DEFINED** (Il task viene ri-pianificato)
+    *   `error(details: String, is_failure: bool)`:
+        *   Se `is_failure == true` -> **FAILED**
+        *   Se `is_failure == false` -> **ERROR**
 
-1.  **Generazione Subtask:** Un task genitore può generare subtask in qualsiasi stato valido (es. `Created`, `ObjectiveDefined`, `PlanDefined`, `Working`).
-2.  **Stato di Pausa:**
-    *   Al momento della generazione del primo subtask, il task genitore imposterà il suo flag `is_paused` a `true` nel suo `TaskStatus`.
-    *   Il `previous_state` nel `TaskStatus` del genitore verrà aggiornato per memorizzare il `current_state` in cui si trovava prima di generare i subtask. Questo permetterà al task di riprendere il suo lavoro dal punto corretto.
-    *   Il `current_state` del task genitore non cambierà (es. rimarrà `Working` se stava lavorando, o `PlanDefined` se stava pianificando). La condizione di "attesa subtask" sarà indicata dalla combinazione di `is_paused = true` e la presenza di subtask attivi.
-3.  **Monitoraggio e Attesa:** Il task genitore rimarrà in uno stato di "pausa" (`is_paused = true`) e attenderà il completamento *con successo* di tutti i subtask che ha generato.
-4.  **Propagazione del Fallimento:** Se *qualsiasi* subtask generato dal genitore fallisce (transita allo stato `Failed`), il task genitore transiterà anch'esso immediatamente allo stato `Failed`.
-5.  **Ripresa del Lavoro:** Quando tutti i subtask generati dal genitore completano con successo:
-    *   Il flag `is_paused` del task genitore verrà reimpostato a `false`.
-    *   Il `current_state` del task genitore verrà ripristinato al valore memorizzato in `previous_state`.
+---
 
-## 3. Modifiche alla Macchina a Stati (TaskState)
+#### 3. Stato Ortogonale: PAUSED e Gestione Subtask
 
-La proposta mira a *non* introdurre nuovi stati nell'enum `TaskState` per la gestione dei subtask. Gli stati `Delegating` e `Harvesting` verranno rimossi se presenti, o non verranno introdotti.
+*   **`is_paused: bool`**: Un flag booleano in `TaskStatus` che indica se il task è in pausa.
+*   **`previous_state: Option<TaskState>`**: In `TaskStatus`, memorizza lo stato del task prima che venisse messo in pausa per la gestione dei subtask.
 
-### 3.1. `TaskState` Attuale (o Previsto)
+**Logica di Gestione Subtask:**
+
+Quando un task genitore genera subtask, il suo `current_state` non cambia, ma `is_paused` viene impostato a `true`. Il `previous_state` viene usato per ricordare dove il task genitore dovrà riprendere una volta che tutti i subtask saranno completati con successo.
+
+*   **`spawn_subtask(subtask_uid: String)`**:
+    *   Aggiunge `subtask_uid` al campo `subtask_uids` del task genitore.
+    *   Se `is_paused` è `false`, imposta `previous_state = Some(current_state)` e `is_paused = true`.
+*   **`handle_subtask_completion(subtask_uid: String, success: bool)`**:
+    *   Rimuove `subtask_uid` da `subtask_uids`.
+    *   Se `success` è `false`, il task genitore transita a `FAILED`.
+    *   Se `success` è `true` e `subtask_uids` è ora vuoto (tutti i subtask completati):
+        *   Imposta `is_paused = false`.
+        *   Ripristina `current_state` da `previous_state`.
+
+---
+
+#### 4. API per la Gestione del Ciclo di Vita del Task
+
+Proposta di API di alto livello (es. metodi su un oggetto `Task` o un `TaskManager`):
+
+```rust
+// API per la gestione del task
+trait TaskLifecycle {
+    fn define_objective(&mut self, task_id: &str, objective_content: String) -> Result<(), TaskError>;
+    fn define_plan(&mut self, task_id: &str, plan_content: String) -> Result<(), TaskError>;
+    fn accept_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
+    fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
+    fn error(&mut self, task_id: &str, details: String, is_failure: bool) -> Result<(), TaskError>; // General error API
+    fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>;
+    fn review_rejected(&mut self, task_id: &str) -> Result<(), TaskError>; // Nuova API per la review
+
+    // API per la gestione dei subtask
+    fn spawn_subtask(&mut self, parent_task_id: &str, subtask_id: &str) -> Result<(), TaskError>;
+    fn handle_subtask_completion(&mut self, parent_task_id: &str, subtask_id: &str, success: bool) -> Result<(), TaskError>;
+
+    // Metodi di query per lo stato
+    fn get_task_state(&self, task_id: &str) -> Result<TaskState, TaskError>;
+    fn is_task_paused(&self, task_id: &str) -> Result<bool, TaskError>;
+    fn get_subtask_uids(&self, task_id: &str) -> Result<Vec<String>, TaskError>;
+}
+```
+
+---
+
+#### 5. Strutture Dati Modificate
+
+##### `TaskState` (Aggiornata)
 
 ```rust
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -50,69 +133,11 @@ pub enum TaskState {
     Error,
     Failed,
     Completed,
-    // `Delegating` e `Harvesting` sono stati rimossi/non introdotti
-    // `NeedsReview` è stato rimosso/non introdotto
-    Replanned, // Mantenuto per la possibilità di ri-pianificare dopo un review negativo
+    Replanned,
 }
 ```
 
-### 3.2. Rappresentazione della Macchina a Stati
-
-La macchina a stati opererà come segue, con `is_paused` che agisce come un flag ortogonale:
-
-```
-[Created]
-    |
-    V
-[ObjectiveDefined]
-    |
-    V
-[PlanDefined]
-    |
-    V
-[Working] <------------------------------------------------------------------+
-    |                                                                      |
-    | (Genera Subtask)                                                     |
-    |   - Imposta `is_paused = true`                                       |
-    |   - Salva `current_state` in `previous_state`                        |
-    |   - Aggiunge UID subtask a `subtask_uids`                             |
-    |                                                                      |
-    +----------------------------------------------------------------------+
-    |                                                                      |
-    | (Subtask Fallito)                                                    |
-    |   - Task Genitore -> [Failed]                                        |
-    |                                                                      |
-    +----------------------------------------------------------------------+
-    |                                                                      |
-    | (Tutti i Subtask Completati con Successo)                            |
-    |   - Imposta `is_paused = false`                                      |
-    |   - Ripristina `current_state` da `previous_state` (es. a [Working])|
-    |                                                                      |
-    +--------------------------------------------------------------------->|
-    |
-    V
-[Completed]
-    ^
-    | (Review Positivo)
-    |
-[Replanned] <--------------------------------------------------------------+
-    ^                                                                      |
-    | (Review Negativo)                                                    |
-    |                                                                      |
-[Failed] <-----------------------------------------------------------------+
-    ^
-    | (Errore Interno)
-    |
-[Error]
-```
-
-**Nota:** Un task può essere in `Working` con `is_paused = true` se sta aspettando subtask. Se `is_paused = false`, sta attivamente eseguendo il proprio lavoro.
-
-## 4. Modifiche all'API (Struct Task e Funzioni Correlate)
-
-### 4.1. `TaskConfig` (Modificata)
-
-Il campo `task_type` verrà rimosso.
+##### `TaskConfig` (Semplificata)
 
 ```rust
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -126,9 +151,7 @@ pub struct TaskConfig {
 }
 ```
 
-### 4.2. `TaskStatus` (Invariata, ma con uso specifico di `is_paused`)
-
-La struttura rimane invariata, ma il flag `is_paused` assumerà un ruolo chiave nella gestione dei subtask.
+##### `TaskStatus` (Aggiornata per `is_paused` e `previous_state`)
 
 ```rust
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -137,16 +160,14 @@ pub struct TaskStatus {
     pub last_updated_at: DateTime<Utc>,
     pub progress: Option<String>,
     pub parent_content_hashes: HashMap<String, String>,
-    pub is_paused: bool, // Utilizzato per indicare l'attesa dei subtask
+    pub is_paused: bool, // Indica se il task è in pausa (es. in attesa di subtask)
     pub error_details: Option<String>,
-    pub previous_state: Option<TaskState>, // Utilizzato per ripristinare lo stato dopo la pausa
+    pub previous_state: Option<TaskState>, // Stato prima della pausa, per ripristino
     pub retry_count: u8,
 }
 ```
 
-### 4.3. `Task` Struct (Modificata)
-
-Verrà aggiunto un campo per tenere traccia degli UID dei subtask.
+##### `Task` Struct (Aggiornata con `subtask_uids`)
 
 ```rust
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -162,32 +183,20 @@ pub struct Task {
 }
 ```
 
-### 4.4. Funzioni Correlate (Esempi di Modifiche/Nuove Funzioni)
+---
 
-*   **`Project::create_task`:**
-    *   Dovrà inizializzare `subtask_uids` come un `Vec` vuoto.
-    *   Dovrà inizializzare `is_paused` a `false`.
+#### 6. Considerazioni Aggiuntive e Best Practices
 
-*   **`Task::spawn_subtask(self, subtask_uid: String) -> Result<(), ProjectError>` (Nuova Funzione/Logica):**
-    *   Aggiunge `subtask_uid` a `self.subtask_uids`.
-    *   Se `self.status.is_paused` è `false`, imposta `self.status.previous_state = Some(self.status.current_state)` e `self.status.is_paused = true`.
-    *   Persiste le modifiche allo stato del task genitore.
+*   **Versioning con Git:** L'approccio "tutto su filesystem" del progetto si presta perfettamente all'uso di Git per il versioning di obiettivi, piani e altri artefatti del task. Ogni modifica significativa (es. definizione obiettivo, accettazione piano, completamento sub-task) dovrebbe idealmente corrispondere a un commit strategico. Questo fornisce una tracciabilità granulare e un audit trail robusto.
+    *   **Strategia di Commit:** Definire una strategia per la frequenza e il contenuto dei messaggi di commit (es. commit automatici per transizioni di stato, commit manuali per modifiche sostanziali a objective/plan).
+*   **UID Immodificabile:** L'UID del task rimane immutabile.
+*   **Nome Modificabile:** Il nome del task è un alias per l'utente e può essere modificato liberamente.
+*   **Gestione degli Errori:** Ogni transizione o operazione dovrebbe avere una gestione robusta degli errori.
+*   **Audit Trail:** Ogni transizione di stato e azione significativa dovrebbe essere loggata.
+*   **Interazione Agenti:** Chiarire quali transizioni sono innescate da azioni utente e quali da agenti automatizzati.
+*   **Progress Tracking:** Implementare un meccanismo di tracciamento del progresso per `WORKING` (anche quando `is_paused = true`).
+*   **Contatore Retry:** Per lo stato `ERROR`, implementare un contatore di tentativi prima di transitare a `FAILED`.
 
-*   **`Task::handle_subtask_completion(self, completed_subtask_uid: String, success: bool) -> Result<(), ProjectError>` (Nuova Funzione/Logica):**
-    *   Rimuove `completed_subtask_uid` da `self.subtask_uids`.
-    *   Se `success` è `false`:
-        *   Imposta `self.status.current_state = TaskState::Failed`.
-        *   Imposta `self.status.is_paused = false`.
-        *   Persiste le modifiche.
-        *   Notifica il fallimento (es. tramite un evento persistente).
-    *   Se `success` è `true` e `self.subtask_uids` è ora vuoto (tutti i subtask completati):
-        *   Imposta `self.status.is_paused = false`.
-        *   Ripristina `self.status.current_state` da `self.status.previous_state`.
-        *   Persiste le modifiche.
-        *   Notifica il completamento dei subtask.
-    *   Se `success` è `true` ma `self.subtask_uids` non è vuoto, il task genitore rimane in pausa in attesa degli altri subtask.
+---
 
-*   **`Task::load`:**
-    *   Dovrà caricare il nuovo campo `subtask_uids` dal file `config.json` o da un nuovo file dedicato (es. `subtasks.json`). Per semplicità iniziale, potremmo includerlo in `config.json` o `status.json`.
-
-Questo documento fornisce una base solida per procedere con le modifiche. Attendo il tuo feedback.
+Questo design fornisce una base completa e coerente per la gestione del ciclo di vita dei task, incorporando le ultime discussioni e best practice, con una logica semplificata per i subtask.

@@ -1,6 +1,8 @@
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use std::path::{Path, PathBuf};
+use crate::utils::{read_json_file, write_json_file, generate_uid};
+use std::fs;
 
 // 1. MESSAGE: L'unità atomica di memoria.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -48,36 +50,94 @@ pub enum MemoryError {
     Json(#[from] serde_json::Error),
     #[error("Message not found: {0}")]
     MessageNotFound(String),
+    #[error("UID generation error: {0}")]
+    UidGenerationError(String),
 }
 
 impl Memory {
+    /// Carica una memoria esistente da una directory.
     pub fn load(path: &Path) -> Result<Self, MemoryError> {
-        unimplemented!();
+        if !path.exists() {
+            return Err(MemoryError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, format!("Memory path not found: {}", path.display()))));
+        }
+        let mut messages = Vec::new();
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            let entry_path = entry.path();
+            if entry_path.is_file() && entry_path.extension().map_or(false, |ext| ext == "json") {
+                let message: Message = read_json_file(&entry_path)?;
+                messages.push(message);
+            }
+        }
+        messages.sort_by_key(|m| m.timestamp);
+        Ok(Self { root_path: path.to_path_buf(), messages })
     }
 
+    /// Crea una nuova memoria (e la sua directory).
     pub fn new(path: &Path) -> Result<Self, MemoryError> {
-        unimplemented!();
+        fs::create_dir_all(path)?;
+        Ok(Self { root_path: path.to_path_buf(), messages: Vec::new() })
     }
 
+    /// Aggiunge un nuovo messaggio e lo persiste su file.
     pub fn add_message(&mut self, author_agent_uid: String, content: MessageContent) -> Result<&Message, MemoryError> {
-        unimplemented!();
+        let uid = generate_uid("msg").map_err(|e| MemoryError::UidGenerationError(e.to_string()))?;
+        let now = Utc::now();
+        let message = Message {
+            uid: uid.clone(),
+            timestamp: now,
+            author_agent_uid,
+            content,
+            status: MessageStatus::Enabled,
+        };
+        let message_path = self.root_path.join(format!("{}.json", uid));
+        write_json_file(&message_path, &message)?;
+        self.messages.push(message);
+        self.messages.sort_by_key(|m| m.timestamp);
+        Ok(self.messages.last().unwrap())
     }
 
+    /// Elimina un messaggio in modo permanente.
     pub fn delete_message(&mut self, message_uid: &str) -> Result<(), MemoryError> {
-        unimplemented!();
+        let initial_len = self.messages.len();
+        self.messages.retain(|m| m.uid != message_uid);
+        if self.messages.len() == initial_len {
+            return Err(MemoryError::MessageNotFound(message_uid.to_string()));
+        }
+        let message_path = self.root_path.join(format!("{}.json", message_uid));
+        fs::remove_file(&message_path)?;
+        Ok(())
     }
 
+    /// Abilita un messaggio.
     pub fn enable_message(&mut self, message_uid: &str) -> Result<(), MemoryError> {
-        unimplemented!();
+        if let Some(message) = self.messages.iter_mut().find(|m| m.uid == message_uid) {
+            message.status = MessageStatus::Enabled;
+            let message_path = self.root_path.join(format!("{}.json", message_uid));
+            write_json_file(&message_path, message)?;
+            Ok(())
+        } else {
+            Err(MemoryError::MessageNotFound(message_uid.to_string()))
+        }
     }
 
+    /// Disabilita un messaggio.
     pub fn disable_message(&mut self, message_uid: &str) -> Result<(), MemoryError> {
-        unimplemented!();
+        if let Some(message) = self.messages.iter_mut().find(|m| m.uid == message_uid) {
+            message.status = MessageStatus::Disabled;
+            let message_path = self.root_path.join(format!("{}.json", message_uid));
+            write_json_file(&message_path, message)?;
+            Ok(())
+        } else {
+            Err(MemoryError::MessageNotFound(message_uid.to_string()))
+        }
     }
 
+    /// Restituisce tutti i messaggi (abilitati e non).
     pub fn get_all_messages(&self) -> &Vec<Message> { &self.messages }
 
+    /// Restituisce solo i messaggi abilitati, pronti per essere usati come contesto.
     pub fn get_context(&self) -> Vec<&Message> {
-        unimplemented!();
+        self.messages.iter().filter(|m| m.status == MessageStatus::Enabled).collect()
     }
 }

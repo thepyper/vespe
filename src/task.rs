@@ -411,3 +411,90 @@ impl Task {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::project::Project;
+    use tempfile::{tempdir, TempDir};
+
+    // Helper to create a dummy project and task, returns the TempDir to keep it in scope
+    fn setup_test_task(task_state: TaskState) -> (Project, Task, TempDir) {
+        let dir = tempdir().unwrap();
+        let project = Project::initialize(dir.path()).unwrap();
+        let mut task = project.create_task(None, "Test Task".to_string(), "user-1".to_string(), "".to_string()).unwrap();
+
+        // Manually set the state for the test
+        task.status.current_state = task_state;
+        write_json_file(&task.root_path.join("status.json"), &task.status).unwrap();
+
+        (project, task, dir)
+    }
+
+    #[test]
+    fn test_spawn_subtask_first_time() {
+        let (_project, mut task, _dir) = setup_test_task(TaskState::Working);
+
+        assert!(!task.status.is_paused);
+        assert!(task.status.previous_state.is_none());
+
+        task.spawn_subtask("sub-1".to_string()).unwrap();
+
+        assert!(task.status.is_paused);
+        assert_eq!(task.status.previous_state, Some(TaskState::Working));
+        assert_eq!(task.status.subtask_uids, vec!["sub-1".to_string()]);
+        // The current state should remain what it was
+        assert_eq!(task.status.current_state, TaskState::Working);
+    }
+
+    #[test]
+    fn test_spawn_another_subtask() {
+        let (_project, mut task, _dir) = setup_test_task(TaskState::Working);
+        task.spawn_subtask("sub-1".to_string()).unwrap();
+
+        // Spawn another one
+        task.spawn_subtask("sub-2".to_string()).unwrap();
+
+        assert!(task.status.is_paused); // Should still be paused
+        assert_eq!(task.status.previous_state, Some(TaskState::Working)); // Should not have changed
+        assert_eq!(task.status.subtask_uids, vec!["sub-1".to_string(), "sub-2".to_string()]);
+    }
+
+    #[test]
+    fn test_on_subtask_completed_not_last() {
+        let (_project, mut task, _dir) = setup_test_task(TaskState::Working);
+        task.spawn_subtask("sub-1".to_string()).unwrap();
+        task.spawn_subtask("sub-2".to_string()).unwrap();
+
+        task.on_subtask_completed("sub-1").unwrap();
+
+        assert!(task.status.is_paused); // Should still be paused
+        assert_eq!(task.status.current_state, TaskState::Working); // State should not be restored yet
+        assert_eq!(task.status.subtask_uids, vec!["sub-2".to_string()]);
+    }
+
+    #[test]
+    fn test_on_subtask_completed_last_one() {
+        let (_project, mut task, _dir) = setup_test_task(TaskState::Working);
+        task.spawn_subtask("sub-1".to_string()).unwrap();
+
+        task.on_subtask_completed("sub-1").unwrap();
+
+        assert!(!task.status.is_paused); // Should be unpaused
+        assert!(task.status.previous_state.is_none()); // Previous state should be cleared
+        assert_eq!(task.status.current_state, TaskState::Working); // State should be restored
+        assert!(task.status.subtask_uids.is_empty());
+    }
+
+    #[test]
+    fn test_on_subtask_failed() {
+        let (_project, mut task, _dir) = setup_test_task(TaskState::Working);
+        task.spawn_subtask("sub-1".to_string()).unwrap();
+
+        task.on_subtask_failed("sub-1", "It exploded".to_string()).unwrap();
+
+        assert_eq!(task.status.current_state, TaskState::Failed);
+        assert!(task.status.error_details.is_some());
+        assert!(task.status.error_details.unwrap().contains("Subtask sub-1 failed: It exploded"));
+    }
+}

@@ -286,7 +286,6 @@ impl Project {
             created_by_agent_uid: created_by_agent_uid.clone(),
             created_at: now,
             parent_uid,
-            task_type: None,
         };
         write_json_file(&task_path.join("config.json"), &config)?;
 
@@ -345,10 +344,9 @@ impl Project {
         &self,
         task_uid: &str,
         plan_content: String,
-        task_type: crate::task::TaskType,
     ) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;
-        task.define_plan(plan_content, task_type)?;
+        task.define_plan(plan_content)?;
         Ok(())
     }
 
@@ -364,11 +362,7 @@ impl Project {
         Ok(())
     }
 
-    pub fn add_subtask(&self, parent_task_uid: &str, subtask_id: String, is_final: bool) -> Result<(), ProjectError> {
-        let mut parent_task = self.load_task(parent_task_uid)?;
-        parent_task.add_subtask(subtask_id, is_final)?;
-        Ok(())
-    }
+
 
     pub fn error(&self, task_uid: &str, details: String, is_failure: bool) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;

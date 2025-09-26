@@ -16,8 +16,6 @@ pub enum TaskState {
     Created,
     ObjectiveDefined,
     PlanDefined,
-    Delegating,
-    Harvesting,
     Working,
     Error,
     Failed,
@@ -29,20 +27,12 @@ impl TaskState {
         match self {
             TaskState::Created => matches!(next_state, TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
             TaskState::ObjectiveDefined => matches!(next_state, TaskState::ObjectiveDefined | TaskState::PlanDefined | TaskState::Error | TaskState::Failed),
-            TaskState::PlanDefined => matches!(next_state, TaskState::PlanDefined | TaskState::Working | TaskState::Delegating | TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
-            TaskState::Delegating => matches!(next_state, TaskState::Delegating | TaskState::Harvesting | TaskState::Error | TaskState::Failed),
-            TaskState::Harvesting => matches!(next_state, TaskState::Completed | TaskState::Error | TaskState::Failed),
+            TaskState::PlanDefined => matches!(next_state, TaskState::PlanDefined | TaskState::Working | TaskState::ObjectiveDefined | TaskState::Error | TaskState::Failed),
             TaskState::Working => matches!(next_state, TaskState::Completed | TaskState::Error | TaskState::Failed),
             TaskState::Error => matches!(next_state, TaskState::Failed | TaskState::Error), // From Error, can transition to Failed or stay in Error
             TaskState::Failed | TaskState::Completed => false, // Final states, no transitions out
         }
     }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum TaskType {
-    Monolithic,
-    Subdivided,
 }
 
 // Corrisponde a config.json
@@ -53,7 +43,6 @@ pub struct TaskConfig {
     pub created_by_agent_uid: String, // Riferimento all'UID dell'Agente
     pub created_at: DateTime<Utc>,
     pub parent_uid: Option<String>, // UID del task genitore, se è un subtask
-    pub task_type: Option<TaskType>,
 }
 
 // Corrisponde a status.json
@@ -85,7 +74,6 @@ pub struct Task {
     pub objective: String, // Contenuto di objective.md
     pub plan: Option<String>, // Contenuto di plan.md
     pub dependencies: TaskDependencies,
-    pub subtasks: HashMap<String, TaskState>,
 }
 
 impl Task {
@@ -103,7 +91,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn define_plan(&mut self, plan_content: String, task_type: TaskType) -> Result<(), ProjectError> {
+    pub fn define_plan(&mut self, plan_content: String) -> Result<(), ProjectError> {
         if !self.status.current_state.can_transition_to(TaskState::PlanDefined) {
             return Err(ProjectError::InvalidStateTransition(
                 self.status.current_state,
@@ -114,30 +102,20 @@ impl Task {
         write_file_content(&self.root_path.join("plan.md"), &plan_content)?;
         self.plan = Some(plan_content);
 
-        self.config.task_type = Some(task_type);
-        write_json_file(&self.root_path.join("config.json"), &self.config)?;
-
         update_task_status(&self.root_path, TaskState::PlanDefined, &mut self.status)?;
 
         Ok(())
     }
 
     pub fn accept_plan(&mut self) -> Result<(), ProjectError> {
-        if !self.status.current_state.can_transition_to(TaskState::Working) &&
-           !self.status.current_state.can_transition_to(TaskState::Delegating) {
+        if !self.status.current_state.can_transition_to(TaskState::Working) {
             return Err(ProjectError::InvalidStateTransition(
                 self.status.current_state,
-                TaskState::Working, // Or Delegating, depending on task_type
+                TaskState::Working,
             ));
         }
 
-        let next_state = match self.config.task_type {
-            Some(TaskType::Monolithic) => TaskState::Working,
-            Some(TaskType::Subdivided) => TaskState::Delegating,
-            None => return Err(ProjectError::InvalidProjectConfig("TaskType not defined for task when accepting plan.".to_string())),
-        };
-
-        update_task_status(&self.root_path, next_state, &mut self.status)?;
+        update_task_status(&self.root_path, TaskState::Working, &mut self.status)?;
 
         Ok(())
     }
@@ -155,26 +133,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn add_subtask(&mut self, subtask_id: String, is_final: bool) -> Result<(), ProjectError> {
-        if !self.status.current_state.can_transition_to(TaskState::Delegating) &&
-           !(self.status.current_state == TaskState::Delegating && is_final) { // Allow transition to Harvesting from Delegating
-            return Err(ProjectError::InvalidStateTransition(
-                self.status.current_state,
-                TaskState::Delegating, // Or Harvesting
-            ));
-        }
 
-        self.subtasks.insert(subtask_id, TaskState::Created); // Add subtask with Created state
-
-        if is_final {
-            update_task_status(&self.root_path, TaskState::Harvesting, &mut self.status)?;
-        } else {
-            // If not final, stay in Delegating state, but ensure status is saved
-            write_json_file(&self.root_path.join("status.json"), &self.status)?;
-        }
-
-        Ok(())
-    }
 
     pub fn error(&mut self, details: String, is_failure: bool) -> Result<(), ProjectError> {
         let next_state = if is_failure { TaskState::Failed } else { TaskState::Error };
@@ -419,7 +378,6 @@ impl Task {
             objective,
             plan,
             dependencies,
-            subtasks: HashMap::new(),
         })
     }
 }

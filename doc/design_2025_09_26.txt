@@ -25,36 +25,35 @@ Le transizioni sono definite da azioni specifiche. La gestione dei subtask è or
 
 *   **Da CREATED:**
     *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED**
-    *   `error(details: String, is_failure: bool)`:
-        *   Se `is_failure == true` -> **FAILED**
-        *   Se `is_failure == false` -> **ERROR**
+    *   `error(details: String)` -> **ERROR**
+    *   `failure(details: String)` -> **FAILED**
 *   **Da OBJECTIVE_DEFINED:**
     *   `define_objective(objective_content: String)` -> **OBJECTIVE_DEFINED** (Aggiorna l'obiettivo esistente)
     *   `define_plan(plan_content: String)` -> **PLAN_DEFINED**
-    *   `error(details: String, is_failure: bool)`:
-        *   Se `is_failure == true` -> **FAILED**
-        *   Se `is_failure == false` -> **ERROR**
+    *   `error(details: String)` -> **ERROR**
+    *   `failure(details: String)` -> **FAILED**
 *   **Da PLAN_DEFINED:**
     *   `define_plan(plan_content: String)` -> **PLAN_DEFINED** (Aggiorna il piano esistente)
     *   `accept_plan()` -> **WORKING**
     *   `reject_plan()` -> **OBJECTIVE_DEFINED**
-    *   `error(details: String, is_failure: bool)`:
-        *   Se `is_failure == true` -> **FAILED**
-        *   Se `is_failure == false` -> **ERROR**
+    *   `error(details: String)` -> **ERROR**
+    *   `failure(details: String)` -> **FAILED**
 *   **Da WORKING:**
     *   `work_completed()` -> **COMPLETED**
-    *   `error(details: String, is_failure: bool)`:
-        *   Se `is_failure == true` -> **FAILED**
-        *   Se `is_failure == false` -> **ERROR**
-    *   **Gestione Subtask (Ortogonale):**
+    *   `error(details: String)` -> **ERROR**
+    *   `failure(details: String)` -> **FAILED**
+    *   **Gestione Subtask (Ortogonale - Reazione a eventi interni):**
         *   `spawn_subtask(subtask_uid: String)`: Il task genitore rimane in `WORKING`, ma imposta `is_paused = true` e salva il suo stato corrente in `previous_state`. Aggiunge `subtask_uid` a `subtask_uids`.
-        *   `handle_subtask_completion(subtask_uid: String, success: bool)`:
-            *   Se `success == false` -> **FAILED** (il task genitore fallisce).
-            *   Se `success == true` e tutti i subtask sono completati -> `is_paused = false` e ripristina lo stato da `previous_state`.
+        *   **Reazione a `subtask_completed(subtask_uid: String)` (interna):**
+            *   Il task genitore rimuove `subtask_uid` da `subtask_uids`.
+            *   Se `subtask_uids` è ora vuoto (tutti i subtask completati):
+                *   Imposta `is_paused = false`.
+                *   Ripristina `current_state` da `previous_state`.
+        *   **Reazione a `subtask_failed(subtask_uid: String)` (interna):**
+            *   Il task genitore transita immediatamente a **FAILED**.
 *   **Da ERROR:**
-    *   `error(details: String, is_failure: bool)`:
-        *   Se `is_failure == true` -> **FAILED** (Transizione da errore recuperabile a fallimento definitivo)
-        *   Se `is_failure == false` -> **ERROR** (Rimane in stato di errore recuperabile, ad esempio per aggiornare i dettagli dell'errore)
+    *   `error(details: String)` -> **ERROR** (Rimane in stato di errore recuperabile, ad esempio per aggiornare i dettagli dell'errore)
+    *   `failure(details: String)` -> **FAILED** (Transizione da errore recuperabile a fallimento definitivo)
     *   `retry()` -> (Transizione TBD, es. a `WORKING` o `PLAN_DEFINED` a seconda del contesto)
 *   **Da FAILED:**
     *   (Stato terminale, nessuna transizione in uscita)
@@ -75,12 +74,13 @@ Quando un task genitore genera subtask, il suo `current_state` non cambia, ma `i
 *   **`spawn_subtask(subtask_uid: String)`**:
     *   Aggiunge `subtask_uid` al campo `subtask_uids` del task genitore.
     *   Se `is_paused` è `false`, imposta `previous_state = Some(current_state)` e `is_paused = true`.
-*   **`handle_subtask_completion(subtask_uid: String, success: bool)`**:
+*   **Reazione interna a `subtask_completed(subtask_uid: String)`**:
     *   Rimuove `subtask_uid` da `subtask_uids`.
-    *   Se `success` è `false`, il task genitore transita a `FAILED`.
-    *   Se `success` è `true` e `subtask_uids` è ora vuoto (tutti i subtask completati):
+    *   Se `subtask_uids` è ora vuoto (tutti i subtask completati):
         *   Imposta `is_paused = false`.
         *   Ripristina `current_state` da `previous_state`.
+*   **Reazione interna a `subtask_failed(subtask_uid: String)`**:
+    *   Il task genitore transita a `FAILED`.
 
 ---
 
@@ -95,12 +95,12 @@ trait TaskLifecycle {
     fn define_plan(&mut self, task_id: &str, plan_content: String) -> Result<(), TaskError>;
     fn accept_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
     fn reject_plan(&mut self, task_id: &str) -> Result<(), TaskError>;
-    fn error(&mut self, task_id: &str, details: String, is_failure: bool) -> Result<(), TaskError>; // General error API
+    fn error(&mut self, task_id: &str, details: String) -> Result<(), TaskError>; // Per errori recuperabili
+    fn failure(&mut self, task_id: &str, details: String) -> Result<(), TaskError>; // Per fallimenti definitivi
     fn work_completed(&mut self, task_id: &str) -> Result<(), TaskError>;
 
-    // API per la gestione dei subtask
+    // API per la gestione dei subtask (chiamate dal task genitore)
     fn spawn_subtask(&mut self, parent_task_id: &str, subtask_id: &str) -> Result<(), TaskError>;
-    fn handle_subtask_completion(&mut self, parent_task_id: &str, subtask_id: &str, success: bool) -> Result<(), TaskError>;
 
     // Metodi di query per lo stato
     fn get_task_state(&self, task_id: &str) -> Result<TaskState, TaskError>;

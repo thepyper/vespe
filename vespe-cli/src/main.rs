@@ -4,11 +4,11 @@ use clap::Parser;
 use cli::commands::{Cli, Commands, ProjectSubcommand, TaskSubcommand, ToolSubcommand, AgentSubcommand};
  // Import the api module
 use vespe::project::Project;
-use vespe::TaskState;
+
 use vespe::{AIConfig, HumanConfig, LLMProviderConfig};
 use std::fs;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
-use tracing::{info, debug, error}; // New import
+
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

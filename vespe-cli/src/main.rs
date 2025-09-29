@@ -188,6 +188,14 @@ async fn main() -> anyhow::Result<()> {
             },            TaskSubcommand::Chat(chat_command) => {
                 println!("Task Chat command called: {:?}", chat_command);
             }
+            TaskSubcommand::Tick { identifier } => {
+                match project_root.tick_task(identifier).await {
+                    Ok(result) => {
+                        println!("Task {} ticked successfully. Result: {:?}", identifier, result);
+                    }
+                    Err(e) => eprintln!("Error ticking task {}: {}", identifier, e),
+                }
+            }
         },
         Commands::Tool(tool_command) => match &tool_command.command {
             ToolSubcommand::Create { name, description, schema } => {

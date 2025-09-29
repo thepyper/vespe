@@ -57,6 +57,7 @@ pub enum ProjectError {
 }
 
 // Rappresenta il risultato di un ciclo di `tick`
+#[derive(Debug)]
 pub enum AgentTickResult {
     MadeProgress { thought: String },
     TaskCompleted,

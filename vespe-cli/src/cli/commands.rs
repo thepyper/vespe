@@ -135,6 +135,11 @@ pub enum TaskSubcommand {
     },
     /// Chat with a task-specific agent
     Chat(ChatCommand),
+    /// Execute a single tick for a task
+    Tick {
+        /// The UID or name of the task
+        identifier: String,
+    },
 }
 
 #[derive(Debug, Parser)]

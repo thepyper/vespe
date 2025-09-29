@@ -172,7 +172,7 @@ impl Agent {
 
     /// Retrieves the AgentProtocol associated with this agent from the registry.
     pub async fn protocol(&self) -> Result<Arc<Box<dyn AgentProtocol + Send + Sync>>, ProjectError> {
-        let registry = AGENT_PROTOCOL_REGISTRY.lock().await;
+        let registry = &AGENT_PROTOCOL_REGISTRY;
         let protocol_name = &self.metadata.protocol_name;
 
         registry.get(protocol_name)

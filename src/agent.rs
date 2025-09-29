@@ -6,6 +6,13 @@ use crate::memory::{Memory, Message};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
 
+// Default protocol name for agents
+const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";
+
+fn default_protocol_name() -> String {
+    DEFAULT_AGENT_PROTOCOL_NAME.to_string()
+}
+
 // 1. METADATA COMUNI: Dati condivisi da tutti gli agenti.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentMetadata {
@@ -13,6 +20,8 @@ pub struct AgentMetadata {
     pub name: String,
     pub created_at: DateTime<Utc>,
     pub parent_uid: Option<String>,
+    #[serde(default = "default_protocol_name")]
+    pub protocol_name: String,
 }
 
 // 2. DETTAGLI SPECIFICI: L'enum che modella la differenza chiave.
@@ -62,6 +71,7 @@ impl Agent {
         name: String,
         config: AIConfig,
         system_prompt: Option<String>,
+        protocol_name: Option<String>,
     ) -> Result<Agent, ProjectError> {
         let uid = generate_uid("agt")?;
         let agents_base_path = project_root.join(".vespe").join("agents");
@@ -81,6 +91,7 @@ impl Agent {
             name: name.clone(),
             created_at: now,
             parent_uid: None,
+            protocol_name: protocol_name.unwrap_or_else(default_protocol_name),
         };
         write_json_file(&agent_path.join("metadata.json"), &metadata)?;
 
@@ -97,6 +108,7 @@ impl Agent {
         project_root: &Path,
         name: String,
         config: HumanConfig,
+        protocol_name: Option<String>,
     ) -> Result<Agent, ProjectError> {
         let uid = generate_uid("usr")?;
         let agents_base_path = project_root.join(".vespe").join("agents");
@@ -112,6 +124,7 @@ impl Agent {
             name: name.clone(),
             created_at: now,
             parent_uid: None,
+            protocol_name: protocol_name.unwrap_or_else(default_protocol_name),
         };
         write_json_file(&agent_path.join("metadata.json"), &metadata)?;
 

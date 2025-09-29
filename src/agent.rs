@@ -3,6 +3,8 @@ use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 
 use crate::memory::{Memory, Message};
+use crate::error::ProjectError;
+use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file};
 
 // 1. METADATA COMUNI: Dati condivisi da tutti gli agenti.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -54,9 +56,87 @@ pub struct Agent {
 }
 
 impl Agent {
-    // Placeholder for methods that will be implemented later
-    // pub fn create_ai(name: String, config: AIConfig, agents_base_path: &Path) -> Result<Self, ProjectError> { unimplemented!() }
-    // pub fn create_human(name: String, config: HumanConfig, agents_base_path: &Path) -> Result<Self, ProjectError> { unimplemented!() }
-    // pub fn load(project_root: &Path, uid: &str) -> Result<Self, ProjectError> { unimplemented!() }
+    pub fn create_ai(
+        project_root: &Path,
+        name: String,
+        config: AIConfig,
+    ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("agt")?;
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::AI(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        Agent::load(project_root, &uid)
+    }
+
+    pub fn create_human(
+        project_root: &Path,
+        name: String,
+        config: HumanConfig,
+    ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("usr")?;
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::Human(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        Agent::load(project_root, &uid)
+    }
+
+    pub fn load(project_root: &Path, agent_uid: &str) -> Result<Self, ProjectError> {
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, agent_uid)?;
+
+        if !agent_path.exists() {
+            return Err(ProjectError::AgentNotFound(agent_uid.to_string()));
+        }
+
+        let metadata: AgentMetadata = read_json_file(&agent_path.join("metadata.json"))?;
+        let details: AgentDetails = read_json_file(&agent_path.join("details.json"))?;
+        let state: AgentState = read_json_file(&agent_path.join("state.json"))?;
+        let memory = Memory::load(&agent_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
+
+        Ok(Agent {
+            metadata,
+            details,
+            state,
+            memory,
+        })
+    }
     // pub fn save_state(&self) -> Result<(), ProjectError> { unimplemented!() }
 }

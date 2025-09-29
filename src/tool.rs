@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
 use serde::{Serialize, Deserialize};
+use serde_json::{Value, json};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, write_json_file, write_file_content};
+use async_trait::async_trait;
 
 // Corresponds to config.json for a Tool
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -10,7 +12,6 @@ pub struct ToolConfig {
     pub name: String,
     pub description: String,
     pub schema: serde_json::Value, // JSON Schema for inputs/outputs
-    pub implementation_details: serde_json::Value, // Details on how to execute (type, path, entrypoint, args)
 }
 
 // Represents a Tool loaded in memory
@@ -27,7 +28,6 @@ impl Tool {
         name: String,
         description: String,
         schema: serde_json::Value,
-        implementation_details: serde_json::Value,
         tools_base_path: &Path,
     ) -> Result<Self, ProjectError> {
         let uid = generate_uid("tool")?;
@@ -40,7 +40,6 @@ impl Tool {
             name: name.clone(),
             description: description.clone(),
             schema,
-            implementation_details,
         };
         write_json_file(&tool_path.join("config.json"), &config)?;
         write_file_content(&tool_path.join("description.md"), &description)?;
@@ -69,5 +68,21 @@ impl Tool {
             root_path: tool_path.into(),
             config,
         })
+    }
+
+    /// Executes the tool with the given inputs.
+    /// This is a placeholder implementation.
+    pub async fn execute(&self, inputs: Value) -> Result<Value, ProjectError> {
+        match self.config.name.as_str() {
+            "dummy_tool_1" => {
+                println!("Executing dummy_tool_1 with inputs: {:?}", inputs);
+                Ok(json!({"status": "success", "output": "Dummy tool 1 executed successfully."}))
+            },
+            "dummy_tool_2" => {
+                println!("Executing dummy_tool_2 with inputs: {:?}", inputs);
+                Ok(json!({"status": "success", "output": "Dummy tool 2 executed successfully."}))
+            },
+            _ => Err(ProjectError::ToolExecutionError(format!("Tool '{}' not implemented yet.", self.config.name))),
+        }
     }
 }

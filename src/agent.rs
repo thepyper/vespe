@@ -192,6 +192,7 @@ impl Agent {
     pub async fn call_llm(
         &self,
         task_context: Vec<Message>,
+        task_data: serde_json::Value,
     ) -> Result<Vec<Message>, ProjectError> {
         let protocol = self.protocol().await?;
 
@@ -225,6 +226,10 @@ impl Agent {
 
         // Prepare data for Handlebars template
         let mut handlebars_data = json!({});
+        // Merge task_data into handlebars_data
+        for (key, value) in task_data.as_object().unwrap_or(&serde_json::Map::new()).iter() {
+            handlebars_data[key] = value.clone();
+        }
         handlebars_data["task_context"] = json!(task_context_formatted);
         handlebars_data["agent_context"] = json!(agent_context_formatted);
         handlebars_data["available_tools"] = json!(formatted_available_tools);

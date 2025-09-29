@@ -491,6 +491,18 @@ impl Project {
         Ok(message.clone())
     }
 
+    /// Adds a message to a task's memory.
+    pub fn add_message_to_task_memory(
+        &self,
+        task_uid: &str,
+        author_uid: &str,
+        content: MessageContent,
+    ) -> Result<Message, ProjectError> {
+        let mut task = self.load_task(task_uid)?;
+        let message = task.memory.add_message(author_uid.to_string(), content).map_err(|e| ProjectError::Memory(e))?;
+        Ok(message.clone())
+    }
+
     /// Executes a single reasoning cycle for a given task, using the assigned agent.
     pub fn tick_task(
         &self,

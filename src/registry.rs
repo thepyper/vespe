@@ -9,14 +9,35 @@ use crate::error::ProjectError;
 
 /// Un trait generico per un registro che può memorizzare implementazioni di un tipo `T`.
 pub trait Registry<T> {
+    /// Restituisce un riferimento immutabile alla mappa interna del registro.
+    fn get_map(&self) -> &HashMap<String, T>;
+    /// Restituisce un riferimento mutabile alla mappa interna del registro.
+    fn get_map_mut(&mut self) -> &mut HashMap<String, T>;
+
     /// Registra un'implementazione di `T` con un dato nome.
-    fn register(&mut self, name: String, item: T) -> Result<(), ProjectError>;
+    fn register(&mut self, name: String, item: T) -> Result<(), ProjectError> {
+        let map = self.get_map_mut();
+        if map.contains_key(&name) {
+            return Err(ProjectError::RegistryError(format!("Item with name '{}' already registered.", name)));
+        }
+        map.insert(name, item);
+        Ok(())
+    }
+
     /// Recupera un'implementazione di `T` tramite il suo nome.
-    fn get(&self, name: &str) -> Option<&T>;
+    fn get(&self, name: &str) -> Option<&T> {
+        self.get_map().get(name)
+    }
+
     /// Recupera un'implementazione mutabile di `T` tramite il suo nome.
-    fn get_mut(&mut self, name: &str) -> Option<&mut T>;
+    fn get_mut(&mut self, name: &str) -> Option<&mut T> {
+        self.get_map_mut().get_mut(name)
+    }
+
     /// Restituisce un iteratore sui nomi e gli elementi registrati.
-    fn iter(&self) -> Box<dyn Iterator<Item = (&String, &T)> + '_>;
+    fn iter(&self) -> Box<dyn Iterator<Item = (&String, &T)> + '_> {
+        Box::new(self.get_map().iter())
+    }
 }
 
 // --- Implementazione di ToolRegistry ---
@@ -25,31 +46,25 @@ pub struct ToolRegistryInner {
     tools: HashMap<String, Tool>,
 }
 
+impl ToolRegistryInner {
+    fn new() -> Self {
+        ToolRegistryInner { tools: HashMap::new() }
+    }
+}
+
 impl Registry<Tool> for ToolRegistryInner {
-    fn register(&mut self, name: String, tool: Tool) -> Result<(), ProjectError> {
-        if self.tools.contains_key(&name) {
-            return Err(ProjectError::RegistryError(format!("Tool with name '{}' already registered.", name)));
-        }
-        self.tools.insert(name, tool);
-        Ok(())
+    fn get_map(&self) -> &HashMap<String, Tool> {
+        &self.tools
     }
 
-    fn get(&self, name: &str) -> Option<&Tool> {
-        self.tools.get(name)
-    }
-
-    fn get_mut(&mut self, name: &str) -> Option<&mut Tool> {
-        self.tools.get_mut(name)
-    }
-
-    fn iter(&self) -> Box<dyn Iterator<Item = (&String, &Tool)> + '_> {
-        Box::new(self.tools.iter())
+    fn get_map_mut(&mut self) -> &mut HashMap<String, Tool> {
+        &mut self.tools
     }
 }
 
 /// Singleton per il registro degli strumenti.
 pub static TOOL_REGISTRY: Lazy<Arc<Mutex<ToolRegistryInner>>> = Lazy::new(|| {
-    Arc::new(Mutex::new(ToolRegistryInner { tools: HashMap::new() }))
+    Arc::new(Mutex::new(ToolRegistryInner::new()))
 });
 
 // --- Implementazione di AgentProtocolRegistry ---
@@ -58,29 +73,23 @@ pub struct AgentProtocolRegistryInner {
     protocols: HashMap<String, Box<dyn AgentProtocol>>,
 }
 
+impl AgentProtocolRegistryInner {
+    fn new() -> Self {
+        AgentProtocolRegistryInner { protocols: HashMap::new() }
+    }
+}
+
 impl Registry<Box<dyn AgentProtocol>> for AgentProtocolRegistryInner {
-    fn register(&mut self, name: String, protocol: Box<dyn AgentProtocol>) -> Result<(), ProjectError> {
-        if self.protocols.contains_key(&name) {
-            return Err(ProjectError::RegistryError(format!("AgentProtocol with name '{}' already registered.", name)));
-        }
-        self.protocols.insert(name, protocol);
-        Ok(())
+    fn get_map(&self) -> &HashMap<String, Box<dyn AgentProtocol>> {
+        &self.protocols
     }
 
-    fn get(&self, name: &str) -> Option<&Box<dyn AgentProtocol>> {
-        self.protocols.get(name)
-    }
-
-    fn get_mut(&mut self, name: &str) -> Option<&mut Box<dyn AgentProtocol>> {
-        self.protocols.get_mut(name)
-    }
-
-    fn iter(&self) -> Box<dyn Iterator<Item = (&String, &Box<dyn AgentProtocol>)> + '_> {
-        Box::new(self.protocols.iter())
+    fn get_map_mut(&mut self) -> &mut HashMap<String, Box<dyn AgentProtocol>> {
+        &mut self.protocols
     }
 }
 
 /// Singleton per il registro dei protocolli agente.
 pub static AGENT_PROTOCOL_REGISTRY: Lazy<Arc<Mutex<AgentProtocolRegistryInner>>> = Lazy::new(|| {
-    Arc::new(Mutex::new(AgentProtocolRegistryInner { protocols: HashMap::new() }))
+    Arc::new(Mutex::new(AgentProtocolRegistryInner::new()))
 });

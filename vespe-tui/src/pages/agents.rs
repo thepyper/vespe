@@ -2,7 +2,7 @@ use ratatui::{prelude::*, widgets::*};
 use crossterm::event::KeyCode;
 use crate::{App, MessageType};
 use vespe::Agent;
-use tracing::{info, warn, error, debug};
+use tracing::{info, error};
 
 #[derive(Debug)]
 pub struct AgentsPageState {

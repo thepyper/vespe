@@ -6,10 +6,8 @@ use crossterm::{
 };
 use ratatui::{prelude::*, widgets::*};
 use std::io::stdout;
-use tracing::{info, warn, error, debug};
-use crate::pages::task_edit::InputFocus;
-use vespe::{Project, ProjectError};
-use vespe::task::TaskState;
+use tracing::info;
+use vespe::{Project, task::TaskState};
 use crate::pages::task_edit::TaskViewMode;
 use tracing_subscriber::{fmt, prelude::*};
 use std::sync::Arc;

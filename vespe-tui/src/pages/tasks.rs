@@ -3,7 +3,7 @@ use crossterm::event::KeyCode;
 use crate::{App, Page};
 use crate::MessageType;
 use vespe::Task;
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, error};
 
 #[derive(Debug)]
 pub struct TasksPageState {

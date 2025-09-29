@@ -55,7 +55,7 @@ impl Tool {
     pub fn from_path(
         tool_path: &Path        
     ) -> Result<Self, ProjectError> {
-
+      
         if !tool_path.exists() {
             return Err(ProjectError::ToolNotFound("sticazzi TODO".to_string()));
         }

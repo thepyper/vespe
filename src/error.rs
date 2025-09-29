@@ -44,12 +44,6 @@ pub enum ProjectError {
     LLMClientError(String),
     #[error("Invalid tool call: {0}")]
     InvalidToolCall(String),
-    #[error("Agent protocol not found: {0}")]
-    AgentProtocolNotFound(String),
-    #[error("Tool execution error: {0}")]
-    ToolExecutionError(String),
-    #[error("Agent protocol error: {0}")]
-    AgentProtocol(#[from] crate::agent_protocol::AgentProtocolError),
 }
 
 // Rappresenta il risultato di un ciclo di `tick`

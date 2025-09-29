@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-// Removed unused: use serde_json::Value;
+use serde_json::Value;
 use crate::error::ProjectError;
-use crate::memory::Message; // Removed unused: MessageContent
+use crate::memory::{Message, MessageContent};
 use crate::tool::ToolConfig;
 
 /// Errore specifico per le operazioni di AgentProtocol.
@@ -11,7 +11,8 @@ pub enum AgentProtocolError {
     ParseError(String),
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
-    // Removed: #[error("Project error: {0}")] Project(#[from] ProjectError), to break recursive type
+    #[error("Project error: {0}")]
+    Project(#[from] ProjectError),
     // Aggiungi altri tipi di errore se necessario
 }
 

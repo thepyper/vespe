@@ -503,7 +503,7 @@ impl Project {
     }
 
     /// Executes a single reasoning cycle for a given task, using the assigned agent.
-    pub fn tick_task(
+    pub async fn tick_task(
         &self,
         task_uid: &str,
     ) -> Result<AgentTickResult, ProjectError> {
@@ -511,15 +511,36 @@ impl Project {
         let agent_uid = task.status.assigned_agent_uid.ok_or_else(|| ProjectError::InvalidOperation(format!("Task {} has no agent assigned.", task_uid)))?;
         let agent = self.load_agent(&agent_uid)?;
 
-        // For now, this is a placeholder. The actual reasoning logic will go here.
-        // It would involve:
-        // 1. Getting context from task and agent memory.
-        // 2. Calling the LLM.
-        // 3. Parsing the LLM response (tool call, thought, final answer).
-        // 4. Executing tools or updating task state.
+        // 1. Check for Objective
+        if task.objective.is_empty() {
+            return Err(ProjectError::InvalidOperation(format!("Task {} has no objective defined. Cannot tick.", task_uid)));
+        }
+
+        // 2. Prepare task_data
+        let mut task_data = serde_json::json!({});
+        task_data["task_objective"] = serde_json::Value::String(task.objective.clone());
+
+        // Determine step_objective based on task state
+        let step_objective = match task.status.current_state {
+            crate::task::TaskState::Created => "Define the objective for the task.",
+            crate::task::TaskState::ObjectiveDefined => "Create a plan to achieve the objective.",
+            crate::task::TaskState::PlanDefined => "Execute the plan.",
+            crate::task::TaskState::Working => "Continue executing the plan or take the next step.",
+            _ => return Err(ProjectError::InvalidOperation(format!("Task {} is in an untickable state: {:?}", task_uid, task.status.current_state))),
+        };
+        task_data["step_objective"] = serde_json::Value::String(step_objective.to_string());
+
+        // Get task_context from task memory and serialize it
+        let task_context_messages: Vec<Message> = task.memory.get_context().into_iter().cloned().collect();
+        task_data["task_context"] = serde_json::to_value(task_context_messages)?;
 
         debug!("Ticking task {} with agent {}. Agent details: {:?}", task_uid, agent_uid, agent.details);
+        debug!("Task data for LLM: {:?}", task_data);
 
+        // 3. Call the LLM
+        let _llm_response_messages = agent.call_llm(task.memory.get_context().into_iter().cloned().collect(), task_data).await?;
+
+        // For now, just return Waiting. The actual processing of llm_response_messages will come later.
         Ok(AgentTickResult::Waiting)
     }
 }

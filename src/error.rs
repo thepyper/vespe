@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use crate::task::TaskState;
 use crate::memory::MemoryError;
-use anyhow::Error;
+
 
 #[derive(Debug, Error)]
 pub enum ProjectError {

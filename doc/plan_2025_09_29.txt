@@ -1,45 +1,74 @@
-## Piano di Implementazione per ToolAdapter
+## Piano di Implementazione per ToolAdapter (Revisione 2)
 
-Basandomi sul documento `doc/design_2025_09_26c.txt`, `doc/design_2025_09_26b.txt` e le tue recenti chiarificazioni, ho formulato un piano dettagliato per l'implementazione del `ToolAdapter`.
+Basandomi sul documento `doc/design_2025_09_26c.txt`, `doc/design_2025_09_26b.txt` e le tue recenti chiarificazioni e proposte, ho formulato un piano dettagliato e rivisto per l'implementazione del `ToolAdapter`.
 
-**Obiettivo:** Introdurre il concetto di `ToolAdapter` come `trait` per astrarre l'interazione tra `Tool` e LLM, e preparare la struct `Tool` per l'esecuzione.
+**Obiettivo:** Introdurre il concetto di `ToolAdapter` come `trait` per astrarre l'interazione tra `Tool` e LLM, e preparare la struct `Tool` per l'esecuzione tramite un sistema di `ToolImplementation`.
 
 ---
 
-### Fase 1: Migliorare la struct `Tool` per l'esecuzione
+### Fase 1: Preparare la struct `Tool` e introdurre `ToolImplementation`
 
-Prima di poter adattare un `Tool`, il `Tool` stesso deve essere in grado di essere eseguito. Attualmente, la struct `Tool` contiene `implementation_details`, ma non un metodo per l'esecuzione.
+Questa fase si concentra sulla separazione della definizione del `Tool` (dati) dalla sua logica di esecuzione (comportamento), e sull'eliminazione della proliferazione di tipi per `ToolCall`.
 
 1.  **Modificare `src/tool.rs`:**
-    *   **Definire la struct `ToolCall`**: Questa struct rappresenterà una chiamata a un tool, con i parametri necessari. Sarà usata sia dal `ToolAdapter` per parsare la risposta dell'LLM, sia dal `Tool` per l'esecuzione. I campi saranno gli stessi di `MessageContent::ToolCall` per coerenza.
+    *   **Rimuovere la definizione della struct `ToolCall`**: Utilizzeremo direttamente `MessageContent::ToolCall` per rappresentare una chiamata a un tool, evitando la proliferazione di tipi.
+    *   **Definire un trait `ToolImplementation`**: Questo trait definirà l'interfaccia per l'esecuzione concreta di un tool. Le implementazioni di questo trait saranno registrate e richiamate dal `ToolAdapter`.
         ```rust
-        #[derive(Debug, Serialize, Deserialize, Clone)]
-        pub struct ToolCall {
-            pub tool_name: String,
-            pub call_uid: String,
-            pub inputs: serde_json::Value,
+        use async_trait::async_trait;
+        use serde_json::Value;
+        use crate::error::ProjectError;
+
+        #[async_trait]
+        pub trait ToolImplementation: Send + Sync {
+            /// Restituisce il nome del tool implementato.
+            fn name(&self) -> &str;
+
+            /// Esegue il tool con gli input forniti.
+            async fn execute(&self, inputs: Value) -> Result<Value, ProjectError>;
         }
         ```
-    *   **Aggiungere un metodo `execute` alla struct `Tool`**: Questo metodo sarà responsabile dell'interpretazione di `self.config.implementation_details` e dell'esecuzione effettiva del tool. Per ora, l'implementazione sarà un placeholder.
-        ```rust
-        impl Tool {
-            // ... metodi esistenti ...
+    *   **Aggiungere `use async_trait::async_trait;`** e `use serde_json::Value;` se non già presenti.
+    *   **Rimuovere il metodo `execute` dalla struct `Tool`**: La struct `Tool` rimarrà un contenitore di dati (manifesto, dettagli di implementazione) e non avrà più una logica di esecuzione diretta. L'esecuzione sarà delegata a un'implementazione di `ToolImplementation` tramite un registro.
 
-            pub async fn execute(&self, inputs: serde_json::Value) -> Result<serde_json::Value, ProjectError> {
-                // TODO: Implementare la logica di esecuzione basata su self.config.implementation_details
-                // Per ora, un placeholder:
-                tracing::warn!("Tool execution for '{}' is a placeholder. Inputs: {:?}", self.config.name, inputs);
-                Ok(serde_json::json!({ "status": "success", "message": "Placeholder execution", "inputs_received": inputs }))
+2.  **Creare un nuovo file `src/tool_registry.rs` (o integrare in `src/project.rs` in futuro):**
+    *   **Definire la struct `ToolRegistry`**: Questa struct manterrà una mappa di implementazioni di `ToolImplementation` registrate, accessibili per nome.
+        ```rust
+        use std::collections::HashMap;
+        use std::sync::Arc;
+        use crate::tool::ToolImplementation;
+
+        pub struct ToolRegistry {
+            implementations: HashMap<String, Arc<dyn ToolImplementation>>,
+        }
+
+        impl ToolRegistry {
+            pub fn new() -> Self {
+                ToolRegistry { implementations: HashMap::new() }
+            }
+
+            pub fn register(&mut self, implementation: Arc<dyn ToolImplementation>) {
+                self.implementations.insert(implementation.name().to_string(), implementation);
+            }
+
+            pub fn get(&self, name: &str) -> Option<&Arc<dyn ToolImplementation>> {
+                self.implementations.get(name)
             }
         }
         ```
-    *   **Aggiungere `use serde::{Serialize, Deserialize};`** e `use tracing;` se non già presenti.
+    *   **Aggiungere `use std::collections::HashMap;`** e `use std::sync::Arc;` se non già presenti.
+
+3.  **Aggiornare `src/lib.rs`:**
+    *   Esportare il nuovo modulo `tool_registry`.
+        ```rust
+        pub mod tool_registry;
+        pub use tool_registry::*;
+        ```
 
 ---
 
 ### Fase 2: Definire il trait `ToolAdapter`
 
-Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l'adattamento di un `Tool` a un LLM.
+Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l'adattamento di un `Tool` a un LLM, utilizzando `MessageContent::ToolCall` e `serde_json::Value` per gli input/output raw.
 
 1.  **Creare un nuovo file `src/tool_adapter.rs`:**
     *   **Definire l'enum `ToolAdapterError`**: Per gestire errori specifici dell'adattatore (es. errori di parsing, errori di esecuzione del tool).
@@ -52,16 +81,18 @@ Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l
             ToolExecutionError(#[from] crate::error::ProjectError),
             #[error("Invalid tool call: {0}")]
             InvalidToolCall(String),
-            #[error("Tool not found: {0}")]
-            ToolNotFound(String),
+            #[error("Tool implementation not found for '{0}'")]
+            ToolImplementationNotFound(String),
             // Altri errori specifici...
         }
         ```
-    *   **Definire il trait `ToolAdapter`**: Questo trait richiederà un riferimento al `Tool` che sta adattando.
+    *   **Definire il trait `ToolAdapter`**: Questo trait richiederà un riferimento al `Tool` che sta adattando e avrà accesso a un `ToolRegistry` per l'esecuzione.
         ```rust
         use async_trait::async_trait;
-        use crate::tool::{Tool, ToolCall};
-        use crate::error::ProjectError;
+        use serde_json::Value;
+        use crate::tool::Tool;
+        use crate::tool_registry::ToolRegistry;
+        use crate::memory::MessageContent;
 
         #[async_trait]
         pub trait ToolAdapter: Send + Sync {
@@ -74,17 +105,17 @@ Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l
             /// Genera una descrizione del tool specifica per l'LLM (es. JSON Schema per OpenAI).
             fn generate_tool_description(&self) -> String;
 
-            /// Parsa la risposta raw dell'LLM in una ToolCall strutturata.
-            fn parse_llm_response(&self, llm_response: &str) -> Result<ToolCall, ToolAdapterError>;
+            /// Parsa la risposta raw dell'LLM in una MessageContent::ToolCall strutturata.
+            fn parse_llm_response(&self, llm_response: &str) -> Result<MessageContent::ToolCall, ToolAdapterError>;
 
-            /// Esegue il Tool sottostante con gli input parsati.
-            async fn execute_tool(&self, tool_call: &ToolCall) -> Result<serde_json::Value, ToolAdapterError>;
+            /// Esegue il Tool sottostante con gli input parsati, utilizzando il ToolRegistry.
+            async fn execute_tool(&self, tool_call: &MessageContent::ToolCall, tool_registry: &ToolRegistry) -> Result<Value, ToolAdapterError>;
 
             /// Formatta l'output raw del Tool in una stringa adatta al contesto dell'LLM.
-            fn format_tool_output(&self, tool_output: serde_json::Value) -> String;
+            fn format_tool_output(&self, tool_output: Value) -> String;
         }
         ```
-    *   **Aggiungere `use serde::{Serialize, Deserialize};`** e `use thiserror::Error;` se non già presenti.
+    *   **Aggiungere `use serde_json::Value;`** e `use thiserror::Error;` se non già presenti.
 
 2.  **Aggiornare `src/lib.rs`:**
     *   Esportare il nuovo modulo `tool_adapter`.
@@ -97,7 +128,8 @@ Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l
 
 ### Punti ancora da chiarire (per il prossimo piano):
 
+*   **Implementazioni concrete di `ToolImplementation`**: Questo piano definisce solo il trait. Le implementazioni concrete (es. `FileSystemToolImplementation`, `CalculatorToolImplementation`) saranno definite in un piano successivo.
 *   **Implementazioni concrete di `ToolAdapter`**: Questo piano definisce solo il trait. Le implementazioni concrete (es. per OpenAI, Ollama, o un `ModelContextProtocolToolAdapter` strict) saranno definite in un piano successivo.
-*   **Integrazione con `Agent`**: Come gli `Agent` caricheranno e utilizzeranno questi `ToolAdapter`s. Questo sarà un passo successivo.
+*   **Integrazione di `ToolRegistry` e `ToolAdapter` con `Project` e `Agent`**: Come gli `Agent` caricheranno e utilizzeranno questi `ToolAdapter`s e come il `ToolRegistry` sarà gestito a livello di `Project`. Questo sarà un passo successivo.
 
-Attendo la tua approvazione per questo piano.
+Attendo la tua approvazione per questo piano rivisto.

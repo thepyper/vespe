@@ -170,6 +170,21 @@ pub enum TaskSubcommand {
         /// The UID or name of the task
         identifier: String,
     },
+    /// Assign an agent to a task
+    Assign {
+        /// The UID or name of the task
+        #[arg(long)]
+        task_identifier: String,
+        /// The UID of the agent to assign
+        #[arg(long)]
+        agent_uid: String,
+    },
+    /// Unassign an agent from a task
+    Unassign {
+        /// The UID or name of the task
+        #[arg(long)]
+        task_identifier: String,
+    },
 }
 
 #[derive(Debug, Parser)]

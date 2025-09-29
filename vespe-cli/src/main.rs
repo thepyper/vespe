@@ -191,9 +191,25 @@ async fn main() -> anyhow::Result<()> {
             TaskSubcommand::Tick { identifier } => {
                 match project_root.tick_task(identifier).await {
                     Ok(result) => {
-                        println!("Task {} ticked successfully. Result: {:?}", identifier, result);
+                        println!("Task {} ticked successfully. Result: {:?}.", identifier, result);
                     }
-                    Err(e) => eprintln!("Error ticking task {}: {}", identifier, e),
+                    Err(e) => eprintln!("Error ticking task {}: {}.", identifier, e),
+                }
+            }
+            TaskSubcommand::Assign { task_identifier, agent_uid } => {
+                match project_root.assign_task_to_agent(&task_identifier, &agent_uid) {
+                    Ok(_) => {
+                        println!("Agent {} assigned to task {} successfully.", agent_uid, task_identifier);
+                    }
+                    Err(e) => eprintln!("Error assigning agent {} to task {}: {}.", agent_uid, task_identifier, e),
+                }
+            }
+            TaskSubcommand::Unassign { task_identifier } => {
+                match project_root.unassign_agent_from_task(&task_identifier) {
+                    Ok(_) => {
+                        println!("Agent unassigned from task {} successfully.", task_identifier);
+                    }
+                    Err(e) => eprintln!("Error unassigning agent from task {}: {}.", task_identifier, e),
                 }
             }
         },

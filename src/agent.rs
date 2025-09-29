@@ -3,10 +3,10 @@ use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::memory::{Memory, Message};
+use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
-use crate::registry::{AGENT_PROTOCOL_REGISTRY, Registry};
+use crate::registry::{AGENT_PROTOCOL_REGISTRY, TOOL_REGISTRY, Registry};
 use crate::agent_protocol::{AgentProtocol, ToolConfig};
 use crate::llm_client::{create_llm_client, LLMClient};
 
@@ -184,24 +184,49 @@ impl Agent {
     pub async fn call_llm(
         &self,
         messages: Vec<Message>,
-        available_tools: Option<Vec<ToolConfig>>,
     ) -> Result<Vec<Message>, ProjectError> {
         let protocol = self.protocol().await?;
 
-        // 1. Format messages using the agent's protocol
-        let formatted_prompt = protocol.format_messages(messages, available_tools).await?;
-
-        // 2. Get LLM client based on agent's configuration
-        let llm_client = match &self.details {
-            AgentDetails::AI(ai_config) => create_llm_client(&ai_config.llm_provider)?,
+        let ai_config = match &self.details {
+            AgentDetails::AI(config) => config,
             AgentDetails::Human(_) => return Err(ProjectError::InvalidOperation("Cannot call LLM for a Human agent.".to_string())),
         };
+
+        // Retrieve allowed tools from the agent's configuration
+        let allowed_tool_names = &ai_config.allowed_tools;
+        let mut available_tools_for_protocol = Vec::new();
+        let tool_registry = &TOOL_REGISTRY;
+
+        for tool_name in allowed_tool_names {
+            if let Some(tool_config) = tool_registry.get(tool_name) {
+                available_tools_for_protocol.push(tool_config.config.clone()); // Assuming ToolConfig is what AgentProtocol expects
+            } else {
+                // Log a warning or return an error if an allowed tool is not found in the registry
+                // For now, we'll just skip it, but a warning would be good.
+                eprintln!("Warning: Allowed tool '{}' not found in TOOL_REGISTRY.", tool_name);
+            }
+        }
+
+        // 1. Format messages using the agent's protocol
+        let formatted_prompt = protocol.format_messages(messages, Some(available_tools_for_protocol)).await?;
+
+        // 2. Get LLM client based on agent's configuration
+        let llm_client = create_llm_client(&ai_config.llm_provider)?;
 
         // 3. Send query to LLM
         let raw_response = llm_client.send_query(formatted_prompt).await?;
 
         // 4. Parse LLM response using the agent's protocol
         let parsed_messages = protocol.parse_llm_output(raw_response).await?;
+
+        // 5. Validate tool calls in parsed messages
+        for message in &parsed_messages {
+            if let MessageContent::ToolCall { tool_name, .. } = &message.content {
+                if !allowed_tool_names.contains(tool_name) {
+                    return Err(ProjectError::InvalidToolCall(format!("Agent attempted to call disallowed tool: '{}'.", tool_name)));
+                }
+            }
+        }
 
         Ok(parsed_messages)
     }

@@ -42,6 +42,8 @@ pub enum ProjectError {
     InvalidOperation(String),
     #[error("LLM client error: {0}")]
     LLMClientError(String),
+    #[error("Invalid tool call: {0}")]
+    InvalidToolCall(String),
 }
 
 // Rappresenta il risultato di un ciclo di `tick`

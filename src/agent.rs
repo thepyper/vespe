@@ -49,6 +49,12 @@ pub struct AIConfig {
 pub enum LLMProviderConfig {
     Ollama { model: String, endpoint: String },
     OpenAI { model: String, api_key_env: String },
+    Gemini {
+        model: String,
+        client_id_env: String,
+        client_secret_env: String,
+        refresh_token_env: String,
+    },
 }
 
 // 4. CONFIGURAZIONE HUMAN: Campi specifici per l'umano.

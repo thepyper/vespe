@@ -8,6 +8,7 @@ use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
 use tracing::{debug, error, warn};
+use crate::memory::{Memory, MemoryError};
 
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -68,7 +69,7 @@ pub struct TaskDependencies {
 }
 
 // Rappresenta un task completo caricato in memoria
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct Task {
     pub uid: String,
     pub root_path: PathBuf, // Percorso alla directory tsk-UID/
@@ -77,6 +78,7 @@ pub struct Task {
     pub objective: String, // Contenuto di objective.md
     pub plan: Option<String>, // Contenuto di plan.md
     pub dependencies: TaskDependencies,
+    pub memory: Memory,
 }
 
 impl Task {
@@ -106,6 +108,12 @@ impl Task {
         debug!("Task::create: Attempting to create result directory: {:?}", task_path.join("result"));
         std::fs::create_dir_all(task_path.join("result")).map_err(|e| {
             error!("Task::create: Failed to create result directory {:?}: {:?}", task_path.join("result"), e);
+            ProjectError::Io(e)
+        })?;
+
+        debug!("Task::create: Attempting to create memory directory: {:?}", task_path.join("memory"));
+        std::fs::create_dir_all(task_path.join("memory")).map_err(|e| {
+            error!("Task::create: Failed to create memory directory {:?}: {:?}", task_path.join("memory"), e);
             ProjectError::Io(e)
         })?;
 
@@ -440,6 +448,9 @@ impl Task {
             }
         };
 
+        debug!("Loading memory for task: {}", uid);
+        let memory = Memory::load(&task_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
+
         Ok(Task {
             uid: uid.to_string(),
             root_path: task_path,
@@ -448,6 +459,7 @@ impl Task {
             objective,
             plan,
             dependencies,
+            memory,
         })
     }
 }

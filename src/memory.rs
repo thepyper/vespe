@@ -21,9 +21,16 @@ pub struct Message {
 pub enum MessageContent {
     Text(String),    // Input utente, output finale dell'agente, messaggi di sistema
     Thought(String), // Ragionamento interno dell'agente (non mostrato di default)
+    ToolCall {
+        tool_name: String,
+        call_uid: String,
+        inputs: serde_json::Value,
+    },
     ToolResult {
-        tool_uid: String,
-        result: serde_json::Value,
+        tool_name: String,
+        call_uid: String,
+        inputs: serde_json::Value, // For debug/context
+        outputs: serde_json::Value,
     },
 }
 

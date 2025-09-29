@@ -500,9 +500,9 @@ impl Project {
     ) -> Result<(), ProjectError> {
         let mut task = self.resolve_task(task_uid)?;
         // Check if agent exists
-        self.load_agent(agent_uid)?;
+        let agent = self.resolve_agent(agent_uid)?;
 
-        task.assign_agent(agent_uid)
+        task.assign_agent(&agent.metadata.uid)
     }
 
     /// Unassigns an agent from a task. This modifies the Task's status.
@@ -521,7 +521,7 @@ impl Project {
         author_uid: &str,
         content: MessageContent,
     ) -> Result<Message, ProjectError> {
-        let mut agent = self.load_agent(agent_uid)?;
+        let mut agent = self.resolve_agent(agent_uid)?;
         let message = agent.memory.add_message(author_uid.to_string(), content).map_err(|e| ProjectError::Memory(e))?;
         Ok(message.clone())
     }
@@ -545,7 +545,7 @@ impl Project {
     ) -> Result<AgentTickResult, ProjectError> {
         let task = self.resolve_task(task_uid)?;
         let agent_uid = task.status.assigned_agent_uid.ok_or_else(|| ProjectError::InvalidOperation(format!("Task {} has no agent assigned.", task_uid)))?;
-        let agent = self.load_agent(&agent_uid)?;
+        let agent = self.resolve_agent(&agent_uid)?;
 
         // 1. Check for Objective
         if task.objective.is_empty() {

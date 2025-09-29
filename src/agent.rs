@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use handlebars::Handlebars;
+use serde_json::json;
 
 use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
@@ -183,7 +185,7 @@ impl Agent {
     /// Sends a request to the LLM, handles formatting, querying, and parsing.
     pub async fn call_llm(
         &self,
-        messages: Vec<Message>,
+        task_context: Vec<Message>,
     ) -> Result<Vec<Message>, ProjectError> {
         let protocol = self.protocol().await?;
 
@@ -207,8 +209,28 @@ impl Agent {
             }
         }
 
-        // 1. Format messages using the agent's protocol
-        let formatted_prompt = protocol.format_messages(messages, Some(available_tools_for_protocol)).await?;
+        // Retrieve agent's context from memory
+        let agent_context = self.memory.get_context();
+
+        // Format contexts using the agent's protocol
+        let task_context_formatted = protocol.format_messages(task_context, None).await?;
+        let agent_context_formatted = protocol.format_messages(agent_context, Some(available_tools_for_protocol)).await?;
+
+        // Prepare data for Handlebars template
+        let mut handlebars_data = json!({});
+        handlebars_data["task_context"] = json!(task_context_formatted);
+        handlebars_data["agent_context"] = json!(agent_context_formatted);
+        if let Some(system_prompt_template) = &self.system_prompt {
+            handlebars_data["system_prompt_template"] = json!(system_prompt_template);
+        }
+
+        // Render the system prompt template
+        let mut handlebars = Handlebars::new();
+        handlebars.register_template_string("system_prompt", &self.system_prompt.clone().unwrap_or_default())
+            .map_err(|e| ProjectError::InvalidOperation(format!("Failed to register system prompt template: {}", e)))?;
+
+        let formatted_prompt = handlebars.render("system_prompt", &handlebars_data)
+            .map_err(|e| ProjectError::InvalidOperation(format!("Failed to render system prompt: {}", e)))?;
 
         // 2. Get LLM client based on agent's configuration
         let llm_client = create_llm_client(&ai_config.llm_provider)?;

@@ -4,6 +4,7 @@ use crate::agent::LLMProviderConfig;
 use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 use std::sync::Arc;
+use tracing::{debug, error, info, trace, warn};
 
 /// Trait per un client LLM generico.
 /// Ogni implementazione gestirà la comunicazione con uno specifico provider LLM.
@@ -33,6 +34,7 @@ impl OllamaClient {
 #[async_trait]
 impl LLMClient for OllamaClient {
     async fn send_query(&self, formatted_prompt: String) -> Result<String, ProjectError> {
+        debug!("Ollama Request: Model={}, Endpoint={}, Prompt={}", self.model, self.endpoint, formatted_prompt);
         let url = format!("{}/api/generate", self.endpoint);
         let payload = serde_json::json!({
             "model": self.model,
@@ -48,6 +50,7 @@ impl LLMClient for OllamaClient {
 
         let response_text = response.text().await
             .map_err(|e| ProjectError::LLMClientError(format!("Failed to get Ollama response text: {}", e)))?;
+        debug!("Ollama Response: {}", response_text);
 
         // Ollama returns a JSON object with a 'response' field
         let json_response: serde_json::Value = serde_json::from_str(&response_text)
@@ -79,6 +82,7 @@ impl OpenAIClient {
 #[async_trait]
 impl LLMClient for OpenAIClient {
     async fn send_query(&self, formatted_prompt: String) -> Result<String, ProjectError> {
+        debug!("OpenAI Request: Model={}, Prompt={}", self.model, formatted_prompt);
         let url = "https://api.openai.com/v1/chat/completions";
         let payload = serde_json::json!({
             "model": self.model,
@@ -97,6 +101,7 @@ impl LLMClient for OpenAIClient {
 
         let response_json: serde_json::Value = response.json().await
             .map_err(|e| ProjectError::LLMClientError(format!("Failed to get OpenAI JSON response: {}", e)))?;
+        debug!("OpenAI Response: {}", serde_json::to_string_pretty(&response_json).unwrap_or_else(|_| "<unparseable JSON>".to_string()));
 
         // OpenAI returns a JSON object with choices[0].message.content
         response_json["choices"][0]["message"]["content"].as_str()
@@ -166,6 +171,7 @@ impl GeminiClient {
 #[async_trait]
 impl LLMClient for GeminiClient {
     async fn send_query(&self, formatted_prompt: String) -> Result<String, ProjectError> {
+        debug!("Gemini Request: Model={}, Prompt={}", self.model, formatted_prompt);
         let mut token_state_guard = self.token_state.lock().await;
 
         if token_state_guard.is_expired() {
@@ -191,6 +197,7 @@ impl LLMClient for GeminiClient {
 
         let response_json: serde_json::Value = response.json().await
             .map_err(|e| ProjectError::LLMClientError(format!("Failed to get Gemini JSON response: {}", e)))?;
+        debug!("Gemini Response: {}", serde_json::to_string_pretty(&response_json).unwrap_or_else(|_| "<unparseable JSON>".to_string()));
 
         // Extract content from Gemini response
         response_json["candidates"][0]["content"]["parts"][0]["text"].as_str()

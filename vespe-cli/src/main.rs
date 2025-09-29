@@ -14,7 +14,7 @@ use tracing_subscriber::{EnvFilter, FmtSubscriber};
 async fn main() -> anyhow::Result<()> {
     // Initialize tracing for logging
     let subscriber = FmtSubscriber::builder()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(EnvFilter::from_default_env().add_directive(tracing::Level::DEBUG.into()))
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 

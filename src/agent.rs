@@ -171,12 +171,12 @@ impl Agent {
     }
 
     /// Retrieves the AgentProtocol associated with this agent from the registry.
-    pub async fn protocol(&self) -> Result<Arc<Mutex<Box<dyn AgentProtocol>>>, ProjectError> {
+    pub async fn protocol(&self) -> Result<Arc<Box<dyn AgentProtocol + Send + Sync>>, ProjectError> {
         let registry = AGENT_PROTOCOL_REGISTRY.lock().await;
         let protocol_name = &self.metadata.protocol_name;
 
         registry.get(protocol_name)
-            .cloned() // Clone the Arc<Mutex<Box<dyn AgentProtocol>>>
+            .map(|b| Arc::new(b.clone())) // Clone the Box and wrap in Arc
             .ok_or_else(|| ProjectError::AgentProtocolNotFound(protocol_name.clone()))
     }
 

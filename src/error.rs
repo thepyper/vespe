@@ -3,6 +3,7 @@ use thiserror::Error;
 
 use crate::task::TaskState;
 use crate::memory::MemoryError;
+use anyhow::Error;
 
 #[derive(Debug, Error)]
 pub enum ProjectError {
@@ -50,6 +51,8 @@ pub enum ProjectError {
     ToolExecutionError(String),
     #[error("Agent protocol error: {0}")]
     AgentProtocol(#[from] crate::agent_protocol::AgentProtocolError),
+    #[error("Anyhow error: {0}")]
+    Anyhow(#[from] anyhow::Error),
 
 }
 

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use crate::error::ProjectError;
-use crate::agent::{LLMProviderConfig, AIConfig};
+use crate::agent::LLMProviderConfig;
 use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 use std::sync::Arc;
@@ -111,9 +111,9 @@ impl LLMClient for OpenAIClient {
 struct GeminiTokenState {
     access_token: String,
     expires_at: DateTime<Utc>,
-    refresh_token: String,
-    client_id: String,
-    client_secret: String,
+    refresh_token: String, // Intended for use in a real token refresh flow
+    client_id: String,     // Intended for use in a real token refresh flow
+    client_secret: String, // Intended for use in a real token refresh flow
 }
 
 impl GeminiTokenState {

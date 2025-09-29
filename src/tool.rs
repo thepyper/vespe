@@ -3,7 +3,6 @@ use serde::{Serialize, Deserialize};
 use serde_json::{Value, json};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, write_json_file, write_file_content};
-use async_trait::async_trait;
 
 // Corresponds to config.json for a Tool
 #[derive(Debug, Serialize, Deserialize, Clone)]

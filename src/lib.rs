@@ -8,14 +8,12 @@ pub mod agent_protocol;
 pub mod registry;
 pub mod llm_client;
 
-pub use tool::*;
 pub mod project;
 
+pub use tool::*;
 pub use project::*;
 pub use task::*;
 pub use agent::*;
 pub use error::*;
 pub use utils::*;
-pub use crate::tool::*;
-pub use crate::project::*;
 pub use memory::*;

@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use handlebars::Handlebars;
 use serde_json::json;
@@ -9,8 +9,8 @@ use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
 use crate::registry::{AGENT_PROTOCOL_REGISTRY, TOOL_REGISTRY, Registry};
-use crate::agent_protocol::{AgentProtocol, ToolConfig};
-use crate::llm_client::{create_llm_client, LLMClient};
+use crate::agent_protocol::AgentProtocol;
+use crate::llm_client::create_llm_client;
 
 // Default protocol name for agents
 const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";
@@ -184,7 +184,7 @@ impl Agent {
         let protocol_name = &self.metadata.protocol_name;
 
         registry.get(protocol_name)
-            .map(|b| Arc::new(b.clone())) // Clone the Box and wrap in Arc
+            .map(|b| b.clone())
             .ok_or_else(|| ProjectError::AgentProtocolNotFound(protocol_name.clone()))
     }
 
@@ -221,7 +221,7 @@ impl Agent {
         // Format contexts using the agent's protocol
         let task_context_formatted = protocol.format_messages(task_context).await?;
         let formatted_available_tools = protocol.format_available_tools(Some(available_tools_for_protocol)).await?;
-        let agent_context_formatted = protocol.format_messages(agent_context).await?;
+        let agent_context_formatted = protocol.format_messages(agent_context.into_iter().cloned().collect()).await?;
 
         // Prepare data for Handlebars template
         let mut handlebars_data = json!({});

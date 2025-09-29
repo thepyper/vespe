@@ -1,16 +1,14 @@
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use crate::error::ProjectError;
-use crate::utils::{read_json_file, write_json_file, generate_uid, get_entity_path, write_file_content};
-use crate::task::{TaskConfig, TaskDependencies, TaskState, TaskStatus};
+use crate::utils::{read_json_file, write_json_file};
 use crate::task::Task;
-use crate::agent::{Agent, AgentMetadata, AgentDetails, AIConfig, HumanConfig, LLMProviderConfig, AgentState};
+use crate::agent::{Agent, AIConfig, HumanConfig};
 use crate::tool::Tool;
-use crate::memory::{Memory, Message, MessageContent, MemoryError};
+use crate::memory::{Message, MessageContent};
 use crate::error::AgentTickResult;
 use anyhow::{anyhow, Result};
-use chrono::Utc;
-use tracing::{debug, error};
+use tracing::debug;
 
 // Constants for project root detection
 pub const VESPE_DIR: &str = ".vespe";
@@ -381,10 +379,10 @@ impl Project {
         name: String,
         description: String,
         schema: serde_json::Value,
-        implementation_details: serde_json::Value,
+        _implementation_details: serde_json::Value,
     ) -> Result<Tool, ProjectError> {
         let tools_base_path = self.tools_dir();
-        Tool::create(name, description, schema, implementation_details, &tools_base_path)
+        Tool::create(name, description, schema, &tools_base_path)
     }
 
     /// Loads a tool from the filesystem given its UID.
@@ -403,7 +401,7 @@ impl Project {
         config: AIConfig,
         system_prompt: Option<String>,
     ) -> Result<Agent, ProjectError> {
-        Agent::create_ai(&self.root_path, name, config, system_prompt)
+        Agent::create_ai(&self.root_path, name, config, system_prompt, None)
     }
 
     /// Creates a new human agent.
@@ -412,7 +410,7 @@ impl Project {
         name: String,
         config: HumanConfig,
     ) -> Result<Agent, ProjectError> {
-        Agent::create_human(&self.root_path, name, config)
+        Agent::create_human(&self.root_path, name, config, None)
     }
 
     /// Loads an agent from the filesystem given its UID.

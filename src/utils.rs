@@ -2,11 +2,9 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 use chrono::Utc;
 use sha2::{Sha256, Digest};
-use std::fs; // Added for fs operations
 
 use crate::error::ProjectError;
 use crate::task::{TaskStatus, TaskState};
-use crate::project::*;
 
 /// Generates a unique UID for a task, agent, or tool.
 pub fn generate_uid(prefix: &str) -> Result<String, ProjectError> {

@@ -4,11 +4,10 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use crate::error::ProjectError;
 use crate::utils::{write_file_content, update_task_status, write_json_file, generate_uid, get_entity_path};
-use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
 use tracing::{debug, error, warn};
-use crate::memory::{Memory, MemoryError};
+use crate::memory::Memory;
 
 // Rappresenta lo stato attuale del task
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]

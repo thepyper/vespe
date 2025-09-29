@@ -483,10 +483,11 @@ impl Project {
     pub fn add_message_to_agent_memory(
         &self,
         agent_uid: &str,
+        author_uid: &str,
         content: MessageContent,
     ) -> Result<Message, ProjectError> {
         let mut agent = self.load_agent(agent_uid)?;
-        let message = agent.memory.add_message(agent_uid.to_string(), content).map_err(|e| ProjectError::Memory(e))?;
+        let message = agent.memory.add_message(author_uid.to_string(), content).map_err(|e| ProjectError::Memory(e))?;
         Ok(message.clone())
     }
 

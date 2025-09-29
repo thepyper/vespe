@@ -256,64 +256,7 @@ impl Project {
         created_by_agent_uid: String,
         _template_name: String, // Template not yet implemented, ignored for now
     ) -> Result<Task, ProjectError> {
-        let uid = generate_uid("tsk")?;
-        let tasks_base_path = self.tasks_dir();
-        let task_path = get_entity_path(&tasks_base_path, &uid)?;
-
-        debug!("Project::create_task: Attempting to create task directory: {:?}", task_path);
-        std::fs::create_dir_all(&task_path).map_err(|e| {
-            error!("Project::create_task: Failed to create task directory {:?}: {:?}", task_path, e);
-            ProjectError::Io(e)
-        })?;
-
-        debug!("Project::create_task: Attempting to create persistent directory: {:?}", task_path.join("persistent"));
-        std::fs::create_dir_all(task_path.join("persistent")).map_err(|e| {
-            error!("Project::create_task: Failed to create persistent directory {:?}: {:?}", task_path.join("persistent"), e);
-            ProjectError::Io(e)
-        })?;
-
-        debug!("Project::create_task: Attempting to create result directory: {:?}", task_path.join("result"));
-        std::fs::create_dir_all(task_path.join("result")).map_err(|e| {
-            error!("Project::create_task: Failed to create result directory {:?}: {:?}", task_path.join("result"), e);
-            ProjectError::Io(e)
-        })?;
-
-        let now = Utc::now();
-
-        // Initialize config.json
-        let config = TaskConfig {
-            uid: uid.clone(),
-            name: name.clone(),
-            created_by_agent_uid: created_by_agent_uid.clone(),
-            created_at: now,
-            parent_uid,
-        };
-        write_json_file(&task_path.join("config.json"), &config)?;
-
-        // Initialize status.json
-        let status = TaskStatus {
-            current_state: TaskState::Created,
-            last_updated_at: now,
-            progress: None,
-            parent_content_hashes: std::collections::HashMap::new(),
-            is_paused: false,
-            error_details: None,
-            previous_state: None,
-            retry_count: 0,
-            subtask_uids: Vec::new(),
-            assigned_agent_uid: None,
-        };
-        write_json_file(&task_path.join("status.json"), &status)?;
-
-        // Create empty objective.md and plan.md
-
-
-        // Initialize dependencies.json
-        let dependencies = TaskDependencies { depends_on: Vec::new() };
-        write_json_file(&task_path.join("dependencies.json"), &dependencies)?;
-
-        // Load the newly created task to return it
-        self.load_task(&uid)
+        Task::create(&self.root_path, parent_uid, name, created_by_agent_uid, _template_name)
     }
 
 

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use crate::error::ProjectError;
-use crate::utils::{write_file_content, update_task_status, write_json_file};
+use crate::utils::{write_file_content, update_task_status, write_json_file, generate_uid, get_entity_path};
 use uuid::Uuid;
 use sha2::{Sha256, Digest};
 use walkdir;
@@ -80,6 +80,71 @@ pub struct Task {
 }
 
 impl Task {
+    pub fn create(
+        project_root: &Path,
+        parent_uid: Option<String>,
+        name: String,
+        created_by_agent_uid: String,
+        _template_name: String, // Template not yet implemented, ignored for now
+    ) -> Result<Task, ProjectError> {
+        let uid = generate_uid("tsk")?;
+        let tasks_base_path = project_root.join(".vespe").join("tasks");
+        let task_path = get_entity_path(&tasks_base_path, &uid)?;
+
+        debug!("Task::create: Attempting to create task directory: {:?}", task_path);
+        std::fs::create_dir_all(&task_path).map_err(|e| {
+            error!("Task::create: Failed to create task directory {:?}: {:?}", task_path, e);
+            ProjectError::Io(e)
+        })?;
+
+        debug!("Task::create: Attempting to create persistent directory: {:?}", task_path.join("persistent"));
+        std::fs::create_dir_all(task_path.join("persistent")).map_err(|e| {
+            error!("Task::create: Failed to create persistent directory {:?}: {:?}", task_path.join("persistent"), e);
+            ProjectError::Io(e)
+        })?;
+
+        debug!("Task::create: Attempting to create result directory: {:?}", task_path.join("result"));
+        std::fs::create_dir_all(task_path.join("result")).map_err(|e| {
+            error!("Task::create: Failed to create result directory {:?}: {:?}", task_path.join("result"), e);
+            ProjectError::Io(e)
+        })?;
+
+        let now = Utc::now();
+
+        // Initialize config.json
+        let config = TaskConfig {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_by_agent_uid: created_by_agent_uid.clone(),
+            created_at: now,
+            parent_uid,
+        };
+        write_json_file(&task_path.join("config.json"), &config)?;
+
+        // Initialize status.json
+        let status = TaskStatus {
+            current_state: TaskState::Created,
+            last_updated_at: now,
+            progress: None,
+            parent_content_hashes: std::collections::HashMap::new(),
+            is_paused: false,
+            error_details: None,
+            previous_state: None,
+            retry_count: 0,
+            subtask_uids: Vec::new(),
+            assigned_agent_uid: None,
+        };
+        write_json_file(&task_path.join("status.json"), &status)?;
+
+        // Initialize dependencies.json
+        let dependencies = TaskDependencies { depends_on: Vec::new() };
+        write_json_file(&task_path.join("dependencies.json"), &dependencies)?;
+
+        // Load the newly created task to return it
+        Task::load(project_root, &uid)
+    }
+
+
     pub fn define_objective(&mut self, objective_content: String) -> Result<(), ProjectError> {
         if !self.status.current_state.can_transition_to(TaskState::ObjectiveDefined) {
             return Err(ProjectError::InvalidStateTransition(

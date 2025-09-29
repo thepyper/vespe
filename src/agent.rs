@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use crate::memory::{Memory, Message};
 use crate::error::ProjectError;
-use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file};
+use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
 
 // 1. METADATA COMUNI: Dati condivisi da tutti gli agenti.
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -53,6 +53,7 @@ pub struct Agent {
     pub details: AgentDetails,
     pub state: AgentState,
     pub memory: Memory,
+    pub system_prompt: Option<String>,
 }
 
 impl Agent {
@@ -60,6 +61,7 @@ impl Agent {
         project_root: &Path,
         name: String,
         config: AIConfig,
+        system_prompt: Option<String>,
     ) -> Result<Agent, ProjectError> {
         let uid = generate_uid("agt")?;
         let agents_base_path = project_root.join(".vespe").join("agents");
@@ -67,6 +69,10 @@ impl Agent {
 
         std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
         std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        if let Some(prompt) = system_prompt {
+            write_file_content(&agent_path.join("system_prompt.hbs"), &prompt)?;
+        }
 
         let now = Utc::now();
 
@@ -131,11 +137,19 @@ impl Agent {
         let state: AgentState = read_json_file(&agent_path.join("state.json"))?;
         let memory = Memory::load(&agent_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
 
+        let system_prompt_path = agent_path.join("system_prompt.hbs");
+        let system_prompt = if system_prompt_path.exists() {
+            Some(read_file_content(&system_prompt_path)?)
+        } else {
+            None
+        };
+
         Ok(Agent {
             metadata,
             details,
             state,
             memory,
+            system_prompt,
         })
     }
     pub fn save_state(&self, project_root: &Path) -> Result<(), ProjectError> {

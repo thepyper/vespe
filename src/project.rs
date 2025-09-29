@@ -401,8 +401,9 @@ impl Project {
         &self,
         name: String,
         config: AIConfig,
+        system_prompt: Option<String>,
     ) -> Result<Agent, ProjectError> {
-        Agent::create_ai(&self.root_path, name, config)
+        Agent::create_ai(&self.root_path, name, config, system_prompt)
     }
 
     /// Creates a new human agent.

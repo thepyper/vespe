@@ -251,10 +251,23 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Agent(agent_command) => match &agent_command.command {
-            AgentSubcommand::CreateAI { name, role, model, endpoint, allowed_tools } => {
+            AgentSubcommand::CreateAI { name, role, model, endpoint, allowed_tools, system_prompt } => {
                 let llm_config = LLMProviderConfig::Ollama { model: model.clone(), endpoint: endpoint.clone() };
                 let ai_config = AIConfig { role: role.clone(), llm_provider: llm_config, allowed_tools: allowed_tools.clone() };
-                match project_root.create_ai_agent(name.clone(), ai_config) {
+
+                let prompt_content = if let Some(path) = system_prompt {
+                    match fs::read_to_string(path) {
+                        Ok(content) => Some(content),
+                        Err(e) => {
+                            eprintln!("Error reading system prompt file: {}", e);
+                            return Ok(()); // Exit gracefully
+                        }
+                    }
+                } else {
+                    None
+                };
+
+                match project_root.create_ai_agent(name.clone(), ai_config, prompt_content) {
                     Ok(agent) => {
                         println!("AI Agent created successfully:");
                         println!("  UID: {}", agent.metadata.uid);

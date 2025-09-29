@@ -277,7 +277,7 @@ impl Project {
         task_uid: &str,
         objective_content: String
     ) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.define_objective(objective_content)?;
         Ok(())
     }
@@ -289,19 +289,19 @@ impl Project {
         task_uid: &str,
         plan_content: String,
     ) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.define_plan(plan_content)?;
         Ok(())
     }
 
     pub fn accept_plan(&self, task_uid: &str) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.accept_plan()?;
         Ok(())
     }
 
     pub fn reject_plan(&self, task_uid: &str) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.reject_plan()?;
         Ok(())
     }
@@ -309,25 +309,25 @@ impl Project {
 
 
     pub fn error(&self, task_uid: &str, details: String) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.error(details)?;
         Ok(())
     }
 
     pub fn failure(&self, task_uid: &str, details: String) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.failure(details)?;
         Ok(())
     }
 
     pub fn work_completed(&self, task_uid: &str) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.work_completed()?;
         Ok(())
     }
 
     pub fn abort(&self, task_uid: &str, reason: String) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.abort(reason)?;
         Ok(())
     }
@@ -335,17 +335,17 @@ impl Project {
 
 
     pub fn get_task_state(&self, task_uid: &str) -> Result<crate::task::TaskState, ProjectError> {
-        let task = self.load_task(task_uid)?;
+        let task = self.resolve_task(task_uid)?;
         Ok(task.get_task_state())
     }
 
     pub fn is_task_paused(&self, task_uid: &str) -> Result<bool, ProjectError> {
-        let task = self.load_task(task_uid)?;
+        let task = self.resolve_task(task_uid)?;
         Ok(task.is_task_paused())
     }
 
     pub fn set_task_name(&self, task_uid: &str, new_name: String) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.set_name(new_name)?;
         Ok(())
     }
@@ -357,7 +357,7 @@ impl Project {
         &self,
         task_uid: &str
     ) -> Result<String, ProjectError> {
-        let task = self.load_task(task_uid)?;
+        let task = self.resolve_task(task_uid)?;
         task.calculate_result_hash()
     }
 
@@ -368,7 +368,7 @@ impl Project {
         filename: &str,
         content: Vec<u8>
     ) -> Result<(), ProjectError> {
-        let task = self.load_task(task_uid)?;
+        let task = self.resolve_task(task_uid)?;
         task.add_result_file(filename, content)?;
         Ok(())
     }

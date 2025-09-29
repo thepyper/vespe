@@ -164,4 +164,36 @@ impl Memory {
     pub fn get_enabled_messages(&self) -> Vec<&Message> {
         self.messages.iter().filter(|m| m.status == MessageStatus::Enabled).collect()
     }
+
+    /// Restituisce un contesto filtrato per l'LLM:
+    /// 1. Filtra via i messaggi `Disabled`.
+    /// 2. Filtra via i messaggi `Thought`.
+    /// 3. Filtra via un `ToolCall` se esiste il corrispondente `ToolResult`.
+    pub fn get_context(&self) -> Vec<&Message> {
+        let enabled_messages: Vec<&Message> = self.get_enabled_messages();
+
+        // Collect all call_uids from ToolResult messages
+        let tool_results_call_uids: std::collections::HashSet<&String> = enabled_messages.iter()
+            .filter_map(|msg| {
+                if let MessageContent::ToolResult { call_uid, .. } = &msg.content {
+                    Some(call_uid)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        enabled_messages.into_iter()
+            .filter(|msg| {
+                match &msg.content {
+                    MessageContent::Thought(_) => false, // Filter out Thought messages
+                    MessageContent::ToolCall { call_uid, .. } => {
+                        // Filter out ToolCall if a corresponding ToolResult exists
+                        !tool_results_call_uids.contains(call_uid)
+                    },
+                    _ => true, // Keep Text and ToolResult messages
+                }
+            })
+            .collect()
+    }
 }

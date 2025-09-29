@@ -1,93 +1,47 @@
-## Piano di Implementazione per ToolAdapter (Revisione 3)
+## Piano di Implementazione per ToolAdapter (Revisione Semplificata)
 
-Basandomi sul documento `doc/design_2025_09_26c.txt`, `doc/design_2025_09_26b.txt` e le tue recenti chiarificazioni e proposte, ho formulato un piano dettagliato e rivisto per l'implementazione del `ToolAdapter`.
+Basandomi sul documento `doc/design_2025_09_26c.txt`, `doc/design_2025_09_26b.txt` e le tue recenti chiarificazioni e la richiesta di semplificazione, ho formulato un piano rivisto per l'implementazione del `ToolAdapter`.
 
-**Obiettivo:** Introdurre il concetto di `ToolAdapter` come `trait` per astrarre l'interazione tra `Tool` e LLM, e preparare la struct `Tool` per l'esecuzione tramite un sistema di `ToolImplementation` e un trait di estensione, riducendo la proliferazione di tipi.
+**Obiettivo:** Introdurre il concetto di `ToolAdapter` come `trait` per astrarre l'interazione tra `Tool` e LLM, e dotare la struct `Tool` di un metodo `execute` placeholder per l'esecuzione diretta, posticipando l'introduzione di `ToolImplementation` e `ToolRegistry`.
 
 ---
 
-### Fase 1: Ridefinire `Tool` e introdurre `ToolImplementation` e `ToolRegistry`
+### Fase 1: Dotare la struct `Tool` di un metodo `execute` (Semplificato)
 
-Questa fase si concentra sulla separazione della definizione del `Tool` (dati) dalla sua logica di esecuzione (comportamento), e sull'utilizzo diretto di `MessageContent::ToolCall`.
+Questa fase si concentra sull'abilitazione dell'esecuzione diretta da parte della struct `Tool`, senza introdurre complessità aggiuntive per ora.
 
 1.  **Modificare `src/tool.rs`:**
-    *   **Rimuovere `implementation_details` da `ToolConfig`**: La logica di esecuzione sarà trovata tramite il nome del tool nel `ToolRegistry`, rendendo questo campo ridondante per l'esecuzione. Potrebbe essere mantenuto per scopi descrittivi, ma per ora lo rimuoviamo per chiarezza.
-    *   **Definire un trait `ToolImplementation`**: Questo trait definirà l'interfaccia per l'esecuzione concreta di un tool. Le implementazioni di questo trait saranno registrate e richiamate dal `ToolAdapter`.
+    *   **Mantenere `implementation_details` in `ToolConfig`**: Questo campo sarà utilizzato dal metodo `execute` del `Tool` per determinare (in futuro) come eseguire il tool. Per ora, servirà come riferimento per il placeholder.
+    *   **Aggiungere un metodo `execute` alla struct `Tool`**: Questo metodo sarà responsabile dell'interpretazione di `self.config.implementation_details` e dell'esecuzione effettiva del tool. Per ora, sarà un placeholder che simula l'esecuzione.
         ```rust
         use async_trait::async_trait;
         use serde_json::Value;
         use crate::error::ProjectError;
 
-        #[async_trait]
-        pub trait ToolImplementation: Send + Sync {
-            /// Restituisce il nome del tool implementato.
-            fn name(&self) -> &str;
+        impl Tool {
+            // ... metodi esistenti ...
 
-            /// Esegue il tool con gli input forniti.
-            async fn execute(&self, inputs: Value) -> Result<Value, ProjectError>;
-        }
-        ```
-    *   **Rimuovere il metodo `execute` dalla struct `Tool`**: La struct `Tool` rimarrà un contenitore di dati (manifesto: nome, descrizione, schema) e non avrà più una logica di esecuzione diretta.
-    *   **Definire un trait di estensione `ExecutableTool` per `Tool`**: Questo trait fornirà un metodo `execute_with_registry` che userà il `ToolRegistry` per trovare e chiamare l'implementazione appropriata di `ToolImplementation`.
-        ```rust
-        use async_trait::async_trait;
-        use serde_json::Value;
-        use crate::error::ProjectError;
-        use crate::tool_registry::ToolRegistry; // Sarà definito nel prossimo punto
-
-        #[async_trait]
-        pub trait ExecutableTool {
-            async fn execute_with_registry(&self, inputs: Value, registry: &ToolRegistry) -> Result<Value, ProjectError>;
-        }
-
-        #[async_trait]
-        impl ExecutableTool for Tool {
-            async fn execute_with_registry(&self, inputs: Value, registry: &ToolRegistry) -> Result<Value, ProjectError> {
-                let tool_impl = registry.get(&self.config.name)
-                    .ok_or_else(|| ProjectError::ToolNotFound(format!("No implementation found for tool '{}'", self.config.name)))?;
-                tool_impl.execute(inputs).await
+            pub async fn execute(&self, inputs: Value) -> Result<Value, ProjectError> {
+                // TODO: Implementare la logica di esecuzione basata su self.config.implementation_details
+                // Per ora, un placeholder che simula l'esecuzione.
+                // In futuro, qui potrebbe esserci un match su un campo di implementation_details
+                // per chiamare diverse logiche di esecuzione (es. comando shell, funzione Rust).
+                tracing::warn!("Tool execution for '{}' is a placeholder. Inputs: {:?}. Implementation details: {:?}", self.config.name, inputs, self.config.implementation_details);
+                Ok(serde_json::json!({ "status": "success", "message": "Placeholder execution", "tool_name": self.config.name, "inputs_received": inputs }))
             }
         }
         ```
+    *   **Rimuovere la definizione della struct `ToolCall`**: Continueremo a utilizzare direttamente `MessageContent::ToolCall`.
     *   **Aggiungere `use async_trait::async_trait;`**, `use serde_json::Value;` e `use crate::error::ProjectError;` se non già presenti.
 
-2.  **Creare un nuovo file `src/tool_registry.rs`:**
-    *   **Definire la struct `ToolRegistry`**: Questa struct manterrà una mappa di implementazioni di `ToolImplementation` registrate, accessibili per nome.
-        ```rust
-        use std::collections::HashMap;
-        use std::sync::Arc;
-        use crate::tool::ToolImplementation;
-
-        pub struct ToolRegistry {
-            implementations: HashMap<String, Arc<dyn ToolImplementation>>,
-        }
-
-        impl ToolRegistry {
-            pub fn new() -> Self {
-                ToolRegistry { implementations: HashMap::new() }
-            }
-
-            pub fn register(&mut self, implementation: Arc<dyn ToolImplementation>) {
-                self.implementations.insert(implementation.name().to_string(), implementation);
-            }
-
-            pub fn get(&self, name: &str) -> Option<&Arc<dyn ToolImplementation>> {
-                self.implementations.get(name)
-            }
-        }
-        ```
-    *   **Aggiungere `use std::collections::HashMap;`** e `use std::sync::Arc;` se non già presenti.
+2.  **Rimuovere `src/tool_registry.rs` dal piano**: L'introduzione di `ToolImplementation` e `ToolRegistry` è posticipata.
 
 3.  **Aggiornare `src/lib.rs`:**
-    *   Esportare il nuovo modulo `tool_registry`.
-        ```rust
-        pub mod tool_registry;
-        pub use tool_registry::*;
-        ```
+    *   Assicurarsi che non ci siano esportazioni relative a `tool_registry` o `ExecutableTool`.
 
 ---
 
-### Fase 2: Definire il trait `ToolAdapter`
+### Fase 2: Definire il trait `ToolAdapter` (Aggiustato)
 
 Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l'adattamento di un `Tool` a un LLM, utilizzando `MessageContent::ToolCall` per gli input parsati e `serde_json::Value` per gli output raw.
 
@@ -102,17 +56,16 @@ Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l
             ToolExecutionError(#[from] crate::error::ProjectError),
             #[error("Invalid tool call: {0}")]
             InvalidToolCall(String),
-            #[error("Tool implementation not found for '{0}'")]
-            ToolImplementationNotFound(String),
+            #[error("Tool not found: {0}")]
+            ToolNotFound(String),
             // Altri errori specifici...
         }
         ```
-    *   **Definire il trait `ToolAdapter`**: Questo trait richiederà un riferimento al `Tool` che sta adattando e avrà accesso a un `ToolRegistry` per l'esecuzione. Il metodo `execute_tool` avrà un'implementazione di default che sfrutta il trait di estensione `ExecutableTool`.
+    *   **Definire il trait `ToolAdapter`**: Questo trait richiederà un riferimento al `Tool` che sta adattando. Il metodo `execute_tool` avrà un'implementazione di default che chiama direttamente `Tool::execute`.
         ```rust
         use async_trait::async_trait;
         use serde_json::Value;
-        use crate::tool::{Tool, ExecutableTool};
-        use crate::tool_registry::ToolRegistry;
+        use crate::tool::Tool;
         use crate::memory::MessageContent;
         use crate::error::ProjectError;
 
@@ -130,11 +83,11 @@ Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l
             /// Parsa la risposta raw dell'LLM in una MessageContent::ToolCall strutturata.
             fn parse_llm_response(&self, llm_response: &str) -> Result<MessageContent::ToolCall, ToolAdapterError>;
 
-            /// Esegue il Tool sottostante con gli input parsati, utilizzando il ToolRegistry.
-            /// Ha un'implementazione di default che usa il trait ExecutableTool.
-            async fn execute_tool(&self, tool_call: &MessageContent::ToolCall, tool_registry: &ToolRegistry) -> Result<Value, ToolAdapterError> {
+            /// Esegue il Tool sottostante con gli input parsati.
+            /// Ha un'implementazione di default che chiama Tool::execute.
+            async fn execute_tool(&self, tool_call: &MessageContent::ToolCall) -> Result<Value, ToolAdapterError> {
                 let tool = self.tool();
-                tool.execute_with_registry(tool_call.inputs.clone(), tool_registry).await
+                tool.execute(tool_call.inputs.clone()).await
                     .map_err(|e| ToolAdapterError::ToolExecutionError(e))
             }
 
@@ -155,8 +108,8 @@ Questa fase introduce il `trait` `ToolAdapter` che definisce l'interfaccia per l
 
 ### Punti ancora da chiarire (per il prossimo piano):
 
-*   **Implementazioni concrete di `ToolImplementation`**: Questo piano definisce solo il trait. Le implementazioni concrete (es. `FileSystemToolImplementation`, `CalculatorToolImplementation`) saranno definite in un piano successivo.
 *   **Implementazioni concrete di `ToolAdapter`**: Questo piano definisce solo il trait. Le implementazioni concrete (es. per OpenAI, Ollama, o un `ModelContextProtocolToolAdapter` strict) saranno definite in un piano successivo.
-*   **Integrazione di `ToolRegistry` e `ToolAdapter` con `Project` e `Agent`**: Come gli `Agent` caricheranno e utilizzeranno questi `ToolAdapter`s e come il `ToolRegistry` sarà gestito a livello di `Project`. Questo sarà un passo successivo.
+*   **Integrazione di `ToolAdapter` con `Project` e `Agent`**: Come gli `Agent` caricheranno e utilizzeranno questi `ToolAdapter`s. Questo sarà un passo successivo.
+*   **Implementazione reale di `Tool::execute`**: La logica attuale è un placeholder. L'implementazione di un `ToolRegistry` e `ToolImplementation` verrà affrontata in un piano futuro per rendere `Tool::execute` funzionale.
 
-Attendo la tua approvazione per questo piano rivisto.
+Attendo la tua approvazione per questo piano semplificato.

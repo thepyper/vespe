@@ -154,7 +154,7 @@ impl Memory {
     pub fn get_all_messages(&self) -> &Vec<Message> { &self.messages }
 
     /// Restituisce solo i messaggi abilitati, pronti per essere usati come contesto.
-    pub fn get_context(&self) -> Vec<&Message> {
+    pub fn get_enabled_messages(&self) -> Vec<&Message> {
         self.messages.iter().filter(|m| m.status == MessageStatus::Enabled).collect()
     }
 }

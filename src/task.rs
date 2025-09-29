@@ -296,6 +296,18 @@ impl Task {
 
 
 
+    pub fn assign_agent(&mut self, agent_uid: &str) -> Result<(), ProjectError> {
+        self.status.assigned_agent_uid = Some(agent_uid.to_string());
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
+        Ok(())
+    }
+
+    pub fn unassign_agent(&mut self) -> Result<(), ProjectError> {
+        self.status.assigned_agent_uid = None;
+        write_json_file(&self.root_path.join("status.json"), &self.status)?;
+        Ok(())
+    }
+
     pub fn get_task_state(&self) -> TaskState {
         self.status.current_state
     }

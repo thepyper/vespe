@@ -467,9 +467,7 @@ impl Project {
         // Check if agent exists
         self.load_agent(agent_uid)?;
 
-        task.status.assigned_agent_uid = Some(agent_uid.to_string());
-        write_json_file(&task.root_path.join("status.json"), &task.status)?;
-        Ok(())
+        task.assign_agent(agent_uid)
     }
 
     /// Unassigns an agent from a task. This modifies the Task's status.
@@ -478,9 +476,7 @@ impl Project {
         task_uid: &str,
     ) -> Result<(), ProjectError> {
         let mut task = self.load_task(task_uid)?;
-        task.status.assigned_agent_uid = None;
-        write_json_file(&task.root_path.join("status.json"), &task.status)?;
-        Ok(())
+        task.unassign_agent()
     }
 
     /// Adds a message to an agent's memory.

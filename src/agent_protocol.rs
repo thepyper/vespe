@@ -2,15 +2,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 use crate::error::ProjectError;
 use crate::memory::{Message, MessageContent};
-
-/// Rappresenta la definizione di uno strumento che può essere offerto all'LLM.
-/// Questa struttura verrà utilizzata per generare la parte del prompt che descrive gli strumenti disponibili.
-#[derive(Debug, Clone)]
-pub struct ToolDefinition {
-    pub name: String,
-    pub description: String,
-    pub parameters: Value, // JSON Schema per i parametri dello strumento
-}
+use crate::tool::ToolConfig;
 
 /// Errore specifico per le operazioni di AgentProtocol.
 #[derive(Debug, thiserror::Error)]
@@ -34,14 +26,14 @@ pub trait AgentProtocol: Send + Sync {
     ///
     /// # Argomenti
     /// * `messages` - Un vettore di `Message` che rappresenta la cronologia della conversazione.
-    /// * `available_tools` - Un vettore di `ToolDefinition` che descrive gli strumenti che l'LLM può chiamare.
+    /// * `available_tools` - Un vettore di `ToolConfig` che descrive gli strumenti che l'LLM può chiamare.
     ///
     /// # Restituisce
     /// Una stringa formattata per l'input dell'LLM.
     async fn format_messages(
         &self,
         messages: Vec<Message>,
-        available_tools: Option<Vec<ToolDefinition>>,
+        available_tools: Option<Vec<ToolConfig>>,
     ) -> Result<String, AgentProtocolError>;
 
     /// Parsa la stringa di output grezza dell'LLM in una sequenza di `Message` strutturati.

@@ -497,7 +497,7 @@ impl Project {
         author_uid: &str,
         content: MessageContent,
     ) -> Result<Message, ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         let message = task.memory.add_message(author_uid.to_string(), content).map_err(|e| ProjectError::Memory(e))?;
         Ok(message.clone())
     }
@@ -507,7 +507,7 @@ impl Project {
         &self,
         task_uid: &str,
     ) -> Result<AgentTickResult, ProjectError> {
-        let task = self.load_task(task_uid)?;
+        let task = self.resolve_task(task_uid)?;
         let agent_uid = task.status.assigned_agent_uid.ok_or_else(|| ProjectError::InvalidOperation(format!("Task {} has no agent assigned.", task_uid)))?;
         let agent = self.load_agent(&agent_uid)?;
 

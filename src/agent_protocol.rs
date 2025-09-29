@@ -21,18 +21,28 @@ pub enum AgentProtocolError {
 /// della risposta dell'LLM in una sequenza di messaggi strutturati.
 #[async_trait]
 pub trait AgentProtocol: Send + Sync {
-    /// Formatta una sequenza di messaggi e le definizioni degli strumenti in una stringa
-    /// pronta per essere inviata all'LLM.
+    /// Formatta una sequenza di messaggi in una stringa pronta per essere inviata all'LLM.
     ///
     /// # Argomenti
     /// * `messages` - Un vettore di `Message` che rappresenta la cronologia della conversazione.
-    /// * `available_tools` - Un vettore di `ToolConfig` che descrive gli strumenti che l'LLM può chiamare.
     ///
     /// # Restituisce
     /// Una stringa formattata per l'input dell'LLM.
     async fn format_messages(
         &self,
         messages: Vec<Message>,
+    ) -> Result<String, AgentProtocolError>;
+
+    /// Formatta le definizioni degli strumenti disponibili in una stringa
+    /// pronta per essere inclusa nel prompt dell'LLM.
+    ///
+    /// # Argomenti
+    /// * `available_tools` - Un vettore di `ToolConfig` che descrive gli strumenti che l'LLM può chiamare.
+    ///
+    /// # Restituisce
+    /// Una stringa formattata per le definizioni degli strumenti.
+    async fn format_available_tools(
+        &self,
         available_tools: Option<Vec<ToolConfig>>,
     ) -> Result<String, AgentProtocolError>;
 

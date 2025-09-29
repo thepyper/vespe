@@ -213,13 +213,15 @@ impl Agent {
         let agent_context = self.memory.get_context();
 
         // Format contexts using the agent's protocol
-        let task_context_formatted = protocol.format_messages(task_context, None).await?;
-        let agent_context_formatted = protocol.format_messages(agent_context, Some(available_tools_for_protocol)).await?;
+        let task_context_formatted = protocol.format_messages(task_context).await?;
+        let formatted_available_tools = protocol.format_available_tools(Some(available_tools_for_protocol)).await?;
+        let agent_context_formatted = protocol.format_messages(agent_context).await?;
 
         // Prepare data for Handlebars template
         let mut handlebars_data = json!({});
         handlebars_data["task_context"] = json!(task_context_formatted);
         handlebars_data["agent_context"] = json!(agent_context_formatted);
+        handlebars_data["available_tools"] = json!(formatted_available_tools);
         if let Some(system_prompt_template) = &self.system_prompt {
             handlebars_data["system_prompt_template"] = json!(system_prompt_template);
         }

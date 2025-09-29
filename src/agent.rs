@@ -138,5 +138,10 @@ impl Agent {
             memory,
         })
     }
-    // pub fn save_state(&self) -> Result<(), ProjectError> { unimplemented!() }
+    pub fn save_state(&self, project_root: &Path) -> Result<(), ProjectError> {
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, &self.metadata.uid)?;
+        write_json_file(&agent_path.join("state.json"), &self.state)?;
+        Ok(())
+    }
 }

@@ -6,6 +6,7 @@ pub mod tool;
 pub mod memory;
 pub mod agent_protocol;
 pub mod registry;
+pub mod llm_client;
 
 pub use tool::*;
 pub mod project;

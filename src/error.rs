@@ -40,6 +40,8 @@ pub enum ProjectError {
     Memory(#[from] MemoryError),
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
+    #[error("LLM client error: {0}")]
+    LLMClientError(String),
 }
 
 // Rappresenta il risultato di un ciclo di `tick`

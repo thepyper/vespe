@@ -2,13 +2,13 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use crate::memory::{Memory, Message};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
 use crate::registry::{AGENT_PROTOCOL_REGISTRY, Registry};
-use crate::agent_protocol::AgentProtocol;
+use crate::agent_protocol::{AgentProtocol, ToolConfig};
+use crate::llm_client::{create_llm_client, LLMClient};
 
 // Default protocol name for agents
 const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";
@@ -178,6 +178,32 @@ impl Agent {
         registry.get(protocol_name)
             .map(|b| Arc::new(b.clone())) // Clone the Box and wrap in Arc
             .ok_or_else(|| ProjectError::AgentProtocolNotFound(protocol_name.clone()))
+    }
+
+    /// Sends a request to the LLM, handles formatting, querying, and parsing.
+    pub async fn call_llm(
+        &self,
+        messages: Vec<Message>,
+        available_tools: Option<Vec<ToolConfig>>,
+    ) -> Result<Vec<Message>, ProjectError> {
+        let protocol = self.protocol().await?;
+
+        // 1. Format messages using the agent's protocol
+        let formatted_prompt = protocol.format_messages(messages, available_tools).await?;
+
+        // 2. Get LLM client based on agent's configuration
+        let llm_client = match &self.details {
+            AgentDetails::AI(ai_config) => create_llm_client(&ai_config.llm_provider)?,
+            AgentDetails::Human(_) => return Err(ProjectError::InvalidOperation("Cannot call LLM for a Human agent.".to_string())),
+        };
+
+        // 3. Send query to LLM
+        let raw_response = llm_client.send_query(formatted_prompt).await?;
+
+        // 4. Parse LLM response using the agent's protocol
+        let parsed_messages = protocol.parse_llm_output(raw_response).await?;
+
+        Ok(parsed_messages)
     }
 
     pub fn save_state(&self, project_root: &Path) -> Result<(), ProjectError> {

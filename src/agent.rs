@@ -1,10 +1,14 @@
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::memory::{Memory, Message};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
+use crate::registry::{AGENT_PROTOCOL_REGISTRY, Registry};
+use crate::agent_protocol::AgentProtocol;
 
 // Default protocol name for agents
 const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";
@@ -165,6 +169,17 @@ impl Agent {
             system_prompt,
         })
     }
+
+    /// Retrieves the AgentProtocol associated with this agent from the registry.
+    pub async fn protocol(&self) -> Result<Arc<Mutex<Box<dyn AgentProtocol>>>, ProjectError> {
+        let registry = AGENT_PROTOCOL_REGISTRY.lock().await;
+        let protocol_name = &self.metadata.protocol_name;
+
+        registry.get(protocol_name)
+            .cloned() // Clone the Arc<Mutex<Box<dyn AgentProtocol>>>
+            .ok_or_else(|| ProjectError::AgentProtocolNotFound(protocol_name.clone()))
+    }
+
     pub fn save_state(&self, project_root: &Path) -> Result<(), ProjectError> {
         let agents_base_path = project_root.join(".vespe").join("agents");
         let agent_path = get_entity_path(&agents_base_path, &self.metadata.uid)?;

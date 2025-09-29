@@ -259,8 +259,19 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Agent(agent_command) => match &agent_command.command {
-            AgentSubcommand::CreateAI { name, role, model, endpoint, allowed_tools, system_prompt } => {
-                let llm_config = LLMProviderConfig::Ollama { model: model.clone(), endpoint: endpoint.clone() };
+            AgentSubcommand::CreateAI { name, role, llm_provider_args, allowed_tools, system_prompt } => {
+                let llm_config = match &llm_provider_args.provider {
+                    cli::commands::LlmProviderSubcommand::Ollama { model, endpoint } => {
+                        LLMProviderConfig::Ollama { model: model.clone(), endpoint: endpoint.clone() }
+                    }
+                    cli::commands::LlmProviderSubcommand::OpenAI { model, api_key_env } => {
+                        LLMProviderConfig::OpenAI { model: model.clone(), api_key_env: api_key_env.clone() }
+                    }
+                    cli::commands::LlmProviderSubcommand::Gemini { model, client_id_env, client_secret_env, refresh_token_env } => {
+                        LLMProviderConfig::Gemini { model: model.clone(), client_id_env: client_id_env.clone(), client_secret_env: client_secret_env.clone(), refresh_token_env: refresh_token_env.clone() }
+                    }
+                };
+
                 let ai_config = AIConfig { role: role.clone(), llm_provider: llm_config, allowed_tools: allowed_tools.clone() };
 
                 let prompt_content = if let Some(path) = system_prompt {

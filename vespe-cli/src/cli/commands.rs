@@ -31,6 +31,38 @@ pub struct AgentCommand {
     pub command: AgentSubcommand,
 }
 
+#[derive(Debug, Parser)]
+pub struct LlmProviderArgs {
+    #[command(subcommand)]
+    pub provider: LlmProviderSubcommand,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum LlmProviderSubcommand {
+    Ollama {
+        #[arg(long)]
+        model: String,
+        #[arg(long)]
+        endpoint: String,
+    },
+    OpenAI {
+        #[arg(long)]
+        model: String,
+        #[arg(long)]
+        api_key_env: String,
+    },
+    Gemini {
+        #[arg(long)]
+        model: String,
+        #[arg(long)]
+        client_id_env: String,
+        #[arg(long)]
+        client_secret_env: String,
+        #[arg(long)]
+        refresh_token_env: String,
+    },
+}
+
 #[derive(Debug, Subcommand)]
 pub enum AgentSubcommand {
     /// Create a new AI agent
@@ -39,10 +71,8 @@ pub enum AgentSubcommand {
         name: String,
         #[arg(long)]
         role: String,
-        #[arg(long)]
-        model: String,
-        #[arg(long)]
-        endpoint: String,
+        #[clap(flatten)] // Use flatten to include LLM provider arguments
+        llm_provider_args: LlmProviderArgs,
         #[arg(long, value_delimiter = ' ')] // Allows multiple values separated by space
         allowed_tools: Vec<String>,
         /// Path to the system prompt template file (.hbs)

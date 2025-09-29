@@ -191,11 +191,11 @@ impl Project {
 
         // 3. Check the search results.
         match matching_tasks.len() {
-            0 => Err(anyhow!("Task \'{}\' not found.", identifier)),
+            0 => Err(anyhow!("Task '{}' not found.", identifier.to_string())),
             1 => Ok(matching_tasks.into_iter().next().unwrap()),
             _ => Err(anyhow!(
-                "Multiple tasks found with the name \'{}\'. Please use a unique UID.",
-                identifier
+                "Multiple tasks found with the name '{}'. Please use a unique UID.",
+                identifier.to_string()
             )),
         }
     }
@@ -209,11 +209,47 @@ impl Project {
             .collect();
 
         match matching_tools.len() {
-            0 => Err(anyhow!("Tool '{}' not found.", identifier)),
+            0 => Err(anyhow!("Tool '{}' not found.", identifier.to_string())),
             1 => Ok(matching_tools.into_iter().next().unwrap()),
             _ => Err(anyhow!(
                 "Multiple tools found with the name '{}'. Please use a unique UID.",
-                identifier
+                identifier.to_string()
+            )),
+        }
+    }
+
+    /// Resolves an agent identifier (which can be a UID or a name) to an Agent.
+    ///
+    /// # Arguments
+    ///
+    /// * `identifier` - The string identifier for the agent (e.g., "agt-...") or its name.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the resolved `Agent` or an error if the agent cannot be found
+    /// or if the name is ambiguous.
+    pub fn resolve_agent(&self, identifier: &str) -> Result<Agent> {
+        // 1. Try to load directly as a UID.
+        if identifier.starts_with("agt-") || identifier.starts_with("usr-") {
+            if let Ok(agent) = self.load_agent(identifier) {
+                return Ok(agent);
+            }
+        }
+
+        // 2. If that fails or it's not a UID, search by name.
+        let all_agents = self.list_agents()?;
+        let matching_agents: Vec<Agent> = all_agents
+            .into_iter()
+            .filter(|a| a.metadata.name == identifier)
+            .collect();
+
+        // 3. Check the search results.
+        match matching_agents.len() {
+            0 => Err(anyhow!("Agent '{}' not found.", identifier.to_string())),
+            1 => Ok(matching_agents.into_iter().next().unwrap()),
+            _ => Err(anyhow!(
+                "Multiple agents found with the name '{}'. Please use a unique UID.",
+                identifier.to_string()
             )),
         }
     }
@@ -462,7 +498,7 @@ impl Project {
         task_uid: &str,
         agent_uid: &str,
     ) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         // Check if agent exists
         self.load_agent(agent_uid)?;
 
@@ -474,7 +510,7 @@ impl Project {
         &self,
         task_uid: &str,
     ) -> Result<(), ProjectError> {
-        let mut task = self.load_task(task_uid)?;
+        let mut task = self.resolve_task(task_uid)?;
         task.unassign_agent()
     }
 

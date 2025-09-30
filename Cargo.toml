@@ -9,22 +9,6 @@ name = "vespe"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "ollama_test_client"
-path = "src/bin/ollama_test_client.rs"
-
-[[bin]]
-name = "ollama_agent_client"
-path = "src/bin/ollama_agent_client.rs"
-
-[[bin]]
-name = "data-generator"
-path = "src/bin/data_generator/main.rs"
-
-[[bin]]
-name = "tool-format-tester"
-path = "src/bin/tool-format-tester/main.rs"
-
 [dependencies]
 rand = "0.8"
 tokio = { version = "1", features = ["full"] }

@@ -1,0 +1,115 @@
+[2m2025-09-22T09:54:41.861554Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m Tracing initialized successfully.
+[2m2025-09-22T09:54:41.863697Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m Parsed CLI arguments: CliArgs { narrator_model: "gemma3:1b", hero_model: "qwen2.5:1.5b", ollama_url: "http://localhost:11434", num_examples: 1, output_dir: "buzz/training/generated_format_test", policy: "tagged", tool_name: None, use_case: None, complexity: None, user_style: None, context_length: None }
+[2m2025-09-22T09:54:41.867745Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m Selected policy: tagged
+[2m2025-09-22T09:54:41.869410Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m Registering Handlebars templates...
+[2m2025-09-22T09:54:41.873194Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m Handlebars templates registered.
+[2m2025-09-22T09:54:41.874127Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m --- Inizio Pipeline di Test Formato Tool ---
+[2m2025-09-22T09:54:41.878791Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m ========== Inizio Esempio 1/1 ==========
+[2m2025-09-22T09:54:41.879767Z[0m [34mDEBUG[0m [2mtool_format_tester[0m[2m:[0m Selected parameters for example 1: tool_name=read_file, use_case=text transformation, complexity=simple, user_style=casual, context_length=very long
+[2m2025-09-22T09:54:41.881873Z[0m [32m INFO[0m [2mtool_format_tester[0m[2m:[0m PASSO 1: Generating prompt for HERO model...
+[2m2025-09-22T09:54:41.883806Z[0m [34mDEBUG[0m [2mtool_format_tester::pipeline[0m[2m:[0m generate_student_prompt: Data for rendering: Object {
+    "complexity": String("simple"),
+    "context_length": String("very long"),
+    "tool_description": String("Reads and returns the content of a specified file."),
+    "tool_name": String("read_file"),
+    "tool_spec": String("{\n  \"name\": \"read_file\",\n  \"description\": \"Reads and returns the content of a specified file.\",\n  \"parameters\": [\n    {\n      \"name\": \"absolute_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to read.\",\n      \"required\": true\n    }\n  ]\n}"),
+    "use_case": String("text transformation"),
+    "user_style": String("casual"),
+}
+[2m2025-09-22T09:54:41.886633Z[0m [34mDEBUG[0m [2mhandlebars::render[0m[2m:[0m Rendering value: Path(Relative(([Named("tool_name")], "tool_name")))
+[2m2025-09-22T09:54:41.887716Z[0m [34mDEBUG[0m [2mhandlebars::render[0m[2m:[0m Rendering value: Path(Relative(([Named("tool_spec")], "tool_spec")))
+[2m2025-09-22T09:54:41.889062Z[0m [34mDEBUG[0m [2mhandlebars::render[0m[2m:[0m Rendering value: Path(Relative(([Named("tool_description")], "tool_description")))
+[2m2025-09-22T09:54:41.892904Z[0m [34mDEBUG[0m [2mhandlebars::render[0m[2m:[0m Rendering value: Path(Relative(([Named("use_case")], "use_case")))
+[2m2025-09-22T09:54:41.896065Z[0m [34mDEBUG[0m [2mhandlebars::render[0m[2m:[0m Rendering value: Path(Relative(([Named("complexity")], "complexity")))
+[2m2025-09-22T09:54:41.897273Z[0m [34mDEBUG[0m [2mhandlebars::render[0m[2m:[0m Rendering value: Path(Relative(([Named("user_style")], "user_style")))
+[2m2025-09-22T09:54:41.898824Z[0m [34mDEBUG[0m [2mhandlebars::render[0m[2m:[0m Rendering value: Path(Relative(([Named("context_length")], "context_length")))
+[2m2025-09-22T09:54:41.900591Z[0m [32m INFO[0m [2mtool_format_tester::pipeline[0m[2m:[0m Narrator Query: TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR
+
+Your task is to generate an hypotetical user prompt that will be submitted to a language model, so that the language model will need to use a specific tool in the crafted scenario.
+
+=== TARGET TOOL ===
+Tool Name: read_file
+Tool Specification: {
+  "name": "read_file",
+  "description": "Reads and returns the content of a specified file.",
+  "parameters": [
+    {
+      "name": "absolute_path",
+      "type": "string",
+      "description": "The absolute path to the file to read.",
+      "required": true
+    }
+  ]
+}
+Tool Description: Reads and returns the content of a specified file.
+
+=== SCENARIO PARAMETERS ===
+Use Case: text transformation
+Complexity: simple
+User Style: casual
+Context Length: very long
+
+=== GENERATION RULES ===
+1. Create realistic user request (not "please use the X tool")
+2. Match the specified use case and complexity naturally
+3. Include appropriate context for the context_length parameter
+4. Use language style matching user_style parameter
+5. Make tool usage feel natural and necessary
+Generate exactly one user prompt that matches all parameters.
+DO NOT include any preamble nor explanation to the prompt.
+ALL OF YOUR OUTPUT MUST BE ONLY THE PROMPT.
+
+=== OUTPUT ===
+
+[2m2025-09-22T09:54:41.905470Z[0m [34mDEBUG[0m [2mtool_format_tester::ollama_client[0m[2m:[0m Ollama Request: model=gemma3:1b, system=None, prompt=TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR
+
+Your task is to generate an hypotetical user prompt that will be submitted to a language model, so that the language model will need to use a specific tool in the crafted scenario.
+
+=== TARGET TOOL ===
+Tool Name: read_file
+Tool Specification: {
+  "name": "read_file",
+  "description": "Reads and returns the content of a specified file.",
+  "parameters": [
+    {
+      "name": "absolute_path",
+      "type": "string",
+      "description": "The absolute path to the file to read.",
+      "required": true
+    }
+  ]
+}
+Tool Description: Reads and returns the content of a specified file.
+
+=== SCENARIO PARAMETERS ===
+Use Case: text transformation
+Complexity: simple
+User Style: casual
+Context Length: very long
+
+=== GENERATION RULES ===
+1. Create realistic user request (not "please use the X tool")
+2. Match the specified use case and complexity naturally
+3. Include appropriate context for the context_length parameter
+4. Use language style matching user_style parameter
+5. Make tool usage feel natural and necessary
+Generate exactly one user prompt that matches all parameters.
+DO NOT include any preamble nor explanation to the prompt.
+ALL OF YOUR OUTPUT MUST BE ONLY THE PROMPT.
+
+=== OUTPUT ===
+
+[2m2025-09-22T09:54:41.912520Z[0m [34mDEBUG[0m [2mtool_format_tester::ollama_client[0m[2m:[0m Ollama Raw Request Payload: {
+  "model": "gemma3:1b",
+  "prompt": "TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR\r\n\r\nYour task is to generate an hypotetical user prompt that will be submitted to a language model, so that the language model will need to use a specific tool in the crafted scenario.\r\n\r\n=== TARGET TOOL ===\r\nTool Name: read_file\r\nTool Specification: {\n  \"name\": \"read_file\",\n  \"description\": \"Reads and returns the content of a specified file.\",\n  \"parameters\": [\n    {\n      \"name\": \"absolute_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to read.\",\n      \"required\": true\n    }\n  ]\n}\r\nTool Description: Reads and returns the content of a specified file.\r\n\r\n=== SCENARIO PARAMETERS ===\r\nUse Case: text transformation\r\nComplexity: simple\r\nUser Style: casual\r\nContext Length: very long\r\n\r\n=== GENERATION RULES ===\r\n1. Create realistic user request (not \"please use the X tool\")\r\n2. Match the specified use case and complexity naturally\r\n3. Include appropriate context for the context_length parameter\r\n4. Use language style matching user_style parameter\r\n5. Make tool usage feel natural and necessary\r\nGenerate exactly one user prompt that matches all parameters.\r\nDO NOT include any preamble nor explanation to the prompt.\r\nALL OF YOUR OUTPUT MUST BE ONLY THE PROMPT.\r\n\r\n=== OUTPUT ===\r\n",
+  "system": null,
+  "stream": true,
+  "options": {
+    "temperature": 0.0,
+    "top_p": 0.0
+  }
+}
+[2m2025-09-22T09:54:41.919297Z[0m [34mDEBUG[0m [2mreqwest::connect[0m[2m:[0m starting new connection: http://localhost:11434/
+[2m2025-09-22T09:54:41.931888Z[0m [34mDEBUG[0m [2mhyper_util::client::legacy::connect::http[0m[2m:[0m connecting to [::1]:11434
+[2m2025-09-22T09:54:42.234036Z[0m [34mDEBUG[0m [2mhyper_util::client::legacy::connect::http[0m[2m:[0m connecting to 127.0.0.1:11434
+[2m2025-09-22T09:54:42.236617Z[0m [34mDEBUG[0m [2mhyper_util::client::legacy::connect::http[0m[2m:[0m connected to 127.0.0.1:11434

@@ -1,0 +1,78 @@
+# Piano di Refactoring: Integrazione del Crate `genai`
+
+## Obiettivo
+Sostituire i moduli `llm_client` e `agent_protocol` con il crate `genai` (versione 0.4) per un'interazione unificata e semplificata con i Large Language Models (LLM). Questo refactoring mira a ridurre il codice personalizzato per l'integrazione LLM, sfruttare il supporto multi-provider di `genai` e migliorare la manutenibilità.
+
+## Fasi del Piano
+
+### Fase 0: Setup Iniziale e Commit
+1.  **Creazione Branch:** Creare un nuovo branch Git per queste modifiche (es. `feature/integrate-genai`).
+2.  **Commit Iniziale:** Assicurarsi che tutte le modifiche precedenti siano state commesse e che il repository sia in uno stato pulito.
+
+### Fase 1: Aggiunta della Dipendenza `genai`
+1.  **Modifica `Cargo.toml`:** Aggiungere `genai = "0.4"` alla sezione `[dependencies]` del file `Cargo.toml` principale del progetto `vespe`.
+2.  **Commit:** Commit delle modifiche a `Cargo.toml`.
+
+### Fase 2: Creazione del Modulo `genai_wrapper`
+1.  **Creazione File:** Creare un nuovo file `src/genai_wrapper.rs`.
+2.  **Contenuto Iniziale `genai_wrapper.rs`:** Definire la struttura di base per il wrapping di `genai`. Questo modulo conterrà le funzioni per:
+    *   Creare e gestire istanze `genai::Client` basate su `LLMProviderConfig`.
+    *   Convertire i nostri tipi `Message` e `ToolConfig` nei formati di messaggio e strumento di `genai`.
+    *   Inviare richieste di chat utilizzando `genai::Client`.
+    *   Parsare le risposte di `genai` nei nostri tipi `Message`.
+3.  **Aggiunta a `src/lib.rs`:** Aggiungere `pub mod genai_wrapper;` a `src/lib.rs` per rendere il modulo accessibile.
+4.  **Commit:** Commit della creazione del modulo `genai_wrapper`.
+
+### Fase 3: Rimozione del Modulo `llm_client`
+1.  **Eliminazione Directory:** Eliminare la directory `src/llm_client` e tutti i suoi contenuti.
+2.  **Rimozione Riferimenti in `src/lib.rs`:** Rimuovere `pub mod llm_client;` da `src/lib.rs`.
+3.  **Rimozione Riferimenti in `src/agent.rs`:** Rimuovere `use crate::llm_client::create_llm_client;` e qualsiasi altro riferimento a `llm_client`.
+4.  **Rimozione Riferimenti in `src/project.rs`:** Rimuovere qualsiasi riferimento a `llm_client`.
+5.  **Commit:** Commit della rimozione del modulo `llm_client`.
+
+### Fase 4: Rimozione del Modulo `agent_protocol`
+1.  **Eliminazione Directory:** Eliminare la directory `src/agent_protocol` e tutti i suoi contenuti.
+2.  **Rimozione Riferimenti in `src/lib.rs`:** Rimuovere `pub mod agent_protocol;` da `src/lib.rs`.
+3.  **Rimozione Riferimenti in `src/agent.rs`:** Rimuovere `use crate::agent_protocol::AgentProtocol;`, `use crate::agent_protocol::QueryContext;` e qualsiasi altro riferimento a `agent_protocol`.
+4.  **Rimozione Riferimenti in `src/registry.rs`:** Rimuovere `AGENT_PROTOCOL_REGISTRY` e qualsiasi codice correlato alla registrazione di `AgentProtocol`.
+5.  **Rimozione Riferimenti in `src/project.rs`:** Rimuovere qualsiasi riferimento a `agent_protocol`.
+6.  **Commit:** Commit della rimozione del modulo `agent_protocol`.
+
+### Fase 5: Refactoring della Struct `Agent`
+1.  **Modifica `src/agent.rs`:**
+    *   **Rimozione `protocol()`:** Eliminare la funzione `protocol()` dalla `impl Agent`.
+    *   **Aggiornamento `call_llm()`:**
+        *   Modificare la firma di `call_llm` per rimuovere i parametri `task_context`, `available_tools`, `system_instructions` (poiché `genai_wrapper` gestirà la costruzione del prompt completo).
+        *   All'interno di `call_llm`, recuperare `ai_config`, `allowed_tool_names`, `agent_context` (internamente) e `self.agent_instructions`.
+        *   Chiamare una nuova funzione nel `genai_wrapper` (es. `genai_wrapper::send_chat_request`) che prenderà questi componenti e restituirà `Vec<Message>`.
+        *   Rimuovere la logica di costruzione di `QueryContext`.
+        *   Rimuovere la logica di validazione delle chiamate agli strumenti (questa potrebbe essere spostata nel `genai_wrapper` o gestita diversamente).
+2.  **Commit:** Commit delle modifiche alla struct `Agent`.
+
+### Fase 6: Aggiornamento di `LLMProviderConfig`
+1.  **Modifica `src/agent.rs`:**
+    *   Rivedere la definizione di `LLMProviderConfig` per allinearla meglio ai requisiti di configurazione di `genai`. Potrebbe essere necessario aggiungere o rimuovere campi.
+2.  **Commit:** Commit delle modifiche a `LLMProviderConfig`.
+
+### Fase 7: Aggiornamento di `src/registry.rs`
+1.  **Rimozione `AGENT_PROTOCOL_REGISTRY`:** Eliminare la definizione di `AGENT_PROTOCOL_REGISTRY` e qualsiasi codice correlato alla sua inizializzazione o utilizzo.
+2.  **Commit:** Commit delle modifiche a `src/registry.rs`.
+
+### Fase 8: Aggiornamento di `src/project.rs`
+1.  **Modifica `tick_task()`:**
+    *   Rimuovere la costruzione della stringa `system_instructions` (poiché `Agent::call_llm` la gestirà internamente o tramite `genai_wrapper`).
+    *   Aggiornare la chiamata a `agent.call_llm` per corrispondere alla sua nuova firma (meno argomenti).
+2.  **Commit:** Commit delle modifiche a `src/project.rs`.
+
+### Fase 9: Pulizia di `vespe-cli`
+1.  **Modifica `vespe-cli/src/main.rs`:**
+    *   Rimuovere qualsiasi riferimento a `llm_client` o `agent_protocol`.
+    *   Aggiornare le chiamate a `project_root.create_ai_agent` e `project_root.create_human_agent` per corrispondere alle loro nuove firme (meno argomenti).
+2.  **Commit:** Commit delle modifiche a `vespe-cli`.
+
+### Fase 10: Test e Verifica Finale
+1.  **Compilazione:** Eseguire `cargo check --workspace` per assicurarsi che l'intero workspace compili senza errori.
+2.  **Esecuzione Test:** Se esistono test, eseguirli per verificare l'assenza di regressioni.
+3.  **Verifica Manuale:** Eseguire l'applicazione `vespe-cli` per creare agenti e task, e verificare che l'interazione con l'LLM funzioni come previsto con la nuova integrazione `genai`.
+
+---

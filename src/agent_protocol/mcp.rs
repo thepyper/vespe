@@ -18,33 +18,51 @@ struct McpMessage {
 
 #[async_trait]
 impl AgentProtocol for McpAgentProtocol {
-    async fn format_messages(
+    async fn format_query(
         &self,
-        messages: Vec<Message>,
+        context: crate::agent_protocol::QueryContext<'_>,
     ) -> Result<String, AgentProtocolError> {
         let mut mcp_messages: Vec<McpMessage> = Vec::new();
 
-        for message in messages {
+        // Add system instructions if present
+        if let Some(instructions) = context.system_instructions {
+            mcp_messages.push(McpMessage {
+                role: "system".to_string(),
+                content: json!({ "type": "text", "text": instructions }),
+            });
+        }
+
+        // Add available tools as a system message
+        if !context.available_tools.is_empty() {
+            let tools_json = to_string_pretty(context.available_tools)
+                .map_err(|e| AgentProtocolError::SerializationError(e))?;
+            mcp_messages.push(McpMessage {
+                role: "system".to_string(),
+                content: json!({ "type": "tool_definitions", "tools": serde_json::from_str::<serde_json::Value>(&tools_json).unwrap_or_default() }),
+            });
+        }
+
+        // Combine agent_context and task_context and format them
+        let all_messages = context.agent_context.iter().chain(context.task_context.iter());
+
+        for message in all_messages {
             let role = match message.author_agent_uid.as_str() {
                 "user" => "user".to_string(),
                 "system" => "system".to_string(),
                 _ => "assistant".to_string(), // Default to assistant for other agents
             };
 
-            let content_value = match message.content {
+            let content_value = match &message.content {
                 MessageContent::Text(text) => {
                     json!({ "type": "text", "text": text })
                 },
                 MessageContent::Thought(thought) => {
-                    // Thoughts are internal and not typically sent to LLM in MCP
-                    // For now, we'll treat them as assistant text messages
                     json!({ "type": "text", "text": format!("Thought: {}", thought) })
                 },
                 MessageContent::ToolCall { tool_name, call_uid, inputs } => {
                     json!({ "type": "tool_use", "id": call_uid, "name": tool_name, "input": inputs })
                 },
                 MessageContent::ToolResult { tool_name: _, call_uid, inputs: _, outputs } => {
-                    // MCP spec doesn't explicitly show tool_result from agent, assuming a 'tool_result' type
                     json!({ "type": "tool_result", "tool_call_id": call_uid, "output": outputs })
                 },
             };
@@ -57,18 +75,6 @@ impl AgentProtocol for McpAgentProtocol {
 
         to_string_pretty(&mcp_messages)
             .map_err(|e| AgentProtocolError::SerializationError(e))
-    }
-
-    async fn format_available_tools(
-        &self,
-        available_tools: Option<Vec<ToolConfig>>,
-    ) -> Result<String, AgentProtocolError> {
-        if let Some(tools) = available_tools {
-            to_string_pretty(&tools)
-                .map_err(|e| AgentProtocolError::SerializationError(e))
-        } else {
-            Ok("[]".to_string())
-        }
     }
 
     async fn parse_llm_output(

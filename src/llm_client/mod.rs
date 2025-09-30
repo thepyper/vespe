@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use crate::error::ProjectError;
 use crate::agent::LLMProviderConfig;
+use std::path::Path;
 
 pub mod ollama;
 pub mod openai;
@@ -19,7 +20,7 @@ pub trait LLMClient: Send + Sync {
 }
 
 /// Factory function per creare un LLMClient basato su LLMProviderConfig.
-pub fn create_llm_client(config: &LLMProviderConfig) -> Result<Box<dyn LLMClient>, ProjectError> {
+pub fn create_llm_client(project_root: &Path, config: &LLMProviderConfig) -> Result<Box<dyn LLMClient>, ProjectError> {
     match config {
         LLMProviderConfig::Ollama { model, endpoint } => {
             Ok(Box::new(OllamaClient::new(model.clone(), endpoint.clone())))
@@ -29,18 +30,16 @@ pub fn create_llm_client(config: &LLMProviderConfig) -> Result<Box<dyn LLMClient
                 .map_err(|_| ProjectError::LLMClientError(format!("OpenAI API key environment variable '{}' not set.", api_key_env)))?;
             Ok(Box::new(OpenAIClient::new(model.clone(), api_key)))
         },
-        LLMProviderConfig::Gemini { model, client_id_env, client_secret_env, refresh_token_env } => {
+        LLMProviderConfig::Gemini { model, client_id_env, client_secret_env } => {
             let client_id = std::env::var(client_id_env)
                 .map_err(|_| ProjectError::LLMClientError(format!("Gemini CLIENT_ID environment variable '{}' not set.", client_id_env)))?;
             let client_secret = std::env::var(client_secret_env)
                 .map_err(|_| ProjectError::LLMClientError(format!("Gemini CLIENT_SECRET environment variable '{}' not set.", client_secret_env)))?;
-            let refresh_token = std::env::var(refresh_token_env)
-                .map_err(|_| ProjectError::LLMClientError(format!("Gemini REFRESH_TOKEN environment variable '{}' not set.", refresh_token_env)))?;
 
             // block_on is used here for simplicity in this prototype. In a real application,
             // create_llm_client should ideally be async or called from an async context.
             let client = tokio::runtime::Handle::current().block_on(async {
-                GeminiClient::new(model.clone(), client_id, client_secret, refresh_token).await
+                GeminiClient::new(project_root.to_path_buf(), model.clone(), client_id, client_secret).await
             })?;
             Ok(Box::new(client))
         },

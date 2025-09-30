@@ -58,8 +58,6 @@ pub enum LlmProviderSubcommand {
         client_id_env: String,
         #[arg(long)]
         client_secret_env: String,
-        #[arg(long)]
-        refresh_token_env: String,
     },
 }
 

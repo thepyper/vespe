@@ -626,13 +626,6 @@ impl Project {
             _ => return Err(ProjectError::InvalidOperation(format!("Task {} is in an untickable state: {:?}", task_uid, task.status.current_state))),
         };
 
-        let system_instructions = format!(
-            "You are an AI agent working on task '{}'.\nObjective: {}\nStep Objective: {}",
-            task.config.name,
-            task.objective,
-            step_objective
-        );
-
         let ai_config = match &agent.details {
             crate::agent::AgentDetails::AI(config) => config,
             crate::agent::AgentDetails::Human(_) => return Err(ProjectError::InvalidOperation("Cannot call LLM for a Human agent.".to_string())),
@@ -653,17 +646,15 @@ impl Project {
         let task_context_messages: Vec<Message> = task.memory.get_context().into_iter().cloned().collect();
 
         debug!("Ticking task {} with agent {}. Agent details: {:?}", task_uid, agent_uid, agent.details);
-        debug!("System Instructions for LLM: {}", system_instructions);
 
         // 3. Call the LLM
         let _llm_response_messages = agent.call_llm(
             &self.root_path,
             &task_context_messages,
             &available_tools_for_protocol,
-            Some(&system_instructions),
+            None, // system_instructions are now handled internally by Agent::call_llm
         ).await?;
 
         // For now, just return Waiting. The actual processing of llm_response_messages will come later.
         Ok(AgentTickResult::Waiting)
-    }
 }

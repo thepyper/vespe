@@ -124,7 +124,7 @@ impl Project {
     }
 
     /// Lists all tasks in the project.
-    pub fn list_all_tasks(&self) -> Result<Vec<Task>, ProjectError> {
+    pub fn list_tasks(&self) -> Result<Vec<Task>, ProjectError> {
         let tasks_base_path = self.tasks_dir();
         let mut tasks = Vec::new();
 

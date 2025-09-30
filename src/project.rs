@@ -637,7 +637,7 @@ impl Project {
         debug!("Task data for LLM: {:?}", task_data);
 
         // 3. Call the LLM
-        let _llm_response_messages = agent.call_llm(task.memory.get_context().into_iter().cloned().collect(), task_data).await?;
+        let _llm_response_messages = agent.call_llm(&self.root_path, task.memory.get_context().into_iter().cloned().collect(), task_data).await?;
 
         // For now, just return Waiting. The actual processing of llm_response_messages will come later.
         Ok(AgentTickResult::Waiting)

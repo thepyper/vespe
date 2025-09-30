@@ -77,6 +77,9 @@ pub enum AgentSubcommand {
     CreateHuman {
         #[arg(long)]
         name: String,
+        /// Path to the agent instructions file (.md)
+        #[arg(long)]
+        agent_instructions: Option<PathBuf>,
         // HumanConfig is empty for now, so no specific args needed
     },
     /// Show details for a specific agent

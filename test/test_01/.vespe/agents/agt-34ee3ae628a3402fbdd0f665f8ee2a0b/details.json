@@ -1,0 +1,12 @@
+{
+  "AI": {
+    "role": "planner",
+    "llm_provider": {
+      "Ollama": {
+        "model": "gpt-oss:20b",
+        "endpoint": "http://localhost:11434"
+      }
+    },
+    "allowed_tools": []
+  }
+}

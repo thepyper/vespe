@@ -49,8 +49,10 @@ pub enum ProjectError {
     AgentProtocolNotFound(String),
     #[error("Tool execution error: {0}")]
     ToolExecutionError(String),
-    #[error("Agent protocol error: {0}")]
-    AgentProtocol(#[from] crate::agent_protocol::AgentProtocolError),
+    #[error("Genai error: {0}")]
+    GenaiError(String),
+    #[error("Missing API key: {0}")]
+    MissingApiKey(String),
     #[error("Anyhow error: {0}")]
     Anyhow(#[from] anyhow::Error),
     #[error("URL parsing error: {0}")]

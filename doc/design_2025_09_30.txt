@@ -1,0 +1,16 @@
+
+In agent.rs:
+
+- LLMProviderConfig va cambiato per essere una configurazione di genai; 
+  potremmo mantenere la struttura attuale, ma poi mappare tutto in genai,
+  propongo un file per il wrapping tipo genai_wrapper.rs;
+  
+- Agent:
+	protocol() sparisce
+	call_llm: dovrebbe fare circa quello che fa adesso, poi chiamare il metodo wrapper di genai (in un file genai_wrapper.rs che contenga tutto il wrapping di genai)
+	
+Tutto llm_client sparisce, fa genai
+Tutto agent_protocol sparisce, fa genai 
+
+
+

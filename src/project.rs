@@ -657,4 +657,5 @@ impl Project {
 
         // For now, just return Waiting. The actual processing of llm_response_messages will come later.
         Ok(AgentTickResult::Waiting)
+    }
 }

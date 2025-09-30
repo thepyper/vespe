@@ -7,6 +7,7 @@ pub mod memory;
 pub mod agent_protocol;
 pub mod registry;
 pub mod llm_client;
+pub mod genai_wrapper;
 
 pub mod project;
 

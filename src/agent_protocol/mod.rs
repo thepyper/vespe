@@ -2,6 +2,13 @@ use async_trait::async_trait;
 use crate::memory::Message;
 use crate::tool::ToolConfig;
 
+pub struct QueryContext<'a> {
+    pub task_context: &'a [Message],
+    pub agent_context: &'a [Message],
+    pub available_tools: &'a [ToolConfig],
+    pub system_instructions: Option<&'a str>,
+}
+
 /// Errore specifico per le operazioni di AgentProtocol.
 #[derive(Debug, thiserror::Error)]
 pub enum AgentProtocolError {
@@ -17,13 +24,6 @@ pub enum AgentProtocolError {
 /// Gestisce la formattazione dei messaggi in un formato comprensibile dall'LLM e il parsing
 /// della risposta dell'LLM in una sequenza di messaggi strutturati.
 #[async_trait]
-pub struct QueryContext<'a> {
-    pub task_context: &'a [Message],
-    pub agent_context: &'a [Message],
-    pub available_tools: &'a [ToolConfig],
-    pub system_instructions: Option<&'a str>,
-}
-
 pub trait AgentProtocol: Send + Sync {
     /// Formatta l'intera query per l'LLM, includendo contesto del task, contesto dell'agente,
     /// strumenti disponibili e istruzioni di sistema.

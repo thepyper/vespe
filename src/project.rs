@@ -9,6 +9,7 @@ use crate::memory::{Message, MessageContent};
 use crate::error::AgentTickResult;
 use anyhow::{anyhow, Result};
 use tracing::debug;
+use crate::registry::Registry;
 
 // Constants for project root detection
 pub const VESPE_DIR: &str = ".vespe";
@@ -482,9 +483,8 @@ impl Project {
         &self,
         name: String,
         config: AIConfig,
-        system_prompt: Option<String>,
     ) -> Result<Agent, ProjectError> {
-        Agent::create_ai(&self.root_path, name, config, system_prompt, None)
+        Agent::create_ai(&self.root_path, name, config, None)
     }
 
     /// Creates a new human agent.
@@ -620,13 +620,13 @@ impl Project {
             crate::task::TaskState::Created => "Define the objective for the task.",
             crate::task::TaskState::ObjectiveDefined => "Create a plan to achieve the objective.",
             crate::task::TaskState::PlanDefined => "Execute the plan.",
-            crate::task::Task::TaskState::Working => "Continue executing the plan or take the next step.",
+            crate::task::TaskState::Working => "Continue executing the plan or take the next step.",
             _ => return Err(ProjectError::InvalidOperation(format!("Task {} is in an untickable state: {:?}", task_uid, task.status.current_state))),
         };
 
         let system_instructions = format!(
             "You are an AI agent working on task '{}'.\nObjective: {}\nStep Objective: {}",
-            task.metadata.name,
+            task.config.name,
             task.objective,
             step_objective
         );
@@ -649,7 +649,7 @@ impl Project {
         }
 
         let agent_context_messages: Vec<Message> = agent.memory.get_context().into_iter().cloned().collect();
-        let task_context_messages_ref: Vec<&Message> = task.memory.get_context();
+        let task_context_messages: Vec<Message> = task.memory.get_context().into_iter().cloned().collect();
 
         debug!("Ticking task {} with agent {}. Agent details: {:?}", task_uid, agent_uid, agent.details);
         debug!("System Instructions for LLM: {}", system_instructions);
@@ -657,7 +657,7 @@ impl Project {
         // 3. Call the LLM
         let _llm_response_messages = agent.call_llm(
             &self.root_path,
-            &task_context_messages_ref,
+            &task_context_messages,
             &agent_context_messages,
             &available_tools_for_protocol,
             Some(&system_instructions),

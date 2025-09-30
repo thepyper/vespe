@@ -2,14 +2,13 @@ use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::path::Path;
 use std::sync::Arc;
-use handlebars::Handlebars;
-use serde_json::json;
 
 use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
-use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
-use crate::registry::{AGENT_PROTOCOL_REGISTRY, TOOL_REGISTRY, Registry};
+use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file};
+use crate::registry::{AGENT_PROTOCOL_REGISTRY, Registry};
 use crate::agent_protocol::AgentProtocol;
+use crate::tool::ToolConfig;
 use crate::llm_client::create_llm_client;
 
 // Default protocol name for agents
@@ -210,7 +209,7 @@ impl Agent {
         // 5. Validate tool calls in parsed messages
         for message in &parsed_messages {
             if let MessageContent::ToolCall { tool_name, .. } = &message.content {
-                if !allowed_tool_names.contains(tool_name) {
+                if !allowed_tool_names.contains(&tool_name) {
                     return Err(ProjectError::InvalidToolCall(format!("Agent attempted to call disallowed tool: '{}'.", tool_name)));
                 }
             }

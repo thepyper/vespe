@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use crate::memory::{Message, MessageContent};
-use crate::tool::ToolConfig;
 use crate::agent_protocol::{AgentProtocol, AgentProtocolError};
 use serde_json::{json, to_string_pretty, Value};
 use serde::{Serialize, Deserialize};

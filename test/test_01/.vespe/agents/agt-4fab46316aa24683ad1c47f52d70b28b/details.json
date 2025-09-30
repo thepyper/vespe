@@ -1,0 +1,11 @@
+{
+  "AI": {
+    "role": "planner",
+    "llm_provider": {
+      "Gemini": {
+        "model": "gemini-2.5-flash"
+      }
+    },
+    "allowed_tools": []
+  }
+}

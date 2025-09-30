@@ -71,7 +71,6 @@ pub struct Agent {
     pub details: AgentDetails,
     pub state: AgentState,
     pub memory: Memory,
-    pub system_prompt: Option<String>,
 }
 
 impl Agent {
@@ -79,7 +78,6 @@ impl Agent {
         project_root: &Path,
         name: String,
         config: AIConfig,
-        system_prompt: Option<String>,
         protocol_name: Option<String>,
     ) -> Result<Agent, ProjectError> {
         let uid = generate_uid("agt")?;
@@ -88,10 +86,6 @@ impl Agent {
 
         std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
         std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
-
-        if let Some(prompt) = system_prompt {
-            write_file_content(&agent_path.join("system_prompt.hbs"), &prompt)?;
-        }
 
         let now = Utc::now();
 
@@ -159,19 +153,11 @@ impl Agent {
         let state: AgentState = read_json_file(&agent_path.join("state.json"))?;
         let memory = Memory::load(&agent_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
 
-        let system_prompt_path = agent_path.join("system_prompt.hbs");
-        let system_prompt = if system_prompt_path.exists() {
-            Some(read_file_content(&system_prompt_path)?)
-        } else {
-            None
-        };
-
         Ok(Agent {
             metadata,
             details,
             state,
             memory,
-            system_prompt,
         })
     }
 

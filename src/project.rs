@@ -661,7 +661,7 @@ impl Project {
             &agent_context_messages,
             &available_tools_for_protocol,
             Some(&system_instructions),
-        )?;
+        ).await?;
 
         // For now, just return Waiting. The actual processing of llm_response_messages will come later.
         Ok(AgentTickResult::Waiting)

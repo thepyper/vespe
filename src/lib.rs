@@ -4,7 +4,7 @@ pub mod error;
 pub mod utils;
 pub mod tool;
 pub mod memory;
-pub mod agent_protocol;
+
 pub mod registry;
 pub mod genai_wrapper;
 

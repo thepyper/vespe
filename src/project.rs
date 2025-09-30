@@ -615,29 +615,53 @@ impl Project {
             return Err(ProjectError::InvalidOperation(format!("Task {} has no objective defined. Cannot tick.", task_uid)));
         }
 
-        // 2. Prepare task_data
-        let mut task_data = serde_json::json!({});
-        task_data["task_objective"] = serde_json::Value::String(task.objective.clone());
-
-        // Determine step_objective based on task state
+        // 2. Determine step_objective based on task state
         let step_objective = match task.status.current_state {
             crate::task::TaskState::Created => "Define the objective for the task.",
             crate::task::TaskState::ObjectiveDefined => "Create a plan to achieve the objective.",
             crate::task::TaskState::PlanDefined => "Execute the plan.",
-            crate::task::TaskState::Working => "Continue executing the plan or take the next step.",
+            crate::task::Task::TaskState::Working => "Continue executing the plan or take the next step.",
             _ => return Err(ProjectError::InvalidOperation(format!("Task {} is in an untickable state: {:?}", task_uid, task.status.current_state))),
         };
-        task_data["step_objective"] = serde_json::Value::String(step_objective.to_string());
 
-        // Get task_context from task memory and serialize it
-        let task_context_messages: Vec<Message> = task.memory.get_context().into_iter().cloned().collect();
-        task_data["task_context"] = serde_json::to_value(task_context_messages)?;
+        let system_instructions = format!(
+            "You are an AI agent working on task '{}'.\nObjective: {}\nStep Objective: {}",
+            task.metadata.name,
+            task.objective,
+            step_objective
+        );
+
+        let ai_config = match &agent.details {
+            crate::agent::AgentDetails::AI(config) => config,
+            crate::agent::AgentDetails::Human(_) => return Err(ProjectError::InvalidOperation("Cannot call LLM for a Human agent.".to_string())),
+        };
+
+        let allowed_tool_names = &ai_config.allowed_tools;
+        let mut available_tools_for_protocol = Vec::new();
+        let tool_registry = &crate::registry::TOOL_REGISTRY;
+
+        for tool_name in allowed_tool_names {
+            if let Some(tool_config) = tool_registry.get(tool_name) {
+                available_tools_for_protocol.push(tool_config.config.clone());
+            } else {
+                eprintln!("Warning: Allowed tool '{}' not found in TOOL_REGISTRY.", tool_name);
+            }
+        }
+
+        let agent_context_messages: Vec<Message> = agent.memory.get_context().into_iter().cloned().collect();
+        let task_context_messages_ref: Vec<&Message> = task.memory.get_context();
 
         debug!("Ticking task {} with agent {}. Agent details: {:?}", task_uid, agent_uid, agent.details);
-        debug!("Task data for LLM: {:?}", task_data);
+        debug!("System Instructions for LLM: {}", system_instructions);
 
         // 3. Call the LLM
-        let _llm_response_messages = agent.call_llm(&self.root_path, task.memory.get_context().into_iter().cloned().collect(), task_data).await?;
+        let _llm_response_messages = agent.call_llm(
+            &self.root_path,
+            &task_context_messages_ref,
+            &agent_context_messages,
+            &available_tools_for_protocol,
+            Some(&system_instructions),
+        ).await?;
 
         // For now, just return Waiting. The actual processing of llm_response_messages will come later.
         Ok(AgentTickResult::Waiting)

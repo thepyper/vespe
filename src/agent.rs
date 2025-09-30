@@ -195,7 +195,7 @@ impl Agent {
             system_instructions,
         };
 
-        let formatted_prompt = protocol.format_query(query_context).await?;
+        let formatted_prompt = protocol.format_query(query_context)?;
 
         // 2. Get LLM client based on agent's configuration
         let llm_client = create_llm_client(project_root, &ai_config.llm_provider).await?;
@@ -204,7 +204,7 @@ impl Agent {
         let raw_response = llm_client.send_query(formatted_prompt).await?;
 
         // 4. Parse LLM response using the agent's protocol
-        let parsed_messages = protocol.parse_llm_output(raw_response).await?;
+        let parsed_messages = protocol.parse_llm_output(raw_response)?;
 
         // 5. Validate tool calls in parsed messages
         for message in &parsed_messages {

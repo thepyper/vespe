@@ -4,7 +4,7 @@ use crate::agent::LLMProviderConfig;
 use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 use std::sync::Arc;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug};
 
 /// Trait per un client LLM generico.
 /// Ogni implementazione gestirà la comunicazione con uno specifico provider LLM.
@@ -113,6 +113,7 @@ impl LLMClient for OpenAIClient {
 // --- Gemini Client Implementation ---
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct GeminiTokenState {
     access_token: String,
     expires_at: DateTime<Utc>,

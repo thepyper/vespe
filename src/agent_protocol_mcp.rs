@@ -8,28 +8,7 @@ use serde::{Serialize, Deserialize};
 /// Implementazione del Model Context Protocol (MCP) per AgentProtocol.
 pub struct McpAgentProtocol;
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-enum McpContent {
-    Text(McpTextContent),
-    ToolUse(McpToolUseContent),
-}
 
-#[derive(Debug, Serialize, Deserialize)]
-struct McpTextContent {
-    #[serde(rename = "type")]
-    content_type: String,
-    text: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct McpToolUseContent {
-    #[serde(rename = "type")]
-    content_type: String,
-    id: String,
-    name: String,
-    input: Value,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct McpMessage {

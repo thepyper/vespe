@@ -20,7 +20,7 @@ pub const VESPE_ROOT_MARKER: &str = ".vespe_root";
 pub struct ProjectConfig {
     pub name: Option<String>,
     pub description: Option<String>,
-        pub default_agent_uid: Option<String>,
+    pub default_agent_uid: Option<String>,
     pub default_user_agent_uid: Option<String>,
     // pub manager_agent_config: Option<serde_json::Value>, // Future: specific config for Manager Agent
 }
@@ -29,7 +29,7 @@ impl Default for ProjectConfig {
     fn default() -> Self {
         ProjectConfig {
             name: None,
-                        description: None,
+            description: None,
             default_agent_uid: None,
             default_user_agent_uid: None,
         }
@@ -539,21 +539,6 @@ impl Project {
         agent.save_state(&self.root_path)
     }
 
-    /// Assigns a default user agent for the project.
-    pub fn assign_default_user_agent(&mut self, agent_uid: &str) -> Result<(), ProjectError> {
-        let agent = self.resolve_agent(agent_uid)?;
-        if !matches!(agent.details, crate::agent::AgentDetails::Human(_)) {
-            return Err(ProjectError::NotHumanAgent(agent_uid.to_string()));
-        }
-        self.config.default_user_agent_uid = Some(agent_uid.to_string());
-        self.save_config()
-    }
-
-    /// Unassigns the default user agent for the project.
-    pub fn unassign_default_user_agent(&mut self) -> Result<(), ProjectError> {
-        self.config.default_user_agent_uid = None;
-        self.save_config()
-    }
 
     /// Assigns a default user agent for the project.
     pub fn assign_default_user_agent(&mut self, agent_uid: &str) -> Result<(), ProjectError> {

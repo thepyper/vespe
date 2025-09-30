@@ -54,10 +54,6 @@ pub enum LlmProviderSubcommand {
     Gemini {
         #[arg(long)]
         model: String,
-        #[arg(long)]
-        client_id_env: String,
-        #[arg(long)]
-        client_secret_env: String,
     },
 }
 

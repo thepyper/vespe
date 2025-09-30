@@ -30,16 +30,11 @@ pub fn create_llm_client(project_root: &Path, config: &LLMProviderConfig) -> Res
                 .map_err(|_| ProjectError::LLMClientError(format!("OpenAI API key environment variable '{}' not set.", api_key_env)))?;
             Ok(Box::new(OpenAIClient::new(model.clone(), api_key)))
         },
-        LLMProviderConfig::Gemini { model, client_id_env, client_secret_env } => {
-            let client_id = std::env::var(client_id_env)
-                .map_err(|_| ProjectError::LLMClientError(format!("Gemini CLIENT_ID environment variable '{}' not set.", client_id_env)))?;
-            let client_secret = std::env::var(client_secret_env)
-                .map_err(|_| ProjectError::LLMClientError(format!("Gemini CLIENT_SECRET environment variable '{}' not set.", client_secret_env)))?;
-
+        LLMProviderConfig::Gemini { model } => {
             // block_on is used here for simplicity in this prototype. In a real application,
             // create_llm_client should ideally be async or called from an async context.
             let client = tokio::runtime::Handle::current().block_on(async {
-                GeminiClient::new(project_root.to_path_buf(), model.clone(), client_id, client_secret).await
+                GeminiClient::new(project_root.to_path_buf(), model.clone()).await
             })?;
             Ok(Box::new(client))
         },

@@ -22,3 +22,7 @@ target/
 
 # Ignore test environment
 /sandbox
+
+# Gemini client secrets
+/src/llm_client/gemini_client_id.txt
+/src/llm_client/gemini_client_secret.txt

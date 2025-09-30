@@ -125,7 +125,10 @@ pub struct GeminiClient {
 }
 
 impl GeminiClient {
-    pub async fn new(project_root: PathBuf, model: String, client_id: String, client_secret: String) -> Result<Self, ProjectError> {
+    pub async fn new(project_root: PathBuf, model: String) -> Result<Self, ProjectError> {
+        let client_id = include_str!("gemini_client_id.txt").trim().to_string();
+        let client_secret = include_str!("gemini_client_secret.txt").trim().to_string();
+
         let oauth_client = BasicClient::new(ClientId::new(client_id.clone()))
             .set_client_secret(ClientSecret::new(client_secret.clone()))
             .set_auth_uri(AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_string())?)

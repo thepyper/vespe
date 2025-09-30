@@ -51,8 +51,6 @@ pub enum LLMProviderConfig {
     OpenAI { model: String, api_key_env: String },
     Gemini {
         model: String,
-        client_id_env: String,
-        client_secret_env: String,
     },
 }
 

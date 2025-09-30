@@ -283,8 +283,8 @@ async fn main() -> anyhow::Result<()> {
                     cli::commands::LlmProviderSubcommand::OpenAI { model, api_key_env } => {
                         LLMProviderConfig::OpenAI { model: model.clone(), api_key_env: api_key_env.clone() }
                     }
-                    cli::commands::LlmProviderSubcommand::Gemini { model, client_id_env, client_secret_env } => {
-                        LLMProviderConfig::Gemini { model: model.clone(), client_id_env: client_id_env.clone(), client_secret_env: client_secret_env.clone() }
+                    cli::commands::LlmProviderSubcommand::Gemini { model } => {
+                        LLMProviderConfig::Gemini { model: model.clone() }
                     }
                 };
 

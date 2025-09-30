@@ -175,8 +175,10 @@ impl Agent {
     pub async fn call_llm(
         &self,
         project_root: &Path,
-        task_context: Vec<Message>,
-        task_data: serde_json::Value,
+        task_context: &[Message],
+        agent_context: &[Message],
+        available_tools: &[ToolConfig],
+        system_instructions: Option<&str>,
     ) -> Result<Vec<Message>, ProjectError> {
         let protocol = self.protocol().await?;
 
@@ -185,49 +187,16 @@ impl Agent {
             AgentDetails::Human(_) => return Err(ProjectError::InvalidOperation("Cannot call LLM for a Human agent.".to_string())),
         };
 
-        // Retrieve allowed tools from the agent's configuration
         let allowed_tool_names = &ai_config.allowed_tools;
-        let mut available_tools_for_protocol = Vec::new();
-        let tool_registry = &TOOL_REGISTRY;
 
-        for tool_name in allowed_tool_names {
-            if let Some(tool_config) = tool_registry.get(tool_name) {
-                available_tools_for_protocol.push(tool_config.config.clone()); // Assuming ToolConfig is what AgentProtocol expects
-            } else {
-                // Log a warning or return an error if an allowed tool is not found in the registry
-                // For now, we'll just skip it, but a warning would be good.
-                eprintln!("Warning: Allowed tool '{}' not found in TOOL_REGISTRY.", tool_name);
-            }
-        }
+        let query_context = crate::agent_protocol::QueryContext {
+            task_context,
+            agent_context,
+            available_tools,
+            system_instructions,
+        };
 
-        // Retrieve agent's context from memory
-        let agent_context = self.memory.get_context();
-
-        // Format contexts using the agent's protocol
-        let task_context_formatted = protocol.format_messages(task_context).await?;
-        let formatted_available_tools = protocol.format_available_tools(Some(available_tools_for_protocol)).await?;
-        let agent_context_formatted = protocol.format_messages(agent_context.into_iter().cloned().collect()).await?;
-
-        // Prepare data for Handlebars template
-        let mut handlebars_data = json!({});
-        // Merge task_data into handlebars_data
-        for (key, value) in task_data.as_object().unwrap_or(&serde_json::Map::new()).iter() {
-            handlebars_data[key] = value.clone();
-        }
-        handlebars_data["task_context"] = json!(task_context_formatted);
-        handlebars_data["agent_context"] = json!(agent_context_formatted);
-        handlebars_data["available_tools"] = json!(formatted_available_tools);
-        if let Some(system_prompt_template) = &self.system_prompt {
-            handlebars_data["system_prompt_template"] = json!(system_prompt_template);
-        }
-
-        // Render the system prompt template
-        let mut handlebars = Handlebars::new();
-        handlebars.register_template_string("system_prompt", &self.system_prompt.clone().unwrap_or_default())
-            .map_err(|e| ProjectError::InvalidOperation(format!("Failed to register system prompt template: {}", e)))?;
-
-        let formatted_prompt = handlebars.render("system_prompt", &handlebars_data)
-            .map_err(|e| ProjectError::InvalidOperation(format!("Failed to render system prompt: {}", e)))?;
+        let formatted_prompt = protocol.format_query(query_context).await?;
 
         // 2. Get LLM client based on agent's configuration
         let llm_client = create_llm_client(project_root, &ai_config.llm_provider).await?;

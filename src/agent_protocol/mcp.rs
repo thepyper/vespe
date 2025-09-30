@@ -15,9 +15,8 @@ struct McpMessage {
     content: Value,
 }
 
-#[async_trait]
 impl AgentProtocol for McpAgentProtocol {
-    async fn format_query(
+    fn format_query(
         &self,
         context: crate::agent_protocol::QueryContext<'_>,
     ) -> Result<String, AgentProtocolError> {
@@ -76,7 +75,7 @@ impl AgentProtocol for McpAgentProtocol {
             .map_err(|e| AgentProtocolError::SerializationError(e))
     }
 
-    async fn parse_llm_output(
+    fn parse_llm_output(
         &self,
         llm_output: String,
     ) -> Result<Vec<Message>, AgentProtocolError> {

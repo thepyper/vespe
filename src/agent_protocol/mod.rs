@@ -55,3 +55,4 @@ pub trait AgentProtocol: Send + Sync {
         llm_output: String,
     ) -> Result<Vec<Message>, AgentProtocolError>;
 }
+pub mod mcp;

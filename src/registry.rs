@@ -3,8 +3,7 @@ use std::sync::Arc;
 use once_cell::sync::Lazy;
 
 use crate::tool::Tool;
-use crate::agent_protocol::AgentProtocol;
-use crate::agent_protocol_mcp::McpAgentProtocol;
+use crate::agent_protocol::{AgentProtocol, mcp::McpAgentProtocol};
 
 pub trait Registry<T> {
     fn get_map(&self) -> &HashMap<String, T>;

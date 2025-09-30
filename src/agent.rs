@@ -9,7 +9,7 @@ use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_fil
 use crate::registry::{AGENT_PROTOCOL_REGISTRY, Registry};
 use crate::agent_protocol::AgentProtocol;
 use crate::tool::ToolConfig;
-use crate::llm_client::create_llm_client;
+
 
 // Default protocol name for agents
 const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";

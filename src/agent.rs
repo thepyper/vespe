@@ -6,10 +6,8 @@ use std::sync::Arc;
 use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
-use crate::registry::{AGENT_PROTOCOL_REGISTRY, Registry};
-use crate::agent_protocol::AgentProtocol;
+use crate::registry::{Registry};
 use crate::tool::ToolConfig;
-use crate::llm_client::create_llm_client;
 
 // Default protocol name for agents
 const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";
@@ -179,16 +177,6 @@ impl Agent {
         })
     }
 
-    /// Retrieves the AgentProtocol associated with this agent from the registry.
-    pub async fn protocol(&self) -> Result<Arc<Box<dyn AgentProtocol + Send + Sync>>, ProjectError> {
-        let registry = &AGENT_PROTOCOL_REGISTRY;
-        let protocol_name = &self.metadata.protocol_name;
-
-        registry.get(protocol_name)
-            .map(|b| b.clone())
-            .ok_or_else(|| ProjectError::AgentProtocolNotFound(protocol_name.clone()))
-    }
-
     /// Sends a request to the LLM, handles formatting, querying, and parsing.
     pub async fn call_llm(
         &self,
@@ -197,7 +185,6 @@ impl Agent {
         available_tools: &[ToolConfig],
         system_instructions: Option<&str>,
     ) -> Result<Vec<Message>, ProjectError> {
-        let protocol = self.protocol().await?;
 
         let ai_config = match &self.details {
             AgentDetails::AI(config) => config,
@@ -216,23 +203,14 @@ impl Agent {
             final_system_instructions.push_str(dynamic_instructions);
         }
 
-        let query_context = crate::agent_protocol::QueryContext {
-            task_context,
-            agent_context: agent_context_messages.as_slice(),
-            available_tools,
-            system_instructions: Some(&final_system_instructions),
-        };
+	// TODO formatta per genai
+	
 
-        let formatted_prompt = protocol.format_query(query_context)?;
+        // TODO chiama genai
+		
 
-        // 2. Get LLM client based on agent's configuration
-        let llm_client = create_llm_client(project_root, &ai_config.llm_provider).await?;
-
-        // 3. Send query to LLM
-        let raw_response = llm_client.send_query(formatted_prompt).await?;
-
-        // 4. Parse LLM response using the agent's protocol
-        let parsed_messages = protocol.parse_llm_output(raw_response)?;
+		// TODO parse risultati genai 
+		let parsed_messages = Vec::<Message>::new();
 
         // 5. Validate tool calls in parsed messages
         for message in &parsed_messages {

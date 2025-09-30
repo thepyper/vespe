@@ -4,7 +4,6 @@ use thiserror::Error;
 use crate::task::TaskState;
 use crate::memory::MemoryError;
 
-
 #[derive(Debug, Error)]
 pub enum ProjectError {
     #[error("I/O error: {0}")]
@@ -49,8 +48,6 @@ pub enum ProjectError {
     AgentProtocolNotFound(String),
     #[error("Tool execution error: {0}")]
     ToolExecutionError(String),
-    #[error("Agent protocol error: {0}")]
-    AgentProtocol(#[from] crate::agent_protocol::AgentProtocolError),
     #[error("Anyhow error: {0}")]
     Anyhow(#[from] anyhow::Error),
     #[error("URL parsing error: {0}")]

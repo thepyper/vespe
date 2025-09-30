@@ -3,7 +3,6 @@ use std::sync::Arc;
 use once_cell::sync::Lazy;
 
 use crate::tool::Tool;
-use crate::agent_protocol::{AgentProtocol, mcp::McpAgentProtocol};
 
 pub trait Registry<T> {
     fn get_map(&self) -> &HashMap<String, T>;
@@ -32,18 +31,3 @@ pub static TOOL_REGISTRY: Lazy<ToolRegistryInner> = Lazy::new(|| {
     ToolRegistryInner { tools }
 });
 
-pub struct AgentProtocolRegistryInner {
-    protocols: HashMap<String, Arc<Box<dyn AgentProtocol + Send + Sync>>>,
-}
-
-impl Registry<Arc<Box<dyn AgentProtocol + Send + Sync>>> for AgentProtocolRegistryInner {
-    fn get_map(&self) -> &HashMap<String, Arc<Box<dyn AgentProtocol + Send + Sync>>> {
-        &self.protocols
-    }
-}
-
-pub static AGENT_PROTOCOL_REGISTRY: Lazy<AgentProtocolRegistryInner> = Lazy::new(|| {
-    let mut protocols = HashMap::new();
-    protocols.insert("mcp".to_string(), Arc::new(Box::new(McpAgentProtocol) as Box<dyn AgentProtocol + Send + Sync>));
-    AgentProtocolRegistryInner { protocols }
-});

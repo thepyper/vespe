@@ -69,9 +69,6 @@ pub enum AgentSubcommand {
         llm_provider_args: LlmProviderArgs,
         #[arg(long, value_delimiter = ' ')] // Allows multiple values separated by space
         allowed_tools: Vec<String>,
-        /// Path to the system prompt template file (.hbs)
-        #[arg(long)]
-        system_prompt: Option<PathBuf>,
     },
     /// Create a new human agent
     CreateHuman {

@@ -56,4 +56,3 @@ pub trait AgentProtocol: Send + Sync {
     ) -> Result<Vec<Message>, AgentProtocolError>;
 }
 pub mod mcp;
-pub mod gemini;

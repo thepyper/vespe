@@ -382,6 +382,20 @@ async fn main() -> anyhow::Result<()> {
                     Err(e) => eprintln!("Error listing agents: {}", e),
                 }
             }
+            AgentSubcommand::SetDefaultUser { agent_identifier } => {
+                let mut project = project_root;
+                match project.assign_default_user_agent(agent_identifier) {
+                    Ok(_) => println!("Default user agent set to '{}'.", agent_identifier),
+                    Err(e) => eprintln!("Error setting default user agent: {}", e),
+                }
+            }
+            AgentSubcommand::UnsetDefaultUser => {
+                let mut project = project_root;
+                match project.unassign_default_user_agent() {
+                    Ok(_) => println!("Default user agent has been unset."),
+                    Err(e) => eprintln!("Error unsetting default user agent: {}", e),
+                }
+            }
         },
     }
 

@@ -92,6 +92,13 @@ pub enum AgentSubcommand {
     },
     /// List all agents
     List,
+    /// Set the default user agent for the project
+    SetDefaultUser {
+        /// The UID or name of the human agent
+        agent_identifier: String,
+    },
+    /// Unset the default user agent for the project
+    UnsetDefaultUser,
 }
 
 #[derive(Debug, Parser)]

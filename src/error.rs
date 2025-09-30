@@ -53,6 +53,8 @@ pub enum ProjectError {
     AgentProtocol(#[from] crate::agent_protocol::AgentProtocolError),
     #[error("Anyhow error: {0}")]
     Anyhow(#[from] anyhow::Error),
+    #[error("Agent '{0}' is not a human agent.")]
+    NotHumanAgent(String),
 
 }
 

@@ -20,7 +20,8 @@ pub const VESPE_ROOT_MARKER: &str = ".vespe_root";
 pub struct ProjectConfig {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub default_agent_uid: Option<String>,
+        pub default_agent_uid: Option<String>,
+    pub default_user_agent_uid: Option<String>,
     // pub manager_agent_config: Option<serde_json::Value>, // Future: specific config for Manager Agent
 }
 
@@ -28,8 +29,9 @@ impl Default for ProjectConfig {
     fn default() -> Self {
         ProjectConfig {
             name: None,
-            description: None,
+                        description: None,
             default_agent_uid: None,
+            default_user_agent_uid: None,
         }
     }
 }
@@ -251,6 +253,51 @@ impl Project {
                 "Multiple agents found with the name '{}'. Please use a unique UID.",
                 identifier.to_string()
             )),
+        }
+    }
+
+    /// Resolves a human agent by identifier, or returns the default human agent.
+    pub fn resolve_human_agent_or_default(
+        &self,
+        identifier: Option<&str>,
+    ) -> Result<Agent, ProjectError> {
+        // 1. Attempt to resolve the provided identifier first.
+        if let Some(id) = identifier {
+            match self.resolve_agent(id) {
+                Ok(agent) => {
+                    if matches!(agent.details, crate::agent::AgentDetails::Human(_)) {
+                        return Ok(agent); // Found a human agent with the given ID.
+                    } else {
+                        // Found an agent, but it's not human. Return specific error.
+                        return Err(ProjectError::NotHumanAgent(id.to_string()));
+                    }
+                }
+                Err(_) => {
+                    // Agent not found by the given identifier, fall through to default.
+                    eprintln!("Warning: Agent '{}' not found. Falling back to default.", id);
+                }
+            }
+        }
+
+        // 2. If no identifier was provided, or if it wasn't found, use the default.
+        let default_uid = self
+            .config
+            .default_user_agent_uid
+            .as_ref()
+            .ok_or_else(|| {
+                ProjectError::InvalidProjectConfig(
+                    "No identifier provided and no default human agent is set.".to_string(),
+                )
+            })?;
+
+        let default_agent = self.load_agent(default_uid)?;
+
+        if matches!(default_agent.details, crate::agent::AgentDetails::Human(_)) {
+            Ok(default_agent)
+        } else {
+            Err(ProjectError::InvalidProjectConfig(
+                "The configured default user agent is not a human agent.".to_string(),
+            ))
         }
     }
 
@@ -492,6 +539,37 @@ impl Project {
         agent.save_state(&self.root_path)
     }
 
+    /// Assigns a default user agent for the project.
+    pub fn assign_default_user_agent(&mut self, agent_uid: &str) -> Result<(), ProjectError> {
+        let agent = self.resolve_agent(agent_uid)?;
+        if !matches!(agent.details, crate::agent::AgentDetails::Human(_)) {
+            return Err(ProjectError::NotHumanAgent(agent_uid.to_string()));
+        }
+        self.config.default_user_agent_uid = Some(agent_uid.to_string());
+        self.save_config()
+    }
+
+    /// Unassigns the default user agent for the project.
+    pub fn unassign_default_user_agent(&mut self) -> Result<(), ProjectError> {
+        self.config.default_user_agent_uid = None;
+        self.save_config()
+    }
+
+    /// Assigns a default user agent for the project.
+    pub fn assign_default_user_agent(&mut self, agent_uid: &str) -> Result<(), ProjectError> {
+        let agent = self.resolve_agent(agent_uid)?;
+        if !matches!(agent.details, crate::agent::AgentDetails::Human(_)) {
+            return Err(ProjectError::NotHumanAgent(agent_uid.to_string()));
+        }
+        self.config.default_user_agent_uid = Some(agent_uid.to_string());
+        self.save_config()
+    }
+
+    /// Unassigns the default user agent for the project.
+    pub fn unassign_default_user_agent(&mut self) -> Result<(), ProjectError> {
+        self.config.default_user_agent_uid = None;
+        self.save_config()
+    }
     /// Assigns a task to an agent. This modifies the Task's status.
     pub fn assign_task_to_agent(
         &self,

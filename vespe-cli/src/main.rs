@@ -275,7 +275,7 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Commands::Agent(agent_command) => match &agent_command.command {
-            AgentSubcommand::CreateAI { name, role, llm_provider_args, allowed_tools } => {
+            AgentSubcommand::CreateAI { name, role, llm_provider_args, allowed_tools, agent_instructions } => {
                 let llm_config = match &llm_provider_args.provider {
                     cli::commands::LlmProviderSubcommand::Ollama { model, endpoint } => {
                         LLMProviderConfig::Ollama { model: model.clone(), endpoint: endpoint.clone() }
@@ -290,7 +290,19 @@ async fn main() -> anyhow::Result<()> {
 
                 let ai_config = AIConfig { role: role.clone(), llm_provider: llm_config, allowed_tools: allowed_tools.clone() };
 
-                match project_root.create_ai_agent(name.clone(), ai_config) {
+                let instructions_content = if let Some(path) = agent_instructions {
+                    match fs::read_to_string(path) {
+                        Ok(content) => Some(content),
+                        Err(e) => {
+                            eprintln!("Error reading agent instructions file: {}", e);
+                            return Ok(()); // Exit gracefully
+                        }
+                    }
+                } else {
+                    None
+                };
+
+                match project_root.create_ai_agent(name.clone(), ai_config, instructions_content) {
                     Ok(agent) => {
                         println!("AI Agent created successfully:");
                         println!("  UID: {}", agent.metadata.uid);
@@ -303,9 +315,20 @@ async fn main() -> anyhow::Result<()> {
                     Err(e) => eprintln!("Error creating AI agent: {}", e),
                 }
             }
-            AgentSubcommand::CreateHuman { name } => {
+            AgentSubcommand::CreateHuman { name, agent_instructions } => {
                 let human_config = HumanConfig {};
-                match project_root.create_human_agent(name.clone(), human_config) {
+                let instructions_content = if let Some(path) = agent_instructions {
+                    match fs::read_to_string(path) {
+                        Ok(content) => Some(content),
+                        Err(e) => {
+                            eprintln!("Error reading agent instructions file: {}", e);
+                            return Ok(()); // Exit gracefully
+                        }
+                    }
+                } else {
+                    None
+                };
+                match project_root.create_human_agent(name.clone(), human_config, instructions_content) {
                     Ok(agent) => {
                         println!("Human Agent created successfully:");
                         println!("  UID: {}", agent.metadata.uid);

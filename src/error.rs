@@ -54,7 +54,8 @@ pub enum ProjectError {
     UrlParse(#[from] url::ParseError),
     #[error("Agent '{0}' is not a human agent.")]
     NotHumanAgent(String),
-
+    #[error("Genai error: {0}")]
+    Genai(#[from] genai::Error),
 }
 
 // Rappresenta il risultato di un ciclo di `tick`

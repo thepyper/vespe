@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use genai::Client;
-use genai::chat::{ChatMessage, Tool};
+use genai::chat::{ChatMessage, ChatRequest, Tool};
 
 use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
@@ -236,10 +236,32 @@ impl Agent {
 				ChatMessage::system(system_instructions)
 			);
 		}
+				
+		genai_messages.extend(
+			agent_context_messages.into_iter().filter_map(|x| match &x.content {
+				MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
+				MessageContent::Thought(x) => None,
+				MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
+				MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
+			}
+		));
+				
+		genai_messages.extend(  // TODO metti in funzione a parte
+			task_context.into_iter().filter_map(|x| match &x.content {
+				MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
+				MessageContent::Thought(x) => None,
+				MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
+				MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
+			}
+		));
 		
 		// Create chat request 
+		let chat_req = ChatRequest::new(genai_messages)
+		.with_tools(genai_tools);
 		
-		// TODO formatta per genai
+		// Execute request 
+		let chat_res = client.exec_chat("gpt-oss:20b", chat_req.clone(), None).await?; // TODO config!!
+
 	
 
         // TODO chiama genai

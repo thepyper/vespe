@@ -181,6 +181,34 @@ impl Agent {
         })
     }
 
+    fn message_to_genai_chat_message(&self, message: &Message) -> Option<ChatMessage> {
+        let is_from_self = message.author_agent_uid == self.metadata.uid;
+
+        match &message.content {
+            MessageContent::Text(text) => {
+                if is_from_self {
+                    Some(ChatMessage::model(text.clone()))
+                } else {
+                    Some(ChatMessage::user(text.clone()))
+                }
+            },
+            MessageContent::ToolCall { tool_name, call_uid: _, inputs } => {
+                // Assuming inputs is a serde_json::Value that can be converted to genai::chat::ToolCall::args
+                // This might require a more specific conversion depending on the actual structure of inputs
+                let tool_call = genai::chat::ToolCall::new(tool_name.clone())
+                    .with_args(serde_json::from_value(inputs.clone()).unwrap_or_default()); // TODO: Handle error
+                Some(ChatMessage::tool_call(tool_call))
+            },
+            MessageContent::ToolResult { tool_name, call_uid: _, inputs: _, outputs } => {
+                // Assuming outputs is a serde_json::Value that can be converted to genai::chat::ToolResponse::output
+                let tool_response = genai::chat::ToolResponse::new(tool_name.clone())
+                    .with_output(serde_json::from_value(outputs.clone()).unwrap_or_default()); // TODO: Handle error
+                Some(ChatMessage::tool_response(tool_response))
+            },
+            MessageContent::Thought(_) => None, // Thoughts are internal, not sent to LLM
+        }
+    }
+
     /// Sends a request to the LLM, handles formatting, querying, and parsing.
     pub async fn call_llm(
         &self,
@@ -248,22 +276,12 @@ impl Agent {
 				}
 						
 				genai_messages.extend(
-					agent_context_messages.into_iter().filter_map(|x| match &x.content {
-						MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
-						MessageContent::Thought(x) => None,
-						MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
-						MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
-					}
-				));
+					agent_context_messages.into_iter().filter_map(|msg| self.message_to_genai_chat_message(msg))
+				);
 						
-				genai_messages.extend(  // TODO metti in funzione a parte
-					task_context.into_iter().filter_map(|x| match &x.content {
-						MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
-						MessageContent::Thought(x) => None,
-						MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
-						MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
-					}
-				));
+				genai_messages.extend(
+					task_context.into_iter().filter_map(|msg| self.message_to_genai_chat_message(msg))
+				);
 				
 				// Create chat request 
 				let chat_req = ChatRequest::new(genai_messages)

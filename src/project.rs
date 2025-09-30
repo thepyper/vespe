@@ -483,8 +483,9 @@ impl Project {
         &self,
         name: String,
         config: AIConfig,
+        agent_instructions: Option<String>,
     ) -> Result<Agent, ProjectError> {
-        Agent::create_ai(&self.root_path, name, config, None)
+        Agent::create_ai(&self.root_path, name, config, agent_instructions, None)
     }
 
     /// Creates a new human agent.
@@ -492,8 +493,9 @@ impl Project {
         &self,
         name: String,
         config: HumanConfig,
+        agent_instructions: Option<String>,
     ) -> Result<Agent, ProjectError> {
-        Agent::create_human(&self.root_path, name, config, None)
+        Agent::create_human(&self.root_path, name, config, agent_instructions, None)
     }
 
     /// Loads an agent from the filesystem given its UID.

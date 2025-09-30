@@ -70,6 +70,7 @@ pub struct Agent {
     pub details: AgentDetails,
     pub state: AgentState,
     pub memory: Memory,
+    pub agent_instructions: Option<String>,
 }
 
 impl Agent {
@@ -77,6 +78,7 @@ impl Agent {
         project_root: &Path,
         name: String,
         config: AIConfig,
+        agent_instructions: Option<String>,
         protocol_name: Option<String>,
     ) -> Result<Agent, ProjectError> {
         let uid = generate_uid("agt")?;
@@ -85,6 +87,10 @@ impl Agent {
 
         std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
         std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        if let Some(instructions) = agent_instructions.clone() {
+            write_file_content(&agent_path.join("agent_instructions.md"), &instructions)?;
+        }
 
         let now = Utc::now();
 
@@ -110,6 +116,7 @@ impl Agent {
         project_root: &Path,
         name: String,
         config: HumanConfig,
+        agent_instructions: Option<String>,
         protocol_name: Option<String>,
     ) -> Result<Agent, ProjectError> {
         let uid = generate_uid("usr")?;
@@ -118,6 +125,10 @@ impl Agent {
 
         std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
         std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        if let Some(instructions) = agent_instructions.clone() {
+            write_file_content(&agent_path.join("agent_instructions.md"), &instructions)?;
+        }
 
         let now = Utc::now();
 
@@ -152,11 +163,19 @@ impl Agent {
         let state: AgentState = read_json_file(&agent_path.join("state.json"))?;
         let memory = Memory::load(&agent_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
 
+        let agent_instructions_path = agent_path.join("agent_instructions.md");
+        let agent_instructions = if agent_instructions_path.exists() {
+            Some(read_file_content(&agent_instructions_path)?)
+        } else {
+            None
+        };
+
         Ok(Agent {
             metadata,
             details,
             state,
             memory,
+            agent_instructions,
         })
     }
 
@@ -189,11 +208,19 @@ impl Agent {
 
         let agent_context_messages: Vec<Message> = self.memory.get_context().into_iter().cloned().collect(); // Retrieve agent_context internally
 
+        let mut final_system_instructions = self.agent_instructions.clone().unwrap_or_default();
+        if let Some(dynamic_instructions) = system_instructions {
+            if !final_system_instructions.is_empty() {
+                final_system_instructions.push_str("\n");
+            }
+            final_system_instructions.push_str(dynamic_instructions);
+        }
+
         let query_context = crate::agent_protocol::QueryContext {
             task_context,
-            agent_context: agent_context_messages.as_slice(), // Use internally retrieved agent_context
+            agent_context: agent_context_messages.as_slice(),
             available_tools,
-            system_instructions,
+            system_instructions: Some(&final_system_instructions),
         };
 
         let formatted_prompt = protocol.format_query(query_context)?;

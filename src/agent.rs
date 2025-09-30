@@ -208,62 +208,71 @@ impl Agent {
             final_system_instructions.push_str(dynamic_instructions);
         }
 
-		// Format for genai 
-		let client = Client::default(); // TODO config!!!
-		
-		// Create tools 
-		let mut genai_tools = Vec::<Tool>::new();
-		
-		for tool_name in allowed_tool_names {
-			let tool = project.resolve_tool(tool_name)?;
-			let genai_tool = Tool::new(tool.config.name)
-				.with_description(tool.config.description)
-				.with_schema(tool.config.schema);
-			genai_tools.push(genai_tool);
-		}
-		
-		// Create messages 
-		let mut genai_messages = Vec::<ChatMessage>::new();
-		
-		if let Some(agent_instructions) = self.agent_instructions.clone() {
-			genai_messages.push( 
-				ChatMessage::system(agent_instructions)
-			);
-		}
-		
-		if let Some(system_instructions) = system_instructions {
-			genai_messages.push( 
-				ChatMessage::system(system_instructions)
-			);
-		}
+		        // Format for genai 
+		        let (client, model_name) = match &ai_config.llm_provider {
+		            LLMProviderConfig::Ollama { model, endpoint } => (Client::new_ollama(endpoint.clone()), model.clone()),
+		            LLMProviderConfig::OpenAI { model, api_key_env } => {
+		                let api_key = env::var(api_key_env).map_err(|e| ProjectError::EnvVar(e.to_string()))?;
+		                (Client::new_openai(api_key), model.clone())
+		            },
+		            LLMProviderConfig::Gemini { model } => {
+		                let api_key = env::var("GEMINI_API_KEY").map_err(|e| ProjectError::EnvVar(e.to_string()))?;
+		                (Client::new_gemini(api_key), model.clone())
+		            },
+		        };
 				
-		genai_messages.extend(
-			agent_context_messages.into_iter().filter_map(|x| match &x.content {
-				MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
-				MessageContent::Thought(x) => None,
-				MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
-				MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
-			}
-		));
+				// Create tools 
+				let mut genai_tools = Vec::<Tool>::new();
 				
-		genai_messages.extend(  // TODO metti in funzione a parte
-			task_context.into_iter().filter_map(|x| match &x.content {
-				MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
-				MessageContent::Thought(x) => None,
-				MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
-				MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
-			}
-		));
+				for tool_name in allowed_tool_names {
+					let tool = project.resolve_tool(tool_name)?;
+					let genai_tool = Tool::new(tool.config.name)
+						.with_description(tool.config.description)
+						.with_schema(tool.config.schema);
+					genai_tools.push(genai_tool);
+				}
+				
+				// Create messages 
+				let mut genai_messages = Vec::<ChatMessage>::new();
+				
+				if let Some(agent_instructions) = self.agent_instructions.clone() {
+					genai_messages.push( 
+						ChatMessage::system(agent_instructions)
+					);
+				}
+				
+				if let Some(system_instructions) = system_instructions {
+					genai_messages.push( 
+						ChatMessage::system(system_instructions)
+					);
+				}
+						
+				genai_messages.extend(
+					agent_context_messages.into_iter().filter_map(|x| match &x.content {
+						MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
+						MessageContent::Thought(x) => None,
+						MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
+						MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
+					}
+				));
+						
+				genai_messages.extend(  // TODO metti in funzione a parte
+					task_context.into_iter().filter_map(|x| match &x.content {
+						MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
+						MessageContent::Thought(x) => None,
+						MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
+						MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
+					}
+				));
+				
+				// Create chat request 
+				let chat_req = ChatRequest::new(genai_messages)
+				.with_tools(genai_tools);
+				
+				// Execute request 
+				let chat_res = client.exec_chat(&model_name, chat_req.clone(), None).await?;
 		
-		// Create chat request 
-		let chat_req = ChatRequest::new(genai_messages)
-		.with_tools(genai_tools);
-		
-		// Execute request 
-		let chat_res = client.exec_chat("gpt-oss:20b", chat_req.clone(), None).await?; // TODO config!!
-
-		// TODO parse risultati genai 
-		let now = Utc::now();
+				// TODO parse risultati genai 		let now = Utc::now();
 		let parsed_messages = chat_res.content.parts().into_iter().filter_map(|x| match x {
 			ContentPart::Text(x) => Some(Message {
 									uid: "todo".into(),

@@ -4,9 +4,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use genai::Client;
-use genai::chat::{ChatMessage, ChatRequest, Tool};
+use genai::chat::{ChatMessage, ChatRequest, ChatResponse, Tool, ContentPart};
 
-use crate::memory::{Memory, Message, MessageContent};
+use crate::memory::{Memory, Message, MessageContent, MessageStatus};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
 use crate::registry::{Registry};
@@ -262,14 +262,39 @@ impl Agent {
 		// Execute request 
 		let chat_res = client.exec_chat("gpt-oss:20b", chat_req.clone(), None).await?; // TODO config!!
 
-	
-
-        // TODO chiama genai
-		
-
 		// TODO parse risultati genai 
-		let parsed_messages = Vec::<Message>::new();
-
+		let now = Utc::now();
+		let parsed_messages = chat_res.content.parts().into_iter().filter_map(|x| match x {
+			ContentPart::Text(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text(x.clone()),
+									status: MessageStatus::Enabled,
+								}),
+			ContentPart::Binary(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text("bin todo".into()),
+									status: MessageStatus::Enabled,
+								}),
+			ContentPart::ToolCall(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text("todo tolcall".into()),
+									status: MessageStatus::Enabled,
+								}),
+			ContentPart::ToolResponse(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text("todo toolresp".into()),
+									status: MessageStatus::Enabled,
+								}),
+		}).collect::<Vec::<Message>>();
+		
         // 5. Validate tool calls in parsed messages
         for message in &parsed_messages {
             if let MessageContent::ToolCall { tool_name, .. } = &message.content {

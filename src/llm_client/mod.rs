@@ -20,7 +20,7 @@ pub trait LLMClient: Send + Sync {
 }
 
 /// Factory function per creare un LLMClient basato su LLMProviderConfig.
-pub fn create_llm_client(project_root: &Path, config: &LLMProviderConfig) -> Result<Box<dyn LLMClient>, ProjectError> {
+pub async fn create_llm_client(project_root: &Path, config: &LLMProviderConfig) -> Result<Box<dyn LLMClient>, ProjectError> {
     match config {
         LLMProviderConfig::Ollama { model, endpoint } => {
             Ok(Box::new(OllamaClient::new(model.clone(), endpoint.clone())))
@@ -31,11 +31,7 @@ pub fn create_llm_client(project_root: &Path, config: &LLMProviderConfig) -> Res
             Ok(Box::new(OpenAIClient::new(model.clone(), api_key)))
         },
         LLMProviderConfig::Gemini { model } => {
-            // block_on is used here for simplicity in this prototype. In a real application,
-            // create_llm_client should ideally be async or called from an async context.
-            let client = tokio::runtime::Handle::current().block_on(async {
-                GeminiClient::new(project_root.to_path_buf(), model.clone()).await
-            })?;
+            let client = GeminiClient::new(project_root.to_path_buf(), model.clone()).await?;
             Ok(Box::new(client))
         },
     }

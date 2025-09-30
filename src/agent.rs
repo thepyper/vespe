@@ -181,6 +181,43 @@ impl Agent {
         })
     }
 
+    fn convert_from_genai_content_part(&self, part: &ContentPart) -> Result<Option<Message>, ProjectError> {
+        let now = Utc::now();
+        let uid = generate_uid("msg")?; // Generate a new UID for the message
+
+        let message_content = match part {
+            ContentPart::Text(text) => MessageContent::Text(text.clone()),
+            ContentPart::Binary(_) => MessageContent::Text("Binary content not yet supported.".to_string()), // TODO: Handle binary content properly
+            ContentPart::ToolCall(tool_call) => {
+                let inputs = serde_json::to_value(tool_call.args.clone())
+                    .map_err(|e| ProjectError::Serialization(e.to_string()))?;
+                MessageContent::ToolCall {
+                    tool_name: tool_call.name.clone(),
+                    call_uid: generate_uid("tcl")?, // Generate a UID for the tool call
+                    inputs,
+                }
+            },
+            ContentPart::ToolResponse(tool_response) => {
+                let outputs = serde_json::to_value(tool_response.output.clone())
+                    .map_err(|e| ProjectError::Serialization(e.to_string()))?;
+                MessageContent::ToolResult {
+                    tool_name: tool_response.name.clone(),
+                    call_uid: "todo".into(), // TODO: Need to link to the original tool call's UID
+                    inputs: serde_json::Value::Null, // TODO: Inputs are not directly available here
+                    outputs,
+                }
+            },
+        };
+
+        Ok(Some(Message {
+            uid,
+            timestamp: now,
+            author_agent_uid: self.metadata.uid.clone(), // Author is the current agent (model)
+            content: message_content,
+            status: MessageStatus::Enabled,
+        }))
+    }
+
     fn message_to_genai_chat_message(&self, message: &Message) -> Option<ChatMessage> {
         let is_from_self = message.author_agent_uid == self.metadata.uid;
 
@@ -290,37 +327,10 @@ impl Agent {
 				// Execute request 
 				let chat_res = client.exec_chat(&model_name, chat_req.clone(), None).await?;
 		
-				// TODO parse risultati genai 		let now = Utc::now();
-		let parsed_messages = chat_res.content.parts().into_iter().filter_map(|x| match x {
-			ContentPart::Text(x) => Some(Message {
-									uid: "todo".into(),
-									timestamp: now,
-									author_agent_uid: "todo".into(),
-									content: MessageContent::Text(x.clone()),
-									status: MessageStatus::Enabled,
-								}),
-			ContentPart::Binary(x) => Some(Message {
-									uid: "todo".into(),
-									timestamp: now,
-									author_agent_uid: "todo".into(),
-									content: MessageContent::Text("bin todo".into()),
-									status: MessageStatus::Enabled,
-								}),
-			ContentPart::ToolCall(x) => Some(Message {
-									uid: "todo".into(),
-									timestamp: now,
-									author_agent_uid: "todo".into(),
-									content: MessageContent::Text("todo tolcall".into()),
-									status: MessageStatus::Enabled,
-								}),
-			ContentPart::ToolResponse(x) => Some(Message {
-									uid: "todo".into(),
-									timestamp: now,
-									author_agent_uid: "todo".into(),
-									content: MessageContent::Text("todo toolresp".into()),
-									status: MessageStatus::Enabled,
-								}),
-		}).collect::<Vec::<Message>>();
+		let parsed_messages = chat_res.content.parts().into_iter().filter_map(|part| {
+            self.convert_from_genai_content_part(part).transpose() // Transpose to convert Result<Option<T>, E> to Option<Result<T, E>>
+        }).collect::<Result<Vec<Message>, ProjectError>>()?;
+
 		
         // 5. Validate tool calls in parsed messages
         for message in &parsed_messages {

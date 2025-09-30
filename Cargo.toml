@@ -34,7 +34,7 @@ futures-util = "0.3"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 sha2 = "0.10"
 walkdir = "2.3"
-oauth2 = "5.0"
+oauth2 = { version = "5.0", features = ["reqwest"] }
 tiny_http = "0.12"
 webbrowser = "1.0"
 url = "2.5"

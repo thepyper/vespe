@@ -3,11 +3,15 @@ use serde::{Serialize, Deserialize};
 use std::path::Path;
 use std::sync::Arc;
 
+use genai::Client;
+use genai::chat::{ChatMessage, Tool};
+
 use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
 use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
 use crate::registry::{Registry};
 use crate::tool::ToolConfig;
+use crate::project::Project;
 
 // Default protocol name for agents
 const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";
@@ -180,6 +184,7 @@ impl Agent {
     /// Sends a request to the LLM, handles formatting, querying, and parsing.
     pub async fn call_llm(
         &self,
+		project: &Project,
         project_root: &Path,
         task_context: &[Message],
         available_tools: &[ToolConfig],
@@ -203,7 +208,38 @@ impl Agent {
             final_system_instructions.push_str(dynamic_instructions);
         }
 
-	// TODO formatta per genai
+		// Format for genai 
+		let client = Client::default(); // TODO config!!!
+		
+		// Create tools 
+		let mut genai_tools = Vec::<Tool>::new();
+		
+		for tool_name in allowed_tool_names {
+			let tool = project.resolve_tool(tool_name)?;
+			let genai_tool = Tool::new(tool.config.name)
+				.with_description(tool.config.description)
+				.with_schema(tool.config.schema);
+			genai_tools.push(genai_tool);
+		}
+		
+		// Create messages 
+		let mut genai_messages = Vec::<ChatMessage>::new();
+		
+		if let Some(agent_instructions) = self.agent_instructions.clone() {
+			genai_messages.push( 
+				ChatMessage::system(agent_instructions)
+			);
+		}
+		
+		if let Some(system_instructions) = system_instructions {
+			genai_messages.push( 
+				ChatMessage::system(system_instructions)
+			);
+		}
+		
+		// Create chat request 
+		
+		// TODO formatta per genai
 	
 
         // TODO chiama genai

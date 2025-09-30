@@ -657,6 +657,7 @@ impl Project {
 
         // 3. Call the LLM
         let _llm_response_messages = agent.call_llm(
+			&self,
             &self.root_path,
             &task_context_messages,
             &available_tools_for_protocol,

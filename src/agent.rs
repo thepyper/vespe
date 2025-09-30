@@ -52,6 +52,16 @@ pub enum LLMProviderConfig {
     },
 }
 
+impl LLMProviderConfig {
+    pub fn get_model_name(&self) -> &str {
+        match self {
+            LLMProviderConfig::Ollama { model, .. } => model,
+            LLMProviderConfig::OpenAI { model, .. } => model,
+            LLMProviderConfig::Gemini { model } => model,
+        }
+    }
+}
+
 // 4. CONFIGURAZIONE HUMAN: Campi specifici per l'umano.
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct HumanConfig { /* ...email, permissions, etc. */ }

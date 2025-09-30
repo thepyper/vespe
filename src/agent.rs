@@ -53,7 +53,6 @@ pub enum LLMProviderConfig {
         model: String,
         client_id_env: String,
         client_secret_env: String,
-        refresh_token_env: String,
     },
 }
 
@@ -191,6 +190,7 @@ impl Agent {
     /// Sends a request to the LLM, handles formatting, querying, and parsing.
     pub async fn call_llm(
         &self,
+        project_root: &Path,
         task_context: Vec<Message>,
         task_data: serde_json::Value,
     ) -> Result<Vec<Message>, ProjectError> {
@@ -246,7 +246,7 @@ impl Agent {
             .map_err(|e| ProjectError::InvalidOperation(format!("Failed to render system prompt: {}", e)))?;
 
         // 2. Get LLM client based on agent's configuration
-        let llm_client = create_llm_client(&ai_config.llm_provider)?;
+        let llm_client = create_llm_client(project_root, &ai_config.llm_provider)?;
 
         // 3. Send query to LLM
         let raw_response = llm_client.send_query(formatted_prompt).await?;

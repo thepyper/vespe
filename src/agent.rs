@@ -244,7 +244,7 @@ impl Agent {
             .map_err(|e| ProjectError::InvalidOperation(format!("Failed to render system prompt: {}", e)))?;
 
         // 2. Get LLM client based on agent's configuration
-        let llm_client = create_llm_client(project_root, &ai_config.llm_provider)?;
+        let llm_client = create_llm_client(project_root, &ai_config.llm_provider).await?;
 
         // 3. Send query to LLM
         let raw_response = llm_client.send_query(formatted_prompt).await?;

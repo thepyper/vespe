@@ -648,7 +648,6 @@ impl Project {
             }
         }
 
-        let agent_context_messages: Vec<Message> = agent.memory.get_context().into_iter().cloned().collect();
         let task_context_messages: Vec<Message> = task.memory.get_context().into_iter().cloned().collect();
 
         debug!("Ticking task {} with agent {}. Agent details: {:?}", task_uid, agent_uid, agent.details);
@@ -658,7 +657,6 @@ impl Project {
         let _llm_response_messages = agent.call_llm(
             &self.root_path,
             &task_context_messages,
-            &agent_context_messages,
             &available_tools_for_protocol,
             Some(&system_instructions),
         ).await?;

@@ -175,7 +175,6 @@ impl Agent {
         &self,
         project_root: &Path,
         task_context: &[Message],
-        agent_context: &[Message],
         available_tools: &[ToolConfig],
         system_instructions: Option<&str>,
     ) -> Result<Vec<Message>, ProjectError> {
@@ -188,9 +187,11 @@ impl Agent {
 
         let allowed_tool_names = &ai_config.allowed_tools;
 
+        let agent_context_messages: Vec<Message> = self.memory.get_context().into_iter().cloned().collect(); // Retrieve agent_context internally
+
         let query_context = crate::agent_protocol::QueryContext {
             task_context,
-            agent_context,
+            agent_context: agent_context_messages.as_slice(), // Use internally retrieved agent_context
             available_tools,
             system_instructions,
         };

@@ -38,3 +38,4 @@ oauth2 = { version = "5.0", features = ["reqwest"] }
 tiny_http = "0.12"
 webbrowser = "1.0"
 url = "2.5"
+genai = "0.4"

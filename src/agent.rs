@@ -178,17 +178,6 @@ impl Agent {
         })
     }
 
-    /// Retrieves the AgentProtocol associated with this agent from the registry.
-    pub async fn protocol(&self) -> Result<Arc<Box<dyn AgentProtocol + Send + Sync>>, ProjectError> {
-        let registry = &AGENT_PROTOCOL_REGISTRY;
-        let protocol_name = &self.metadata.protocol_name;
-
-        registry.get(protocol_name)
-            .map(|b| b.clone())
-            .ok_or_else(|| ProjectError::AgentProtocolNotFound(protocol_name.clone()))
-    }
-
-    /// Sends a request to the LLM, handles formatting, querying, and parsing.
     pub async fn call_llm(
         &self,
         project_root: &Path,
@@ -196,8 +185,6 @@ impl Agent {
         available_tools: &[ToolConfig],
         system_instructions: Option<&str>,
     ) -> Result<Vec<Message>, ProjectError> {
-        let protocol = self.protocol().await?;
-
         let ai_config = match &self.details {
             AgentDetails::AI(config) => config,
             AgentDetails::Human(_) => return Err(ProjectError::InvalidOperation("Cannot call LLM for a Human agent.".to_string())),
@@ -205,7 +192,7 @@ impl Agent {
 
         let allowed_tool_names = &ai_config.allowed_tools;
 
-        let agent_context_messages: Vec<Message> = self.memory.get_context().into_iter().cloned().collect(); // Retrieve agent_context internally
+        let agent_context_messages: Vec<Message> = self.memory.get_context().into_iter().cloned().collect();
 
         let mut final_system_instructions = self.agent_instructions.clone().unwrap_or_default();
         if let Some(dynamic_instructions) = system_instructions {
@@ -215,25 +202,15 @@ impl Agent {
             final_system_instructions.push_str(dynamic_instructions);
         }
 
-        let query_context = crate::agent_protocol::QueryContext {
+        let parsed_messages = genai_wrapper::send_chat_request(
+            &ai_config.llm_provider,
+            Some(&final_system_instructions),
             task_context,
-            agent_context: agent_context_messages.as_slice(),
+            agent_context_messages.as_slice(),
             available_tools,
-            system_instructions: Some(&final_system_instructions),
-        };
+        ).await?;
 
-        let formatted_prompt = protocol.format_query(query_context)?;
-
-        // 2. Get LLM client based on agent's configuration
-        let llm_client = create_llm_client(project_root, &ai_config.llm_provider).await?;
-
-        // 3. Send query to LLM
-        let raw_response = llm_client.send_query(formatted_prompt).await?;
-
-        // 4. Parse LLM response using the agent's protocol
-        let parsed_messages = protocol.parse_llm_output(raw_response)?;
-
-        // 5. Validate tool calls in parsed messages
+        // Validate tool calls in parsed messages
         for message in &parsed_messages {
             if let MessageContent::ToolCall { tool_name, .. } = &message.content {
                 if !allowed_tool_names.contains(&tool_name) {
@@ -244,11 +221,3 @@ impl Agent {
 
         Ok(parsed_messages)
     }
-
-    pub fn save_state(&self, project_root: &Path) -> Result<(), ProjectError> {
-        let agents_base_path = project_root.join(".vespe").join("agents");
-        let agent_path = get_entity_path(&agents_base_path, &self.metadata.uid)?;
-        write_json_file(&agent_path.join("state.json"), &self.state)?;
-        Ok(())
-    }
-}

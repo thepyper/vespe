@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::memory::{Memory, Message, MessageContent};
 use crate::error::ProjectError;
-use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file};
+use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
 use crate::registry::{AGENT_PROTOCOL_REGISTRY, Registry};
 use crate::agent_protocol::AgentProtocol;
 use crate::tool::ToolConfig;

@@ -23,7 +23,6 @@ pub enum AgentProtocolError {
 /// Il trait `AgentProtocol` definisce l'interfaccia per la comunicazione tra un agente e un LLM.
 /// Gestisce la formattazione dei messaggi in un formato comprensibile dall'LLM e il parsing
 /// della risposta dell'LLM in una sequenza di messaggi strutturati.
-#[async_trait]
 pub trait AgentProtocol: Send + Sync {
     /// Formatta l'intera query per l'LLM, includendo contesto del task, contesto dell'agente,
     /// strumenti disponibili e istruzioni di sistema.
@@ -33,7 +32,7 @@ pub trait AgentProtocol: Send + Sync {
     ///
     /// # Restituisce
     /// Una stringa formattata per l'input dell'LLM.
-    async fn format_query(
+    fn format_query(
         &self,
         context: QueryContext<'_>,
     ) -> Result<String, AgentProtocolError>;
@@ -45,7 +44,7 @@ pub trait AgentProtocol: Send + Sync {
     ///
     /// # Restituisce
     /// Un `Result` contenente un vettore di `Message` parsati o un `AgentProtocolError` in caso di fallimento.
-    async fn parse_llm_output(
+    fn parse_llm_output(
         &self,
         llm_output: String,
     ) -> Result<Vec<Message>, AgentProtocolError>;

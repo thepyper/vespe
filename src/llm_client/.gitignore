@@ -1,0 +1,3 @@
+# Ignore Gemini client secrets
+gemini_client_id.txt
+gemini_client_secret.txt

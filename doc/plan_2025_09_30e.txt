@@ -1,0 +1,67 @@
+# Plan for Refactoring `src/agent.rs` - `call_llm` function
+
+## Current Issues in `call_llm`:
+The `call_llm` function in `src/agent.rs` has several hardwired elements and incomplete implementations related to the `genai` crate integration:
+1.  **Hardwired `genai::Client`:** The `genai::Client` is initialized with `Client::default()` and a `TODO config!!!` comment, indicating a lack of proper configuration based on `LLMProviderConfig`.
+2.  **Hardwired Model Name:** The model name `"gpt-oss:20b"` is directly used in `client.exec_chat`, ignoring the `model` specified in `AIConfig`.
+3.  **Incomplete Message Mapping (Input):** The conversion from `crate::memory::Message` to `genai::chat::ChatMessage` for `agent_context_messages` and `task_context` is incomplete. `ToolCall` and `ToolResult` are currently ignored or mapped incorrectly, and `MessageContent::Text` is always mapped to `ChatMessage::system` which might be incorrect.
+4.  **Incomplete Response Parsing (Output):** The parsing of `genai::chat::ChatResponse` back into `crate::memory::Message` is marked with `TODO`s, using placeholder values for `uid`, `timestamp`, `author_agent_uid`, and `content`.
+
+## Proposed Changes:
+
+### 1. Configure `genai::Client` based on `LLMProviderConfig`
+*   **Modification:**
+    *   Remove `let client = Client::default(); // TODO config!!!`.
+    *   Inside `call_llm`, use a `match` statement on `ai_config.llm_provider` to create the `genai::Client` instance.
+    *   For `LLMProviderConfig::Gemini`, read the API key from the environment (e.g., `GEMINI_API_KEY`).
+    *   For `LLMProviderConfig::Ollama`, use the provided `endpoint`.
+    *   For `LLMProviderConfig::OpenAI`, use the provided `api_key_env` to read the API key.
+*   **Rationale:** This ensures the `genai::Client` is correctly configured for the specified LLM provider, making the agent truly flexible.
+
+### 2. Dynamic Model Selection for `exec_chat`
+*   **Modification:**
+    *   Replace `"gpt-oss:20b"` in `client.exec_chat` with the `model` field extracted from `ai_config.llm_provider`.
+*   **Rationale:** Allows the agent to use the specific model configured in its `AIConfig`.
+
+### 3. Robust Message Mapping for `genai_messages` (Input)
+*   **Modification:**
+    *   Create a helper function (e.g., `fn convert_to_genai_chat_message(message: &Message) -> Option<ChatMessage>`) to handle the conversion from `crate::memory::Message` to `genai::chat::ChatMessage`.
+    *   Inside this helper:
+        *   For `MessageContent::Text(text)`, determine if it's a user or model message based on the `Message`'s `author_agent_uid` (assuming the `Message` struct can distinguish between user and model authors, or we might need to add a `role` field to `Message`). For now, if `author_agent_uid` matches the current agent's UID, it's a model message; otherwise, it's a user message.
+        *   For `MessageContent::ToolCall { tool_name, call_uid, inputs }`, convert it to `ChatMessage::tool_call` using `genai::chat::ToolCall`.
+        *   For `MessageContent::ToolResult { tool_name, call_uid, inputs, outputs }`, convert it to `ChatMessage::tool_response` using `genai::chat::ToolResponse`.
+    *   Apply this helper function to `agent_context_messages` and `task_context` using `filter_map`.
+*   **Rationale:** Correctly translates internal message representations into the format expected by the `genai` library, enabling proper conversational flow and tool usage.
+
+### 4. Proper Parsing of `genai::chat::ChatResponse` (Output)
+*   **Modification:**
+    *   Create another helper function (e.g., `fn convert_from_genai_content_part(part: &ContentPart, agent_uid: &str) -> Option<Message>`) to handle the conversion from `genai::chat::ContentPart` to `crate::memory::Message`.
+    *   Inside this helper:
+        *   Generate a unique `uid` for each new message using `generate_uid`.
+        *   Set `timestamp` to `Utc::now()`.
+        *   Set `author_agent_uid` to the current agent's UID (for model responses).
+        *   Map `ContentPart::Text(text)` to `MessageContent::Text(text)`.
+        *   Map `ContentPart::ToolCall(tool_call)` to `MessageContent::ToolCall { ... }`.
+        *   Map `ContentPart::ToolResponse(tool_response)` to `MessageContent::ToolResult { ... }`.
+        *   Handle `ContentPart::Binary` appropriately (e.g., convert to text representation or ignore if not supported).
+    *   Apply this helper function to `chat_res.content.parts()` using `filter_map`.
+*   **Rationale:** Ensures that the LLM's responses, including text and tool calls/results, are correctly captured and stored in the agent's memory in the internal `Message` format.
+
+## Example `LLMProviderConfig` usage for client creation (conceptual):
+
+```rust
+let client = match &ai_config.llm_provider {
+    LLMProviderConfig::Ollama { model: _, endpoint } => Client::new_ollama(endpoint.clone()),
+    LLMProviderConfig::OpenAI { model: _, api_key_env } => {
+        let api_key = env::var(api_key_env).map_err(|e| ProjectError::EnvVar(e.to_string()))?;
+        Client::new_openai(api_key)
+    },
+    LLMProviderConfig::Gemini { model: _ } => {
+        let api_key = env::var("GEMINI_API_KEY").map_err(|e| ProjectError::EnvVar(e.to_string()))?;
+        Client::new_gemini(api_key)
+    },
+};
+```
+
+## Next Steps:
+Upon your approval, I will proceed with implementing these detailed changes in `src/agent.rs`.

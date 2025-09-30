@@ -3,6 +3,7 @@ use serde::{Serialize, Deserialize};
 use std::path::Path;
 use std::sync::Arc;
 
+use std::env;
 use genai::Client;
 use genai::chat::{ChatMessage, ChatRequest, ChatResponse, Tool, ContentPart};
 
@@ -189,20 +190,20 @@ impl Agent {
             ContentPart::Text(text) => MessageContent::Text(text.clone()),
             ContentPart::Binary(_) => MessageContent::Text("Binary content not yet supported.".to_string()), // TODO: Handle binary content properly
             ContentPart::ToolCall(tool_call) => {
-                let inputs = serde_json::to_value(tool_call.args.clone())
+                let inputs = serde_json::to_value(tool_call.fn_arguments.clone())
                     .map_err(|e| ProjectError::Serialization(e.to_string()))?;
                 MessageContent::ToolCall {
-                    tool_name: tool_call.name.clone(),
+                    tool_name: tool_call.fn_name.clone(),
                     call_uid: generate_uid("tcl")?, // Generate a UID for the tool call
                     inputs,
                 }
             },
             ContentPart::ToolResponse(tool_response) => {
-                let outputs = serde_json::to_value(tool_response.output.clone())
+                let outputs = serde_json::to_value(tool_response.content.clone())
                     .map_err(|e| ProjectError::Serialization(e.to_string()))?;
                 MessageContent::ToolResult {
-                    tool_name: tool_response.name.clone(),
-                    call_uid: "todo".into(), // TODO: Need to link to the original tool call's UID
+                    tool_name: "todo_from_tool_response".into(), // TODO: Need to derive tool_name from somewhere
+                    call_uid: tool_response.call_id.clone(), // Use call_id from genai ToolResponse
                     inputs: serde_json::Value::Null, // TODO: Inputs are not directly available here
                     outputs,
                 }
@@ -224,23 +225,22 @@ impl Agent {
         match &message.content {
             MessageContent::Text(text) => {
                 if is_from_self {
-                    Some(ChatMessage::model(text.clone()))
+                    Some(ChatMessage::assistant(text.clone()))
                 } else {
                     Some(ChatMessage::user(text.clone()))
                 }
             },
             MessageContent::ToolCall { tool_name, call_uid: _, inputs } => {
-                // Assuming inputs is a serde_json::Value that can be converted to genai::chat::ToolCall::args
-                // This might require a more specific conversion depending on the actual structure of inputs
                 let tool_call = genai::chat::ToolCall::new(tool_name.clone())
-                    .with_args(serde_json::from_value(inputs.clone()).unwrap_or_default()); // TODO: Handle error
-                Some(ChatMessage::tool_call(tool_call))
+                    .with_fn_arguments_json(serde_json::from_value(inputs.clone()).unwrap_or_default()); // TODO: Handle error
+                Some(ChatMessage { role: ChatRole::Function, parts: vec![ContentPart::ToolCall(tool_call)] })
             },
-            MessageContent::ToolResult { tool_name, call_uid: _, inputs: _, outputs } => {
-                // Assuming outputs is a serde_json::Value that can be converted to genai::chat::ToolResponse::output
-                let tool_response = genai::chat::ToolResponse::new(tool_name.clone())
-                    .with_output(serde_json::from_value(outputs.clone()).unwrap_or_default()); // TODO: Handle error
-                Some(ChatMessage::tool_response(tool_response))
+            MessageContent::ToolResult { tool_name: _, call_uid, inputs: _, outputs } => {
+                let tool_response = genai::chat::ToolResponse::new(
+                    call_uid.clone(), // Use call_uid for tool_call_id
+                    serde_json::to_string(&outputs).unwrap_or_default() // Convert outputs to String for content
+                ); // TODO: Handle error
+                Some(ChatMessage { role: ChatRole::Function, parts: vec![ContentPart::ToolResponse(tool_response)] })
             },
             MessageContent::Thought(_) => None, // Thoughts are internal, not sent to LLM
         }
@@ -274,18 +274,18 @@ impl Agent {
         }
 
 		        // Format for genai 
-		        let (client, model_name) = match &ai_config.llm_provider {
-		            LLMProviderConfig::Ollama { model, endpoint } => (Client::new_ollama(endpoint.clone()), model.clone()),
-		            LLMProviderConfig::OpenAI { model, api_key_env } => {
-		                let api_key = env::var(api_key_env).map_err(|e| ProjectError::EnvVar(e.to_string()))?;
-		                (Client::new_openai(api_key), model.clone())
-		            },
-		            LLMProviderConfig::Gemini { model } => {
-		                let api_key = env::var("GEMINI_API_KEY").map_err(|e| ProjectError::EnvVar(e.to_string()))?;
-		                (Client::new_gemini(api_key), model.clone())
-		            },
-		        };
-				
+		                let (client, model_name) = match &ai_config.llm_provider {
+		                    LLMProviderConfig::Gemini { model } => {
+		                        let api_key = env::var("GEMINI_API_KEY").map_err(|e| ProjectError::EnvVar(e.to_string()))?;
+		                        (Client::new(api_key), model.clone())
+		                    },
+		                    LLMProviderConfig::Ollama { model: _, endpoint: _ } => {
+		                        return Err(ProjectError::InvalidOperation("Ollama provider not yet supported with genai client.".to_string()));
+		                    },
+		                    LLMProviderConfig::OpenAI { model: _, api_key_env: _ } => {
+		                        return Err(ProjectError::InvalidOperation("OpenAI provider not yet supported with genai client.".to_string()));
+		                    },
+		                };				
 				// Create tools 
 				let mut genai_tools = Vec::<Tool>::new();
 				
@@ -312,14 +312,13 @@ impl Agent {
 					);
 				}
 						
-				genai_messages.extend(
-					agent_context_messages.into_iter().filter_map(|msg| self.message_to_genai_chat_message(msg))
-				);
-						
-				genai_messages.extend(
-					task_context.into_iter().filter_map(|msg| self.message_to_genai_chat_message(msg))
-				);
-				
+						genai_messages.extend(
+							agent_context_messages.into_iter().filter_map(|msg| self.message_to_genai_chat_message(&msg))
+						);
+								
+						genai_messages.extend(
+							task_context.into_iter().filter_map(|msg| self.message_to_genai_chat_message(&msg))
+						);				
 				// Create chat request 
 				let chat_req = ChatRequest::new(genai_messages)
 				.with_tools(genai_tools);

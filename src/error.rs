@@ -56,6 +56,10 @@ pub enum ProjectError {
     NotHumanAgent(String),
     #[error("Genai error: {0}")]
     Genai(#[from] genai::Error),
+    #[error("Environment variable error: {0}")]
+    EnvVar(String),
+    #[error("Serialization error: {0}")]
+    Serialization(String),
 }
 
 // Rappresenta il risultato di un ciclo di `tick`

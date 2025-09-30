@@ -176,7 +176,7 @@ impl Project {
     ///
     /// A `Result` containing the resolved `Task` or an error if the task cannot be found
     /// or if the name is ambiguous.
-    pub fn resolve_task_by_id_or_name(&self, identifier: &str) -> Result<Task> {
+    pub fn resolve_task(&self, identifier: &str) -> Result<Task> {
         // 1. Try to load directly as a UID.
         if identifier.starts_with("tsk-") {
             if let Ok(task) = self.load_task(identifier) {
@@ -185,7 +185,7 @@ impl Project {
         }
 
         // 2. If that fails or it's not a UID, search by name.
-        let all_tasks = self.list_tasks()?;
+        let all_tasks = self.list_all_tasks()?;
         let matching_tasks: Vec<Task> = all_tasks
             .into_iter()
             .filter(|t| t.config.name == identifier)

@@ -17,30 +17,25 @@ pub enum AgentProtocolError {
 /// Gestisce la formattazione dei messaggi in un formato comprensibile dall'LLM e il parsing
 /// della risposta dell'LLM in una sequenza di messaggi strutturati.
 #[async_trait]
+pub struct QueryContext<'a> {
+    pub task_context: &'a [Message],
+    pub agent_context: &'a [Message],
+    pub available_tools: &'a [ToolConfig],
+    pub system_instructions: Option<&'a str>,
+}
+
 pub trait AgentProtocol: Send + Sync {
-    /// Formatta una sequenza di messaggi in una stringa pronta per essere inviata all'LLM.
+    /// Formatta l'intera query per l'LLM, includendo contesto del task, contesto dell'agente,
+    /// strumenti disponibili e istruzioni di sistema.
     ///
     /// # Argomenti
-    /// * `messages` - Un vettore di `Message` che rappresenta la cronologia della conversazione.
+    /// * `context` - Una struct `QueryContext` contenente tutti i dati necessari per costruire il prompt.
     ///
     /// # Restituisce
     /// Una stringa formattata per l'input dell'LLM.
-    async fn format_messages(
+    async fn format_query(
         &self,
-        messages: Vec<Message>,
-    ) -> Result<String, AgentProtocolError>;
-
-    /// Formatta le definizioni degli strumenti disponibili in una stringa
-    /// pronta per essere inclusa nel prompt dell'LLM.
-    ///
-    /// # Argomenti
-    /// * `available_tools` - Un vettore di `ToolConfig` che descrive gli strumenti che l'LLM può chiamare.
-    ///
-    /// # Restituisce
-    /// Una stringa formattata per le definizioni degli strumenti.
-    async fn format_available_tools(
-        &self,
-        available_tools: Option<Vec<ToolConfig>>,
+        context: QueryContext<'_>,
     ) -> Result<String, AgentProtocolError>;
 
     /// Parsa la stringa di output grezza dell'LLM in una sequenza di `Message` strutturati.

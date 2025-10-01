@@ -1,8 +1,8 @@
-[workspace]
-members = [
-    "vespe-cli",
-    "vespe-tui",
-]
+#[workspace]
+#members = [
+#    "vespe-cli",
+#    "vespe-tui",
+#]
 
 [package]
 name = "vespe"

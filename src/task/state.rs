@@ -2,7 +2,7 @@ use std::path::Path;
 use thiserror::Error;
 use anyhow::anyhow;
 
-use markdown::mdast::*;
+use markdown::mdast::{Node, Heading, Root};
 
 pub enum PlanSectionItem{
     LocalTask(String),
@@ -96,14 +96,17 @@ impl State {
 
     fn parse_markdown_node_into_section(md_ast: Node) -> Result<Option<SectionParsing>, Error> {
         match md_ast {
-            Heading(heading) => Ok(Some(Self::parse_markdown_heading_into_section(heading))),
+            Node::Heading(heading) => Ok(Some(Self::parse_markdown_heading_into_section(heading)?)),
             _ => Ok(None),
         }
     }
 
     fn parse_markdown_ast_into_sections(md_ast: Node) -> Result<Vec<SectionParsing>, Error> {
         match md_ast {
-            Root(root) => root.children.into_iter().map(|x| Self::parse_markdown_node_into_section(x)).collect(),
+            Node::Root(root) => root.children.into_iter()
+                .map(|x| Self::parse_markdown_node_into_section(x))
+                .filter_map(|x| x.transpose())
+                .collect(),
             _ => Err(anyhow!("No Root node in md_ast").into()),
         }
     }

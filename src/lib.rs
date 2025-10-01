@@ -1,4 +1,3 @@
-
 pub mod task;
 
 /*
@@ -27,7 +26,7 @@ pub enum ReconcileQueryKind {
 }
 
 pub struct ReconcileQuery {
-    uid: String,    
+    uid: String,
     kind: ReconcileQueryKind,
 }
 

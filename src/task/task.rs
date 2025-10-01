@@ -1,4 +1,3 @@
-
 use super::state::State;
 
 pub struct Metadata {
@@ -10,4 +9,3 @@ pub struct Task {
     meta: Metadata,
     state: State,
 }
-

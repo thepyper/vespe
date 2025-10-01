@@ -1,19 +1,18 @@
-use markdown::{to_mdast, ParseOptions};
 use markdown::message::Message;
+use markdown::{to_mdast, ParseOptions};
 
-fn main()  -> Result<(), Message>  {
-     
+fn main() -> Result<(), Message> {
     let examples = vec![
-r###"# Hi *Earth*!"###,
-r###"
+        r###"# Hi *Earth*!"###,
+        r###"
 # Hi *Earth*!!!
 This is line 2
 
 This is line 4
 
 This is line 6
-"###,        
-r###"
+"###,
+        r###"
 # Objective <!-- my note -->
 
 # HeyHey
@@ -21,7 +20,7 @@ r###"
 haha haha haha
 
 "###,
-r###"
+        r###"
 some text
 some more text
 
@@ -31,14 +30,14 @@ some more more text
 
 bababababa
 
-"###
+"###,
     ];
-    
+
     for (i, example) in examples.into_iter().enumerate() {
         let tree = to_mdast(example, &ParseOptions::default())?;
-        println!("example {i}:\n{:?}", tree);        
+        println!("example {i}:\n{:?}", tree);
         println!("string  {i}:\n{}", tree.to_string());
     }
-    
+
     Ok(())
 }

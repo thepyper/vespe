@@ -96,9 +96,9 @@ impl State {
 
     fn parse_markdown_ast_into_sections(md_ast: markdown::mdast::Node) -> Result<Vec<SectionParsing>, Error> {
         match md_ast {
-            Root(root) => root.children.into_iter().map(|x| Self::parse_markdown_node_into_section(x)).collect::<Vec<SectionParsing>>()?,
-            _ => anyhow!("No Root node in md_ast"),
-        };
+            Root(root) => root.children.into_iter().map(|x| Self::parse_markdown_node_into_section(x)).collect(),
+            _ => Err(anyhow!("No Root node in md_ast").into()),
+        }
     }
 
     fn load_markdown_and_parse_sections(md_file_path: &Path) -> Result<(String, Vec<SectionParsing>), Error> {

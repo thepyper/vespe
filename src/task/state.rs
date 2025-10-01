@@ -2,7 +2,7 @@ use std::path::Path;
 use thiserror::Error;
 use anyhow::anyhow;
 
-use markdown::mdast::{Node, Heading, Root};
+use markdown::mdast::{Node, Heading, Root, Paragraph};
 
 pub enum PlanSectionItem{
     LocalTask(String),
@@ -94,9 +94,14 @@ impl State {
         unimplemented!();
     }
 
+    fn parse_markdown_paragraph_into_section(md_paragraph: Paragraph) -> Result<SectionParsing, Error> {
+        unimplemented!();   
+    }
+
     fn parse_markdown_node_into_section(md_ast: Node) -> Result<Option<SectionParsing>, Error> {
         match md_ast {
             Node::Heading(heading) => Ok(Some(Self::parse_markdown_heading_into_section(heading)?)),
+            Node::Paragraph(paragraph) => Ok(Some(Self::parse_markdown_paragraph_into_section(paragraph)?)),
             _ => Ok(None),
         }
     }

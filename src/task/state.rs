@@ -126,8 +126,8 @@ impl State {
             .ok_or(anyhow!("No position in md_ast"))?
             .clone();
 
-        let md_node_content =
-            md_content[position.start.offset as usize..position.end.offset as usize];
+                let md_node_content = 
+            &md_content[position.start.offset as usize..position.end.offset as usize];
 
         let content = match md_ast {
             Node::Heading(ref heading) => Some(Self::parse_markdown_heading_into_section(

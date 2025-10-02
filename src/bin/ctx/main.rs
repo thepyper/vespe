@@ -125,7 +125,7 @@ fn main() -> Result<()> {
             project.list_contexts()?;
         }
         Commands::New { name } => {
-            Context::new(&project, &name)?;
+            project.new_context(&name)?;
         }
         Commands::Edit { name } => {
             edit(&project, &name)?;

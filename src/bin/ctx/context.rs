@@ -13,18 +13,6 @@ pub enum Line {
 pub struct Context;
 
 impl Context {
-    pub fn new(project: &Project, name: &str) -> Result<()> {
-        let path = project.contexts_dir()?.join(Self::to_filename(name));
-        
-        if path.exists() {
-            anyhow::bail!("Context '{}' already exists", name);
-        }
-        
-        std::fs::write(&path, format!("# {}\n\n", name))?;
-        println!("Created {}", path.display());
-        Ok(())
-    }
-
     pub fn parse(content: &str) -> Vec<Line> {
         content
             .lines()

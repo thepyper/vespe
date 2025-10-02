@@ -54,3 +54,12 @@ impl AgentCall for ShellAgentCall {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 }
+
+pub struct MockAgentCall;
+
+impl AgentCall for MockAgentCall {
+    fn call_llm(&self, prompt: String) -> Result<String> {
+        println!("MockAgentCall received prompt:\n{}", prompt);
+        Ok("LLM Response for @answer".to_string())
+    }
+}

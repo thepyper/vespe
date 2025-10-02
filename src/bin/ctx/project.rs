@@ -163,50 +163,64 @@ impl Project {
 
 
     pub fn execute_context(&self, name: &str, agent: &dyn AgentCall) -> Result<()> {
-        loop {
-            let composed_lines = self.compose(name, agent)?;
-            
-            let mut answer_line_info: Option<(PathBuf, usize)> = None;
-            let mut prompt_content = String::new();
+        let context_ast = self.get_or_build_context_ast(name)?;
+        let target_file_path = context_ast.file_path.clone();
 
-            for line in composed_lines.iter() {
-                if let LineData::Answer = line.data {
-                    answer_line_info = Some((line.source_file.clone(), line.source_line_number));
-                    break;
-                }
-                if let LineData::Text(text) = &line.data {
-                    prompt_content.push_str(text);
-                    prompt_content.push('\n');
-                }
-            }
+        let composed_lines = self.compose(name, agent)?;
+        
+        let mut prompt_content = String::new();
+        let mut answer_idx: Option<usize> = None;
 
-            if let Some((source_file, source_line_number)) = answer_line_info {
-                println!("Executing LLM for context: {}", name);
-                println!("Found @answer tag in {:?} at line {}", source_file, source_line_number);
-
-                let llm_response = self._execute_answer_llm_command(prompt_content, agent)?;
-                println!("LLM Response:\n{}", llm_response);
-
-                // 2. Replace @answer in the file
-                let file_content = std::fs::read_to_string(&source_file)?;
-                let mut lines: Vec<String> = file_content.lines().map(String::from).collect();
-
-                if source_line_number < lines.len() {
-                    lines[source_line_number] = llm_response.trim().to_string();
-                } else {
-                    anyhow::bail!("Answer tag line number out of bounds for file {:?}", source_file);
-                }
-
-                // 3. Rewrite the file
-                std::fs::write(&source_file, lines.join("\n"))?;
-                println!("Rewrote file: {:?}\n", source_file);
-
-            } else {
-                // No more @answer tags, break the loop
-                println!("No more @answer tags found. Context execution complete.");
+        for (i, line) in composed_lines.iter().enumerate() {
+            if let LineData::Answer = line.data {
+                answer_idx = Some(i);
                 break;
             }
+            if let LineData::Text(text) = &line.data {
+                prompt_content.push_str(text);
+                prompt_content.push('\n');
+            }
         }
+
+        let mut new_file_content_lines: Vec<String> = Vec::new();
+        if let Some(idx) = answer_idx {
+            println!("Executing LLM for context: {}", name);
+            println!("Found @answer tag in composed lines at index {}", idx);
+
+            let llm_response = self._execute_answer_llm_command(prompt_content, agent)?;
+            println!("LLM Response:\n{}", llm_response);
+
+            for (i, line) in composed_lines.iter().enumerate() {
+                match &line.data {
+                    LineData::Text(text) => new_file_content_lines.push(text.clone()),
+                    LineData::Answer => {
+                        if Some(i) == answer_idx {
+                            new_file_content_lines.push(llm_response.trim().to_string());
+                        } else {
+                            new_file_content_lines.push("@answer".to_string());
+                        }
+                    },
+                    _ => {
+                        // This should not happen if ComposerVisitor correctly expands everything to Text or Answer
+                        // For safety, we can push the original line content if it's not Text or Answer
+                        // For now, let's assume it's always Text or Answer after composition.
+                        // If other LineData types are encountered here, it indicates a bug in composition or this logic.
+                        // For now, we'll just ignore them, which might lead to missing content, but prevents a crash.
+                    }
+                }
+            }
+        } else {
+            // No @answer tag found, just write the composed text lines
+            for line in composed_lines {
+                if let LineData::Text(text) = line.data {
+                    new_file_content_lines.push(text);
+                }
+            }
+        }
+
+        std::fs::write(&target_file_path, new_file_content_lines.join("\n"))?;
+        println!("Rewrote file: {:?}\n", target_file_path);
+        
         Ok(())
     }
 

@@ -8,8 +8,10 @@ use std::collections::HashSet;
 
 mod context;
 mod project;
+mod agent_call;
 use context::ContextTreeItem;
 use project::Project;
+use agent_call::{AgentCall, ShellAgentCall};
 
 #[derive(Parser)]
 struct Cli {
@@ -77,7 +79,8 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Compose { name } => {
-            let composed_lines = project.compose(&name)?;
+            let agent = ShellAgentCall::new("echo".to_string()); // Dummy agent for compose
+            let composed_lines = project.compose(&name, &agent)?;
             for line in composed_lines {
                 if let context::LineData::Text(text) = line.data {
                     println!("{}", text);
@@ -105,7 +108,8 @@ fn main() -> Result<()> {
             print_tree(&tree, 0);
         }
         Commands::Execute { name } => {
-            project.execute_context(&name)?;
+            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+            project.execute_context(&name, &agent)?;
         }
         Commands::Watch => {
             println!("Watching for changes in {:?}... (Press Ctrl+C to stop)", project.contexts_dir());
@@ -131,7 +135,8 @@ fn main() -> Result<()> {
                                 if path.extension().map_or(false, |ext| ext == "md") {
                                     if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
                                         println!("Executing context: {}", name);
-                                        if let Err(e) = project.execute_context(&name.to_string()) {
+                                        let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+                                        if let Err(e) = project.execute_context(&name.to_string(), &agent) {
                                             eprintln!("Error executing context {}: {}", name, e);
                                             return Err(e);
                                         }
@@ -146,7 +151,8 @@ fn main() -> Result<()> {
                         let current_contexts: HashSet<String> = project.list_contexts()?.into_iter().collect();
                         for new_context in current_contexts.difference(&known_contexts) {
                             println!("New context detected: {}. Executing...", new_context);
-                            if let Err(e) = project.execute_context(new_context) {
+                            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+                            if let Err(e) = project.execute_context(new_context, &agent) {
                                 eprintln!("Error executing new context {}: {}", new_context, e);
                                 return Err(e);
                             }

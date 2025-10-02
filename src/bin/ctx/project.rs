@@ -2,11 +2,8 @@
 use anyhow::{Context as AnyhowContext, Result};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::io::Write;
-use sha2::{Sha256, Digest};
-use handlebars::Handlebars;
-use serde_json::json;
+
+use crate::agent_call::AgentCall;
 
 use super::context::{Line, LineData, ContextTreeItem, Context};
 
@@ -15,13 +12,13 @@ pub struct Project {
 }
 
 impl Project {
-    pub fn compose(&self, name: &str) -> Result<Vec<Line>> {
+    pub fn compose(&self, name: &str, agent: &dyn AgentCall) -> Result<Vec<Line>> {
         let path = self.resolve_context(name)?;
         let mut visited = HashSet::new();
-        self.compose_recursive(&path, &mut visited)
+        self.compose_recursive(&path, &mut visited, agent)
     }
 
-    fn compose_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<Vec<Line>> {
+    fn compose_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>, agent: &dyn AgentCall) -> Result<Vec<Line>> {
         if visited.contains(path) {
             return Ok(Vec::new()); // Circular include
         }
@@ -36,11 +33,11 @@ impl Project {
             match line.data {
                 LineData::Include { context_name } => {
                     let include_path = self.resolve_context(&context_name)?;
-                    let included_lines = self.compose_recursive(&include_path, visited)?;
+                    let included_lines = self.compose_recursive(&include_path, visited, agent)?;
                     composed_lines.extend(included_lines);
                 }
                 LineData::Summary { context_name } => {
-                    let summarized_text = self._handle_summary_tag(&context_name, visited)?;
+                    let summarized_text = self._handle_summary_tag(&context_name, visited, agent)?;
                     composed_lines.push(Line {
                         data: LineData::Text(summarized_text),
                         source_file: line.source_file,
@@ -145,9 +142,9 @@ impl Project {
         Ok(path)
     }
 
-    pub fn execute_context(&self, name: &str) -> Result<()> {
+    pub fn execute_context(&self, name: &str, agent: &dyn AgentCall) -> Result<()> {
         loop {
-            let composed_lines = self.compose(name)?;
+            let composed_lines = self.compose(name, agent)?;
             
             let mut answer_line_index: Option<usize> = None;
             let mut prompt_content = String::new();
@@ -168,7 +165,7 @@ impl Project {
                 println!("Executing LLM for context: {}", name);
                 println!("Found @answer tag in {:?} at line {}", answer_line.source_file, answer_line.source_line_number);
 
-                let llm_response = self._execute_answer_llm_command(prompt_content)?;
+                let llm_response = self._execute_answer_llm_command(prompt_content, agent)?;
                 println!("LLM Response:\n{}", llm_response);
 
                 // 2. Replace @answer in the file
@@ -194,54 +191,15 @@ impl Project {
         Ok(())
     }
 
-    fn _execute_answer_llm_command(&self, composed_content: String) -> Result<String> {
-        let mut command = {
-            #[cfg(windows)]
-            {
-                let mut cmd = Command::new("cmd");
-                cmd.arg("/C").arg("gemini");
-                cmd
-            }
-            #[cfg(not(windows))]
-            {
-                Command::new("gemini")
-            }
-        };
-
-        command
-            .arg("-p")
-            .arg("-y")
-            .arg("-m")
-            .arg("gemini-2.5-flash")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped());
-
-        let mut child = command
-            .spawn()
-            .context("Failed to spawn gemini command. Is 'gemini' in your PATH?")?;
-
-        child.stdin.as_mut().unwrap().write_all(composed_content.as_bytes())?;
-        let output = child.wait_with_output()?;
-
-        if !output.status.success() {
-            anyhow::bail!("Gemini command failed: {:?}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    fn _execute_answer_llm_command(&self, composed_content: String, agent: &dyn AgentCall) -> Result<String> {
+        agent.call_llm(composed_content)
     }
 
-    fn _execute_summary_llm_command(&self, prompt: String) -> Result<String> {
-        // This is a placeholder. The actual command will depend on the user's LLM setup.
-        // For now, we'll simulate it or use a simple echo.
-        // In a real scenario, this would execute something like:
-        // `ollama run llama3 "Summarize this: <prompt>"`
-        // and capture stdout.
-        // For the prototype, we'll just return a mock summary.
-        // TODO: Implement actual shell command execution for LLM.
-        Ok(format!("(LLM Summary of: {})", prompt))
+    fn _execute_summary_llm_command(&self, prompt: String, agent: &dyn AgentCall) -> Result<String> {
+        agent.call_llm(prompt)
     }
 
-    fn _handle_summary_tag(&self, context_name: &str, visited: &mut HashSet<PathBuf>) -> Result<String> {
+    fn _handle_summary_tag(&self, context_name: &str, visited: &mut HashSet<PathBuf>, agent: &dyn AgentCall) -> Result<String> {
         use sha2::{Sha256, Digest};
         use handlebars::Handlebars;
         use serde_json::json;
@@ -280,7 +238,7 @@ impl Project {
             println!("Generating new summary for {}", context_name);
             // Recursively compose the content to be summarized
             let mut summary_visited = visited.clone(); // Clone visited for sub-composition
-            let lines_to_summarize = self.compose_recursive(&summary_target_path, &mut summary_visited)?;
+            let lines_to_summarize = self.compose_recursive(&summary_target_path, &mut summary_visited, agent)?;
             let content_to_summarize: String = lines_to_summarize.into_iter()
                 .filter_map(|l| if let LineData::Text(t) = l.data { Some(t) } else { None })
                 .collect::<Vec<String>>()
@@ -294,7 +252,7 @@ impl Project {
             let llm_prompt = handlebars.render("summary_prompt", &prompt_data)
                 .context("Failed to render handlebars template")?;
 
-            summarized_text = self._execute_summary_llm_command(llm_prompt)?;
+            summarized_text = self._execute_summary_llm_command(llm_prompt, agent)?;
 
             // Save to cache
             let cache_data = json!({ "original_hash": original_hash, "summary_content": summarized_text });

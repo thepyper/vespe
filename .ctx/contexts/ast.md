@@ -330,7 +330,28 @@ Here's my plan:
 
 I will start by reading `src/bin/ctx/composer.rs` to understand the current implementation of `execute_context`.
 
-prova
+Continua pure
 
-@answer
+Okay, the code compiles, and the `InlineExpander` is integrated.
 
+To verify the ` @inline` functionality, please perform the following manual steps:
+
+1.  **Create the following files in your project's `.ctx` directory:**
+    *   `c:\Proj\xxx\025_006.Vespe\vespe\.ctx\contexts\test_inline.md` with content:
+        ```
+        Hello from context!
+        @inline test_snippet
+        End of context.
+        ```
+    *   `c:\Proj\xxx\025_006.Vespe\vespe\.ctx\snippets\test_snippet.sn` with content:
+        ```
+        This is an inlined snippet.
+        It has multiple lines.
+        ```
+2.  **Run the command:**
+    ```bash
+    cargo run --bin ctx compose test_inline
+    ```
+3.  **Verify the output.** It should show the content of `test_snippet.sn` inlined into `test_inline.md`.
+
+Let me know the result of your verification. We can address the `cargo check` warnings afterward if you wish.

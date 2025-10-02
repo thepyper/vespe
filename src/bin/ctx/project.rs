@@ -7,7 +7,7 @@ pub const CONTEXT_EXTENSION: &str = "md";
 pub const SNIPPET_EXTENSION: &str = "sn";
 
 use crate::agent_call::AgentCall;
-use crate::ast::{ContextResolver, Context, Line, LineData, Snippet};
+use crate::ast::{ContextResolver, Context, Line, LineData, Snippet, InlineExpander, transform_context};
 
 
 
@@ -30,8 +30,10 @@ impl crate::ast::ContextResolver for Project {
 impl Project {
     pub fn compose(&self, name: &str, agent: &dyn AgentCall) -> Result<Vec<Line>> {
         let context_ast = self.get_or_build_context_ast(name)?;
+        let mut inline_expander = InlineExpander;
+        let transformed_ast = transform_context(&context_ast, &mut inline_expander);
         let mut visitor = crate::composer::ComposerVisitor::new(self, agent);
-        crate::ast::walk(&context_ast, &mut visitor);
+        crate::ast::walk(&transformed_ast, &mut visitor);
         Ok(visitor.get_composed_lines())
     }
 
@@ -257,8 +259,10 @@ impl Project {
         if !cache_hit {
             println!("Generating new summary for {}", summary_target_path.display());
             // Compose the content to be summarized using the AST and ContextComposer
+            let mut inline_expander = InlineExpander;
+            let transformed_context = transform_context(context, &mut inline_expander);
             let mut visitor = crate::composer::ComposerVisitor::new(self, agent);
-            crate::ast::walk(context, &mut visitor);
+            crate::ast::walk(&transformed_context, &mut visitor);
             let lines_to_summarize = visitor.get_composed_lines();
             let content_to_summarize: String = lines_to_summarize.into_iter()
                 .filter_map(|l| if let crate::ast::LineData::Text(t) = l.data { Some(t) } else { None })

@@ -72,6 +72,37 @@ pub fn walk(context: &Context, visitor: &mut impl Visitor) {
     visitor.post_visit_context(context);
 }
 
+pub trait VisitorTransform {
+    fn transform_line(&mut self, line: &Line) -> Vec<Line>;
+    fn transform_context(&mut self, context: &Context) -> Context {
+        let transformed_lines = context.lines.iter().flat_map(|line| {
+            self.transform_line(line)
+        }).collect();
+        Context {
+            file_path: context.file_path.clone(),
+            lines: transformed_lines,
+        }
+    }
+    fn transform_snippet(&mut self, snippet: &Snippet) -> Snippet {
+        let transformed_lines = snippet.lines.iter().flat_map(|line| {
+            self.transform_line(line)
+        }).collect();
+        Snippet {
+            file_path: snippet.file_path.clone(),
+            lines: transformed_lines,
+        }
+    }
+}
+
+pub fn transform_context<T: VisitorTransform>(context: &Context, transformer: &mut T) -> Context {
+    transformer.transform_context(context)
+}
+
+pub fn transform_snippet<T: VisitorTransform>(snippet: &Snippet, transformer: &mut T) -> Snippet {
+    transformer.transform_snippet(snippet)
+}
+
+
 pub struct AstPrettyPrinter {
     pub output: String,
     indent_level: usize,
@@ -227,6 +258,21 @@ pub fn build_snippet(
         file_path: current_path.to_path_buf(),
         lines,
     })
+}
+
+pub struct InlineExpander;
+
+impl VisitorTransform for InlineExpander {
+    fn transform_line(&mut self, line: &Line) -> Vec<Line> {
+        match &line.data {
+            LineData::Inline(snippet) => {
+                // Recursively transform the snippet's lines in case it contains further inlines
+                let transformed_snippet = self.transform_snippet(snippet);
+                transformed_snippet.lines
+            },
+            _ => vec![line.clone()],
+        }
+    }
 }
 
 // Helper function to resolve context paths, moved from Project

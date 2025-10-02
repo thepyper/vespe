@@ -18,6 +18,7 @@ pub struct Line {
     pub data: LineData,
     pub source_file: PathBuf,
     pub source_line_number: usize,
+    pub text: String,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -151,6 +152,7 @@ fn parse_lines(
                     data: LineData::Include(child_context),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
+                    text: line_content.to_string(),
                 })
             } else if let Some(snippet_name) = line_content.strip_prefix("@inline ") {
                 let child_snippet = resolver.resolve_snippet(snippet_name.trim(), project_root)?;
@@ -159,6 +161,7 @@ fn parse_lines(
                     data: LineData::Inline(child_snippet),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
+                    text: line_content.to_string(),
                 })
             } else if line_content.trim() == "@answer" {
                 Ok(Line {
@@ -166,6 +169,7 @@ fn parse_lines(
                     data: LineData::Answer,
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
+                    text: line_content.to_string(),
                 })
             } else if let Some(context_name) = line_content.strip_prefix("@summary ") {
                 let child_context = resolver.resolve_context(context_name.trim(), project_root, visited)?;
@@ -174,6 +178,7 @@ fn parse_lines(
                     data: LineData::Summary(child_context),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
+                    text: line_content.to_string(),
                 })
             } else {
                 Ok(Line {
@@ -181,6 +186,7 @@ fn parse_lines(
                     data: LineData::Text(line_content.to_string()),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
+                    text: line_content.to_string(),
                 })
             }
         })

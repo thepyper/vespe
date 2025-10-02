@@ -171,8 +171,7 @@ impl Project {
         let mut inliner_visitor = InlinerVisitor::new();
         crate::ast::walk(&root_context, &mut inliner_visitor);
 
-        // Apply the inlines, rewriting the original files
-        inliner_visitor.apply_inlines()?;
+
 
         loop {
             let composed_lines = self.compose(name, agent)?;

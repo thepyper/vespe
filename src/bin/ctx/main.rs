@@ -13,7 +13,7 @@ mod composer;
 
 use project::Project;
 use crate::ast::LineData;
-use agent_call::{ShellAgentCall, MockAgentCall};
+use agent_call::ShellAgentCall;
 
 #[derive(Parser)]
 struct Cli {
@@ -113,7 +113,7 @@ fn main() -> Result<()> {
             project.new_snippet(&name)?;
         }
         Commands::Execute { name } => {
-            let agent = MockAgentCall; // Use MockAgentCall for testing
+            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
             project.execute_context(&name, &agent)?;
         }
         Commands::Watch => {

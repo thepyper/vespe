@@ -8,7 +8,11 @@ use std::collections::HashSet;
 
 mod project;
 mod agent_call;
-use project::{ContextTreeItem, LineData, Project};
+mod ast;
+mod composer;
+mod tree_builder;
+use project::Project;
+use crate::ast::{ContextTreeItem, LineData};
 use agent_call::ShellAgentCall;
 
 #[derive(Parser)]

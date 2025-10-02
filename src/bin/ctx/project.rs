@@ -7,72 +7,44 @@ pub const CONTEXT_EXTENSION: &str = "md";
 pub const SNIPPET_EXTENSION: &str = "sn";
 
 use crate::agent_call::AgentCall;
-use crate::ast::{AstNode, Context, Line, LineData, Snippet, walk, build_context, build_snippet};
-use crate::composer::ContextComposer;
+use crate::ast::{ContextResolver, Context, Line, LineData, Snippet};
+
+
 
 pub struct Project {
     pub root_path: PathBuf,
 }
 
+impl crate::ast::ContextResolver for Project {
+    fn resolve_context(&self, name: &str, project_root: &Path, visited: &mut HashSet<PathBuf>) -> Result<Context> {
+        let path = crate::ast::resolve_context_path(project_root, name)?;
+        crate::ast::build_context(self, project_root, &path, visited)
+    }
+
+    fn resolve_snippet(&self, name: &str, project_root: &Path) -> Result<Snippet> {
+        let path = crate::ast::resolve_snippet_path(project_root, name)?;
+        crate::ast::build_snippet(self, project_root, &path)
+    }
+}
+
 impl Project {
     pub fn compose(&self, name: &str, agent: &dyn AgentCall) -> Result<Vec<Line>> {
         let context_ast = self.get_or_build_context_ast(name)?;
-        let mut composer = ContextComposer::new(self, agent);
-        composer.compose_from_ast(&AstNode::Context(context_ast))
+        let mut visitor = crate::composer::ComposerVisitor::new(self, agent);
+        crate::ast::walk(&context_ast, &mut visitor);
+        Ok(visitor.get_composed_lines())
     }
 
     pub fn context_tree(&self, name: &str) -> Result<String> {
         let context_ast = self.get_or_build_context_ast(name)?;
         let mut output = String::new();
-        self.format_ast_node_for_display(&AstNode::Context(context_ast), 0, &mut output);
+        let mut formatter = crate::ast::AstPrettyPrinter::new();
+        crate::ast::walk(&context_ast, &mut formatter);
+        output.push_str(&formatter.output);
         Ok(output)
     }
 
-    fn format_ast_node_for_display(&self, node: &crate::ast::AstNode, indent_level: usize, output: &mut String) {
-        struct TreeFormatter<'a> {
-            output: &'a mut String,
-            indent_level: usize,
-        }
 
-        impl<'a> crate::ast::Visitor for TreeFormatter<'a> {
-            fn pre_visit_context(&mut self, context: &crate::ast::Context) {
-                let indent = "  ".repeat(self.indent_level);
-                let name = crate::ast::to_name(&context.file_path.file_name().unwrap().to_string_lossy());
-                self.output.push_str(&format!("{}- {}\n", indent, name));
-                self.indent_level += 1;
-            }
-            fn post_visit_context(&mut self, _context: &crate::ast::Context) {
-                self.indent_level -= 1;
-            }
-            fn pre_visit_snippet(&mut self, snippet: &crate::ast::Snippet) {
-                let indent = "  ".repeat(self.indent_level);
-                let name = crate::ast::to_snippet_filename(&snippet.file_path.file_name().unwrap().to_string_lossy());
-                self.output.push_str(&format!("{}- {}\n", indent, name));
-                self.indent_level += 1;
-            }
-            fn post_visit_snippet(&mut self, _snippet: &crate::ast::Snippet) {
-                self.indent_level -= 1;
-            }
-            fn pre_visit_line(&mut self, line: &crate::ast::Line) {
-                let indent = "  ".repeat(self.indent_level);
-                match &line.data {
-                    crate::ast::LineData::Text(text) => {
-                        // self.output.push_str(&format!("{}{}\n", indent, text));
-                    },
-                    crate::ast::LineData::Answer => {
-                        self.output.push_str(&format!("{}- @answer\n", indent));
-                    },
-                    _ => {},
-                }
-            }
-        }
-
-        let mut formatter = TreeFormatter {
-            output,
-            indent_level,
-        };
-        crate::ast::walk(node, &mut formatter);
-    }
 
     // fn context_tree_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<ContextTreeItem> {
     //     if visited.contains(path) {
@@ -194,12 +166,12 @@ impl Project {
         loop {
             let composed_lines = self.compose(name, agent)?;
             
-            let mut answer_line_index: Option<usize> = None;
+            let mut answer_line_info: Option<(PathBuf, usize)> = None;
             let mut prompt_content = String::new();
 
-            for (i, line) in composed_lines.iter().enumerate() {
+            for line in composed_lines.iter() {
                 if let LineData::Answer = line.data {
-                    answer_line_index = Some(i);
+                    answer_line_info = Some((line.source_file.clone(), line.source_line_number));
                     break;
                 }
                 if let LineData::Text(text) = &line.data {
@@ -208,27 +180,26 @@ impl Project {
                 }
             }
 
-            if let Some(index) = answer_line_index {
-                let answer_line = &composed_lines[index];
+            if let Some((source_file, source_line_number)) = answer_line_info {
                 println!("Executing LLM for context: {}", name);
-                println!("Found @answer tag in {:?} at line {}", answer_line.source_file, answer_line.source_line_number);
+                println!("Found @answer tag in {:?} at line {}", source_file, source_line_number);
 
                 let llm_response = self._execute_answer_llm_command(prompt_content, agent)?;
                 println!("LLM Response:\n{}", llm_response);
 
                 // 2. Replace @answer in the file
-                let file_content = std::fs::read_to_string(&answer_line.source_file)?;
+                let file_content = std::fs::read_to_string(&source_file)?;
                 let mut lines: Vec<String> = file_content.lines().map(String::from).collect();
 
-                if answer_line.source_line_number < lines.len() {
-                    lines[answer_line.source_line_number] = llm_response.trim().to_string();
+                if source_line_number < lines.len() {
+                    lines[source_line_number] = llm_response.trim().to_string();
                 } else {
-                    anyhow::bail!("Answer tag line number out of bounds for file {:?}", answer_line.source_file);
+                    anyhow::bail!("Answer tag line number out of bounds for file {:?}", source_file);
                 }
 
                 // 3. Rewrite the file
-                std::fs::write(&answer_line.source_file, lines.join("\n"))?;
-                println!("Rewrote file: {:?}\n", answer_line.source_file);
+                std::fs::write(&source_file, lines.join("\n"))?;
+                println!("Rewrote file: {:?}\n", source_file);
 
             } else {
                 // No more @answer tags, break the loop
@@ -247,12 +218,12 @@ impl Project {
         agent.call_llm(prompt)
     }
 
-    pub fn _handle_summary_tag(&self, context_name: &str, agent: &dyn AgentCall) -> Result<String> {
+    pub fn _handle_summary_tag(&self, context: &Context, agent: &dyn AgentCall) -> Result<String> {
         use sha2::{Sha256, Digest};
         use handlebars::Handlebars;
         use serde_json::json;
 
-        let summary_target_path = crate::ast::resolve_context_path(&self.root_path, context_name)?;
+        let summary_target_path = context.file_path.clone();
         let original_content_to_summarize = std::fs::read_to_string(&summary_target_path)
             .with_context(|| format!("Failed to read context for summary: {:?}", summary_target_path))?;
         let mut hasher = Sha256::new();
@@ -278,18 +249,17 @@ impl Project {
                 if cached_hash == original_hash {
                     summarized_text = cached_content.to_string();
                     cache_hit = true;
-                    println!("Using cached summary for {}", context_name);
+                    println!("Using cached summary for {}", summary_target_path.display());
                 }
             }
         }
 
         if !cache_hit {
-            println!("Generating new summary for {}", context_name);
+            println!("Generating new summary for {}", summary_target_path.display());
             // Compose the content to be summarized using the AST and ContextComposer
-            let mut visited_for_ast = HashSet::new();
-            let summary_context = crate::ast::build_context(&self.root_path, &summary_target_path, &mut visited_for_ast)?;
-            let mut composer = ContextComposer::new(self, agent);
-            let lines_to_summarize = composer.compose_from_ast(&AstNode::Context(summary_context))?;
+            let mut visitor = crate::composer::ComposerVisitor::new(self, agent);
+            crate::ast::walk(context, &mut visitor);
+            let lines_to_summarize = visitor.get_composed_lines();
             let content_to_summarize: String = lines_to_summarize.into_iter()
                 .filter_map(|l| if let crate::ast::LineData::Text(t) = l.data { Some(t) } else { None })
                 .collect::<Vec<String>>()
@@ -354,6 +324,6 @@ impl Project {
         // In the future, we can cache it in self.ast.
         let path = crate::ast::resolve_context_path(&self.root_path, name)?;
         let mut visited_for_ast = HashSet::new();
-        crate::ast::build_context(&self.root_path, &path, &mut visited_for_ast)
+        crate::ast::build_context(self, &self.root_path, &path, &mut visited_for_ast)
     }
 }

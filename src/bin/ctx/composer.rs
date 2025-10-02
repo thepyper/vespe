@@ -1,9 +1,9 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::agent_call::AgentCall;
-use crate::ast::{AstNode, Context, Line, LineData, Snippet, Visitor, walk};
+use crate::ast::{Context, Line, LineData, Snippet, Visitor, walk};
 use crate::project::Project; // Import Project to access its methods
 
 pub struct ComposerVisitor<'a> {
@@ -19,14 +19,11 @@ impl<'a> ComposerVisitor<'a> {
             project,
             agent,
             visited_summaries: HashSet::new(),
+            composed_lines: Vec::new(),
         }
     }
 
-    pub fn compose_from_ast(&mut self, ast_node: &AstNode) -> Result<Vec<Line>> {
-        let mut visitor = ComposerVisitor::new(self.project, self.agent);
-        walk(ast_node, &mut visitor);
-        Ok(visitor.get_composed_lines())
-    }
+
 
     pub fn get_composed_lines(self) -> Vec<Line> {
         self.composed_lines
@@ -34,10 +31,10 @@ impl<'a> ComposerVisitor<'a> {
 }
 
 impl<'a> Visitor for ComposerVisitor<'a> {
-    fn pre_visit_context(&mut self, context: &Context) {
+    fn pre_visit_context(&mut self, context: &crate::ast::Context) {
         // No specific action needed before visiting context children
     }
-    fn post_visit_context(&mut self, context: &Context) {
+    fn post_visit_context(&mut self, context: &crate::ast::Context) {
         // No specific action needed after visiting context children
     }
     fn pre_visit_snippet(&mut self, snippet: &Snippet) {
@@ -49,21 +46,20 @@ impl<'a> Visitor for ComposerVisitor<'a> {
     fn pre_visit_line(&mut self, line: &Line) {
         match &line.data {
             LineData::Text(_) | LineData::Answer => {
-                self.composed_lines.push(line.clone());
+                self.composed_lines.push(Line {
+                    line_number: line.line_number,
+                    data: line.data.clone(),
+                    source_file: line.source_file.clone(),
+                    source_line_number: line.source_line_number,
+                });
             },
             LineData::Include(included_context) => {
-                // Recursively walk the included context
-                for node in &included_context.lines {
-                    walk(node, self);
-                }
+                // The ast::walk function will handle the traversal of included_context.lines
+                // No explicit action needed here, as the visitor methods will be called.
             },
             LineData::Inline(included_snippet) => {
-                // Add lines from the inline snippet directly
-                for node in &included_snippet.lines {
-                    if let AstNode::Line(snippet_line) = node {
-                        self.composed_lines.push(snippet_line.clone());
-                    }
-                }
+                // The ast::walk function will handle the traversal of included_snippet.lines
+                // No explicit action needed here, as the visitor methods will be called.
             },
             LineData::Summary(summary_context) => {
                 let summary_path = summary_context.file_path.clone();
@@ -77,6 +73,8 @@ impl<'a> Visitor for ComposerVisitor<'a> {
                 self.composed_lines.push(Line {
                     data: LineData::Text(summarized_text),
                     line_number: line.line_number,
+                    source_file: line.source_file.clone(),
+                    source_line_number: line.source_line_number,
                 });
             },
             _ => {},

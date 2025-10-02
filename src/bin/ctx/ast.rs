@@ -10,9 +10,6 @@ pub enum LineData {
     Inline(Snippet),
     Answer,
     Summary(Context),
-    IncludePlaceholder(String),
-    InlinePlaceholder(String),
-    SummaryPlaceholder(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -26,53 +23,53 @@ pub struct Line {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Context {
     pub file_path: PathBuf,
-    pub lines: Vec<AstNode>,
+    pub lines: Vec<Line>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Snippet {
     pub file_path: PathBuf,
-    pub lines: Vec<AstNode>,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum AstNode {
-    Context(Context),
-    Line(Line),
-    Snippet(Snippet),
+    pub lines: Vec<Line>,
 }
 
 pub trait Visitor {
-    fn pre_visit_context(&mut self, context: &Context) {}
-    fn post_visit_context(&mut self, context: &Context) {}
-    fn pre_visit_snippet(&mut self, snippet: &Snippet) {}
-    fn post_visit_snippet(&mut self, snippet: &Snippet) {}
-    fn pre_visit_line(&mut self, line: &Line) {}
-    fn post_visit_line(&mut self, line: &Line) {}
+    fn pre_visit_context(&mut self, _context: &Context) {}
+    fn post_visit_context(&mut self, _context: &Context) {}
+    fn pre_visit_snippet(&mut self, _snippet: &Snippet) {}
+    fn post_visit_snippet(&mut self, _snippet: &Snippet) {}
+    fn pre_visit_line(&mut self, _line: &Line) {}
+    fn post_visit_line(&mut self, _line: &Line) {}
 }
 
-pub fn walk(node: &AstNode, visitor: &mut impl Visitor) {
-    match node {
-        AstNode::Context(context) => {
-            visitor.pre_visit_context(context);
-            for child_node in &context.lines {
-                walk(child_node, visitor);
-            }
-            visitor.post_visit_context(context);
-        },
-        AstNode::Snippet(snippet) => {
-            visitor.pre_visit_snippet(snippet);
-            for child_node in &snippet.lines {
-                walk(child_node, visitor);
-            }
-            visitor.post_visit_snippet(snippet);
-        },
-        AstNode::Line(line) => {
-            visitor.pre_visit_line(line);
-            // No children for a Line, so no recursive walk here
-            visitor.post_visit_line(line);
-        },
+pub trait ContextResolver {
+    fn resolve_context(&self, name: &str, project_root: &Path, visited: &mut HashSet<PathBuf>) -> Result<Context>;
+    fn resolve_snippet(&self, name: &str, project_root: &Path) -> Result<Snippet>;
+}
+
+pub fn walk(context: &Context, visitor: &mut impl Visitor) {
+    visitor.pre_visit_context(context);
+    for line in &context.lines {
+        visitor.pre_visit_line(line);
+        match &line.data {
+            LineData::Include(child_context) => {
+                walk(child_context, visitor);
+            },
+            LineData::Summary(child_context) => {
+                walk(child_context, visitor);
+            },
+            LineData::Inline(child_snippet) => {
+                visitor.pre_visit_snippet(child_snippet);
+                for snippet_line in &child_snippet.lines {
+                    visitor.pre_visit_line(snippet_line);
+                    visitor.post_visit_line(snippet_line);
+                }
+                visitor.post_visit_snippet(child_snippet);
+            },
+            _ => {} // Text, Answer, etc.
+        }
+        visitor.post_visit_line(line);
     }
+    visitor.post_visit_context(context);
 }
 
 pub struct AstPrettyPrinter {
@@ -122,22 +119,11 @@ impl Visitor for AstPrettyPrinter {
         self.indent();
         self.output.push_str(&format!("Line {}: ", line.line_number));
         match &line.data {
-            LineData::Text(text) => self.output.push_str(&format!("Text: "{}"
-", text)),
-            LineData::Include(context) => self.output.push_str(&format!("Include: {}
-", context.file_path.display())),
-            LineData::Inline(snippet) => self.output.push_str(&format!("Inline: {}
-", snippet.file_path.display())),
-            LineData::Answer => self.output.push_str("Answer
-"),
-            LineData::Summary(context) => self.output.push_str(&format!("Summary: {}
-", context.file_path.display())),
-            LineData::IncludePlaceholder(name) => self.output.push_str(&format!("IncludePlaceholder: "{}"
-", name)),
-            LineData::InlinePlaceholder(name) => self.output.push_str(&format!("InlinePlaceholder: "{}"
-", name)),
-            LineData::SummaryPlaceholder(name) => self.output.push_str(&format!("SummaryPlaceholder: "{}"
-", name)),
+            LineData::Text(text) => self.output.push_str(&format!("Text: \"{}\"\n", text)),
+            LineData::Include(context) => self.output.push_str(&format!("Include: {}\n", context.file_path.display())),
+            LineData::Inline(snippet) => self.output.push_str(&format!("Inline: {}\n", snippet.file_path.display())),
+            LineData::Answer => self.output.push_str("Answer\n"),
+            LineData::Summary(context) => self.output.push_str(&format!("Summary: {}\n", context.file_path.display())),
         }
         self.indent_level += 1;
     }
@@ -147,58 +133,67 @@ impl Visitor for AstPrettyPrinter {
     }
 }
 
-fn parse_lines(content: &str, file_path: &Path) -> Vec<Line> {
+fn parse_lines(
+    content: &str,
+    file_path: &Path,
+    resolver: &impl ContextResolver,
+    project_root: &Path,
+    visited: &mut HashSet<PathBuf>,
+) -> Result<Vec<Line>> {
     content
         .lines()
         .enumerate()
         .map(|(line_number, line_content)| {
             if let Some(context_name) = line_content.strip_prefix("@include ") {
-                Line {
+                let child_context = resolver.resolve_context(context_name.trim(), project_root, visited)?;
+                Ok(Line {
                     line_number,
-                    data: LineData::IncludePlaceholder(context_name.trim().to_string()),
+                    data: LineData::Include(child_context),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
-                }
+                })
             } else if let Some(snippet_name) = line_content.strip_prefix("@inline ") {
-                Line {
+                let child_snippet = resolver.resolve_snippet(snippet_name.trim(), project_root)?;
+                Ok(Line {
                     line_number,
-                    data: LineData::InlinePlaceholder(snippet_name.trim().to_string()),
+                    data: LineData::Inline(child_snippet),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
-                }
+                })
             } else if line_content.trim() == "@answer" {
-                Line {
+                Ok(Line {
                     line_number,
                     data: LineData::Answer,
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
-                }
+                })
             } else if let Some(context_name) = line_content.strip_prefix("@summary ") {
-                Line {
+                let child_context = resolver.resolve_context(context_name.trim(), project_root, visited)?;
+                Ok(Line {
                     line_number,
-                    data: LineData::SummaryPlaceholder(context_name.trim().to_string()),
+                    data: LineData::Summary(child_context),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
-                }
+                })
             } else {
-                Line {
+                Ok(Line {
                     line_number,
                     data: LineData::Text(line_content.to_string()),
                     source_file: file_path.to_path_buf(),
                     source_line_number: line_number,
-                }
+                })
             }
         })
         .collect()
 }
 
 pub fn build_context(
+    resolver: &impl ContextResolver,
     project_root: &Path,
     current_path: &Path,
     visited: &mut HashSet<PathBuf>,
 ) -> Result<Context> {
     if visited.contains(current_path) {
-        // Handle circular dependency by returning a placeholder context
         return Ok(Context {
             file_path: current_path.to_path_buf(),
             lines: Vec::new(),
@@ -208,59 +203,29 @@ pub fn build_context(
 
     let content = std::fs::read_to_string(current_path)
         .with_context(|| format!("Failed to read {:?}", current_path))?;
-    let parsed_lines = parse_lines(&content, current_path);
 
-    let mut ast_nodes = Vec::new();
-    for line in parsed_lines {
-        match line.data {
-            LineData::IncludePlaceholder(context_name) => {
-                let include_path = resolve_context_path(project_root, &context_name)?;
-                let child_context = build_context(project_root, &include_path, visited)?;
-                ast_nodes.push(AstNode::Context(child_context));
-            },
-            LineData::InlinePlaceholder(snippet_name) => {
-                let snippet_path = resolve_snippet_path(project_root, &snippet_name)?;
-                let child_snippet = build_snippet(project_root, &snippet_path)?;
-                ast_nodes.push(AstNode::Snippet(child_snippet));
-            },
-            LineData::SummaryPlaceholder(context_name) => {
-                let summary_path = resolve_context_path(project_root, &context_name)?;
-                let child_context = build_context(project_root, &summary_path, visited)?;
-                ast_nodes.push(AstNode::Context(child_context));
-            },
-            LineData::Text(text) => ast_nodes.push(AstNode::Line(Line { line_number: line.line_number, data: LineData::Text(text), source_file: line.source_file, source_line_number: line.source_line_number })),
-            LineData::Answer => ast_nodes.push(AstNode::Line(Line { line_number: line.line_number, data: LineData::Answer, source_file: line.source_file, source_line_number: line.source_line_number })),
-            // These should not be encountered here, as they are resolved from placeholders
-            LineData::Include(_) | LineData::Inline(_) | LineData::Summary(_) => {
-                anyhow::bail!("Unexpected resolved LineData variant in build_context before resolution.");
-            }
-        }
-    }
+    let lines = parse_lines(&content, current_path, resolver, project_root, visited)?;
 
     Ok(Context {
         file_path: current_path.to_path_buf(),
-        lines: ast_nodes,
+        lines,
     })
 }
 
 pub fn build_snippet(
+    resolver: &impl ContextResolver,
     project_root: &Path,
     current_path: &Path,
 ) -> Result<Snippet> {
     let content = std::fs::read_to_string(current_path)
         .with_context(|| format!("Failed to read {:?}", current_path))?;
-    let parsed_lines = parse_lines(&content, current_path);
 
-    let mut ast_nodes = Vec::new();
-    for line in parsed_lines {
-        // Snippets do not process includes/inlines/summaries recursively
-        // They just contain lines of text or directives that will be processed by the parent context
-        ast_nodes.push(AstNode::Line(line));
-    }
+    let mut dummy_visited = HashSet::new();
+    let lines = parse_lines(&content, current_path, resolver, project_root, &mut dummy_visited)?;
 
     Ok(Snippet {
         file_path: current_path.to_path_buf(),
-        lines: ast_nodes,
+        lines,
     })
 }
 

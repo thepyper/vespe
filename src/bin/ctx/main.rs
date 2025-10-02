@@ -105,9 +105,8 @@ fn main() -> Result<()> {
         }
         Commands::Ast { name } => {
             let root_context = project.get_or_build_context_ast(&name)?;
-            let root_node = ast::AstNode::Context(root_context);
             let mut printer = ast::AstPrettyPrinter::new();
-            ast::walk(&root_node, &mut printer);
+            ast::walk(&root_context, &mut printer);
             println!("{}", printer.output);
         }
         Commands::CreateSnippet { name } => {

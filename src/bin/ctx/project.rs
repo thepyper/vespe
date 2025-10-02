@@ -7,7 +7,7 @@ pub const CONTEXT_EXTENSION: &str = "md";
 pub const SNIPPET_EXTENSION: &str = "sn";
 
 use crate::agent_call::AgentCall;
-use crate::ast::{Line, LineData, ContextInfo};
+use crate::ast::{AstNode, Context, Line, LineData, Snippet, walk, build_context, build_snippet};
 use crate::composer::ContextComposer;
 
 pub struct Project {
@@ -16,26 +16,62 @@ pub struct Project {
 
 impl Project {
     pub fn compose(&self, name: &str, agent: &dyn AgentCall) -> Result<Vec<Line>> {
-        let ast_node = self.get_or_build_ast(name)?;
+        let context_ast = self.get_or_build_context_ast(name)?;
         let mut composer = ContextComposer::new(self, agent);
-        composer.compose_from_ast(&ast_node)
+        composer.compose_from_ast(&AstNode::Context(context_ast))
     }
 
     pub fn context_tree(&self, name: &str) -> Result<String> {
-        let ast_node = self.get_or_build_ast(name)?;
+        let context_ast = self.get_or_build_context_ast(name)?;
         let mut output = String::new();
-        self.format_ast_node_for_display(&ast_node, 0, &mut output);
+        self.format_ast_node_for_display(&AstNode::Context(context_ast), 0, &mut output);
         Ok(output)
     }
 
-    fn format_ast_node_for_display(&self, node: &crate::ast::ContextAstNode, indent_level: usize, output: &mut String) {
-        let indent = "  ".repeat(indent_level);
-        let name = crate::ast::to_name(&node.path.file_name().unwrap().to_string_lossy());
-        output.push_str(&format!("{}- {}\n", indent, name));
-
-        for child in &node.children {
-            self.format_ast_node_for_display(child, indent_level + 1, output);
+    fn format_ast_node_for_display(&self, node: &crate::ast::AstNode, indent_level: usize, output: &mut String) {
+        struct TreeFormatter<'a> {
+            output: &'a mut String,
+            indent_level: usize,
         }
+
+        impl<'a> crate::ast::Visitor for TreeFormatter<'a> {
+            fn pre_visit_context(&mut self, context: &crate::ast::Context) {
+                let indent = "  ".repeat(self.indent_level);
+                let name = crate::ast::to_name(&context.file_path.file_name().unwrap().to_string_lossy());
+                self.output.push_str(&format!("{}- {}\n", indent, name));
+                self.indent_level += 1;
+            }
+            fn post_visit_context(&mut self, _context: &crate::ast::Context) {
+                self.indent_level -= 1;
+            }
+            fn pre_visit_snippet(&mut self, snippet: &crate::ast::Snippet) {
+                let indent = "  ".repeat(self.indent_level);
+                let name = crate::ast::to_snippet_filename(&snippet.file_path.file_name().unwrap().to_string_lossy());
+                self.output.push_str(&format!("{}- {}\n", indent, name));
+                self.indent_level += 1;
+            }
+            fn post_visit_snippet(&mut self, _snippet: &crate::ast::Snippet) {
+                self.indent_level -= 1;
+            }
+            fn pre_visit_line(&mut self, line: &crate::ast::Line) {
+                let indent = "  ".repeat(self.indent_level);
+                match &line.data {
+                    crate::ast::LineData::Text(text) => {
+                        // self.output.push_str(&format!("{}{}\n", indent, text));
+                    },
+                    crate::ast::LineData::Answer => {
+                        self.output.push_str(&format!("{}- @answer\n", indent));
+                    },
+                    _ => {},
+                }
+            }
+        }
+
+        let mut formatter = TreeFormatter {
+            output,
+            indent_level,
+        };
+        crate::ast::walk(node, &mut formatter);
     }
 
     // fn context_tree_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<ContextTreeItem> {
@@ -70,17 +106,17 @@ impl Project {
         Ok(path)
     }
 
-    pub fn list_contexts(&self) -> Result<Vec<ContextInfo>> {
+    pub fn list_contexts(&self) -> Result<Vec<String>> {
         let contexts_path = self.contexts_dir()?;
-        let mut context_infos = Vec::new();
+        let mut context_names = Vec::new();
     
         for entry in std::fs::read_dir(contexts_path)? {
             let entry = entry?;
             if entry.path().extension() == Some(CONTEXT_EXTENSION.as_ref()) {
-                context_infos.push(crate::ast::get_context_info(&entry.path())?);
+                context_names.push(crate::ast::to_name(&entry.path().file_name().unwrap().to_string_lossy()));
             }
         }
-        Ok(context_infos)
+        Ok(context_names)
     }
 
     pub fn snippets_dir(&self) -> Result<PathBuf> {
@@ -89,17 +125,17 @@ impl Project {
         Ok(path)
     }
 
-    pub fn list_snippets(&self) -> Result<Vec<ContextInfo>> {
+    pub fn list_snippets(&self) -> Result<Vec<String>> {
         let snippets_path = self.snippets_dir()?;
-        let mut snippet_infos = Vec::new();
+        let mut snippet_names = Vec::new();
     
         for entry in std::fs::read_dir(snippets_path)? {
             let entry = entry?;
             if entry.path().extension() == Some(SNIPPET_EXTENSION.as_ref()) {
-                snippet_infos.push(crate::ast::get_context_info(&entry.path())?);
+                snippet_names.push(crate::ast::to_snippet_filename(&entry.path().file_name().unwrap().to_string_lossy()));
             }
         }
-        Ok(snippet_infos)
+        Ok(snippet_names)
     }
 
      fn get_context_meta_dir(&self, context_path: &Path) -> Result<PathBuf> {
@@ -251,9 +287,9 @@ impl Project {
             println!("Generating new summary for {}", context_name);
             // Compose the content to be summarized using the AST and ContextComposer
             let mut visited_for_ast = HashSet::new();
-            let summary_ast_node = crate::ast::ContextAstNode::build_context_ast(&self.root_path, &summary_target_path, &mut visited_for_ast)?;
+            let summary_context = crate::ast::build_context(&self.root_path, &summary_target_path, &mut visited_for_ast)?;
             let mut composer = ContextComposer::new(self, agent);
-            let lines_to_summarize = composer.compose_from_ast(&summary_ast_node)?;
+            let lines_to_summarize = composer.compose_from_ast(&AstNode::Context(summary_context))?;
             let content_to_summarize: String = lines_to_summarize.into_iter()
                 .filter_map(|l| if let crate::ast::LineData::Text(t) = l.data { Some(t) } else { None })
                 .collect::<Vec<String>>()
@@ -313,11 +349,11 @@ impl Project {
             anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    pub fn get_or_build_ast(&self, name: &str) -> Result<crate::ast::ContextAstNode> {
-        // For now, we'll rebuild the AST every time.
+    pub fn get_or_build_context_ast(&self, name: &str) -> Result<Context> {
+        // For now, we\'ll rebuild the AST every time.
         // In the future, we can cache it in self.ast.
         let path = crate::ast::resolve_context_path(&self.root_path, name)?;
         let mut visited_for_ast = HashSet::new();
-        crate::ast::ContextAstNode::build_context_ast(&self.root_path, &path, &mut visited_for_ast)
+        crate::ast::build_context(&self.root_path, &path, &mut visited_for_ast)
     }
 }

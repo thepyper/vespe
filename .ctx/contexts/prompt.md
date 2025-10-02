@@ -267,4 +267,15 @@ Attendo le tue risposte per procedere con l'implementazione.
 Procedi pure con implementazione.
 Fai commit granulari.
 
+---
+Ok vedo che hai praticamente finito.
+
+Intanto fai commit.
+
 @answer
+
+Poi c'e' un problemino con watch:
+pare non rilevare il fatto che test_inline.md sia eseguibile, nonostante contenga (indirettamente) una @answer
+
+@answer
+

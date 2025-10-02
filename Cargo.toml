@@ -9,15 +9,6 @@ name = "vespe"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "test_markdown"
-path = "src/bin/test_markdown.rs"
-
-[[bin]]
-name = "test_ctx"
-path = "src/bin/test_ctx.rs"
-
-
 [dependencies]
 anyhow = "1"
 thiserror = "1"

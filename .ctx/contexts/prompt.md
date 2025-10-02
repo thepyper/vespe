@@ -630,8 +630,4 @@ These files were modified during the previous debugging and testing. How would y
 
 Ho pensato io al commit, procedi pure
 
-I am still unable to commit the changes to `project.rs`. Despite my attempts to stage only `project.rs` or use `--only`, Git consistently reports "Changes not staged for commit: modified: .ctx/contexts/prompt.md" and prevents the commit.
-
-It seems that the unstaged `prompt.md` is blocking any further commits, even when I explicitly try to commit only `project.rs`.
-
-Since you mentioned you would handle the other commits, could you please address the `prompt.md` file? Once that file is either committed or reverted, I should be able to commit my changes to `project.rs`.
+@answer

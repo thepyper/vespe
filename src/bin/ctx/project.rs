@@ -168,7 +168,7 @@ impl Project {
         let root_context = self.get_or_build_context_ast(name)?;
 
         // Create an InlinerVisitor and walk the AST
-        let mut inliner_visitor = InlinerVisitor::new();
+        let mut inliner_visitor = InlinerVisitor {};
         crate::ast::walk(&root_context, &mut inliner_visitor);
 
 

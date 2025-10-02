@@ -51,6 +51,7 @@ impl<'a> Visitor for ComposerVisitor<'a> {
                     data: line.data.clone(),
                     source_file: line.source_file.clone(),
                     source_line_number: line.source_line_number,
+                    text: line.text.clone(),
                 });
             },
             LineData::Include(included_context) => {
@@ -75,6 +76,7 @@ impl<'a> Visitor for ComposerVisitor<'a> {
                     line_number: line.line_number,
                     source_file: line.source_file.clone(),
                     source_line_number: line.source_line_number,
+                    text: line.text.clone(),
                 });
             },
             _ => {},

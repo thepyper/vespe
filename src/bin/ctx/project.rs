@@ -2,23 +2,30 @@
 use anyhow::{Context as AnyhowContext, Result};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::io::Write;
 
 use super::context::{Context, ContextTreeItem, Line};
 
+#[derive(Debug)]
+pub struct AnswerTagLocation {
+    pub file_path: PathBuf,
+    pub line_number: usize,
+}
 pub struct Project {
     pub root_path: PathBuf,
 }
 
 impl Project {
-    pub fn compose(&self, name: &str) -> Result<String> {
+    pub fn compose(&self, name: &str) -> Result<(String, Option<AnswerTagLocation>)> {
         let path = self.resolve_context(name)?;
         let mut visited = HashSet::new();
         self.compose_recursive(&path, &mut visited)
     }
 
-    fn compose_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<String> {
+    fn compose_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<(String, Option<AnswerTagLocation>)> {
         if visited.contains(path) {
-            return Ok(String::new()); // Circular include
+            return Ok((String::new(), None)); // Circular include
         }
         visited.insert(path.to_path_buf());
         
@@ -27,24 +34,28 @@ impl Project {
         
         let mut output = String::new();
         
-        for line in Context::parse(&content) {
+        for line in Context::parse(&content, path.to_path_buf()) {
             match line {
                 Line::Include { context_name } => {
                     let include_path = self.resolve_context(&context_name)?;
-                    output.push_str(&self.compose_recursive(&include_path, visited)?);
+                    let (composed_content, answer_tag) = self.compose_recursive(&include_path, visited)?;
+                    output.push_str(&composed_content);
                     output.push('\n');
+                    if answer_tag.is_some() {
+                        return Ok((output, answer_tag));
+                    }
                 }
                 Line::Text(text) => {
                     output.push_str(&text);
                     output.push('\n');
                 }
-                Line::Answer => {
-                    // For now, do nothing
+                Line::Answer { file_path, line_number } => {
+                    return Ok((output, Some(AnswerTagLocation { file_path, line_number })));
                 }
             }
         }
         
-        Ok(output)
+        Ok((output, None))
     }
 
     pub fn context_tree(&self, name: &str) -> Result<ContextTreeItem> {
@@ -64,7 +75,7 @@ impl Project {
         let mut children = Vec::new();
         let current_name = Context::to_name(&path.file_name().unwrap().to_string_lossy());
     
-        for line in Context::parse(&content) {
+        for line in Context::parse(&content, path.to_path_buf()) {
             if let Line::Include { context_name } = line {
                 let include_path = self.resolve_context(&context_name)?;
                 children.push(self.context_tree_recursive(&include_path, visited)?);
@@ -128,6 +139,57 @@ impl Project {
             anyhow::bail!("Context '{}' does not exist", name);
         }
         Ok(path)
+    }
+
+    pub fn execute_context(&self, name: &str) -> Result<()> {
+        loop {
+            let (composed_content, answer_tag_option) = self.compose(name)?;
+            if let Some(answer_tag) = answer_tag_option {
+                println!("Executing LLM for context: {}", name);
+                println!("Found @answer tag in {:?} at line {}", answer_tag.file_path, answer_tag.line_number);
+
+                // 1. Call LLM with composed_content
+                let mut llm_command = Command::new("gemini")
+                    .arg("-p")
+                    .arg("-y")
+                    .arg("-m")
+                    .arg("gemini-2.5-flash")
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .context("Failed to spawn gemini command. Is 'gemini' in your PATH?")?;
+
+                llm_command.stdin.as_mut().unwrap().write_all(composed_content.as_bytes())?;
+                let output = llm_command.wait_with_output()?;
+
+                if !output.status.success() {
+                    anyhow::bail!("Gemini command failed: {:?}", String::from_utf8_lossy(&output.stderr));
+                }
+
+                let llm_response = String::from_utf8_lossy(&output.stdout).to_string();
+                println!("LLM Response:\n{}", llm_response);
+
+                // 2. Replace @answer in the file
+                let file_content = std::fs::read_to_string(&answer_tag.file_path)?;
+                let mut lines: Vec<String> = file_content.lines().map(String::from).collect();
+
+                if answer_tag.line_number < lines.len() {
+                    lines[answer_tag.line_number] = llm_response.trim().to_string();
+                } else {
+                    anyhow::bail!("Answer tag line number out of bounds for file {:?}", answer_tag.file_path);
+                }
+
+                // 3. Rewrite the file
+                std::fs::write(&answer_tag.file_path, lines.join("\n"))?;
+                println!("Rewrote file: {:?}", answer_tag.file_path);
+
+            } else {
+                // No more @answer tags, break the loop
+                println!("No more @answer tags found. Context execution complete.");
+                break;
+            }
+        }
+        Ok(())
     }
 
     pub fn init(path: &Path) -> Result<Project> {

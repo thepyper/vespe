@@ -1,12 +1,9 @@
-use anyhow::Result;
-use std::path::{Path, PathBuf};
-
-use super::project::Project;
+use std::path::PathBuf;
 
 #[derive(Debug, PartialEq)]
 pub enum Line {
     Include { context_name: String },
-    Answer,
+    Answer { file_path: PathBuf, line_number: usize },
     Text(String),
 }
 
@@ -19,16 +16,17 @@ pub enum ContextTreeItem {
 pub struct Context;
 
 impl Context {
-    pub fn parse(content: &str) -> Vec<Line> {
+    pub fn parse(content: &str, file_path: PathBuf) -> Vec<Line> {
         content
             .lines()
-            .map(|line| {
+            .enumerate()
+            .map(|(line_number, line)| {
                 if let Some(context_name) = line.strip_prefix("@include ") {
                     Line::Include {
                         context_name: context_name.trim().to_string(),
                     }
                 } else if line.trim() == "@answer" {
-                    Line::Answer
+                    Line::Answer { file_path: file_path.clone(), line_number }
                 } else {
                     Line::Text(line.to_string())
                 }
@@ -46,9 +44,5 @@ impl Context {
         } else {
             format!("{}.md", name)
         }
-    }
-
-    pub fn to_path(context_root: &Path, name: &str) -> PathBuf {        
-        context_root.join(Self::to_filename(name))
     }
 }

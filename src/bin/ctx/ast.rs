@@ -8,7 +8,6 @@ pub enum LineData {
     Include { context_name: String },
     Inline { snippet_name: String },
     Answer,
-    Summary { context_name: String },
     Text(String),
 }
 

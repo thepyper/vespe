@@ -1,12 +1,11 @@
 use anyhow::{Context as AnyhowContext, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashSet;
-use std::os::windows::process;
 use std::path::{Path, PathBuf};
 
 mod context;
 mod project;
-use context::Context;
+use context::{Context, Line};
 use project::Project;
 
 #[derive(Parser)]
@@ -55,16 +54,20 @@ fn compose_recursive(project: &Project, path: &Path, visited: &mut HashSet<PathB
     
     let mut output = String::new();
     
-    for line in content.lines() {
-        if let Some(include) = line.strip_prefix("@include ") {
-            let include_name = include.trim();
-            let include_path = project.contexts_dir()?.join(Context::to_filename(include_name));
-            
-            output.push_str(&compose_recursive(project, &include_path, visited)?);
-            output.push('\n');
-        } else {
-            output.push_str(line);
-            output.push('\n');
+    for line in Context::parse(&content) {
+        match line {
+            Line::Include { context_name } => {
+                let include_path = project.contexts_dir()?.join(Context::to_filename(&context_name));
+                output.push_str(&compose_recursive(project, &include_path, visited)?);
+                output.push('\n');
+            }
+            Line::Text(text) => {
+                output.push_str(&text);
+                output.push('\n');
+            }
+            Line::Answer => {
+                // For now, do nothing
+            }
         }
     }
     
@@ -122,7 +125,7 @@ fn main() -> Result<()> {
             project.list_contexts()?;
         }
         Commands::New { name } => {
-            project.new_context(&name)?;
+            Context::new(&project, &name)?;
         }
         Commands::Edit { name } => {
             edit(&project, &name)?;

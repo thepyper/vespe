@@ -3,11 +3,18 @@ use std::path::{Path, PathBuf};
 
 use super::project::Project;
 
+#[derive(Debug, PartialEq)]
+pub enum Line {
+    Include { context_name: String },
+    Answer,
+    Text(String),
+}
+
 pub struct Context;
 
 impl Context {
     pub fn new(project: &Project, name: &str) -> Result<()> {
-        let path = to_path(project.contexts_dir()?, Self::to_filename(name));
+        let path = project.contexts_dir()?.join(Self::to_filename(name));
         
         if path.exists() {
             anyhow::bail!("Context '{}' already exists", name);
@@ -16,6 +23,23 @@ impl Context {
         std::fs::write(&path, format!("# {}\n\n", name))?;
         println!("Created {}", path.display());
         Ok(())
+    }
+
+    pub fn parse(content: &str) -> Vec<Line> {
+        content
+            .lines()
+            .map(|line| {
+                if let Some(context_name) = line.strip_prefix("@include ") {
+                    Line::Include {
+                        context_name: context_name.trim().to_string(),
+                    }
+                } else if line.trim() == "@answer" {
+                    Line::Answer
+                } else {
+                    Line::Text(line.to_string())
+                }
+            })
+            .collect()
     }
 
     pub fn to_name(name: &str) -> String {

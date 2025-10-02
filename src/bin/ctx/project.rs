@@ -126,6 +126,18 @@ impl Project {
         Ok(())
     }
 
+    pub fn new_snippet(&self, name: &str) -> Result<()> {
+        let path = self.snippets_dir()?.join(format!("{}.{}", name, SNIPPET_EXTENSION));
+        
+        if path.exists() {
+            anyhow::bail!("Snippet '{}' already exists", name);
+        }
+        
+        std::fs::write(&path, format!("# Snippet: {}\n\n", name))?;
+        println!("Created {}", path.display());
+        Ok(())
+    }
+
     pub fn edit_context(&self, name: &str) -> Result<()> {
         let path = crate::ast::resolve_context_path(&self.root_path, name)?;
         
@@ -301,7 +313,7 @@ impl Project {
             anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    fn get_or_build_ast(&self, name: &str) -> Result<crate::ast::ContextAstNode> {
+    pub fn get_or_build_ast(&self, name: &str) -> Result<crate::ast::ContextAstNode> {
         // For now, we'll rebuild the AST every time.
         // In the future, we can cache it in self.ast.
         let path = crate::ast::resolve_context_path(&self.root_path, name)?;

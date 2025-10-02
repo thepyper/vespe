@@ -46,6 +46,9 @@ enum Commands {
     /// Show dependency tree
     Tree { name: String },
 
+    /// Create new snippet
+    CreateSnippet { name: String },
+
     /// Watch for changes in context files and execute them
     Watch,
 }
@@ -98,6 +101,9 @@ fn main() -> Result<()> {
         Commands::Tree { name } => {
             let tree = project.context_tree(&name)?;
             println!("{}", tree);
+        }
+        Commands::CreateSnippet { name } => {
+            project.new_snippet(&name)?;
         }
         Commands::Execute { name } => {
             let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());

@@ -2,6 +2,7 @@ use anyhow::{Context as AnyhowContext, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 mod context;
 mod project;
@@ -29,6 +30,9 @@ enum Commands {
     
     /// Create new context
     New { name: String },
+
+    /// Execute a context by composing it and piping to an LLM
+    Execute { name: String },
     
     /// Edit a context
     Edit { name: String },
@@ -90,6 +94,35 @@ fn main() -> Result<()> {
         Commands::Tree { name } => {
             let tree = project.context_tree(&name)?;
             print_tree(&tree, 0);
+        }
+        Commands::Execute { name } => {
+            let composed_context = project.compose(&name)?;
+
+            let mut child = Command::new("gemini")
+                .arg("-p")
+                .arg("-y")
+                .arg("-m")
+                .arg("gemini-2.5-flash")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .context("Failed to spawn gemini command")?;
+
+            // Write the composed context to gemini's stdin
+            use std::io::Write;
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(composed_context.as_bytes())?;
+            }
+
+            let output = child.wait_with_output()?;
+
+            if output.status.success() {
+                print!("{}", String::from_utf8_lossy(&output.stdout));
+            } else {
+                eprint!("gemini command failed: {}", String::from_utf8_lossy(&output.stderr));
+                anyhow::bail!("gemini command failed");
+            }
         }
         Commands::Init => {
             // Unreachable, but needed for the match to be exhaustive

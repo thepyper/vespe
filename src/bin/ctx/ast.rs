@@ -6,10 +6,13 @@ use crate::project::{CONTEXT_EXTENSION, SNIPPET_EXTENSION};
 #[derive(Debug, PartialEq, Clone)]
 pub enum LineData {
     Text(String),
-    Include(String),
-    Inline(String),
+    Include(Context),
+    Inline(Snippet),
     Answer,
-    Summary(String),
+    Summary(Context),
+    IncludePlaceholder(String),
+    InlinePlaceholder(String),
+    SummaryPlaceholder(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -77,12 +80,12 @@ fn parse_lines(content: &str) -> Vec<Line> {
             if let Some(context_name) = line.strip_prefix("@include ") {
                 Line {
                     line_number,
-                    data: LineData::Include(context_name.trim().to_string()),
+                    data: LineData::IncludePlaceholder(context_name.trim().to_string()),
                 }
             } else if let Some(snippet_name) = line.strip_prefix("@inline ") {
                 Line {
                     line_number,
-                    data: LineData::Inline(snippet_name.trim().to_string()),
+                    data: LineData::InlinePlaceholder(snippet_name.trim().to_string()),
                 }
             } else if line.trim() == "@answer" {
                 Line {
@@ -92,7 +95,7 @@ fn parse_lines(content: &str) -> Vec<Line> {
             } else if let Some(context_name) = line.strip_prefix("@summary ") {
                 Line {
                     line_number,
-                    data: LineData::Summary(context_name.trim().to_string()),
+                    data: LineData::SummaryPlaceholder(context_name.trim().to_string()),
                 }
             } else {
                 Line {
@@ -125,22 +128,27 @@ pub fn build_context(
     let mut ast_nodes = Vec::new();
     for line in parsed_lines {
         match line.data {
-            LineData::Include(context_name) => {
+            LineData::IncludePlaceholder(context_name) => {
                 let include_path = resolve_context_path(project_root, &context_name)?;
                 let child_context = build_context(project_root, &include_path, visited)?;
                 ast_nodes.push(AstNode::Context(child_context));
             },
-            LineData::Inline(snippet_name) => {
+            LineData::InlinePlaceholder(snippet_name) => {
                 let snippet_path = resolve_snippet_path(project_root, &snippet_name)?;
                 let child_snippet = build_snippet(project_root, &snippet_path)?;
                 ast_nodes.push(AstNode::Snippet(child_snippet));
             },
-            LineData::Summary(context_name) => {
+            LineData::SummaryPlaceholder(context_name) => {
                 let summary_path = resolve_context_path(project_root, &context_name)?;
                 let child_context = build_context(project_root, &summary_path, visited)?;
                 ast_nodes.push(AstNode::Context(child_context));
             },
-            _ => ast_nodes.push(AstNode::Line(line)),
+            LineData::Text(text) => ast_nodes.push(AstNode::Line(Line { line_number: line.line_number, data: LineData::Text(text) })),
+            LineData::Answer => ast_nodes.push(AstNode::Line(Line { line_number: line.line_number, data: LineData::Answer })),
+            // These should not be encountered here, as they are resolved from placeholders
+            LineData::Include(_) | LineData::Inline(_) | LineData::Summary(_) => {
+                anyhow::bail!("Unexpected resolved LineData variant in build_context before resolution.");
+            }
         }
     }
 

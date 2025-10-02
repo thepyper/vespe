@@ -47,6 +47,14 @@ impl Project {
         Ok(())
     }
 
+    pub fn resolve_context(&self, name: &str) -> Result<PathBuf> {
+        let path = self.contexts_dir()?.join(Context::to_filename(name));
+        if !path.is_file() {
+            anyhow::bail!("Context '{}' does not exist", name);
+        }
+        Ok(path)
+    }
+
     pub fn init(path: &Path) -> Result<Project> {
         let ctx_dir = path.join(".ctx");
         if ctx_dir.is_dir() && ctx_dir.join(".ctx_root").is_file() {

@@ -57,7 +57,7 @@ fn compose_recursive(project: &Project, path: &Path, visited: &mut HashSet<PathB
     for line in Context::parse(&content) {
         match line {
             Line::Include { context_name } => {
-                let include_path = project.contexts_dir()?.join(Context::to_filename(&context_name));
+                let include_path = project.resolve_context(&context_name)?;
                 output.push_str(&compose_recursive(project, &include_path, visited)?);
                 output.push('\n');
             }

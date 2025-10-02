@@ -148,25 +148,7 @@ impl Project {
                 println!("Executing LLM for context: {}", name);
                 println!("Found @answer tag in {:?} at line {}", answer_tag.file_path, answer_tag.line_number);
 
-                // 1. Call LLM with composed_content
-                let mut llm_command = Command::new("gemini")
-                    .arg("-p")
-                    .arg("-y")
-                    .arg("-m")
-                    .arg("gemini-2.5-flash")
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn()
-                    .context("Failed to spawn gemini command. Is 'gemini' in your PATH?")?;
-
-                llm_command.stdin.as_mut().unwrap().write_all(composed_content.as_bytes())?;
-                let output = llm_command.wait_with_output()?;
-
-                if !output.status.success() {
-                    anyhow::bail!("Gemini command failed: {:?}", String::from_utf8_lossy(&output.stderr));
-                }
-
-                let llm_response = String::from_utf8_lossy(&output.stdout).to_string();
+                let llm_response = self._execute_llm_command(composed_content)?;
                 println!("LLM Response:\n{}", llm_response);
 
                 // 2. Replace @answer in the file
@@ -190,6 +172,42 @@ impl Project {
             }
         }
         Ok(())
+    }
+
+    fn _execute_llm_command(&self, composed_content: String) -> Result<String> {
+        let mut command = {
+            #[cfg(windows)]
+            {
+                let mut cmd = Command::new("cmd");
+                cmd.arg("/C").arg("gemini");
+                cmd
+            }
+            #[cfg(not(windows))]
+            {
+                Command::new("gemini")
+            }
+        };
+
+        command
+            .arg("-p")
+            .arg("-y")
+            .arg("-m")
+            .arg("gemini-2.5-flash")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped());
+
+        let mut child = command
+            .spawn()
+            .context("Failed to spawn gemini command. Is 'gemini' in your PATH?")?;
+
+        child.stdin.as_mut().unwrap().write_all(composed_content.as_bytes())?;
+        let output = child.wait_with_output()?;
+
+        if !output.status.success() {
+            anyhow::bail!("Gemini command failed: {:?}", String::from_utf8_lossy(&output.stderr));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 
     pub fn init(path: &Path) -> Result<Project> {

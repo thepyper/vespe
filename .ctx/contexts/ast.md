@@ -287,3 +287,50 @@ Here's the revised plan:
 
 I will start with **Phase 1: Modify Core AST Structures in `src/bin/ctx/ast.rs`**.
 First, I'll read the current content of `src/bin/ctx/ast.rs`.
+
+
+
+Mi pare che funzioni.
+
+
+
+Ora il prossimo refactor e' far funzionare execute_context con un visitor.
+Nel farlo, il seguente cambiamento vorrei: @inline dovrebbe non solo agire nella AST, ma essere proprio copiato
+dentro al file che lo chiama. Implementalo pulito! niente porcherie, ora abbiamo una AST bella funzionante.
+Se hai dubbi chiedi.
+
+Okay, I understand. The next refactoring step is to make `execute_context` use a `Visitor` pattern, and crucially, to ensure that `@inline` directives result in the actual content of the snippet being copied into the AST, rather than just a reference. This means the AST will be transformed.
+
+Here's my plan:
+
+**Phase 1: Understand `execute_context` and Current `@inline` Handling**
+1.  Read `src/bin/ctx/composer.rs` to understand the current `execute_context` function and how it processes the AST.
+2.  Identify how `@inline` directives are currently handled (likely by simply fetching the snippet content at the point of execution).
+
+**Phase 2: Design the `InlineExpander` Visitor**
+1.  Create a new `Visitor` implementation, `InlineExpander`.
+2.  This visitor will traverse the AST. When it encounters a `LineData::Inline(Snippet)`:
+    *   It will need to replace this single `Line` node with the `lines` from the `Snippet`.
+    *   This implies the `Visitor` will need to return a transformed list of `Line`s or collect changes to be applied. I'll aim for a design where the `walk` function can return a new `Vec<Line>` after processing.
+
+**Phase 3: Implement `InlineExpander` and Modify `walk` for Transformation**
+1.  Modify the `walk` function (or create a new `walk_transform`) to allow for AST transformation. This will involve the visitor methods returning a `Vec<Line>` (or similar structure) to replace the current node(s).
+2.  Implement the `InlineExpander` visitor. Its relevant `pre_visit_line` or `post_visit_line` method will detect `LineData::Inline(Snippet)`.
+3.  When an inline is found, it will return the `lines` of the `Snippet` (with appropriate adjustments for file path and line numbers if necessary) to replace the original `Line` containing the inline directive.
+
+**Phase 4: Integrate `InlineExpander` into `execute_context`**
+1.  In `src/bin/ctx/composer.rs`, modify `execute_context` to:
+    *   First, build the initial AST.
+    *   Then, apply the `InlineExpander` visitor to the AST to perform the inlining transformation.
+    *   Finally, process the *transformed* AST to generate the final context string.
+
+**Phase 5: Test and Verify**
+1.  Ensure the `ctx ast` command still works correctly on the *original* AST (before inlining transformation).
+2.  Add a new test case (or modify an existing one) to verify that `@inline` directives are correctly expanded in the output of `execute_context`.
+
+I will start by reading `src/bin/ctx/composer.rs` to understand the current implementation of `execute_context`.
+
+prova
+
+@answer
+

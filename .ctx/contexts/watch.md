@@ -164,4 +164,11 @@ Do you approve this revised plan?
 
 Approvato, vai.
 
-@answer
+It seems that `cargo clean` is also failing with an "Access denied" error, indicating that the `ctx.exe` file is currently in use by another process. I cannot proceed with building or cleaning the project until this lock is released.
+
+Please ensure that no `ctx.exe` process is running and that no other program is accessing the `c:\Proj\xxx\025_006.Vespe\vespe\target\debug\ctx.exe` file. Once you've confirmed this, please instruct me to try `cargo build` again.
+
+Giustamente avevo lanciato il comando con ctx!
+Ora ho lanciato watch, puoi fare commit.
+
+@answer 

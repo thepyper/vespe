@@ -1,6 +1,10 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use notify::{RecommendedWatcher, Watcher, RecursiveMode};
+use std::sync::mpsc::{channel, RecvTimeoutError};
+use std::time::Duration;
+use std::collections::HashSet;
 
 mod context;
 mod project;
@@ -37,6 +41,9 @@ enum Commands {
     
     /// Show dependency tree
     Tree { name: String },
+
+    /// Watch for changes in context files and execute them
+    Watch,
 }
 
 fn print_tree(item: &ContextTreeItem, depth: usize) {
@@ -99,6 +106,60 @@ fn main() -> Result<()> {
         }
         Commands::Execute { name } => {
             project.execute_context(&name)?;
+        }
+        Commands::Watch => {
+            println!("Watching for changes in {:?}... (Press Ctrl+C to stop)", project.contexts_dir());
+
+            let (tx, rx) = channel();
+            let mut watcher = RecommendedWatcher::new(tx, notify::Config::default())?;
+            let contexts_dir = project.contexts_dir()?;
+            watcher.watch(&contexts_dir, RecursiveMode::Recursive)?;
+
+            let mut known_contexts: HashSet<String> = project.list_contexts()?.into_iter().collect();
+
+            let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+            let r = running.clone();
+            ctrlc::set_handler(move || {
+                r.store(false, std::sync::atomic::Ordering::SeqCst);
+            }).expect("Error setting Ctrl-C handler");
+
+            while running.load(std::sync::atomic::Ordering::SeqCst) {
+                match rx.recv_timeout(Duration::from_secs(1)) {
+                    Ok(Ok(event)) => {
+                        if event.kind.is_create() || event.kind.is_modify() {
+                            for path in event.paths {
+                                if path.extension().map_or(false, |ext| ext == "md") {
+                                    if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
+                                        println!("Executing context: {}", name);
+                                        if let Err(e) = project.execute_context(&name.to_string()) {
+                                            eprintln!("Error executing context {}: {}", name, e);
+                                            return Err(e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    Ok(Err(e)) => eprintln!("Watch error: {:?}", e),
+                    Err(RecvTimeoutError::Timeout) => {
+                        // Check for new contexts periodically
+                        let current_contexts: HashSet<String> = project.list_contexts()?.into_iter().collect();
+                        for new_context in current_contexts.difference(&known_contexts) {
+                            println!("New context detected: {}. Executing...", new_context);
+                            if let Err(e) = project.execute_context(new_context) {
+                                eprintln!("Error executing new context {}: {}", new_context, e);
+                                return Err(e);
+                            }
+                        }
+                        known_contexts = current_contexts;
+                    },
+                    Err(RecvTimeoutError::Disconnected) => {
+                        println!("Watcher disconnected.");
+                        break;
+                    }
+                }
+            }
+            println!("Watch stopped.");
         }
         Commands::Init => {
             // Unreachable, but needed for the match to be exhaustive

@@ -56,7 +56,7 @@ fn compose_recursive(path: &Path, visited: &mut HashSet<PathBuf>) -> Result<Stri
             let include_name = include.trim();
             let include_path = contexts_dir().join(format!("{}.md", include_name));
             
-            output.push_str(&compose_recursive(&include_path, &mut visited)?);
+            output.push_str(&compose_recursive(&include_path, visited)?);
             output.push('\n');
         } else {
             output.push_str(line);
@@ -71,7 +71,7 @@ fn list() -> Result<()> {
     for entry in std::fs::read_dir(contexts_dir())? {
         let entry = entry?;
         if entry.path().extension() == Some("md".as_ref()) {
-            println!("{}" , entry.path().file_stem().unwrap().to_string_lossy());
+            println!("{}", entry.path().file_stem().unwrap().to_string_lossy());
         }
     }
     Ok(())
@@ -84,9 +84,7 @@ fn new(name: &str) -> Result<()> {
         anyhow::bail!("Context '{}' already exists", name);
     }
     
-    std::fs::write(&path, format!("# {}
-
-", name))?;
+    std::fs::write(&path, format!("# {}\n\n", name))?;
     println!("Created {}", path.display());
     Ok(())
 }

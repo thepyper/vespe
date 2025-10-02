@@ -73,7 +73,13 @@ fn compose_recursive(project: &Project, path: &Path, visited: &mut HashSet<PathB
 }
 
 fn list(project: &Project) -> Result<()> {
-    for entry in std::fs::read_dir(contexts_dir(project))? {
+    let contexts_path = contexts_dir(project);
+    if !contexts_path.exists() {
+        println!("No contexts found.");
+        return Ok(());
+    }
+
+    for entry in std::fs::read_dir(contexts_path)? {
         let entry = entry?;
         if entry.path().extension() == Some("md".as_ref()) {
             println!("{}", entry.path().file_stem().unwrap().to_string_lossy());

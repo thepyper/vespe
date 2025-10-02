@@ -9,13 +9,15 @@ pub struct Project {
 impl Project {
     pub fn init(path: &Path) -> Result<Project> {
         let ctx_dir = path.join(".ctx");
+        if ctx_dir.is_dir() && ctx_dir.join(".ctx_root").is_file() {
+            anyhow::bail!("ctx project already initialized in this directory.");
+        }
+
         std::fs::create_dir_all(&ctx_dir).context("Failed to create .ctx directory")?;
 
         let ctx_root_file = ctx_dir.join(".ctx_root");
-        if !ctx_root_file.exists() {
-            std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
-                .context("Failed to write .ctx_root file")?;
-        }
+        std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
+            .context("Failed to write .ctx_root file")?;
 
         Ok(Project {
             root_path: ctx_dir.canonicalize()?,

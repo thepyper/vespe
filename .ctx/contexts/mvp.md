@@ -376,4 +376,34 @@ Sei d'accordo con questa versione finale del piano?
 
 Prova ad eseguire.
 
-@answer
+I have successfully implemented the iterative context execution with the `@answer` tag.
+The changes have been committed with the message:
+"feat: Implement iterative context execution with @answer tag"
+
+Facciamo un test per vedere se funziona.
+
+Ciao Gemini!
+
+Okay, capisco. Per testare la nuova funzionalità `execute` e il tag ` @answer`, farò quanto segue:
+
+1.  Creerò un nuovo file di contesto di test con un tag ` @answer`.
+2.  Eseguirò il comando `ctx execute` su questo nuovo contesto.
+3.  Verificherò che il tag ` @answer` nel file sia stato sostituito dalla risposta dell'LLM.
+
+Inizierò listando i file nella directory `.ctx/contexts` per capire la struttura attuale dei contesti.Ok, vedo i file di contesto esistenti: `mvp.md`, `project.md`, `rules.md`.
+
+Ora, creerò un nuovo file di contesto di test chiamato `test_answer.md` nella directory `.ctx/contexts`. Questo file conterrà un semplice prompt e un tag ` @answer`.
+
+**Piano:**
+1.  Creare `c:\Proj\xxx\025_006.Vespe\vespe\.ctx\contexts\test_answer.md` con del contenuto e un tag ` @answer`.
+2.  Eseguire `ctx execute test_answer`.
+3.  Leggere il contenuto di `test_answer.md` per verificare la sostituzione.
+
+Per prima cosa, creo il file `test_answer.md`.Il file `test_answer.md` è stato creato. Ora eseguirò il comando `ctx execute test_answer`.
+Devo assicurarmi di eseguire il binario `ctx` corretto. Basandomi sulla struttura dei file, dovrebbe essere `src/bin/ctx`.
+Userò `cargo run --bin ctx execute test_answer` per eseguire il comando.Il comando `ctx execute test_answer` è stato eseguito con successo. L'output indica che il tag ` @answer` è stato trovato, l'LLM ha risposto con "Hello from Gemini!" e il file è stato riscritto.
+
+Ora devo leggere il file `test_answer.md` per verificare che il tag ` @answer` sia stato sostituito con "Hello from Gemini!".Ottimo! Il file `test_answer.md` ora contiene "Hello from Gemini!" dove prima c'era il tag ` @answer`. Questo conferma che il comando `execute` e la funzionalità del tag ` @answer` funzionano come previsto.
+
+Ho testato con successo la nuova funzionalità.
+Hai altri cambiamenti o test che vorresti che eseguissi?

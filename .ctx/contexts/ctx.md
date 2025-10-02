@@ -1,3 +1,5 @@
+@include project
+
 # ctx
 
 Stiamo lavorando in src/bin/ctx al binario ctx che e' il tool principale che stiamo costruendo adesso. 

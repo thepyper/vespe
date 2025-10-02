@@ -15,6 +15,7 @@ pub enum LineData {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Line {
     pub data: LineData,
+    pub text: String,
     pub source_file: PathBuf,
     pub source_line_number: usize,
 }
@@ -39,6 +40,7 @@ impl ContextAstNode {
                         data: LineData::Include {
                             context_name: context_name.trim().to_string(),
                         },
+                        text: line.into(),
                         source_file: file_path.clone(),
                         source_line_number: line_number,
                     }
@@ -47,18 +49,21 @@ impl ContextAstNode {
                         data: LineData::Inline {
                             snippet_name: snippet_name.trim().to_string(),
                         },
+                        text: line.into(),
                         source_file: file_path.clone(),
                         source_line_number: line_number,
                     }
                 } else if line.trim() == "@answer" {
                     Line {
                         data: LineData::Answer,
+                        text: line.into(),
                         source_file: file_path.clone(),
                         source_line_number: line_number,
                     }
                 } else {
                     Line {
                         data: LineData::Text(line.to_string()),
+                        text: line.into(),
                         source_file: file_path.clone(),
                         source_line_number: line_number,
                     }

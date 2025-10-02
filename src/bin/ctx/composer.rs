@@ -50,7 +50,8 @@ impl<'a> ContextComposer<'a> {
 
                     let summarized_text = self.project._handle_summary_tag(context_name, self.agent)?;
                     composed_lines.push(Line {
-                        data: LineData::Text(summarized_text),
+                        data: LineData::Text(summarized_text.clone()),
+                        text: summarized_text, // TODO se sono piu righe?
                         source_file: line.source_file.clone(),
                         source_line_number: line.source_line_number,
                     });
@@ -65,6 +66,7 @@ impl<'a> ContextComposer<'a> {
                     for snippet_line in parsed_snippet_lines {
                         composed_lines.push(Line {
                             data: snippet_line.data,
+                            text: snippet_line.text,
                             source_file: line.source_file.clone(), // Override with the source of the @inline directive
                             source_line_number: line.source_line_number, // Override with the source of the @inline directive
                         });

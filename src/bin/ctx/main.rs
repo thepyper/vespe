@@ -12,6 +12,7 @@ mod ast;
 mod composer;
 
 use project::Project;
+use crate::ast::LineData;
 use agent_call::ShellAgentCall;
 
 #[derive(Parser)]
@@ -44,6 +45,9 @@ enum Commands {
     
     /// Show dependency tree
     Tree { name: String },
+
+    /// Dump the AST for a given context
+    Ast { name: String },
 
     /// Create new snippet
     CreateSnippet { name: String },
@@ -98,6 +102,13 @@ fn main() -> Result<()> {
         Commands::Tree { name } => {
             let tree = project.context_tree(&name)?;
             println!("{}", tree);
+        }
+        Commands::Ast { name } => {
+            let root_context = project.get_or_build_context_ast(&name)?;
+            let root_node = ast::AstNode::Context(root_context);
+            let mut printer = ast::AstPrettyPrinter::new();
+            ast::walk(&root_node, &mut printer);
+            println!("{}", printer.output);
         }
         Commands::CreateSnippet { name } => {
             project.new_snippet(&name)?;

@@ -7,7 +7,7 @@ pub const CONTEXT_EXTENSION: &str = "md";
 pub const SNIPPET_EXTENSION: &str = "sn";
 
 use crate::agent_call::AgentCall;
-use crate::ast::{Line, ContextInfo};
+use crate::ast::{Line, LineData, ContextInfo};
 use crate::composer::ContextComposer;
 
 pub struct Project {
@@ -155,30 +155,51 @@ impl Project {
 
 
     pub fn execute_context(&self, name: &str, agent: &dyn AgentCall) -> Result<()> {
-        let mut root_ast_node = self.get_or_build_ast(name)?;
-        let mut visitor = crate::visitors::ContextProcessorVisitor::new(self, &self.root_path, agent);
+        loop {
+            let composed_lines = self.compose(name, agent)?;
+            
+            let mut answer_line_index: Option<usize> = None;
+            let mut prompt_content = String::new();
 
-        root_ast_node.accept(&mut visitor)?;
-
-        let mut final_processed_lines = visitor.processed_lines;
-
-        if visitor.first_answer_found_globally {
-            println!("Executing LLM for context: {}", name);
-            let llm_response = self._execute_answer_llm_command(visitor.llm_prompt_content, agent)?;
-            println!("LLM Response:\n{}", llm_response);
-
-            // Replace the placeholder with the actual LLM response
-            if let Some(pos) = final_processed_lines.iter().position(|line| line == "LLM_RESPONSE_PLACEHOLDER") {
-                final_processed_lines[pos] = llm_response.trim().to_string();
+            for (i, line) in composed_lines.iter().enumerate() {
+                if let LineData::Answer = line.data {
+                    answer_line_index = Some(i);
+                    break;
+                }
+                if let LineData::Text(text) = &line.data {
+                    prompt_content.push_str(text);
+                    prompt_content.push('\n');
+                }
             }
-        } else {
-            println!("No @answer tags found in the context or its includes/inlines.");
+
+            if let Some(index) = answer_line_index {
+                let answer_line = &composed_lines[index];
+                println!("Executing LLM for context: {}", name);
+                println!("Found @answer tag in {:?} at line {}", answer_line.source_file, answer_line.source_line_number);
+
+                let llm_response = self._execute_answer_llm_command(prompt_content, agent)?;
+                println!("LLM Response:\n{}", llm_response);
+
+                // 2. Replace @answer in the file
+                let file_content = std::fs::read_to_string(&answer_line.source_file)?;
+                let mut lines: Vec<String> = file_content.lines().map(String::from).collect();
+
+                if answer_line.source_line_number < lines.len() {
+                    lines[answer_line.source_line_number] = llm_response.trim().to_string();
+                } else {
+                    anyhow::bail!("Answer tag line number out of bounds for file {:?}", answer_line.source_file);
+                }
+
+                // 3. Rewrite the file
+                std::fs::write(&answer_line.source_file, lines.join("\n"))?;
+                println!("Rewrote file: {:?}\n", answer_line.source_file);
+
+            } else {
+                // No more @answer tags, break the loop
+                println!("No more @answer tags found. Context execution complete.");
+                break;
+            }
         }
-
-        // Rewrite the original file
-        std::fs::write(&root_ast_node.path, final_processed_lines.join("\n"))?;
-        println!("Rewrote file: {:?}\n", root_ast_node.path);
-
         Ok(())
     }
 

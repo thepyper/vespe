@@ -28,19 +28,6 @@ pub struct ContextAstNode {
     pub children: Vec<ContextAstNode>,
 }
 
-pub trait AstVisitor {
-    type Error;
-
-    fn pre_visit_context_ast_node(&mut self, _node: &mut ContextAstNode) -> Result<(), Self::Error> { Ok(()) }
-    fn post_visit_context_ast_node(&mut self, _node: &mut ContextAstNode) -> Result<(), Self::Error> { Ok(()) }
-
-    fn pre_visit_line(&mut self, _line: &mut Line) -> Result<(), Self::Error> { Ok(()) }
-    fn post_visit_line(&mut self, _line: &mut Line) -> Result<(), Self::Error> { Ok(()) }
-
-    fn pre_visit_line_data(&mut self, _line_data: &mut LineData) -> Result<(), Self::Error> { Ok(()) }
-    fn post_visit_line_data(&mut self, _line_data: &mut LineData) -> Result<(), Self::Error> { Ok(()) }
-}
-
 impl ContextAstNode {
     pub fn parse(content: &str, file_path: PathBuf) -> Vec<Line> {
         content
@@ -63,24 +50,13 @@ impl ContextAstNode {
                         source_file: file_path.clone(),
                         source_line_number: line_number,
                     }
-                } else if let Some(context_name) = line.strip_prefix("@summary ") {
+                } else if line.trim() == "@answer" {
                     Line {
-                        data: LineData::Summary {
-                            context_name: context_name.trim().to_string(),
-                        },
+                        data: LineData::Answer,
                         source_file: file_path.clone(),
                         source_line_number: line_number,
                     }
-                } else if let Some(context_name) = line.strip_prefix("@summary ") {
-                    Line {
-                        data: LineData::Summary {
-                            context_name: context_name.trim().to_string(),
-                        },
-                        source_file: file_path.clone(),
-                        source_line_number: line_number,
-                    }
-                }
-                else {
+                } else {
                     Line {
                         data: LineData::Text(line.to_string()),
                         source_file: file_path.clone(),
@@ -115,9 +91,6 @@ impl ContextAstNode {
             if let LineData::Include { context_name } = &line.data {
                 let include_path = resolve_context_path(project_root, context_name)?;
                 children.push(Self::build_context_ast(project_root, &include_path, visited)?);
-            } else if let LineData::Inline { snippet_name } = &line.data {
-                let snippet_path = resolve_snippet_path(project_root, snippet_name)?;
-                children.push(Self::build_context_ast(project_root, &snippet_path, visited)?);
             }
         }
 
@@ -126,36 +99,6 @@ impl ContextAstNode {
             lines,
             children,
         })
-    }
-
-    pub fn accept<V: AstVisitor>(&mut self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.pre_visit_context_ast_node(self)?;
-        for line in &mut self.lines {
-            line.accept(visitor)?;
-        }
-        for child in &mut self.children {
-            child.accept(visitor)?;
-        }
-        visitor.post_visit_context_ast_node(self)?;
-        Ok(())
-    }
-}
-
-impl Line {
-    pub fn accept<V: AstVisitor>(&mut self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.pre_visit_line(self)?;
-        self.data.accept(visitor)?;
-        visitor.post_visit_line(self)?;
-        Ok(())
-    }
-}
-
-impl LineData {
-    pub fn accept<V: AstVisitor>(&mut self, visitor: &mut V) -> Result<(), V::Error> {
-        visitor.pre_visit_line_data(self)?;
-        // No children for LineData, so no recursive calls here
-        visitor.post_visit_line_data(self)?;
-        Ok(())
     }
 }
 

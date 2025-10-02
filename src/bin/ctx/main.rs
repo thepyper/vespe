@@ -1,6 +1,7 @@
 use anyhow::{Context as AnyhowContext, Result};
 use clap::{Parser, Subcommand};
 use std::collections::HashSet;
+use std::os::windows::process;
 use std::path::{Path, PathBuf};
 
 mod context;
@@ -70,18 +71,6 @@ fn compose_recursive(project: &Project, path: &Path, visited: &mut HashSet<PathB
     Ok(output)
 }
 
-fn new(project: &Project, name: &str) -> Result<()> {
-    let path = project.contexts_dir()?.join(Context::to_filename(name));
-    
-    if path.exists() {
-        anyhow::bail!("Context '{}' already exists", name);
-    }
-    
-    std::fs::write(&path, format!("# {}\n\n", name))?;
-    println!("Created {}", path.display());
-    Ok(())
-}
-
 fn edit(project: &Project, name: &str) -> Result<()> {
     let path = project.contexts_dir()?.join(Context::to_filename(name));
     
@@ -133,7 +122,7 @@ fn main() -> Result<()> {
             project.list_contexts()?;
         }
         Commands::New { name } => {
-            new(&project, &name)?;
+            project.new_context(&name)?;
         }
         Commands::Edit { name } => {
             edit(&project, &name)?;

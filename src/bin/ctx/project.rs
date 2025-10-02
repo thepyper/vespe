@@ -35,6 +35,18 @@ impl Project {
         Ok(())
     }
 
+     pub fn new_context(&self, name: &str) -> Result<()> {
+        let path = self.contexts_dir()?.join(Context::to_filename(name));
+        
+        if path.exists() {
+            anyhow::bail!("Context '{}' already exists", name);
+        }
+        
+        std::fs::write(&path, format!("# {}\n\n", name))?;
+        println!("Created {}", path.display());
+        Ok(())
+    }
+
     pub fn init(path: &Path) -> Result<Project> {
         let ctx_dir = path.join(".ctx");
         if ctx_dir.is_dir() && ctx_dir.join(".ctx_root").is_file() {

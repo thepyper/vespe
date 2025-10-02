@@ -35,12 +35,8 @@ enum Commands {
     Tree { name: String },
 }
 
-fn contexts_dir(project: &Project) -> PathBuf {
-    project.root_path.join("contexts")
-}
-
 fn compose(project: &Project, name: &str) -> Result<String> {
-    let path = contexts_dir(project).join(format!("{}.md", name));
+    let path = project.contexts_dir().join(format!("{}.md", name));
     let mut visited = HashSet::new();
     compose_recursive(project, &path, &mut visited)
 }
@@ -59,7 +55,7 @@ fn compose_recursive(project: &Project, path: &Path, visited: &mut HashSet<PathB
     for line in content.lines() {
         if let Some(include) = line.strip_prefix("@include ") {
             let include_name = include.trim();
-            let include_path = contexts_dir(project).join(format!("{}.md", include_name));
+            let include_path = project.contexts_dir().join(format!("{}.md", include_name));
             
             output.push_str(&compose_recursive(project, &include_path, visited)?);
             output.push('\n');
@@ -72,24 +68,8 @@ fn compose_recursive(project: &Project, path: &Path, visited: &mut HashSet<PathB
     Ok(output)
 }
 
-fn list(project: &Project) -> Result<()> {
-    let contexts_path = contexts_dir(project);
-    if !contexts_path.exists() {
-        println!("No contexts found.");
-        return Ok(());
-    }
-
-    for entry in std::fs::read_dir(contexts_path)? {
-        let entry = entry?;
-        if entry.path().extension() == Some("md".as_ref()) {
-            println!("{}", entry.path().file_stem().unwrap().to_string_lossy());
-        }
-    }
-    Ok(())
-}
-
 fn new(project: &Project, name: &str) -> Result<()> {
-    let path = contexts_dir(project).join(format!("{}.md", name));
+    let path = project.contexts_dir().join(format!("{}.md", name));
     
     if path.exists() {
         anyhow::bail!("Context '{}' already exists", name);
@@ -101,7 +81,7 @@ fn new(project: &Project, name: &str) -> Result<()> {
 }
 
 fn edit(project: &Project, name: &str) -> Result<()> {
-    let path = contexts_dir(project).join(format!("{}.md", name));
+    let path = project.contexts_dir().join(format!("{}.md", name));
     
     let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
     
@@ -113,7 +93,7 @@ fn edit(project: &Project, name: &str) -> Result<()> {
 }
 
 fn tree(project: &Project, name: &str, depth: usize) -> Result<()> {
-    let path = contexts_dir(project).join(format!("{}.md", name));
+    let path = project.contexts_dir().join(format!("{}.md", name));
     let content = std::fs::read_to_string(&path)?;
     
     println!("{}{}", "  ".repeat(depth), name);
@@ -148,7 +128,7 @@ fn main() -> Result<()> {
             print!("{}", output);
         }
         Commands::List => {
-            list(&project)?;
+            project.list_contexts()?;
         }
         Commands::New { name } => {
             new(&project, &name)?;

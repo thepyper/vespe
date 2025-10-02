@@ -7,6 +7,26 @@ pub struct Project {
 }
 
 impl Project {
+    pub fn contexts_dir(&self) -> PathBuf {
+        self.root_path.join("contexts")
+    }
+
+    pub fn list_contexts(&self) -> Result<()> {
+        let contexts_path = self.contexts_dir();
+        if !contexts_path.exists() {
+            println!("No contexts found.");
+            return Ok(());
+        }
+    
+        for entry in std::fs::read_dir(contexts_path)? {
+            let entry = entry?;
+            if entry.path().extension() == Some("md".as_ref()) {
+                println!("{}", entry.path().file_stem().unwrap().to_string_lossy());
+            }
+        }
+        Ok(())
+    }
+
     pub fn init(path: &Path) -> Result<Project> {
         let ctx_dir = path.join(".ctx");
         if ctx_dir.is_dir() && ctx_dir.join(".ctx_root").is_file() {

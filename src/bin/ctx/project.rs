@@ -4,6 +4,9 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::io::Write;
+use sha2::{Sha256, Digest};
+use handlebars::Handlebars;
+use serde_json::json;
 
 use super::context::{Line, LineData, ContextTreeItem, Context};
 
@@ -35,6 +38,14 @@ impl Project {
                     let include_path = self.resolve_context(&context_name)?;
                     let included_lines = self.compose_recursive(&include_path, visited)?;
                     composed_lines.extend(included_lines);
+                }
+                LineData::Summary { context_name } => {
+                    let summarized_text = self._handle_summary_tag(&context_name, visited)?;
+                    composed_lines.push(Line {
+                        data: LineData::Text(summarized_text),
+                        source_file: line.source_file,
+                        source_line_number: line.source_line_number,
+                    });
                 }
                 _ => {
                     composed_lines.push(line);
@@ -128,6 +139,12 @@ impl Project {
         Ok(path)
     }
 
+    pub fn summaries_dir(&self) -> Result<PathBuf> {
+        let path = self.root_path.join("summaries");
+        std::fs::create_dir_all(&path)?;
+        Ok(path)
+    }
+
     pub fn execute_context(&self, name: &str) -> Result<()> {
         loop {
             let composed_lines = self.compose(name)?;
@@ -151,7 +168,7 @@ impl Project {
                 println!("Executing LLM for context: {}", name);
                 println!("Found @answer tag in {:?} at line {}", answer_line.source_file, answer_line.source_line_number);
 
-                let llm_response = self._execute_llm_command(prompt_content)?;
+                let llm_response = self._execute_answer_llm_command(prompt_content)?;
                 println!("LLM Response:\n{}", llm_response);
 
                 // 2. Replace @answer in the file
@@ -177,7 +194,7 @@ impl Project {
         Ok(())
     }
 
-    fn _execute_llm_command(&self, composed_content: String) -> Result<String> {
+    fn _execute_answer_llm_command(&self, composed_content: String) -> Result<String> {
         let mut command = {
             #[cfg(windows)]
             {
@@ -211,6 +228,80 @@ impl Project {
         }
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+
+    fn _execute_summary_llm_command(&self, prompt: String) -> Result<String> {
+        // This is a placeholder. The actual command will depend on the user's LLM setup.
+        // For now, we'll simulate it or use a simple echo.
+        // In a real scenario, this would execute something like:
+        // `ollama run llama3 "Summarize this: <prompt>"`
+        // and capture stdout.
+        // For the prototype, we'll just return a mock summary.
+        // TODO: Implement actual shell command execution for LLM.
+        Ok(format!("(LLM Summary of: {})", prompt))
+    }
+
+    fn _handle_summary_tag(&self, context_name: &str, visited: &mut HashSet<PathBuf>) -> Result<String> {
+        use sha2::{Sha256, Digest};
+        use handlebars::Handlebars;
+        use serde_json::json;
+
+        let summary_target_path = self.resolve_context(context_name)?;
+        let original_content_to_summarize = std::fs::read_to_string(&summary_target_path)
+            .with_context(|| format!("Failed to read context for summary: {:?}", summary_target_path))?;
+        let mut hasher = Sha256::new();
+        hasher.update(original_content_to_summarize.as_bytes());
+        let original_hash = format!("{:x}", hasher.finalize());
+
+        let summary_filename = format!("{}.summary", Context::to_filename(context_name));
+        let summary_file_path = self.summaries_dir()?.join(summary_filename);
+
+        let mut summarized_text = String::new();
+        let mut cache_hit = false;
+
+        if summary_file_path.exists() {
+            let cached_summary_json = std::fs::read_to_string(&summary_file_path)
+                .with_context(|| format!("Failed to read cached summary file: {:?}", summary_file_path))?;
+            let cached_data: serde_json::Value = serde_json::from_str(&cached_summary_json)
+                .with_context(|| format!("Failed to parse cached summary JSON from {:?}", summary_file_path))?;
+            if let (Some(cached_hash), Some(cached_content)) = (
+                cached_data["original_hash"].as_str(),
+                cached_data["summary_content"].as_str(),
+            ) {
+                if cached_hash == original_hash {
+                    summarized_text = cached_content.to_string();
+                    cache_hit = true;
+                    println!("Using cached summary for {}", context_name);
+                }
+            }
+        }
+
+        if !cache_hit {
+            println!("Generating new summary for {}", context_name);
+            // Recursively compose the content to be summarized
+            let mut summary_visited = visited.clone(); // Clone visited for sub-composition
+            let lines_to_summarize = self.compose_recursive(&summary_target_path, &mut summary_visited)?;
+            let content_to_summarize: String = lines_to_summarize.into_iter()
+                .filter_map(|l| if let LineData::Text(t) = l.data { Some(t) } else { None })
+                .collect::<Vec<String>>()
+                .join("\n");
+
+            // Use handlebars for templating the prompt
+            let mut handlebars = Handlebars::new();
+            handlebars.register_template_string("summary_prompt", "Summarize the following content concisely:\n\n{{content}}")
+                .context("Failed to register handlebars template")?;
+            let prompt_data = json!({ "content": content_to_summarize });
+            let llm_prompt = handlebars.render("summary_prompt", &prompt_data)
+                .context("Failed to render handlebars template")?;
+
+            summarized_text = self._execute_summary_llm_command(llm_prompt)?;
+
+            // Save to cache
+            let cache_data = json!({ "original_hash": original_hash, "summary_content": summarized_text });
+            std::fs::write(&summary_file_path, serde_json::to_string_pretty(&cache_data)?)
+                .with_context(|| format!("Failed to write cached summary to {:?}", summary_file_path))?;
+        }
+        Ok(summarized_text)
     }
 
     pub fn init(path: &Path) -> Result<Project> {

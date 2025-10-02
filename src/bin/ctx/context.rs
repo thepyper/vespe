@@ -4,6 +4,7 @@ use std::path::PathBuf;
 pub enum LineData {
     Include { context_name: String },
     Answer,
+    Summary { context_name: String },
     Text(String),
 }
 
@@ -31,6 +32,14 @@ impl Context {
                 if let Some(context_name) = line.strip_prefix("@include ") {
                     Line {
                         data: LineData::Include {
+                            context_name: context_name.trim().to_string(),
+                        },
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
+                    }
+                } else if let Some(context_name) = line.strip_prefix("@summary ") {
+                    Line {
+                        data: LineData::Summary {
                             context_name: context_name.trim().to_string(),
                         },
                         source_file: file_path.clone(),

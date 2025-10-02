@@ -3,6 +3,9 @@ use anyhow::{Context as AnyhowContext, Result};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+pub const CONTEXT_EXTENSION: &str = "md";
+pub const SNIPPET_EXTENSION: &str = "sn";
+
 use crate::agent_call::AgentCall;
 use crate::ast::{Line, LineData, ContextInfo};
 use crate::composer::ContextComposer;
@@ -73,11 +76,30 @@ impl Project {
     
         for entry in std::fs::read_dir(contexts_path)? {
             let entry = entry?;
-            if entry.path().extension() == Some("md".as_ref()) {
+            if entry.path().extension() == Some(CONTEXT_EXTENSION.as_ref()) {
                 context_infos.push(crate::ast::get_context_info(&entry.path())?);
             }
         }
         Ok(context_infos)
+    }
+
+    pub fn snippets_dir(&self) -> Result<PathBuf> {
+        let path = self.root_path.join("snippets");
+        std::fs::create_dir_all(&path)?;
+        Ok(path)
+    }
+
+    pub fn list_snippets(&self) -> Result<Vec<ContextInfo>> {
+        let snippets_path = self.snippets_dir()?;
+        let mut snippet_infos = Vec::new();
+    
+        for entry in std::fs::read_dir(snippets_path)? {
+            let entry = entry?;
+            if entry.path().extension() == Some(SNIPPET_EXTENSION.as_ref()) {
+                snippet_infos.push(crate::ast::get_context_info(&entry.path())?);
+            }
+        }
+        Ok(snippet_infos)
     }
 
      fn get_context_meta_dir(&self, context_path: &Path) -> Result<PathBuf> {

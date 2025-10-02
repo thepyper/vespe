@@ -37,18 +37,6 @@ enum Commands {
     Tree { name: String },
 }
 
-fn edit(project: &Project, name: &str) -> Result<()> {
-    let path = project.contexts_dir()?.join(Context::to_filename(name));
-    
-    let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-    
-    std::process::Command::new(editor)
-        .arg(&path)
-        .status()?;
-    
-    Ok(())
-}
-
 fn print_tree(item: &ContextTreeItem, depth: usize) {
     match item {
         ContextTreeItem::Node { name, children } => {
@@ -97,7 +85,7 @@ fn main() -> Result<()> {
             project.new_context(&name)?;
         }
         Commands::Edit { name } => {
-            edit(&project, &name)?;
+            project.edit_context(&name)?;
         }
         Commands::Tree { name } => {
             let tree = project.context_tree(&name)?;

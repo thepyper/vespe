@@ -110,6 +110,18 @@ impl Project {
         Ok(())
     }
 
+    pub fn edit_context(&self, name: &str) -> Result<()> {
+        let path = self.resolve_context(name)?;
+        
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+        
+        std::process::Command::new(editor)
+            .arg(&path)
+            .status()?;
+        
+        Ok(())
+    }
+
     pub fn resolve_context(&self, name: &str) -> Result<PathBuf> {
         let path = self.contexts_dir()?.join(Context::to_filename(name));
         if !path.is_file() {

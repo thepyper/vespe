@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use crate::agent_call::AgentCall;
-use crate::ast::{Line, LineData};
+use crate::ast::{Line, LineData, ContextInfo};
 use crate::composer::ContextComposer;
 
 pub struct Project {
@@ -67,18 +67,17 @@ impl Project {
         Ok(path)
     }
 
-    pub fn list_contexts(&self) -> Result<Vec<String>> {
+    pub fn list_contexts(&self) -> Result<Vec<ContextInfo>> {
         let contexts_path = self.contexts_dir()?;
-        let mut context_names = Vec::new();
+        let mut context_infos = Vec::new();
     
         for entry in std::fs::read_dir(contexts_path)? {
             let entry = entry?;
             if entry.path().extension() == Some("md".as_ref()) {
-                let name = entry.file_name().to_string_lossy().to_string();
-                context_names.push(crate::ast::to_name(&name));
+                context_infos.push(crate::ast::get_context_info(&entry.path())?);
             }
         }
-        Ok(context_names)
+        Ok(context_infos)
     }
 
      pub fn new_context(&self, name: &str) -> Result<()> {

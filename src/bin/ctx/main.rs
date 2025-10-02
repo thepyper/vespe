@@ -82,8 +82,8 @@ fn main() -> Result<()> {
             if contexts.is_empty() {
                 println!("No contexts found.");
             } else {
-                for context_name in contexts {
-                    println!("{}", context_name);
+                for context_info in contexts {
+                    println!("{}", context_info.name);
                 }
             }
         }
@@ -109,7 +109,7 @@ fn main() -> Result<()> {
             let contexts_dir = project.contexts_dir()?;
             watcher.watch(&contexts_dir, RecursiveMode::Recursive)?;
 
-            let mut known_contexts: HashSet<String> = project.list_contexts()?.into_iter().collect();
+            let mut known_contexts: HashSet<String> = project.list_contexts()?.into_iter().map(|ci| ci.name).collect();
 
             let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
             let r = running.clone();
@@ -138,7 +138,7 @@ fn main() -> Result<()> {
                     Ok(Err(e)) => eprintln!("Watch error: {:?}", e),
                     Err(RecvTimeoutError::Timeout) => {
                         // Check for new contexts periodically
-                        let current_contexts: HashSet<String> = project.list_contexts()?.into_iter().collect();
+                        let current_contexts: HashSet<String> = project.list_contexts()?.into_iter().map(|ci| ci.name).collect();
                         for new_context in current_contexts.difference(&known_contexts) {
                             println!("New context detected: {}. Executing...", new_context);
                             let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());

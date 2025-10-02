@@ -123,3 +123,17 @@ pub fn to_filename(name: &str) -> String {
 pub fn to_name(name: &str) -> String {
     name.strip_suffix(".md").unwrap_or(name).to_string()
 }
+
+#[derive(Debug, Clone)]
+pub struct ContextInfo {
+    pub name: String,
+    pub path: PathBuf,
+}
+
+pub fn get_context_info(path: &Path) -> Result<ContextInfo> {
+    let name = to_name(path.file_name().unwrap().to_str().unwrap());
+    Ok(ContextInfo {
+        name,
+        path: path.to_path_buf(),
+    })
+}

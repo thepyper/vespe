@@ -6,12 +6,10 @@ use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::time::Duration;
 use std::collections::HashSet;
 
-mod context;
 mod project;
 mod agent_call;
-use context::ContextTreeItem;
-use project::Project;
-use agent_call::{AgentCall, ShellAgentCall};
+use project::{ContextTreeItem, LineData, Project};
+use agent_call::ShellAgentCall;
 
 #[derive(Parser)]
 struct Cli {
@@ -82,7 +80,7 @@ fn main() -> Result<()> {
             let agent = ShellAgentCall::new("echo".to_string()); // Dummy agent for compose
             let composed_lines = project.compose(&name, &agent)?;
             for line in composed_lines {
-                if let context::LineData::Text(text) = line.data {
+                if let LineData::Text(text) = line.data {
                     println!("{}", text);
                 }
             }

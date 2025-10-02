@@ -5,7 +5,26 @@ use std::path::{Path, PathBuf};
 
 use crate::agent_call::AgentCall;
 
-use super::context::{Line, LineData, ContextTreeItem, Context};
+#[derive(Debug, PartialEq)]
+pub enum LineData {
+    Include { context_name: String },
+    Answer,
+    Summary { context_name: String },
+    Text(String),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Line {
+    pub data: LineData,
+    pub source_file: PathBuf,
+    pub source_line_number: usize,
+}
+
+#[derive(Debug)]
+pub enum ContextTreeItem {
+    Node { name: String, children: Vec<ContextTreeItem> },
+    Leaf { name: String },
+}
 
 pub struct Project {
     pub root_path: PathBuf,
@@ -23,13 +42,13 @@ impl Project {
             return Ok(Vec::new()); // Circular include
         }
         visited.insert(path.to_path_buf());
+
+        let mut composed_lines = Vec::new(); // Initialize composed_lines
         
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read {:?}", path))?;
         
-        let mut composed_lines = Vec::new();
-        
-        for line in Context::parse(&content, path.to_path_buf()) {
+        for line in Self::parse(&content, path.to_path_buf()) {
             match line.data {
                 LineData::Include { context_name } => {
                     let include_path = self.resolve_context(&context_name)?;
@@ -60,7 +79,7 @@ impl Project {
 
     fn context_tree_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<ContextTreeItem> {
         if visited.contains(path) {
-            return Ok(ContextTreeItem::Leaf { name: Context::to_name(&path.file_name().unwrap().to_string_lossy()) });
+            return Ok(ContextTreeItem::Leaf { name: Self::to_name(&path.file_name().unwrap().to_string_lossy()) });
         }
         visited.insert(path.to_path_buf());
     
@@ -68,9 +87,9 @@ impl Project {
             .with_context(|| format!("Failed to read {:?}", path))?;
     
         let mut children = Vec::new();
-        let current_name = Context::to_name(&path.file_name().unwrap().to_string_lossy());
+        let current_name = Self::to_name(&path.file_name().unwrap().to_string_lossy());
     
-        for line in Context::parse(&content, path.to_path_buf()) {
+        for line in Self::parse(&content, path.to_path_buf()) {
             if let LineData::Include { context_name } = line.data {
                 let include_path = self.resolve_context(&context_name)?;
                 children.push(self.context_tree_recursive(&include_path, visited)?);
@@ -98,14 +117,14 @@ impl Project {
             let entry = entry?;
             if entry.path().extension() == Some("md".as_ref()) {
                 let name = entry.file_name().to_string_lossy().to_string();
-                context_names.push(Context::to_name(&name));
+                context_names.push(Self::to_name(&name));
             }
         }
         Ok(context_names)
     }
 
      pub fn new_context(&self, name: &str) -> Result<()> {
-        let path = self.contexts_dir()?.join(Context::to_filename(name));
+        let path = self.contexts_dir()?.join(Self::to_filename(name));
         
         if path.exists() {
             anyhow::bail!("Context '{}' already exists", name);
@@ -129,7 +148,7 @@ impl Project {
     }
 
     pub fn resolve_context(&self, name: &str) -> Result<PathBuf> {
-        let path = self.contexts_dir()?.join(Context::to_filename(name));
+        let path = self.contexts_dir()?.join(Self::to_filename(name));
         if !path.is_file() {
             anyhow::bail!("Context '{}' does not exist", name);
         }
@@ -211,7 +230,7 @@ impl Project {
         hasher.update(original_content_to_summarize.as_bytes());
         let original_hash = format!("{:x}", hasher.finalize());
 
-        let summary_filename = format!("{}.summary", Context::to_filename(context_name));
+        let summary_filename = format!("{}.summary", Self::to_filename(context_name));
         let summary_file_path = self.summaries_dir()?.join(summary_filename);
 
         let mut summarized_text = String::new();
@@ -295,6 +314,56 @@ impl Project {
             }
         }
 
-        anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
+            anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
+    }
+
+    pub fn parse(content: &str, file_path: PathBuf) -> Vec<Line> {
+        content
+            .lines()
+            .enumerate()
+            .map(|(line_number, line)| {
+                if let Some(context_name) = line.strip_prefix("@include ") {
+                    Line {
+                        data: LineData::Include {
+                            context_name: context_name.trim().to_string(),
+                        },
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
+                    }
+                } else if let Some(context_name) = line.strip_prefix("@summary ") {
+                    Line {
+                        data: LineData::Summary {
+                            context_name: context_name.trim().to_string(),
+                        },
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
+                    }
+                } else if line.trim() == "@answer" {
+                    Line {
+                        data: LineData::Answer,
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
+                    }
+                } else {
+                    Line {
+                        data: LineData::Text(line.to_string()),
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
+                    }
+                }
+            })
+            .collect()
+    }
+
+    pub fn to_name(name: &str) -> String {
+        name.strip_suffix(".md").unwrap_or(name).to_string()
+    }
+
+    pub fn to_filename(name: &str) -> String {
+        if name.ends_with(".md") {
+            name.to_string()
+        } else {
+            format!("{}.md", name)
+        }
     }
 }

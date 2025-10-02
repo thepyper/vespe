@@ -12,7 +12,7 @@ mod ast;
 mod composer;
 mod tree_builder;
 use project::Project;
-use crate::ast::{ContextTreeItem, LineData};
+use crate::ast::{ContextAstNode, LineData};
 use agent_call::ShellAgentCall;
 
 #[derive(Parser)]
@@ -50,17 +50,11 @@ enum Commands {
     Watch,
 }
 
-fn print_tree(item: &ContextTreeItem, depth: usize) {
-    match item {
-        ContextTreeItem::Node { name, children } => {
-            println!("{}{}", "  ".repeat(depth), name);
-            for child in children {
-                print_tree(child, depth + 1);
-            }
-        }
-        ContextTreeItem::Leaf { name } => {
-            println!("{}{}", "  ".repeat(depth), name);
-        }
+fn print_ast_node(node: &ContextAstNode, depth: usize) {
+    let name = crate::ast::to_name(&node.path.file_name().unwrap().to_string_lossy());
+    println!("{}{}", "  ".repeat(depth), name);
+    for child in &node.children {
+        print_ast_node(child, depth + 1);
     }
 }
 
@@ -107,7 +101,7 @@ fn main() -> Result<()> {
         }
         Commands::Tree { name } => {
             let tree = project.context_tree(&name)?;
-            print_tree(&tree, 0);
+            print_ast_node(&tree, 0);
         }
         Commands::Execute { name } => {
             let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());

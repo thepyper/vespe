@@ -17,13 +17,9 @@ pub struct Line {
     pub source_line_number: usize,
 }
 
-#[derive(Debug)]
-pub enum ContextTreeItem {
-    Node { name: String, children: Vec<ContextTreeItem> },
-    Leaf { name: String },
-}
 
-#[derive(Debug)]
+
+#[derive(Debug, Clone)]
 pub struct ContextAstNode {
     pub path: PathBuf,
     pub lines: Vec<Line>,

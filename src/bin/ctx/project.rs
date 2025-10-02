@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use crate::agent_call::AgentCall;
-use crate::ast::{ContextAstNode, Line, LineData, ContextTreeItem};
+use crate::ast::{Line, LineData};
 use crate::composer::ContextComposer;
 
 pub struct Project {
@@ -18,7 +18,7 @@ impl Project {
         composer.compose_from_ast(&ast_node)
     }
 
-    pub fn context_tree(&self, name: &str) -> Result<crate::ast::ContextTreeItem> {
+    pub fn context_tree(&self, name: &str) -> Result<crate::ast::ContextAstNode> {
         let ast_node = self.get_or_build_ast(name)?;
         let mut visited = HashSet::new();
         crate::tree_builder::ContextTreeBuilder::build_tree_from_ast(&ast_node, &mut visited)

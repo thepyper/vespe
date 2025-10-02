@@ -1,10 +1,17 @@
 use std::path::PathBuf;
 
 #[derive(Debug, PartialEq)]
-pub enum Line {
+pub enum LineData {
     Include { context_name: String },
-    Answer { file_path: PathBuf, line_number: usize },
+    Answer,
     Text(String),
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Line {
+    pub data: LineData,
+    pub source_file: PathBuf,
+    pub source_line_number: usize,
 }
 
 #[derive(Debug)]
@@ -22,13 +29,25 @@ impl Context {
             .enumerate()
             .map(|(line_number, line)| {
                 if let Some(context_name) = line.strip_prefix("@include ") {
-                    Line::Include {
-                        context_name: context_name.trim().to_string(),
+                    Line {
+                        data: LineData::Include {
+                            context_name: context_name.trim().to_string(),
+                        },
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
                     }
                 } else if line.trim() == "@answer" {
-                    Line::Answer { file_path: file_path.clone(), line_number }
+                    Line {
+                        data: LineData::Answer,
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
+                    }
                 } else {
-                    Line::Text(line.to_string())
+                    Line {
+                        data: LineData::Text(line.to_string()),
+                        source_file: file_path.clone(),
+                        source_line_number: line_number,
+                    }
                 }
             })
             .collect()

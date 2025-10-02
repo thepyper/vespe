@@ -70,8 +70,12 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Compose { name } => {
-            let (output, _) = project.compose(&name)?;
-            print!("{}", output);
+            let composed_lines = project.compose(&name)?;
+            for line in composed_lines {
+                if let context::LineData::Text(text) = line.data {
+                    println!("{}", text);
+                }
+            }
         }
         Commands::List => {
             let contexts = project.list_contexts()?;

@@ -5,57 +5,44 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::io::Write;
 
-use super::context::{Context, ContextTreeItem, Line};
+use super::context::{Line, LineData, ContextTreeItem, Context};
 
-#[derive(Debug)]
-pub struct AnswerTagLocation {
-    pub file_path: PathBuf,
-    pub line_number: usize,
-}
 pub struct Project {
     pub root_path: PathBuf,
 }
 
 impl Project {
-    pub fn compose(&self, name: &str) -> Result<(String, Option<AnswerTagLocation>)> {
+    pub fn compose(&self, name: &str) -> Result<Vec<Line>> {
         let path = self.resolve_context(name)?;
         let mut visited = HashSet::new();
         self.compose_recursive(&path, &mut visited)
     }
 
-    fn compose_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<(String, Option<AnswerTagLocation>)> {
+    fn compose_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<Vec<Line>> {
         if visited.contains(path) {
-            return Ok((String::new(), None)); // Circular include
+            return Ok(Vec::new()); // Circular include
         }
         visited.insert(path.to_path_buf());
         
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read {:?}", path))?;
         
-        let mut output = String::new();
+        let mut composed_lines = Vec::new();
         
         for line in Context::parse(&content, path.to_path_buf()) {
-            match line {
-                Line::Include { context_name } => {
+            match line.data {
+                LineData::Include { context_name } => {
                     let include_path = self.resolve_context(&context_name)?;
-                    let (composed_content, answer_tag) = self.compose_recursive(&include_path, visited)?;
-                    output.push_str(&composed_content);
-                    output.push('\n');
-                    if answer_tag.is_some() {
-                        return Ok((output, answer_tag));
-                    }
+                    let included_lines = self.compose_recursive(&include_path, visited)?;
+                    composed_lines.extend(included_lines);
                 }
-                Line::Text(text) => {
-                    output.push_str(&text);
-                    output.push('\n');
-                }
-                Line::Answer { file_path, line_number } => {
-                    return Ok((output, Some(AnswerTagLocation { file_path, line_number })));
+                _ => {
+                    composed_lines.push(line);
                 }
             }
         }
         
-        Ok((output, None))
+        Ok(composed_lines)
     }
 
     pub fn context_tree(&self, name: &str) -> Result<ContextTreeItem> {
@@ -76,7 +63,7 @@ impl Project {
         let current_name = Context::to_name(&path.file_name().unwrap().to_string_lossy());
     
         for line in Context::parse(&content, path.to_path_buf()) {
-            if let Line::Include { context_name } = line {
+            if let LineData::Include { context_name } = line.data {
                 let include_path = self.resolve_context(&context_name)?;
                 children.push(self.context_tree_recursive(&include_path, visited)?);
             }
@@ -143,27 +130,43 @@ impl Project {
 
     pub fn execute_context(&self, name: &str) -> Result<()> {
         loop {
-            let (composed_content, answer_tag_option) = self.compose(name)?;
-            if let Some(answer_tag) = answer_tag_option {
-                println!("Executing LLM for context: {}", name);
-                println!("Found @answer tag in {:?} at line {}", answer_tag.file_path, answer_tag.line_number);
+            let composed_lines = self.compose(name)?;
+            
+            let mut answer_line_index: Option<usize> = None;
+            let mut prompt_content = String::new();
 
-                let llm_response = self._execute_llm_command(composed_content)?;
+            for (i, line) in composed_lines.iter().enumerate() {
+                if let LineData::Answer = line.data {
+                    answer_line_index = Some(i);
+                    break;
+                }
+                if let LineData::Text(text) = &line.data {
+                    prompt_content.push_str(text);
+                    prompt_content.push('\n');
+                }
+            }
+
+            if let Some(index) = answer_line_index {
+                let answer_line = &composed_lines[index];
+                println!("Executing LLM for context: {}", name);
+                println!("Found @answer tag in {:?} at line {}", answer_line.source_file, answer_line.source_line_number);
+
+                let llm_response = self._execute_llm_command(prompt_content)?;
                 println!("LLM Response:\n{}", llm_response);
 
                 // 2. Replace @answer in the file
-                let file_content = std::fs::read_to_string(&answer_tag.file_path)?;
+                let file_content = std::fs::read_to_string(&answer_line.source_file)?;
                 let mut lines: Vec<String> = file_content.lines().map(String::from).collect();
 
-                if answer_tag.line_number < lines.len() {
-                    lines[answer_tag.line_number] = llm_response.trim().to_string();
+                if answer_line.source_line_number < lines.len() {
+                    lines[answer_line.source_line_number] = llm_response.trim().to_string();
                 } else {
-                    anyhow::bail!("Answer tag line number out of bounds for file {:?}", answer_tag.file_path);
+                    anyhow::bail!("Answer tag line number out of bounds for file {:?}", answer_line.source_file);
                 }
 
                 // 3. Rewrite the file
-                std::fs::write(&answer_tag.file_path, lines.join("\n"))?;
-                println!("Rewrote file: {:?}", answer_tag.file_path);
+                std::fs::write(&answer_line.source_file, lines.join("\n"))?;
+                println!("Rewrote file: {:?}", answer_line.source_file);
 
             } else {
                 // No more @answer tags, break the loop

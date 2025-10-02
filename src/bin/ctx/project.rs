@@ -1,29 +1,37 @@
 
-use anyhow::{Context, Result};
+use anyhow::{Context as AnyhowContext, Result};
 use std::path::{Path, PathBuf};
+
+use super::context::Context;
 
 pub struct Project {
     pub root_path: PathBuf,
 }
 
 impl Project {
-    pub fn contexts_dir(&self) -> PathBuf {
-        self.root_path.join("contexts")
+    pub fn contexts_dir(&self) -> Result<PathBuf> {
+        let path = self.root_path.join("contexts");
+        std::fs::create_dir_all(&path)?;
+        Ok(path)
     }
 
     pub fn list_contexts(&self) -> Result<()> {
-        let contexts_path = self.contexts_dir();
-        if !contexts_path.exists() {
-            println!("No contexts found.");
-            return Ok(());
-        }
+        let contexts_path = self.contexts_dir()?;
     
+        let mut found_one = false;
         for entry in std::fs::read_dir(contexts_path)? {
             let entry = entry?;
             if entry.path().extension() == Some("md".as_ref()) {
-                println!("{}", entry.path().file_stem().unwrap().to_string_lossy());
+                let name = entry.file_name().to_string_lossy().to_string();
+                println!("{}", Context::to_name(&name));
+                found_one = true;
             }
         }
+    
+        if !found_one {
+            println!("No contexts found.");
+        }
+    
         Ok(())
     }
 

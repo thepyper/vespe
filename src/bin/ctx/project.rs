@@ -8,6 +8,7 @@ pub const SNIPPET_EXTENSION: &str = "sn";
 
 use crate::agent_call::AgentCall;
 use crate::ast::{ContextResolver, Context, Line, LineData, Snippet};
+use crate::inliner_visitor::InlinerVisitor;
 
 
 
@@ -163,6 +164,16 @@ impl Project {
 
 
     pub fn execute_context(&self, name: &str, agent: &dyn AgentCall) -> Result<()> {
+        // Build the AST for the root context
+        let root_context = self.get_or_build_context_ast(name)?;
+
+        // Create an InlinerVisitor and walk the AST
+        let mut inliner_visitor = InlinerVisitor::new();
+        crate::ast::walk(&root_context, &mut inliner_visitor);
+
+        // Apply the inlines, rewriting the original files
+        inliner_visitor.apply_inlines()?;
+
         loop {
             let composed_lines = self.compose(name, agent)?;
             

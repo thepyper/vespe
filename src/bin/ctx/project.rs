@@ -150,39 +150,11 @@ impl Project {
         Ok(())
     }
 
+
+
+
+
     pub fn execute_context(&self, name: &str, agent: &dyn AgentCall) -> Result<()> {
-
-        loop {
-
-            let composed_lines = self.compose(name, agent)?;
-
-            let recomposed_filed = HashMap::new();
-
-            for line in composed_lines {
-                match line.data {
-                    LineData::Text(text) => {
-                        recomposed_filed[line.source_file].push_str(&line.text).push('\n');
-                    },
-                    LineData::Inline { snippet_name } => {
-                        unreachable!("Should not have inline tags after composition");
-                    },
-                    LineData::Answer => {
-                        // Handle answer tag if needed
-                    },
-                    LineData::Summary { context_name } => {
-                        unreachable!("Should not have summary tags after composition");
-                    },
-                    LineData::Include { context_name } => {
-                        unreachable!("Should not have include tags after composition");
-                    },
-                }
-            }
-
-
-
-        }        
-
-        /*
         loop {
             let composed_lines = self.compose(name, agent)?;
             
@@ -229,7 +201,6 @@ impl Project {
             }
         }
         Ok(())
-        */
     }
 
     fn _execute_answer_llm_command(&self, composed_content: String, agent: &dyn AgentCall) -> Result<String> {

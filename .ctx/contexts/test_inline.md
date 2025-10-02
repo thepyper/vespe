@@ -2,9 +2,6 @@
 
 This context demonstrates the @inline directive.
 
-@inline my_snippet
-
-lll
-
+The capital of France is Paris.
    
 End of context.

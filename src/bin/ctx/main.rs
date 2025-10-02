@@ -10,6 +10,9 @@ use project::Project;
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    #[clap(global = true, long)]
+    project_root: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -121,32 +124,38 @@ fn tree(project: &Project, name: &str, depth: usize) -> Result<()> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    if let Commands::Init = &cli.command {
+        let path = cli.project_root.unwrap_or(std::env::current_dir()?);
+        let project = Project::init(&path)?;
+        println!("Initialized ctx project in {:?}", project.root_path);
+        return Ok(());
+    }
+
+    let project = {
+        let search_path = cli.project_root.unwrap_or(std::env::current_dir()?);
+        Project::find(&search_path)?
+    };
+
     match cli.command {
-        Commands::Init => {
-            let current_dir = std::env::current_dir()?;
-            let project = Project::init(&current_dir)?;
-            println!("Initialized ctx project in {:?}", project.root_path);
-        }
         Commands::Compose { name } => {
-            let project = Project::find(&std::env::current_dir()?)?;
             let output = compose(&project, &name)?;
             print!("{}", output);
         }
         Commands::List => {
-            let project = Project::find(&std::env::current_dir()?)?;
             list(&project)?;
         }
         Commands::New { name } => {
-            let project = Project::find(&std::env::current_dir()?)?;
             new(&project, &name)?;
         }
         Commands::Edit { name } => {
-            let project = Project::find(&std::env::current_dir()?)?;
             edit(&project, &name)?;
         }
         Commands::Tree { name } => {
-            let project = Project::find(&std::env::current_dir()?)?;
             tree(&project, &name, 0)?;
+        }
+        Commands::Init => {
+            // Unreachable, but needed for the match to be exhaustive
+            unreachable!();
         }
     }
     

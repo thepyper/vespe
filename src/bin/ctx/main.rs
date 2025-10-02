@@ -12,7 +12,6 @@ mod ast;
 mod composer;
 
 use project::Project;
-use crate::ast::LineData;
 use agent_call::ShellAgentCall;
 
 #[derive(Parser)]
@@ -73,8 +72,6 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Compose { name } => {
             let agent = ShellAgentCall::new("echo".to_string()); // Dummy agent for compose
-            let ast = project.get_or_build_ast(&name)?; // Get the AST
-            eprintln!("[DEBUG] AST for {}:\n{:?}", name, ast); // Print the AST
             let composed_lines = project.compose(&name, &agent)?;
             for line in composed_lines {
                 if let LineData::Text(text) = line.data {
@@ -87,8 +84,8 @@ fn main() -> Result<()> {
             if contexts.is_empty() {
                 println!("No contexts found.");
             } else {
-                for context_info in contexts {
-                    println!("{}", context_info.name);
+                for context_name in contexts {
+                    println!("{}", context_name);
                 }
             }
         }
@@ -117,7 +114,7 @@ fn main() -> Result<()> {
             let contexts_dir = project.contexts_dir()?;
             watcher.watch(&contexts_dir, RecursiveMode::Recursive)?;
 
-            let mut known_contexts: HashSet<String> = project.list_contexts()?.into_iter().map(|ci| ci.name).collect();
+            let mut known_contexts: HashSet<String> = project.list_contexts()?.into_iter().collect();
 
             let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
             let r = running.clone();
@@ -147,7 +144,7 @@ fn main() -> Result<()> {
                     Ok(Err(e)) => eprintln!("Watch error: {:?}", e),
                     Err(RecvTimeoutError::Timeout) => {
                         // Check for new contexts periodically
-                        let current_contexts: HashSet<String> = project.list_contexts()?.into_iter().map(|ci| ci.name).collect();
+                        let current_contexts: HashSet<String> = project.list_contexts()?.into_iter().collect();
                         for new_context in current_contexts.difference(&known_contexts) {
                             println!("New context detected: {}. Executing...", new_context);
                             let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());

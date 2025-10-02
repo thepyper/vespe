@@ -55,6 +55,21 @@ impl<'a> ContextComposer<'a> {
                         source_line_number: line.source_line_number,
                     });
                 }
+                LineData::Inline { snippet_name } => {
+                    let snippet_path = crate::ast::resolve_snippet_path(&self.project.root_path, snippet_name)?;
+                    let snippet_content = std::fs::read_to_string(&snippet_path)
+                        .with_context(|| format!("Failed to read snippet file: {:?}", snippet_path))?;
+                    
+                    let parsed_snippet_lines = crate::ast::ContextAstNode::parse(&snippet_content, snippet_path.clone());
+
+                    for snippet_line in parsed_snippet_lines {
+                        composed_lines.push(Line {
+                            data: snippet_line.data,
+                            source_file: line.source_file.clone(), // Override with the source of the @inline directive
+                            source_line_number: line.source_line_number, // Override with the source of the @inline directive
+                        });
+                    }
+                }
                 _ => {
                     composed_lines.push(line.clone());
                 }

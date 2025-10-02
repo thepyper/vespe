@@ -1,10 +1,12 @@
 use anyhow::{Context as AnyhowContext, Result};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use crate::project::{CONTEXT_EXTENSION, SNIPPET_EXTENSION};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum LineData {
     Include { context_name: String },
+    Inline { snippet_name: String },
     Answer,
     Summary { context_name: String },
     Text(String),
@@ -40,10 +42,10 @@ impl ContextAstNode {
                         source_file: file_path.clone(),
                         source_line_number: line_number,
                     }
-                } else if let Some(context_name) = line.strip_prefix("@summary ") {
+                } else if let Some(snippet_name) = line.strip_prefix("@inline ") {
                     Line {
-                        data: LineData::Summary {
-                            context_name: context_name.trim().to_string(),
+                        data: LineData::Inline {
+                            snippet_name: snippet_name.trim().to_string(),
                         },
                         source_file: file_path.clone(),
                         source_line_number: line_number,
@@ -112,16 +114,35 @@ pub fn resolve_context_path(project_root: &Path, name: &str) -> Result<PathBuf> 
 
 // Helper function to convert name to filename, moved from Project
 pub fn to_filename(name: &str) -> String {
-    if name.ends_with(".md") {
+    if name.ends_with(format!(".{}", CONTEXT_EXTENSION).as_str()) {
         name.to_string()
     } else {
-        format!("{}.md", name)
+        format!("{}.{}", name, CONTEXT_EXTENSION)
     }
 }
 
 // Helper function to convert filename to name, moved from Project
 pub fn to_name(name: &str) -> String {
-    name.strip_suffix(".md").unwrap_or(name).to_string()
+    name.strip_suffix(format!(".{}", CONTEXT_EXTENSION).as_str()).unwrap_or(name).to_string()
+}
+
+// Helper function to resolve snippet paths
+pub fn resolve_snippet_path(project_root: &Path, name: &str) -> Result<PathBuf> {
+    let snippets_dir = project_root.join("snippets");
+    let path = snippets_dir.join(to_snippet_filename(name));
+    if !path.is_file() {
+        anyhow::bail!("Snippet '{}' does not exist", name);
+    }
+    Ok(path)
+}
+
+// Helper function to convert snippet name to filename
+pub fn to_snippet_filename(name: &str) -> String {
+    if name.ends_with(format!(".{}", SNIPPET_EXTENSION).as_str()) {
+        name.to_string()
+    } else {
+        format!("{}.{}", name, SNIPPET_EXTENSION)
+    }
 }
 
 #[derive(Debug, Clone)]

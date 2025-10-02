@@ -10,6 +10,7 @@ mod project;
 mod agent_call;
 mod ast;
 mod composer;
+mod visitors;
 
 use project::Project;
 use crate::ast::LineData;

@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 pub struct Context;
 
 impl Context {
@@ -11,5 +13,9 @@ impl Context {
         } else {
             format!("{}.md", name)
         }
+    }
+
+    pub fn to_path(context_root: &Path, name: &str) -> PathBuf {        
+        context_root.join(Self::to_filename(name))
     }
 }

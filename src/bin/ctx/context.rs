@@ -10,6 +10,12 @@ pub enum Line {
     Text(String),
 }
 
+#[derive(Debug)]
+pub enum ContextTreeItem {
+    Node { name: String, children: Vec<ContextTreeItem> },
+    Leaf { name: String },
+}
+
 pub struct Context;
 
 impl Context {

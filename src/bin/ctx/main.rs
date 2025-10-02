@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 mod context;
 mod project;
-use context::{Context, Line};
+use context::{Context, ContextTreeItem, Line};
 use project::Project;
 
 #[derive(Parser)]
@@ -49,19 +49,18 @@ fn edit(project: &Project, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn tree(project: &Project, name: &str, depth: usize) -> Result<()> {
-    let path = project.contexts_dir()?.join(Context::to_filename(name));
-    let content = std::fs::read_to_string(&path)?;
-    
-    println!("{}{}", "  ".repeat(depth), name);
-    
-    for line in content.lines() {
-        if let Some(include) = line.strip_prefix("@include ") {
-            tree(project, include.trim(), depth + 1)?;
+fn print_tree(item: &ContextTreeItem, depth: usize) {
+    match item {
+        ContextTreeItem::Node { name, children } => {
+            println!("{}{}", "  ".repeat(depth), name);
+            for child in children {
+                print_tree(child, depth + 1);
+            }
+        }
+        ContextTreeItem::Leaf { name } => {
+            println!("{}{}", "  ".repeat(depth), name);
         }
     }
-    
-    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -85,7 +84,14 @@ fn main() -> Result<()> {
             print!("{}", output);
         }
         Commands::List => {
-            project.list_contexts()?;
+            let contexts = project.list_contexts()?;
+            if contexts.is_empty() {
+                println!("No contexts found.");
+            } else {
+                for context_name in contexts {
+                    println!("{}", context_name);
+                }
+            }
         }
         Commands::New { name } => {
             project.new_context(&name)?;
@@ -94,7 +100,8 @@ fn main() -> Result<()> {
             edit(&project, &name)?;
         }
         Commands::Tree { name } => {
-            tree(&project, &name, 0)?;
+            let tree = project.context_tree(&name)?;
+            print_tree(&tree, 0);
         }
         Commands::Init => {
             // Unreachable, but needed for the match to be exhaustive
@@ -104,4 +111,3 @@ fn main() -> Result<()> {
     
     Ok(())
 }
-

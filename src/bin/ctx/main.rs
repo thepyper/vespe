@@ -70,6 +70,8 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Compose { name } => {
             let agent = ShellAgentCall::new("echo".to_string()); // Dummy agent for compose
+            let ast = project.get_or_build_ast(&name)?; // Get the AST
+            eprintln!("[DEBUG] AST for {}:\n{:?}", name, ast); // Print the AST
             let composed_lines = project.compose(&name, &agent)?;
             for line in composed_lines {
                 if let LineData::Text(text) = line.data {
@@ -124,6 +126,7 @@ fn main() -> Result<()> {
                             for path in event.paths {
                                 if path.extension().map_or(false, |ext| ext == "md") {
                                     if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
+                                        eprintln!("[DEBUG] Watcher triggered for: {}", path.display()); // Added debug log
                                         println!("Executing context: {}", name);
                                         let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
                                         if let Err(e) = project.execute_context(&name.to_string(), &agent) {

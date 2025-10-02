@@ -37,6 +37,38 @@ pub enum AstNode {
     Snippet(Snippet),
 }
 
+pub trait Visitor {
+    fn pre_visit_context(&mut self, context: &Context) {}
+    fn post_visit_context(&mut self, context: &Context) {}
+    fn pre_visit_snippet(&mut self, snippet: &Snippet) {}
+    fn post_visit_snippet(&mut self, snippet: &Snippet) {}
+    fn pre_visit_line(&mut self, line: &Line) {}
+    fn post_visit_line(&mut self, line: &Line) {}
+}
+
+pub fn walk(node: &AstNode, visitor: &mut impl Visitor) {
+    match node {
+        AstNode::Context(context) => {
+            visitor.pre_visit_context(context);
+            for child_node in &context.lines {
+                walk(child_node, visitor);
+            }
+            visitor.post_visit_context(context);
+        },
+        AstNode::Snippet(snippet) => {
+            visitor.pre_visit_snippet(snippet);
+            for child_node in &snippet.lines {
+                walk(child_node, visitor);
+            }
+            visitor.post_visit_snippet(snippet);
+        },
+        AstNode::Line(line) => {
+            visitor.pre_visit_line(line);
+            visitor.post_visit_line(line);
+        },
+    }
+}
+
 fn parse_lines(content: &str) -> Vec<Line> {
     content
         .lines()

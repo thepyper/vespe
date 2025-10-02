@@ -32,5 +32,22 @@ Oppure, 2-pass:
 La scelta piu' pulita? future-proof?
 
 
-@answer
+Okay, I understand the issue with the `@inline` feature and your proposed solutions. The goal is to ensure that when `@inline` is used, the content of the inlined snippet is actually written into the calling file, not just the LLM's answer.
 
+Before I can suggest the cleaner and more future-proof approach, I need to understand the current implementation of `execute_context` and how `@inline` and `@answer` are processed.
+
+I'll start by reading `Cargo.toml` and then the relevant source files in `src/bin/ctx/`.
+
+Alright, `Cargo.toml` reviewed. Rust project, standard dependencies. Now, to locate the `.rs` files within `src/bin/ctx/`.No files in `src/bin/ctx/`? That contradicts the user's statement about working there. I'll check `src/main.rs` and `src/lib.rs` for the `ctx` binary, and then `src/bin/` for other binaries, starting with `src/main.rs`.`src/main.rs` is missing, which is odd. Checking `src/lib.rs` next.`src/lib.rs` is empty, suggesting a multi-binary workspace or main binary elsewhere. The user's mention of "src/bin/ctx" strongly implies the `ctx` binary is in `src/bin/ctx.rs` or `src/bin/ctx/main.rs`. I'll list `src/bin/` to locate it.`src/bin/ctx` is a directory, so `src/bin/ctx/main.rs` is probably the binary. Listing `src/bin/ctx/` now.Okay, files in `src/bin/ctx/` are listed. `execute_context` is in `project.rs`, so I'll read `src/bin/ctx/project.rs` first, then `src/bin/ctx/main.rs` for flow, and `src/bin/ctx/composer.rs` for context composition.I've analyzed `src/bin/ctx/project.rs`, specifically `execute_context`. The current implementation only replaces the `@answer` line in its original file, ignoring the fully composed context from `@inline` snippets.
+
+My proposed solution refines the "single-pass regeneration" idea. Instead of recursive `execute_context` calls, I'll leverage the existing `self.compose` method to get all resolved lines, including inlined content. Then, `execute_context` will:
+1. Obtain `composed_lines` from `self.compose`.
+2. Target the root context file for writing.
+3. Find the first `@answer` in `composed_lines`.
+4. Generate an LLM response using text preceding the first `@answer`.
+5. Construct the new file content by appending `LineData::Text` and inlined snippet content, replacing the first `@answer` with the LLM response, and keeping subsequent `@answer`s as-is.
+6. Rewrite the root context file with this new content.
+
+This ensures `@inline` content is written, only the first `@answer` triggers an LLM call, and the file is consistently regenerated.
+
+Before implementing, I'll examine `src/bin/ctx/composer.rs` and `src/bin/ctx/ast.rs` to understand `compose` and `Line`/`LineData` structures. Starting with `src/bin/ctx/composer.rs`.I've analyzed `src/bin/ctx/composer.rs`. `ComposerVisitor` correctly expands `@inline` and `@include` directives into `composed_lines` via `ast::walk`, and `LineData::Summary` generates summarized text. This confirms `Project::compose` produces a fully expanded `Vec<Line>`. Next, I'll examine `src/bin/ctx/ast.rs` to understand `Line`, `LineData`, `Context`, `Snippet`, and `ast::walk` for file content reconstruction.I've analyzed `src/bin/ctx/ast.rs`, confirming `Project::compose` correctly expands `@inline` and `@include` directives into `LineData::Text` within `composed_lines`. My plan for `execute_context` is to: 1) get `composed_lines`, 2) identify the root context file for writing, 3) find the first `@answer` and collect preceding `LineData::Text` for the LLM prompt, 4) generate the LLM response, 5) construct new file content by iterating `composed_lines` and replacing the first `@answer` with the LLM response, and 6) rewrite the target file. This refined "single-pass regeneration" is cleaner and more future-proof, leveraging existing composition logic and ensuring full file regeneration. I'll now commit and then modify `execute_context` in `src/bin/ctx/project.rs`.Working tree clean. Committing: "feat: Implement full file regeneration for @inline and @answer in execute_context".Staged. Committing.My apologies, I attempted to commit with no changes. I'll now modify `execute_context` in `src/bin/ctx/project.rs`. My plan is to retrieve the root context's file path, then within the loop, build `new_file_content` from `composed_lines`, handling the first `LineData::Answer` by calling the LLM and replacing it with the response, while appending other `LineData::Text` and subsequent `LineData::Answer` as literal `@answer`. Finally, I'll write `new_file_content` to the root context file. This ensures full file regeneration. I'll use a `replace` call for this.

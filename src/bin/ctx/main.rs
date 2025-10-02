@@ -37,43 +37,6 @@ enum Commands {
     Tree { name: String },
 }
 
-fn compose(project: &Project, name: &str) -> Result<String> {
-    let path = project.contexts_dir()?.join(Context::to_filename(name));
-    let mut visited = HashSet::new();
-    compose_recursive(project, &path, &mut visited)
-}
-
-fn compose_recursive(project: &Project, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<String> {
-    if visited.contains(path) {
-        return Ok(String::new()); // Circular include
-    }
-    visited.insert(path.to_path_buf());
-    
-    let content = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read {:?}", path))?;
-    
-    let mut output = String::new();
-    
-    for line in Context::parse(&content) {
-        match line {
-            Line::Include { context_name } => {
-                let include_path = project.resolve_context(&context_name)?;
-                output.push_str(&compose_recursive(project, &include_path, visited)?);
-                output.push('\n');
-            }
-            Line::Text(text) => {
-                output.push_str(&text);
-                output.push('\n');
-            }
-            Line::Answer => {
-                // For now, do nothing
-            }
-        }
-    }
-    
-    Ok(output)
-}
-
 fn edit(project: &Project, name: &str) -> Result<()> {
     let path = project.contexts_dir()?.join(Context::to_filename(name));
     
@@ -118,7 +81,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Compose { name } => {
-            let output = compose(&project, &name)?;
+            let output = project.compose(&name)?;
             print!("{}", output);
         }
         Commands::List => {

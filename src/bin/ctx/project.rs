@@ -1,14 +1,52 @@
 
 use anyhow::{Context as AnyhowContext, Result};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use super::context::Context;
+use super::context::{Context, Line};
 
 pub struct Project {
     pub root_path: PathBuf,
 }
 
 impl Project {
+    pub fn compose(&self, name: &str) -> Result<String> {
+        let path = self.resolve_context(name)?;
+        let mut visited = HashSet::new();
+        self.compose_recursive(&path, &mut visited)
+    }
+
+    fn compose_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<String> {
+        if visited.contains(path) {
+            return Ok(String::new()); // Circular include
+        }
+        visited.insert(path.to_path_buf());
+        
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read {:?}", path))?;
+        
+        let mut output = String::new();
+        
+        for line in Context::parse(&content) {
+            match line {
+                Line::Include { context_name } => {
+                    let include_path = self.resolve_context(&context_name)?;
+                    output.push_str(&self.compose_recursive(&include_path, visited)?);
+                    output.push('\n');
+                }
+                Line::Text(text) => {
+                    output.push_str(&text);
+                    output.push('\n');
+                }
+                Line::Answer => {
+                    // For now, do nothing
+                }
+            }
+        }
+        
+        Ok(output)
+    }
+
     pub fn contexts_dir(&self) -> Result<PathBuf> {
         let path = self.root_path.join("contexts");
         std::fs::create_dir_all(&path)?;

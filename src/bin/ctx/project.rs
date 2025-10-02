@@ -80,7 +80,19 @@ impl Project {
         Ok(context_infos)
     }
 
-     pub fn new_context(&self, name: &str) -> Result<()> {
+     fn get_context_meta_dir(&self, context_path: &Path) -> Result<PathBuf> {
+        let context_filename = context_path.file_stem()
+            .and_then(|s| s.to_str())
+            .context("Context path does not have a file name")?;
+        let meta_dir = self.root_path
+            .join(".meta")
+            .join("contexts")
+            .join(context_filename);
+        std::fs::create_dir_all(&meta_dir)?;
+        Ok(meta_dir)
+    }
+
+    pub fn new_context(&self, name: &str) -> Result<()> {
         let path = self.contexts_dir()?.join(crate::ast::to_filename(name));
         
         if path.exists() {
@@ -106,11 +118,7 @@ impl Project {
 
 
 
-    pub fn summaries_dir(&self) -> Result<PathBuf> {
-        let path = self.root_path.join("summaries");
-        std::fs::create_dir_all(&path)?;
-        Ok(path)
-    }
+
 
     pub fn execute_context(&self, name: &str, agent: &dyn AgentCall) -> Result<()> {
         loop {
@@ -181,8 +189,9 @@ impl Project {
         hasher.update(original_content_to_summarize.as_bytes());
         let original_hash = format!("{:x}", hasher.finalize());
 
-        let summary_filename = format!("{}.summary", crate::ast::to_filename(context_name));
-        let summary_file_path = self.summaries_dir()?.join(summary_filename);
+        // Construct the new summary file path
+        let context_meta_dir = self.get_context_meta_dir(&summary_target_path)?;
+        let summary_file_path = context_meta_dir.join("summary.md.summary");
 
         let mut summarized_text = String::new();
         let mut cache_hit = false;

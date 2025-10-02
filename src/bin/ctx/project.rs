@@ -138,46 +138,6 @@ impl Project {
         Ok(())
     }
 
-    pub fn inline_snippets_in_context_file(&self, context_name: &str) -> Result<()> {
-        let context_path = self.contexts_dir()?.join(format!("{}.{}", context_name, CONTEXT_EXTENSION));
-        
-        if !context_path.exists() {
-            anyhow::bail!("Context '{}' not found at {:?}", context_name, context_path);
-        }
-
-        let original_content = std::fs::read_to_string(&context_path)?;
-        let mut modified_lines = Vec::new();
-        let inline_regex = regex::Regex::new(r"^//\s*@inline\s+(.+)$")?;
-
-        for line in original_content.lines() {
-            if let Some(captures) = inline_regex.captures(line) {
-                let snippet_name = captures.get(1).map(|m| m.as_str()).context("Failed to capture snippet name")?;
-                let snippet_path = self.snippets_dir()?.join(format!("{}.{}", snippet_name, SNIPPET_EXTENSION));
-
-                if !snippet_path.exists() {
-                    anyhow::bail!("Snippet '{}' not found at {:?}", snippet_name, snippet_path);
-                }
-
-                let snippet_content = std::fs::read_to_string(&snippet_path)?;
-                modified_lines.push(format!("// Start of inlined snippet: {}", snippet_name));
-                modified_lines.extend(snippet_content.lines().map(String::from));
-                modified_lines.push(format!("// End of inlined snippet: {}", snippet_name));
-            } else {
-                modified_lines.push(String::from(line));
-            }
-        }
-
-        let new_content = modified_lines.join("\n");
-        if new_content != original_content {
-            std::fs::write(&context_path, new_content)?;
-            println!("Inlined snippets into context file: {}", context_path.display());
-        } else {
-            println!("No @inline directives found or no changes needed for: {}", context_path.display());
-        }
-
-        Ok(())
-    }
-
     pub fn edit_context(&self, name: &str) -> Result<()> {
         let path = crate::ast::resolve_context_path(&self.root_path, name)?;
         
@@ -195,9 +155,9 @@ impl Project {
 
 
     pub fn execute_context(&self, name: &str, agent: &dyn AgentCall) -> Result<()> {
-        self.inline_snippets_in_context_file(name)?;
         loop {
-            let composed_lines = self.compose(name, agent)?;            
+            let composed_lines = self.compose(name, agent)?;
+            
             let mut answer_line_index: Option<usize> = None;
             let mut prompt_content = String::new();
 

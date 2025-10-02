@@ -6,10 +6,10 @@ use crate::project::{CONTEXT_EXTENSION, SNIPPET_EXTENSION};
 #[derive(Debug, PartialEq, Clone)]
 pub enum LineData {
     Text(String),
-    Include(Context),
-    Inline(Snippet),
+    Include(String),
+    Inline(String),
     Answer,
-    Summary(Context),
+    Summary(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -35,6 +35,108 @@ pub enum AstNode {
     Context(Context),
     Line(Line),
     Snippet(Snippet),
+}
+
+fn parse_lines(content: &str) -> Vec<Line> {
+    content
+        .lines()
+        .enumerate()
+        .map(|(line_number, line)| {
+            if let Some(context_name) = line.strip_prefix("@include ") {
+                Line {
+                    line_number,
+                    data: LineData::Include(context_name.trim().to_string()),
+                }
+            } else if let Some(snippet_name) = line.strip_prefix("@inline ") {
+                Line {
+                    line_number,
+                    data: LineData::Inline(snippet_name.trim().to_string()),
+                }
+            } else if line.trim() == "@answer" {
+                Line {
+                    line_number,
+                    data: LineData::Answer,
+                }
+            } else if let Some(context_name) = line.strip_prefix("@summary ") {
+                Line {
+                    line_number,
+                    data: LineData::Summary(context_name.trim().to_string()),
+                }
+            } else {
+                Line {
+                    line_number,
+                    data: LineData::Text(line.to_string()),
+                }
+            }
+        })
+        .collect()
+}
+
+pub fn build_context(
+    project_root: &Path,
+    current_path: &Path,
+    visited: &mut HashSet<PathBuf>,
+) -> Result<Context> {
+    if visited.contains(current_path) {
+        // Handle circular dependency by returning a placeholder context
+        return Ok(Context {
+            file_path: current_path.to_path_buf(),
+            lines: Vec::new(),
+        });
+    }
+    visited.insert(current_path.to_path_buf());
+
+    let content = std::fs::read_to_string(current_path)
+        .with_context(|| format!("Failed to read {:?}", current_path))?;
+    let parsed_lines = parse_lines(&content);
+
+    let mut ast_nodes = Vec::new();
+    for line in parsed_lines {
+        match line.data {
+            LineData::Include(context_name) => {
+                let include_path = resolve_context_path(project_root, &context_name)?;
+                let child_context = build_context(project_root, &include_path, visited)?;
+                ast_nodes.push(AstNode::Context(child_context));
+            },
+            LineData::Inline(snippet_name) => {
+                let snippet_path = resolve_snippet_path(project_root, &snippet_name)?;
+                let child_snippet = build_snippet(project_root, &snippet_path)?;
+                ast_nodes.push(AstNode::Snippet(child_snippet));
+            },
+            LineData::Summary(context_name) => {
+                let summary_path = resolve_context_path(project_root, &context_name)?;
+                let child_context = build_context(project_root, &summary_path, visited)?;
+                ast_nodes.push(AstNode::Context(child_context));
+            },
+            _ => ast_nodes.push(AstNode::Line(line)),
+        }
+    }
+
+    Ok(Context {
+        file_path: current_path.to_path_buf(),
+        lines: ast_nodes,
+    })
+}
+
+pub fn build_snippet(
+    project_root: &Path,
+    current_path: &Path,
+) -> Result<Snippet> {
+    let content = std::fs::read_to_string(current_path)
+        .with_context(|| format!("Failed to read {:?}", current_path))?;
+    let parsed_lines = parse_lines(&content);
+
+    let mut ast_nodes = Vec::new();
+    for line in parsed_lines {
+        // Snippets do not process includes/inlines/summaries recursively
+        // They just contain lines of text or directives that will be processed by the parent context
+        ast_nodes.push(AstNode::Line(line));
+    }
+
+    Ok(Snippet {
+        file_path: current_path.to_path_buf(),
+        lines: ast_nodes,
+    })
 }
 
 // Helper function to resolve context paths, moved from Project
@@ -78,18 +180,4 @@ pub fn to_snippet_filename(name: &str) -> String {
     } else {
         format!("{}.{}", name, SNIPPET_EXTENSION)
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct ContextInfo {
-    pub name: String,
-    pub path: PathBuf,
-}
-
-pub fn get_context_info(path: &Path) -> Result<ContextInfo> {
-    let name = to_name(path.file_name().unwrap().to_str().unwrap());
-    Ok(ContextInfo {
-        name,
-        path: path.to_path_buf(),
-    })
 }

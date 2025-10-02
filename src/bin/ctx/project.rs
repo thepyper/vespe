@@ -18,10 +18,21 @@ impl Project {
         composer.compose_from_ast(&ast_node)
     }
 
-    pub fn context_tree(&self, name: &str) -> Result<crate::ast::ContextAstNode> {
+    pub fn context_tree(&self, name: &str) -> Result<String> {
         let ast_node = self.get_or_build_ast(name)?;
-        let mut visited = HashSet::new();
-        crate::tree_builder::ContextTreeBuilder::build_tree_from_ast(&ast_node, &mut visited)
+        let mut output = String::new();
+        self.format_ast_node_for_display(&ast_node, 0, &mut output);
+        Ok(output)
+    }
+
+    fn format_ast_node_for_display(&self, node: &crate::ast::ContextAstNode, indent_level: usize, output: &mut String) {
+        let indent = "  ".repeat(indent_level);
+        let name = crate::ast::to_name(&node.path.file_name().unwrap().to_string_lossy());
+        output.push_str(&format!("{}- {}\n", indent, name));
+
+        for child in &node.children {
+            self.format_ast_node_for_display(child, indent_level + 1, output);
+        }
     }
 
     // fn context_tree_recursive(&self, path: &Path, visited: &mut HashSet<PathBuf>) -> Result<ContextTreeItem> {

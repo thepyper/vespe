@@ -47,7 +47,7 @@ impl<'a, T: LineProcessor> Visitor for LineModifyingVisitor<'a, T> {
         self.current_file_path_stack.pop();
     }
 
-    fn visit_line(&mut self, line: &Line) {
+    fn pre_visit_line(&mut self, line: &Line) {
         let current_file_path = self
             .current_file_path_stack
             .last()
@@ -62,7 +62,9 @@ impl<'a, T: LineProcessor> Visitor for LineModifyingVisitor<'a, T> {
 
         match processed_content {
             Some(mut new_content) => {
-                if !new_content.ends_with("\n") {
+                if new_content.is_empty() {
+                    // Skip adding empty lines
+                } else if !new_content.ends_with("\n") {
                     new_content.push_str("\n");
                 }
                 entry.push(new_content);

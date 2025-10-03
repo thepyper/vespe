@@ -439,6 +439,11 @@ Iniziamo leggendo `src/ast/parser.rs`.
 
 Ok. Ora, in previsione di dovre scrivere anche delle Anchor, mi implementi il metodo to_string per AnchorData, che renderizza una anchor <!-- ... -->
 
+Ora vorrei tipizzare anche il campo data di AnchorData: 
+- permetto che sia None (e permetto il formato di anchor senza data come <!-- xxx-yyyy --> oppure <!-- xxx-yyyy: -->
+- oppure puo' essere Begin (stringa begin) oppure End (stringa end)
 
+Chiaro?
 
-  
+@answer
+

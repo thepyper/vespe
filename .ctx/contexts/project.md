@@ -2,7 +2,7 @@
 
 # Project
 
-Stiamo lavorando ad un compositore di contesti per llm.
+Stiamo lavorando ad un compositore di contesti per llm, scritto in rust.
 Lo scopo del progetto e uno streamlining del processo di creazione dei contesti per llm:
 - avere controllo fine del contesto che viene passato agli llm;
 - avere versioning dei contesti (implicito con git);

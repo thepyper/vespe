@@ -1,4 +1,5 @@
 use super::types::{Context, Snippet, Line};
+use async_trait::async_trait;
 
 /// A trait for implementing the Visitor pattern on the AST.
 ///
@@ -45,4 +46,50 @@ pub fn walk_snippet(snippet: &mut Snippet, visitor: &mut dyn Visitor) {
 /// Walks a `Line` node, calling the appropriate method on the provided `Visitor`.
 pub fn walk_line(line: &mut Line, visitor: &mut dyn Visitor) {
     visitor.visit_line(line);
+}
+
+#[async_trait]
+pub trait AsyncVisitor {
+    /// Called before visiting the lines of a `Context` asynchronously.
+    async fn pre_visit_context_async(&mut self, _context: &mut Context) -> Result<(), Box<dyn std::error::Error>> { Ok(()) }
+
+    /// Called after visiting the lines of a `Context` asynchronously.
+    async fn post_visit_context_async(&mut self, _context: &mut Context) -> Result<(), Box<dyn std::error::Error>> { Ok(()) }
+
+    /// Called before visiting the lines of a `Snippet` asynchronously.
+    async fn pre_visit_snippet_async(&mut self, _snippet: &mut Snippet) -> Result<(), Box<dyn std::error::Error>> { Ok(()) }
+
+    /// Called after visiting the lines of a `Snippet` asynchronously.
+    async fn post_visit_snippet_async(&mut self, _snippet: &mut Snippet) -> Result<(), Box<dyn std::error::Error>> { Ok(()) }
+
+    /// Called for each `Line` in the AST asynchronously.
+    async fn visit_line_async(&mut self, _line: &mut Line) -> Result<(), Box<dyn std::error::Error>> { Ok(()) }
+}
+
+/// Walks a `Context` node and its children asynchronously, calling the appropriate
+/// methods on the provided `AsyncVisitor`.
+pub async fn walk_context_async(context: &mut Context, visitor: &mut dyn AsyncVisitor) -> Result<(), Box<dyn std::error::Error>> {
+    visitor.pre_visit_context_async(context).await?;
+    for line in &mut context.lines {
+        walk_line_async(line, visitor).await?;
+    }
+    visitor.post_visit_context_async(context).await?;
+    Ok(())
+}
+
+/// Walks a `Snippet` node and its children asynchronously, calling the appropriate
+/// methods on the provided `AsyncVisitor`.
+pub async fn walk_snippet_async(snippet: &mut Snippet, visitor: &mut dyn AsyncVisitor) -> Result<(), Box<dyn std::error::Error>> {
+    visitor.pre_visit_snippet_async(snippet).await?;
+    for line in &mut snippet.lines {
+        walk_line_async(line, visitor).await?;
+    }
+    visitor.post_visit_snippet_async(snippet).await?;
+    Ok(())
+}
+
+/// Walks a `Line` node asynchronously, calling the appropriate method on the provided `AsyncVisitor`.
+pub async fn walk_line_async(line: &mut Line, visitor: &mut dyn AsyncVisitor) -> Result<(), Box<dyn std::error::Error>> {
+    visitor.visit_line_async(line).await?;
+    Ok(())
 }

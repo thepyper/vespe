@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use anyhow::Result;
 
 use crate::ast::{Context, Line, Visitor};
 
@@ -7,7 +8,7 @@ pub trait LineProcessor {
     fn process_line(&self, line: &Line, current_context_path: &PathBuf) -> Option<String>;
 }
 
-pub struct LineModifyingVisitor<'a, T: LineProcessor> {
+struct LineModifyingVisitor<'a, T: LineProcessor> {
     line_processor: &'a T,
     modified_files_content: HashMap<PathBuf, Vec<String>>,
     current_file_path_stack: Vec<PathBuf>,
@@ -24,7 +25,7 @@ impl<'a, T: LineProcessor> LineModifyingVisitor<'a, T> {
         }
     }
 
-    pub fn write_modified_files(&self) -> Result<(), std::io::Error> {
+    pub fn write_modified_files(&self) -> Result<()> {
         for path in &self.modified_files_set {
             if let Some(lines) = self.modified_files_content.get(path) {
                 let content = lines.join(""); // Lines already have EOL
@@ -75,4 +76,10 @@ impl<'a, T: LineProcessor> Visitor for LineModifyingVisitor<'a, T> {
             }
         }
     }
+}
+
+pub fn line_process_context(context: &Context, processor: &dyn LineProcessor) -> Result<()> {
+    let mut visitor = LineModifyingVisitor::new(processor);
+    crate::ast::visitor::walk_context(context, &mut visitor);
+    visitor.write_modified_files()
 }

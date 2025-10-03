@@ -11,6 +11,7 @@ pub mod parser;
 
 #[cfg(test)]
 pub mod test;
+pub mod visitor;
 
 pub use types::{AnchorData, AnchorKind, Context, Line, LineKind, Parameters, Snippet};
 pub use resolver::Resolver;

@@ -1,4 +1,4 @@
-use super::types::{Context, Snippet, Line};
+use super::types::{Context, Snippet, Line, LineKind};
 
 /// A trait for implementing the Visitor pattern on the AST.
 ///
@@ -19,7 +19,10 @@ pub trait Visitor {
     fn post_visit_snippet(&mut self, _snippet: &Snippet) {}
 
     /// Called for each `Line` in the AST.
-    fn visit_line(&mut self, _line: &Line) {}
+    fn pre_visit_line(&mut self, _line: &Line) {}
+
+    /// Called for each `Line` in the AST.
+    fn post_visit_line(&mut self, _line: &Line) {}
 }
 
 /// Walks a `Context` node and its children, calling the appropriate
@@ -44,5 +47,18 @@ pub fn walk_snippet(snippet: &Snippet, visitor: &mut dyn Visitor) {
 
 /// Walks a `Line` node, calling the appropriate method on the provided `Visitor`.
 pub fn walk_line(line: &Line, visitor: &mut dyn Visitor) {
-    visitor.visit_line(line);
+    visitor.pre_visit_line(line);
+    match &line.kind {
+        LineKind::Include { context, .. } => {
+            walk_context(context, visitor);
+        }
+        LineKind::Inline { snippet, .. } => {
+            walk_snippet(snippet, visitor);
+        }
+        LineKind::Summary { context, .. }   => {
+            walk_context(context, visitor);
+        }
+        _ => {}
+    }
+    visitor.post_visit_line(line);
 }

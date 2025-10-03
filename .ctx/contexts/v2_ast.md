@@ -346,7 +346,17 @@ Per pulizia del codice, ritieni opportuno separare in funzioni separate il parsi
 Per il parsing dei tag se usi delle regex usa una unica regex, hanno tutti lo stesso formato: @tag[parameters] arguments
 Ovviamente anche arguments puo' essere opzionale e non esserci, tipo in @answer
 
+Ok fatto.
+
+Ora, vorrei mi implementassi, in un file separato src/ast/visitor.rs, un bel Visitor pattern.
+
+Un Trait con pre_visit_context / post_visit_context / pre_visit_snippet / post_visit_snippet / visit_line.
+
+Ed una funzione walk (o funzioni walk_context, walk_snippet, walk_line) che accetti un visitor e lo faccia operare su Context (e su Snippet, e su Line).
+Chiaro?
+Se si implementa se no chiedi.
+
 @answer
- 
+
 
 

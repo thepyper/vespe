@@ -9,6 +9,9 @@ pub mod types;
 pub mod resolver;
 pub mod parser;
 
+#[cfg(test)]
+pub mod test;
+
 pub use types::{AnchorData, AnchorKind, Context, Line, LineKind, Parameters, Snippet};
 pub use resolver::Resolver;
 pub use parser::{parse_context, parse_snippet, parse_line};

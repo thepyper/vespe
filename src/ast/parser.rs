@@ -39,7 +39,6 @@ pub fn parse_snippet<R: Resolver>(path_str: &str, resolver: &R) -> Result<Snippe
 }
 
 /// Parses a single line of text into a `Line` struct.
-/// Parses a single line of text into a `Line` struct.
 pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow::Error> {
     let mut line_kind = LineKind::Text;
     let mut current_line_text = text.to_string();

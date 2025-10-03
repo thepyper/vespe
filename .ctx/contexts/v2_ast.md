@@ -343,7 +343,10 @@ Inoltre vorrei che la parte [parameters] fosse opzionale, se non c'e' non ci son
 
 Per pulizia del codice, ritieni opportuno separare in funzioni separate il parsing della anchor e dei parameters? vedi tu, ma separa dove ritieni una buona pratica.
 
-@answer
+Per il parsing dei tag se usi delle regex usa una unica regex, hanno tutti lo stesso formato: @tag[parameters] arguments
+Ovviamente anche arguments puo' essere opzionale e non esserci, tipo in @answer
 
+@answer
+ 
 
 

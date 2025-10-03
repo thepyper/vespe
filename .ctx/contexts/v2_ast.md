@@ -335,7 +335,15 @@ Ecco come modificherò `MockResolver` e la configurazione del test:
 
 Modifichiamo di nuovo `src/ast/test.rs`.
 
+Una modifica: vorrei che nelle linee Tag fosse catturato anche il contenuto dopo, tipo: @tag[parameters] arguments <!--anchor-->
+con @include argument e' il context da passare, context non e' in parameters
+simile in @inline e @summary
 
+Inoltre vorrei che la parte [parameters] fosse opzionale, se non c'e' non ci sono parametri.
+
+Per pulizia del codice, ritieni opportuno separare in funzioni separate il parsing della anchor e dei parameters? vedi tu, ma separa dove ritieni una buona pratica.
+
+@answer
 
 
 

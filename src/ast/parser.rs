@@ -127,7 +127,7 @@ fn parse_anchor(line_text: &str) -> Option<(AnchorData, String)> {
 /// Parses a tag, its optional parameters, and optional arguments from the beginning of a line.
 fn parse_tag_and_content(line_text: &str) -> Option<(String, Option<String>, Option<String>, String)> {
     // Regex to capture tag name, optional parameters, and optional arguments
-    let tag_full_regex = Regex::new(r"^@([a-zA-Z]+)(?:\[(.*?)\])?(?:\s+([^\s].*?))?").unwrap();
+    let tag_full_regex = Regex::new(r"^@([a-zA-Z]+)(?:\[(.*?)\])?(?:\s+([^\s]+))?").unwrap();
 
     if let Some(captures) = tag_full_regex.captures(line_text) {
         let tag_name = captures.get(1).unwrap().as_str().to_string();

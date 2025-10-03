@@ -27,7 +27,9 @@ impl Resolver for MockResolver {
             "my_summary_context" => PathBuf::from("test_data/my_summary_context.md"),
             _ => PathBuf::from(format!("test_data/{}.md", ctx_name)),
         };
-        self.temp_dir.join(relative_path)
+        let resolved_path = self.temp_dir.join(relative_path);
+        dbg!(&resolved_path);
+        resolved_path
     }
 
     fn resolve_snippet(&self, snippet_name: &str) -> PathBuf {
@@ -37,7 +39,9 @@ impl Resolver for MockResolver {
             "my_snippet" => PathBuf::from("test_data/my_snippet.sn"),
             _ => PathBuf::from(format!("test_data/{}.sn", snippet_name)),
         };
-        self.temp_dir.join(relative_path)
+        let resolved_path = self.temp_dir.join(relative_path);
+        dbg!(&resolved_path);
+        resolved_path
     }
 }
 
@@ -150,7 +154,7 @@ fn test_parse_line_with_answer_tag_and_anchor() {
     let resolver = MockResolver::new(PathBuf::new());
     let line_text = "@answer[param = \"test\"] Answer line. <!-- answer-87654321-4321-8765-4321-876543214321:more_data -->";
     let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
+    assert_eq!(line.text, "Answer line.");
     assert!(matches!(line.kind, LineKind::Answer { .. }));
     if let LineKind::Answer { parameters } = line.kind {
         assert_eq!(parameters.get("param").unwrap(), &serde_json::json!("test"));
@@ -273,6 +277,7 @@ fn test_parse_line_with_include_tag_no_params_no_args() {
 
 // Helper function to create a temporary file
 fn create_temp_file(path: &Path, content: &str) {
+    dbg!(&path, &content);
     std::fs::create_dir_all(path.parent().unwrap()).unwrap();
     std::fs::write(path, content).unwrap();
 }

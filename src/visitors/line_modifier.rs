@@ -1,99 +1,76 @@
-use std::{collections::HashMap, path::PathBuf};
-use std::io::Read;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
-use crate::ast::{Line, Context, Visitor};
+use crate::ast::{Context, Line, Visitor};
 
-/// A trait for processing individual lines within a context.
 pub trait LineProcessor {
-    /// Processes a single line.
-    ///
-    /// If `Some(new_content)` is returned, the original line is replaced by `new_content`.
-    /// If `None` is returned, the original line is kept as is.
-    /// The `new_content` should include an end-of-line character if it's not empty.
     fn process_line(&self, line: &Line, current_context_path: &PathBuf) -> Option<String>;
 }
 
-/// A visitor that processes lines using a `LineProcessor` and collects modified content.
-pub struct LineModifyingVisitor<'a, P: LineProcessor> {
-    line_processor: &'a P,
-    /// Temporary buffer to build the lines for the *current* file being visited.
-    current_file_rebuilt_lines: Vec<String>,
-    /// Stores the final, rebuilt content for files that have been modified.
+pub struct LineModifyingVisitor<'a, T: LineProcessor> {
+    line_processor: &'a T,
     modified_files_content: HashMap<PathBuf, Vec<String>>,
-    /// Stack to keep track of the current context's path for nested contexts.
-    context_path_stack: Vec<PathBuf>,
+    current_file_path_stack: Vec<PathBuf>,
+    modified_files_set: HashSet<PathBuf>,
 }
 
-impl<'a, P: LineProcessor> LineModifyingVisitor<'a, P> {
-    pub fn new(line_processor: &'a P) -> Self {
+impl<'a, T: LineProcessor> LineModifyingVisitor<'a, T> {
+    pub fn new(line_processor: &'a T) -> Self {
         Self {
             line_processor,
-            current_file_rebuilt_lines: Vec::new(),
             modified_files_content: HashMap::new(),
-            context_path_stack: Vec::new(),
+            current_file_path_stack: Vec::new(),
+            modified_files_set: HashSet::new(),
         }
     }
 
-    /// Helper to read a file's content as a single string.
-    fn read_file_content_as_string(path: &PathBuf) -> Result<String, std::io::Error> {
-        std::fs::read_to_string(path)
-    }
-
-    /// Writes all modified files back to the filesystem.
     pub fn write_modified_files(&self) -> Result<(), std::io::Error> {
-        for (path, lines) in &self.modified_files_content {
-            let content = lines.join("");
-            std::fs::write(path, content)?;
+        for path in &self.modified_files_set {
+            if let Some(lines) = self.modified_files_content.get(path) {
+                let content = lines.join(""); // Lines already have EOL
+                std::fs::write(path, content)?;
+            }
         }
         Ok(())
     }
 }
 
-impl<'a, P: LineProcessor> Visitor for LineModifyingVisitor<'a, P> {
+impl<'a, T: LineProcessor> Visitor for LineModifyingVisitor<'a, T> {
     fn pre_visit_context(&mut self, context: &Context) {
-        self.context_path_stack.push(context.path.clone());
-        self.current_file_rebuilt_lines.clear(); // Start fresh for each new context file
+        self.current_file_path_stack.push(context.path.clone());
+        self.modified_files_content
+            .entry(context.path.clone())
+            .or_insert_with(Vec::new);
     }
 
-    fn post_visit_context(&mut self, context: &Context) {
-        if let Some(current_context_path) = self.context_path_stack.pop() {
-            let rebuilt_content_string = self.current_file_rebuilt_lines.join("");
-
-            match Self::read_file_content_as_string(&current_context_path) {
-                Ok(original_content_string) => {
-                    if rebuilt_content_string != original_content_string {
-                        self.modified_files_content.insert(current_context_path, self.current_file_rebuilt_lines.clone());
-                    }
-                },
-                Err(e) => {
-                    eprintln!("Error reading original file {}: {}", current_context_path.display(), e);
-                    // If we can't read the original, we can't compare. For now, we'll skip writing if original can't be read.
-                }
-            }
-        }
+    fn post_visit_context(&mut self, _context: &Context) {
+        self.current_file_path_stack.pop();
     }
 
     fn visit_line(&mut self, line: &Line) {
-        if let Some(current_context_path) = self.context_path_stack.last() {
-            let original_line_with_eol = format!("{}{}", line.text, line.eol);
-            let processed_result = self.line_processor.process_line(line, current_context_path);
+        let current_file_path = self
+            .current_file_path_stack
+            .last()
+            .expect("current_file_path_stack should not be empty when visiting a line");
 
-            match processed_result {
-                Some(new_content) => {
-                    // Ensure new_content has an EOL if it's not empty
-                    if !new_content.is_empty() && !new_content.ends_with('\n') && !new_content.ends_with('\r') {
-                        self.current_file_rebuilt_lines.push(format!("{}\n", new_content));
-                    } else {
-                        self.current_file_rebuilt_lines.push(new_content);
-                    }
-                },
-                None => {
-                    // If None, keep the original line
-                    self.current_file_rebuilt_lines.push(original_line_with_eol);
+        let processed_content = self.line_processor.process_line(line, current_file_path);
+
+        let entry = self
+            .modified_files_content
+            .get_mut(current_file_path)
+            .expect("File content vector should exist");
+
+        match processed_content {
+            Some(mut new_content) => {
+                if !new_content.ends_with("\n") {
+                    new_content.push_str("\n");
                 }
+                entry.push(new_content);
+                self.modified_files_set.insert(current_file_path.clone());
             }
-        } else {
-            eprintln!("Warning: visit_line called without a current context path on stack.");
+            None => {
+                entry.push(line.text.clone());
+            }
         }
     }
 }

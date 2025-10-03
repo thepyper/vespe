@@ -21,10 +21,10 @@ pub struct AnchorData {
 #[derive(Debug, PartialEq)]
 pub enum LineKind {
     Text,
-    Include { context: Context, parameters: Parameters, arguments: Option<String> },
-    Inline { snippet: Snippet, parameters: Parameters, arguments: Option<String> },
+    Include { context: Context, parameters: Parameters },
+    Inline { snippet: Snippet, parameters: Parameters },
     Answer { parameters: Parameters },
-    Summary { context: Context, parameters: Parameters, arguments: Option<String> },
+    Summary { context: Context, parameters: Parameters },
 }
 
 #[derive(Debug, PartialEq)]

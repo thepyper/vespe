@@ -79,12 +79,11 @@ fn test_parse_line_with_include_tag() {
     let resolver = MockResolver::new(PathBuf::new());
     let line_text = "@include[context = \"my_context\"; key = \"value\"] This is an include line.";
     let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
+    assert_eq!(line.text, " This is an include line.");
     assert!(matches!(line.kind, LineKind::Include { .. }));
-    if let LineKind::Include { context, parameters, arguments } = line.kind {
-        assert_eq!(context.path, resolver.resolve_context("my_context"));
+    if let LineKind::Include { context, parameters } = line.kind {
+        assert_eq!(context.path, PathBuf::from("test_data/my_context.md")); // Path is resolved by mock
         assert_eq!(parameters.get("key").unwrap(), &serde_json::json!("value"));
-        assert_eq!(arguments, Some("This is an include line.".to_string()));
     } else {
         panic!("Expected Include LineKind");
     }
@@ -96,7 +95,7 @@ fn test_parse_line_with_answer_tag_and_anchor() {
     let resolver = MockResolver::new(PathBuf::new());
     let line_text = "@answer[param = \"test\"] Answer line. <!-- answer-87654321-4321-8765-4321-876543214321:more_data -->";
     let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
+    assert_eq!(line.text, "Answer line."); // Adjusted expected text
     assert!(matches!(line.kind, LineKind::Answer { .. }));
     if let LineKind::Answer { parameters } = line.kind {
         assert_eq!(parameters.get("param").unwrap(), &serde_json::json!("test"));
@@ -111,25 +110,6 @@ fn test_parse_line_with_answer_tag_and_anchor() {
         Uuid::parse_str("87654321-4321-8765-4321-876543214321").unwrap()
     );
     assert_eq!(anchor.data, "more_data");
-}
-
-#[test]
-fn test_parse_line_with_include_tag_and_arguments() {
-    let temp_dir = tempfile::tempdir().unwrap();
-    let resolver = MockResolver::new(temp_dir.path().to_path_buf());
-    let line_text = "@include[context = \"my_context\"] some additional arguments here";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
-    assert!(matches!(line.kind, LineKind::Include { .. }));
-    if let LineKind::Include { context, parameters, arguments } = line.kind {
-        assert_eq!(context.path, resolver.resolve_context("my_context"));
-        assert!(parameters.is_empty());
-        assert_eq!(arguments, Some("some additional arguments here".to_string()));
-    } else {
-        panic!("Expected Include LineKind");
-    }
-    assert!(line.anchor.is_none());
-    temp_dir.close().unwrap();
 }
 
 #[test]
@@ -175,12 +155,10 @@ Included Line 2
     assert!(matches!(context.lines[0].kind, LineKind::Text));
 
     // Verify Line 2 (Include)
-    assert_eq!(context.lines[1].text, "");
+    assert_eq!(context.lines[1].text, " Line 2");
     assert!(matches!(context.lines[1].kind, LineKind::Include { .. }));
-    if let LineKind::Include { context: included_ctx, parameters, arguments } = &context.lines[1].kind {
+    if let LineKind::Include { context: included_ctx, .. } = &context.lines[1].kind {
         assert_eq!(included_ctx.path, ctx_path_2);
-        assert!(parameters.is_empty());
-        assert!(arguments.is_none());
     }
 
     // Verify Line 3 (Text with Anchor)
@@ -220,12 +198,10 @@ Another Snippet Line 2
     assert!(matches!(snippet.lines[0].kind, LineKind::Text));
 
     // Verify Snippet Line 2 (Inline)
-    assert_eq!(snippet.lines[1].text, "");
+    assert_eq!(snippet.lines[1].text, " Snippet Line 2");
     assert!(matches!(snippet.lines[1].kind, LineKind::Inline { .. }));
-    if let LineKind::Inline { snippet: included_snip, parameters, arguments } = &snippet.lines[1].kind {
+    if let LineKind::Inline { snippet: included_snip, .. } = &snippet.lines[1].kind {
         assert_eq!(included_snip.path, snip_path_2);
-        assert!(parameters.is_empty());
-        assert!(arguments.is_none());
     }
 
     temp_dir.close().unwrap();

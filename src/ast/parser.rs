@@ -1,17 +1,18 @@
 use std::collections::HashMap;
 use anyhow::Result;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use regex::Regex;
 use std::fs;
 use std::io::{self, BufRead};
 use serde_json::Value;
 use uuid::Uuid;
 
-use super::types::{AnchorData, AnchorKind, Context, Line, LineKind, Parameters, Snippet};
+use super::types::{AnchorData, AnchorDataValue, AnchorKind, Context, Line, LineKind, Parameters, Snippet};
 use super::resolver::Resolver;
 
 /// Parses a file into a vector of `Line`s.
 fn parse_file_to_lines<R: Resolver>(path: &Path, resolver: &R) -> Result<Vec<Line>> {
+    dbg!(&path);
     let file = fs::File::open(path)?;
     let reader = io::BufReader::new(file);
     let mut lines = Vec::new();
@@ -25,33 +26,26 @@ fn parse_file_to_lines<R: Resolver>(path: &Path, resolver: &R) -> Result<Vec<Lin
 }
 
 /// Parses a context file from the given path string.
-pub fn parse_context<R: Resolver>(path_str: &str, resolver: &R) -> Result<Context> {
-    let path = PathBuf::from(path_str);
-    let lines = parse_file_to_lines(&path, resolver)?;
-    Ok(Context { path, lines })
+pub fn parse_context<R: Resolver>(path: &Path, resolver: &R) -> Result<Context> {
+    let lines = parse_file_to_lines(path, resolver)?;
+    Ok(Context { path: path.to_path_buf(), lines })
 }
 
 /// Parses a snippet file from the given path string.
-pub fn parse_snippet<R: Resolver>(path_str: &str, resolver: &R) -> Result<Snippet> {
-    let path = PathBuf::from(path_str);
-    let lines = parse_file_to_lines(&path, resolver)?;
-    Ok(Snippet { path, lines })
+pub fn parse_snippet<R: Resolver>(path: &Path, resolver: &R) -> Result<Snippet> {
+    let lines = parse_file_to_lines(path, resolver)?;
+    Ok(Snippet { path: path.to_path_buf(), lines })
 }
 
 /// Parses a single line of text into a `Line` struct.
 pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow::Error> {
-    let mut line_kind = LineKind::Text;
-    let mut current_line_text = text.to_string();
-    let mut anchor_data: Option<AnchorData> = None;
+    let (text_without_anchor, anchor_data) = if let Some((anchor, text_before_anchor)) = parse_anchor(text) {
+        (text_before_anchor, Some(anchor))
+    } else {
+        (text.to_string(), None)
+    };
 
-    // Parse anchor
-    if let Some((anchor, remaining_text)) = parse_anchor(&current_line_text) {
-        anchor_data = Some(anchor);
-        current_line_text = remaining_text;
-    }
-
-    // Parse tag
-    if let Some((tag_name, params_str_opt, args_str_opt, remaining_text)) = parse_tag_and_content(&current_line_text) {
+    let (final_text, line_kind) = if let Some((tag_name, params_str_opt, args_str_opt, text_after_tag)) = parse_tag_and_content(&text_without_anchor) {
         let parameters = if let Some(params_str) = params_str_opt {
             parse_parameters(&params_str)?
         } else {
@@ -60,47 +54,49 @@ pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow:
 
         let new_line_kind = match tag_name.as_str() {
             "include" => {
-                let ctx_name = args_str_opt.unwrap_or_default(); // Use argument directly
+                let ctx_name = args_str_opt.unwrap_or_default();
                 let context_path = resolver.resolve_context(&ctx_name);
-                let context = parse_context(&context_path.to_string_lossy(), resolver)?;
+                let context = parse_context(&context_path, resolver)?;
                 LineKind::Include { context, parameters }
             },
             "inline" => {
-                let snippet_name = args_str_opt.unwrap_or_default(); // Use argument directly
+                let snippet_name = args_str_opt.unwrap_or_default();
                 let snippet_path = resolver.resolve_snippet(&snippet_name);
-                let snippet = parse_snippet(&snippet_path.to_string_lossy(), resolver)?;
+                let snippet = parse_snippet(&snippet_path, resolver)?;
                 LineKind::Inline { snippet, parameters }
             },
             "answer" => LineKind::Answer { parameters },
             "summary" => {
-                let ctx_name = args_str_opt.unwrap_or_default(); // Use argument directly
+                let ctx_name = args_str_opt.unwrap_or_default();
                 let context_path = resolver.resolve_context(&ctx_name);
-                let context = parse_context(&context_path.to_string_lossy(), resolver)?;
+                let context = parse_context(&context_path, resolver)?;
                 LineKind::Summary { context, parameters }
             },
-            _ => LineKind::Text, // Unknown tag, treat as text
+            _ => LineKind::Text,
         };
 
         if !matches!(new_line_kind, LineKind::Text) {
-            line_kind = new_line_kind;
-            current_line_text = remaining_text; // Use the remaining text from tag parsing
+            (text_after_tag, new_line_kind)
+        } else {
+            (text_without_anchor.clone(), LineKind::Text)
         }
-    }
+    } else {
+        (text_without_anchor.clone(), LineKind::Text)
+    };
 
     Ok(Line {
         kind: line_kind,
-        text: current_line_text.trim().to_string(), // Final trim
+        text: final_text.trim().to_string(),
         anchor: anchor_data,
     })
 }
 
-/// Parses an anchor from the end of a line.
 fn parse_anchor(line_text: &str) -> Option<(AnchorData, String)> {
-    let anchor_regex = Regex::new(r"<!-- (inline|answer)-([0-9a-fA-F-]+):(.*?) -->$").unwrap();
+    let anchor_regex = Regex::new(r"<!-- (inline|answer)-([0-9a-fA-F-]+)(?::(.*?))? -->$").unwrap();
     if let Some(captures) = anchor_regex.captures(line_text) {
         let kind_str = captures.get(1).unwrap().as_str();
         let uid_str = captures.get(2).unwrap().as_str();
-        let data_str = captures.get(3).unwrap().as_str();
+        let data_str_opt = captures.get(3).map(|m| m.as_str());
 
         let kind = match kind_str {
             "inline" => AnchorKind::Inline,
@@ -109,13 +105,19 @@ fn parse_anchor(line_text: &str) -> Option<(AnchorData, String)> {
         };
         let uid = Uuid::parse_str(uid_str).unwrap(); // Handle error properly in real code
 
+        let data = data_str_opt.map(|s| match s {
+            "begin" => AnchorDataValue::Begin,
+            "end" => AnchorDataValue::End,
+            _ => AnchorDataValue::Custom(s.to_string()),
+        });
+
         let anchor_data = AnchorData {
             kind,
             uid,
-            data: data_str.to_string(),
+            data,
         };
 
-        let remaining_text = anchor_regex.replace(line_text, "").trim().to_string();
+        let remaining_text = line_text[..captures.get(0).unwrap().start()].trim_end().to_string();
         Some((anchor_data, remaining_text))
     } else {
         None

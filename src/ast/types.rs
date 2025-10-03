@@ -14,10 +14,27 @@ pub enum AnchorKind {
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
+pub enum AnchorDataValue {
+    Begin,
+    End,
+    Custom(String), // For cases where zzz is not "begin" or "end"
+}
+
+impl fmt::Display for AnchorDataValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AnchorDataValue::Begin => write!(f, "begin"),
+            AnchorDataValue::End => write!(f, "end"),
+            AnchorDataValue::Custom(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct AnchorData {
     pub kind: AnchorKind,
     pub uid: Uuid,
-    pub data: String,
+    pub data: Option<AnchorDataValue>,
 }
 
 impl fmt::Display for AnchorKind {
@@ -31,7 +48,11 @@ impl fmt::Display for AnchorKind {
 
 impl fmt::Display for AnchorData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<!-- {}-{}:{} -->", self.kind, self.uid, self.data)
+        let data_str = match &self.data {
+            Some(val) => format!(":{}", val),
+            None => String::new(),
+        };
+        write!(f, "<!-- {}-{}{} -->", self.kind, self.uid, data_str)
     }
 }
 

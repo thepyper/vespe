@@ -56,7 +56,7 @@ fn test_parse_line_with_valid_anchor() {
     let resolver = MockResolver::new(PathBuf::new());
     let line_text = "Text with an anchor. <!-- inline-12345678-1234-5678-1234-567812345678:some_data -->";
     let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "Text with an anchor."); // Adjusted expected text
+    assert_eq!(line.text, "Text with an anchor.");
     assert!(matches!(line.kind, LineKind::Text));
     assert!(line.anchor.is_some());
     let anchor = line.anchor.unwrap();
@@ -65,7 +65,58 @@ fn test_parse_line_with_valid_anchor() {
         anchor.uid,
         Uuid::parse_str("12345678-1234-5678-1234-567812345678").unwrap()
     );
-    assert_eq!(anchor.data, "some_data");
+    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Custom("some_data".to_string())));
+}
+
+#[test]
+fn test_parse_line_with_anchor_no_data() {
+    let resolver = MockResolver::new(PathBuf::new());
+    let line_text = "Text with an anchor, no data. <!-- answer-11111111-1111-1111-1111-111111111111 -->";
+    let line = parse_line(line_text, &resolver).unwrap();
+    assert_eq!(line.text, "Text with an anchor, no data.");
+    assert!(matches!(line.kind, LineKind::Text));
+    assert!(line.anchor.is_some());
+    let anchor = line.anchor.unwrap();
+    assert!(matches!(anchor.kind, AnchorKind::Answer));
+    assert_eq!(
+        anchor.uid,
+        Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap()
+    );
+    assert!(anchor.data.is_none());
+}
+
+#[test]
+fn test_parse_line_with_anchor_begin_data() {
+    let resolver = MockResolver::new(PathBuf::new());
+    let line_text = "Text with an anchor, begin data. <!-- inline-22222222-2222-2222-2222-222222222222:begin -->";
+    let line = parse_line(line_text, &resolver).unwrap();
+    assert_eq!(line.text, "Text with an anchor, begin data.");
+    assert!(matches!(line.kind, LineKind::Text));
+    assert!(line.anchor.is_some());
+    let anchor = line.anchor.unwrap();
+    assert!(matches!(anchor.kind, AnchorKind::Inline));
+    assert_eq!(
+        anchor.uid,
+        Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap()
+    );
+    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Begin));
+}
+
+#[test]
+fn test_parse_line_with_anchor_end_data() {
+    let resolver = MockResolver::new(PathBuf::new());
+    let line_text = "Text with an anchor, end data. <!-- inline-33333333-3333-3333-3333-333333333333:end -->";
+    let line = parse_line(line_text, &resolver).unwrap();
+    assert_eq!(line.text, "Text with an anchor, end data.");
+    assert!(matches!(line.kind, LineKind::Text));
+    assert!(line.anchor.is_some());
+    let anchor = line.anchor.unwrap();
+    assert!(matches!(anchor.kind, AnchorKind::Inline));
+    assert_eq!(
+        anchor.uid,
+        Uuid::parse_str("33333333-3333-3333-3333-333333333333").unwrap()
+    );
+    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::End));
 }
 
 #[test]
@@ -99,7 +150,7 @@ fn test_parse_line_with_answer_tag_and_anchor() {
     let resolver = MockResolver::new(PathBuf::new());
     let line_text = "@answer[param = \"test\"] Answer line. <!-- answer-87654321-4321-8765-4321-876543214321:more_data -->";
     let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "Answer line."); // The argument 'Answer line.' is now part of the tag's consumed content
+    assert_eq!(line.text, "");
     assert!(matches!(line.kind, LineKind::Answer { .. }));
     if let LineKind::Answer { parameters } = line.kind {
         assert_eq!(parameters.get("param").unwrap(), &serde_json::json!("test"));
@@ -113,7 +164,7 @@ fn test_parse_line_with_answer_tag_and_anchor() {
         anchor.uid,
         Uuid::parse_str("87654321-4321-8765-4321-876543214321").unwrap()
     );
-    assert_eq!(anchor.data, "more_data");
+    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Custom("more_data".to_string())));
 }
 
 #[test]
@@ -244,7 +295,7 @@ Included Line 2
     create_temp_file(&ctx_path_1, content_1);
     create_temp_file(&ctx_path_2, content_2);
 
-    let context = parse_context(ctx_path_1.to_str().unwrap(), &resolver).unwrap();
+    let context = parse_context(&ctx_path_1, &resolver).unwrap();
     assert_eq!(context.path, ctx_path_1);
     assert_eq!(context.lines.len(), 3);
 
@@ -266,7 +317,7 @@ Included Line 2
     assert!(context.lines[2].anchor.is_some());
     let anchor = context.lines[2].anchor.as_ref().unwrap();
     assert!(matches!(anchor.kind, AnchorKind::Inline));
-    assert_eq!(anchor.data, "data");
+    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Custom("data".to_string())));
 
     temp_dir.close().unwrap();
 }
@@ -288,7 +339,7 @@ Another Snippet Line 2
     create_temp_file(&snip_path_1, content_1);
     create_temp_file(&snip_path_2, content_2);
 
-    let snippet = parse_snippet(snip_path_1.to_str().unwrap(), &resolver).unwrap();
+    let snippet = parse_snippet(&snip_path_1, &resolver).unwrap();
     assert_eq!(snippet.path, snip_path_1);
     assert_eq!(snippet.lines.len(), 2);
 

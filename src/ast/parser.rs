@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use regex::Regex;
@@ -44,11 +43,11 @@ pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow:
     let tag_regex = Regex::new(r"^@([a-zA-Z]+)\[(.*?)\]")?;
 
     let mut line_kind = LineKind::Text;
-    let mut current_line_text = text.to_string(); // Use a temporary variable for modifications
+    let mut line_text = text.to_string();
     let mut anchor_data: Option<AnchorData> = None;
 
     // Parse anchor
-    if let Some(captures) = anchor_regex.captures(&current_line_text) {
+    if let Some(captures) = anchor_regex.captures(&line_text) {
         let kind_str = captures.get(1).unwrap().as_str();
         let uid_str = captures.get(2).unwrap().as_str();
         let data_str = captures.get(3).unwrap().as_str();
@@ -66,53 +65,50 @@ pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow:
             data: data_str.to_string(),
         });
 
-        // Remove anchor from current_line_text
-        current_line_text = anchor_regex.replace(&current_line_text, "").to_string();
+        // Remove anchor from line_text
+        line_text = anchor_regex.replace(&line_text, "").to_string();
     }
 
-    // Trim after anchor removal, before tag parsing
-    current_line_text = current_line_text.trim().to_string();
-
     // Parse tag
-    if let Some(captures) = tag_regex.captures(&current_line_text) {
+    if let Some(captures) = tag_regex.captures(&line_text) {
         let tag_name = captures.get(1).unwrap().as_str();
         let params_str = captures.get(2).unwrap().as_str();
 
         let parameters = parse_parameters(params_str)?;
 
-        let new_line_kind = match tag_name { // Use a temporary variable for the new LineKind
+        line_kind = match tag_name {
             "include" => {
+                // Placeholder for actual context resolution
                 let ctx_name = parameters.get("context").and_then(|v| v.as_str()).unwrap_or_default();
                 let context_path = resolver.resolve_context(ctx_name);
-                let context = parse_context(&context_path.to_string_lossy(), resolver)?;
+                let context = parse_context(&context_path.to_string_lossy(), resolver)?; // Recursive call
                 LineKind::Include { context, parameters }
             },
             "inline" => {
+                // Placeholder for actual snippet resolution
                 let snippet_name = parameters.get("snippet").and_then(|v| v.as_str()).unwrap_or_default();
                 let snippet_path = resolver.resolve_snippet(snippet_name);
-                let snippet = parse_snippet(&snippet_path.to_string_lossy(), resolver)?;
+                let snippet = parse_snippet(&snippet_path.to_string_lossy(), resolver)?; // Recursive call
                 LineKind::Inline { snippet, parameters }
             },
             "answer" => LineKind::Answer { parameters },
             "summary" => {
+                // Placeholder for actual context resolution
                 let ctx_name = parameters.get("context").and_then(|v| v.as_str()).unwrap_or_default();
                 let context_path = resolver.resolve_context(ctx_name);
-                let context = parse_context(&context_path.to_string_lossy(), resolver)?;
+                let context = parse_context(&context_path.to_string_lossy(), resolver)?; // Recursive call
                 LineKind::Summary { context, parameters }
             },
             _ => LineKind::Text, // Unknown tag, treat as text
         };
 
-        // Only update line_kind and remove tag if it was a recognized tag
-        if !matches!(new_line_kind, LineKind::Text) {
-            line_kind = new_line_kind;
-            current_line_text = tag_regex.replace(&current_line_text, "").to_string();
-        }
+        // Remove tag from line_text
+        line_text = tag_regex.replace(&line_text, "").to_string();
     }
 
     Ok(Line {
         kind: line_kind,
-        text: current_line_text.trim().to_string(), // Final trim
+        text: line_text.trim().to_string(),
         anchor: anchor_data,
     })
 }

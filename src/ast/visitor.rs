@@ -26,7 +26,7 @@ pub trait Visitor {
 
 /// Walks a `Context` node and its children, calling the appropriate
 /// methods on the provided `Visitor`.
-pub fn walk_context_sync(context: &mut Context, visitor: &mut dyn Visitor) -> Result<()> {
+pub fn walk_context(context: &mut Context, visitor: &mut dyn Visitor) -> Result<()> {
     visitor.pre_visit_context(context)?;
     for line in &mut context.lines {
         walk_line(line, visitor)?;

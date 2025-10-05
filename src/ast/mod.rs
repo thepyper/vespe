@@ -12,7 +12,9 @@ pub mod parser;
 #[cfg(test)]
 pub mod test;
 pub mod visitor;
+pub mod line_processor;
 
 pub use types::{AnchorData, AnchorKind, Context, Line, LineKind, Parameters, Snippet};
 pub use resolver::Resolver;
 pub use parser::{parse_context, parse_snippet, parse_line};
+pub use line_processor::{LineTransformer, LineModifyingVisitor};

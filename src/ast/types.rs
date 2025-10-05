@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 pub type Parameters = HashMap<String, Value>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum AnchorKind {
     Inline,
     Answer,
@@ -13,7 +13,7 @@ pub enum AnchorKind {
 
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum AnchorDataValue {
     Begin,
     End,
@@ -30,7 +30,7 @@ impl fmt::Display for AnchorDataValue {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct AnchorData {
     pub kind: AnchorKind,
     pub uid: Uuid,
@@ -56,7 +56,7 @@ impl fmt::Display for AnchorData {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum LineKind {
     Text,
     Include { context: Context, parameters: Parameters },
@@ -65,21 +65,21 @@ pub enum LineKind {
     Summary { context: Context, parameters: Parameters },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Line {
     pub kind: LineKind,
     pub text: String,
     pub anchor: Option<AnchorData>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Context {
     pub path: PathBuf,
-    pub lines: Vec<Line>,
+    pub(crate) lines: Vec<Line>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Snippet {
     pub path: PathBuf,
-    pub lines: Vec<Line>,
+    pub(crate) lines: Vec<Line>,
 }

@@ -263,5 +263,47 @@ Does this reasoning make sense, and are you comfortable proceeding with this app
 
 prova, vediamo come viene.
 
+Okay, I will proceed with the refined plan.
+
+First, I'll modify `src/ast/types.rs` to make the `lines` field in `Context` and `Snippet` structs mutable and ensure `Line` derives `Clone`.
+
+Okay, I need to fix the `Clone` trait errors. I will modify `src/ast/types.rs` to derive `Clone` for `LineKind`, `AnchorData`, `AnchorKind`, and `AnchorDataValue`.
+
+First, I'll read the file again to ensure I have the latest content.Okay, I will fix the `Clone` errors for `Context` and `Snippet` and then address the unused import warnings.
+
+First, I'll modify `src/ast/types.rs` to add `#[derive(Clone)]` to `Context` and `Snippet`.Okay, all compilation errors are gone. Now to clean up the warnings by removing unused imports.
+
+First, I'll fix `src/ast/visitor.rs`.I apologize for the oversight. I've introduced new errors by incorrectly modifying `src/ast/line_processor.rs`. I need to re-add the necessary imports for `PathBuf` and `HashSet`.
+
+I will correct `src/ast/line_processor.rs` now.Excellent! All compilation errors and warnings are now resolved. The AST modification and the new `LineModifyingVisitor` are successfully implemented.
+
+I have successfully implemented the `LineModifyingVisitor` and updated the `Visitor` trait in `src/ast/visitor.rs` to be more generic.
+
+Do you have any further instructions or would you like me to proceed with another task?
+
+----
+
+Ora usiamo questo LineProcessor per la gestione dei tag @inline.
+Implementiamo in src/visitors/inline_visitors.rs.
+
+Il compito e' il seguente: un primo visitor, InlineDecorator, riceve una AST, e visitandola esegue il compito seguente:
+- se trova un @inline privo di Anchor <!-- inline-uuid:begin -->:
+    - deve aggiungerla, creando una uuid, e aggiungere alla linea subito seguente una anchor <!-- inline-uuid:end -->; 
+    praticamente sostituisce la riga non decorata con le due righe decorate di ancore
+
+Poi un secondo visitor, InlineCompleter, riceve una AST, e visitangola esegue il seguente compito:
+- se trova un @inline con Anchor <!-- inline-uuid:begin -->, entra in modalita' di completamento;
+    - tutte le righe successive fino alla anchor <!-- inline-uuid:end --> vengono cancellate;
+    - la riga con la anchor <!-- inline-uuid:end --> viene sostituita con lo snippet richiesto dall'inline, e poi rimessa;
+    praticamente cancella quello che c'e' tra le due ancore e lo sostituisce nuovamente con lo snippet (che potrebbe essere
+    cambiato nel mentre). 
+Questa sostituzione attualmente e' incondizionata, ma prevediamo un punto facile (una if) per renderla condizionata,
+potrebbe essere necessario rifare inline di alcuni snippet ed altri no.
+
+Chiaro?
+Dubbi?
+
 @answer
 
+
+   

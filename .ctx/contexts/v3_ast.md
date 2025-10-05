@@ -199,3 +199,12 @@ I will start by updating `Cargo.toml`.
 The project compiled successfully. The parser is implemented.
 
 Do you want me to write unit tests for the parser, or is there anything else you'd like me to do?
+
+Puoi aggiungere la funzione parse_document(str) che divide document in righe e ritorna un Vec<Line> (o errore)?
+parse_line funzione privata.
+
+Okay, I will add the `parse_document` function to `src/ast/parser.rs`. This function will take a document string, split it into individual lines, and use a private `parse_line` function to parse each line, returning a `Vec<Line>` or an error if any line fails to parse.
+
+Here's the plan:
+1.  Modify `src/ast/parser.rs` to add the `parse_document` function.
+2.  Ensure `parse_line` is a private helper function.

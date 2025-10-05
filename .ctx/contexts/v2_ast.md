@@ -470,7 +470,15 @@ Aggiungi al visito non async il return type Result<()>, gestisci errori in walk 
 
 Sistema errori di compilazione.
 
+********************************
+
+Ho cambiato il tipo Line, per avere Text(String) come unico tipo di riga che mantiene il text della linea.
+Le altre tipologie di linea sono ricostruibili a partire dal tipo di dato strutturato.
+
+Correggi il parsing, ed implementa Display per Line.
+
 @answer
+
 
 
 

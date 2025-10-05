@@ -15,17 +15,19 @@ use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AnchorDataValue {
+    None,
     Begin,
     End,
-    Custom(String), // For cases where zzz is not "begin" or "end"
+    //Custom(String), // For cases where zzz is not "begin" or "end"
 }
 
 impl fmt::Display for AnchorDataValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            AnchorDataValue::None => write!(f, ""),
             AnchorDataValue::Begin => write!(f, "begin"),
             AnchorDataValue::End => write!(f, "end"),
-            AnchorDataValue::Custom(s) => write!(f, "{}", s),
+            //AnchorDataValue::Custom(s) => write!(f, "{}", s),
         }
     }
 }
@@ -34,7 +36,7 @@ impl fmt::Display for AnchorDataValue {
 pub struct AnchorData {
     pub kind: AnchorKind,
     pub uid: Uuid,
-    pub data: Option<AnchorDataValue>,
+    pub data: AnchorDataValue, // Option<AnchorDataValue>,
 }
 
 impl fmt::Display for AnchorKind {
@@ -49,8 +51,8 @@ impl fmt::Display for AnchorKind {
 impl fmt::Display for AnchorData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let data_str = match &self.data {
-            Some(val) => format!(":{}", val),
-            None => String::new(),
+            AnchorDataValue::None => String::new(),
+            x => format!(":{}", val),            
         };
         write!(f, "<!-- {}-{}{} -->", self.kind, self.uid, data_str)
     }
@@ -58,7 +60,7 @@ impl fmt::Display for AnchorData {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum LineKind {
-    Text,
+    Text(String),
     Include { context: Context, parameters: Parameters },
     Inline { snippet: Snippet, parameters: Parameters },
     Answer { parameters: Parameters },
@@ -68,7 +70,7 @@ pub enum LineKind {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Line {
     pub kind: LineKind,
-    pub text: String,
+    //pub text: String,
     pub anchor: Option<AnchorData>,
 }
 

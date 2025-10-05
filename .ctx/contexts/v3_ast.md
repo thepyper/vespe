@@ -45,6 +45,9 @@ Se e' tagged, il formato e':
 @tag[parameters] arguments
 
 parameters e' un un elenco tipo    kkk0 = vvvv0;  kkk1 = vvv1;   con kkk0 stringa, vvvv0 stringa;
+trimming, quindi kkk0 = vvvv0 equivalente a kkk0=vvvv0
+keys identificatori (tipo variabile)
+vvvv0 valore stringa (numeri o lettere o underscore o +- e pochi altri caratteri; proibito =, proibito ;)
 
 parameters e' opzionale, in due modi possibili:
 
@@ -53,6 +56,8 @@ p
 @tag arguments
 
 arguments e' pure opzionale, ed e' un elenco di parole separate da spazi (tipo command-line)
+possibilita' di avere whitespaces in una parola se contornato tutto con "
+possibilita' di escaping delle " dentro le " con \", escaping simile a command line praticamente.
 
 struttura della linea:
 

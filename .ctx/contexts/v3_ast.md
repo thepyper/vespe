@@ -34,6 +34,8 @@ o
 
 In entrambi i casi, AnchorTag e' None.
 
+Anchor: case-sensitive; uuid: uuid v4;
+
 Ora parliamo del formato della riga prima della Anchor.
 
 Puo' essere una riga Tagger, oppure Text normale.
@@ -42,7 +44,7 @@ Se e' tagged, il formato e':
 
 @tag[parameters] arguments
 
-parameters e' un un elenco tipo    kkk0 = vvvv0;  kkk1 = vvv1;   con kkk0 stringa, vvvv0 json;
+parameters e' un un elenco tipo    kkk0 = vvvv0;  kkk1 = vvv1;   con kkk0 stringa, vvvv0 stringa;
 
 parameters e' opzionale, in due modi possibili:
 
@@ -64,6 +66,14 @@ enum LineKind
 {
     Text(String),
     Tagged{ tag: TagKind, parameters: HashMap<String, serde_json::Value>, arguments: Vec<String> },
+}
+
+enum TagKind
+{
+    Include,
+    Inline,
+    Answer,
+    Summary,
 }
 
 Prima di tutto fammi una analisi del formato, se e' chiaro, ben definito, ambiguo, migliorabile, e come.

@@ -39,7 +39,7 @@ pub fn parse_snippet<R: Resolver>(path: &Path, resolver: &R) -> Result<Snippet> 
 
 /// Parses a single line of text into a `Line` struct.
 pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow::Error> {
-    let (text_without_anchor, anchor_data) = if let Some((anchor, text_before_anchor)) = parse_anchor(text) {
+    let (text_without_anchor, anchor_data) = if let Some((anchor, text_before_anchor)) = parse_anchor(text)? {
         (text_before_anchor, Some(anchor))
     } else {
         (text.to_string(), None)
@@ -91,7 +91,7 @@ pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow:
     })
 }
 
-fn parse_anchor(line_text: &str) -> Option<(AnchorData, String)> {
+fn parse_anchor(line_text: &str) -> Result<Option<(AnchorData, String)>> {
     let anchor_regex = Regex::new(r"<!-- (inline|answer)-([0-9a-fA-F-]+)(?::(.*?))? -->$").unwrap();
     if let Some(captures) = anchor_regex.captures(line_text) {
         let kind_str = captures.get(1).unwrap().as_str();
@@ -105,12 +105,15 @@ fn parse_anchor(line_text: &str) -> Option<(AnchorData, String)> {
         };
         let uid = Uuid::parse_str(uid_str).unwrap(); // Handle error properly in real code
 
-        let data = data_str_opt.map(|s| match s {
-            "begin" => AnchorDataValue::Begin,
-            "end" => AnchorDataValue::End,
-            //_ => AnchorDataValue::Custom(s.to_string()),
-            _ => panic!("wrong anchor type, TODO better error handling") // TODO error no panic!
-        }).unwrap_or(AnchorDataValue::None);
+        let data: Option<AnchorDataValue> = if let Some(s) = data_str_opt {
+            match s {
+                "begin" => Some(AnchorDataValue::Begin),
+                "end" => Some(AnchorDataValue::End),
+                _ => return Err(anyhow::anyhow!("Unknown anchor data value: {}", s)),
+            }
+        } else {
+            None
+        };
 
         let anchor_data = AnchorData {
             kind,
@@ -119,9 +122,9 @@ fn parse_anchor(line_text: &str) -> Option<(AnchorData, String)> {
         };
 
         let remaining_text = line_text[..captures.get(0).unwrap().start()].trim_end().to_string();
-        Some((anchor_data, remaining_text))
+        Ok(Some((anchor_data, remaining_text)))
     } else {
-        None
+        Ok(None)
     }
 }
 

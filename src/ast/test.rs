@@ -59,17 +59,10 @@ fn test_parse_line_plain_text() {
 fn test_parse_line_with_valid_anchor() {
     let resolver = MockResolver::new(PathBuf::new());
     let line_text = "Text with an anchor. <!-- inline-12345678-1234-5678-1234-567812345678:some_data -->";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "Text with an anchor.");
-    assert!(matches!(line.kind, LineKind::Text));
-    assert!(line.anchor.is_some());
-    let anchor = line.anchor.unwrap();
-    assert!(matches!(anchor.kind, AnchorKind::Inline));
-    assert_eq!(
-        anchor.uid,
-        Uuid::parse_str("12345678-1234-5678-1234-567812345678").unwrap()
-    );
-    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Custom("some_data".to_string())));
+    let result = parse_line(line_text, &resolver);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("Unknown anchor data value: some_data"));
 }
 
 #[test]
@@ -135,40 +128,45 @@ fn test_parse_line_with_invalid_anchor_format() {
 
 #[test]
 fn test_parse_line_with_include_tag() {
-    let resolver = MockResolver::new(PathBuf::new());
-    let line_text = "@include[key = \"value\"] my_context_name This is an include line.";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "This is an include line.");
-    assert!(matches!(line.kind, LineKind::Include { .. }));
-    if let LineKind::Include { context, parameters } = line.kind {
-        assert_eq!(context.path, resolver.resolve_context("my_context_name")); // Path is resolved by mock
-        assert_eq!(parameters.get("key").unwrap(), &serde_json::json!("value"));
-    } else {
-        panic!("Expected Include LineKind");
-    }
-    assert!(line.anchor.is_none());
+    let temp_dir = tempfile::tempdir().unwrap();
+    let resolver = MockResolver::new(temp_dir.path().to_path_buf());
+    let ctx_path = temp_dir.path().join("test_data/my_context_name.md");
+    create_temp_file(&ctx_path, "Included content");
+
+    let line_text = "This is an include line."; // The text after the tag
+
+    // Manually construct the expected Context for the include tag
+    let included_context = super::types::Context {
+        path: resolver.resolve_context("my_context_name"),
+        lines: vec![super::types::Line { kind: LineKind::Text, text: "Included content".to_string(), anchor: None }], // Populated with content
+    };
+    let mut parameters = std::collections::HashMap::new();
+    parameters.insert("key".to_string(), serde_json::json!("value"));
+
+    let expected_line = super::types::Line {
+        kind: LineKind::Include {
+            context: included_context,
+            parameters,
+        },
+        text: line_text.to_string(),
+        anchor: None,
+    };
+
+    // Now, compare the manually constructed line with the one parsed by parse_line
+    let parsed_line = parse_line("@include[key = \"value\"] my_context_name This is an include line.", &resolver).unwrap();
+    assert_eq!(parsed_line, expected_line);
+
+    temp_dir.close().unwrap();
 }
 
 #[test]
 fn test_parse_line_with_answer_tag_and_anchor() {
     let resolver = MockResolver::new(PathBuf::new());
     let line_text = "@answer[param = \"test\"] Answer line. <!-- answer-87654321-4321-8765-4321-876543214321:more_data -->";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "Answer line.");
-    assert!(matches!(line.kind, LineKind::Answer { .. }));
-    if let LineKind::Answer { parameters } = line.kind {
-        assert_eq!(parameters.get("param").unwrap(), &serde_json::json!("test"));
-    } else {
-        panic!("Expected Answer LineKind");
-    }
-    assert!(line.anchor.is_some());
-    let anchor = line.anchor.unwrap();
-    assert!(matches!(anchor.kind, AnchorKind::Answer));
-    assert_eq!(
-        anchor.uid,
-        Uuid::parse_str("87654321-4321-8765-4321-876543214321").unwrap()
-    );
-    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Custom("more_data".to_string())));
+    let result = parse_line(line_text, &resolver);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("Unknown anchor data value: more_data"));
 }
 
 #[test]
@@ -183,50 +181,89 @@ fn test_parse_line_with_malformed_tag() {
 
 #[test]
 fn test_parse_line_with_include_tag_only_argument() {
-    let resolver = MockResolver::new(PathBuf::new());
-    let line_text = "@include my_context";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
-    assert!(matches!(line.kind, LineKind::Include { .. }));
-    if let LineKind::Include { context, parameters } = line.kind {
-        assert_eq!(context.path, resolver.resolve_context("my_context"));
-        assert!(parameters.is_empty());
-    } else {
-        panic!("Expected Include LineKind");
-    }
-    assert!(line.anchor.is_none());
+    let temp_dir = tempfile::tempdir().unwrap();
+    let resolver = MockResolver::new(temp_dir.path().to_path_buf());
+    let ctx_path = temp_dir.path().join("test_data/my_context.md");
+    create_temp_file(&ctx_path, "Included content for my_context");
+
+    // Manually construct the expected Context for the include tag
+    let included_context = super::types::Context {
+        path: resolver.resolve_context("my_context"),
+        lines: vec![super::types::Line { kind: LineKind::Text, text: "Included content for my_context".to_string(), anchor: None }],
+    };
+
+    let expected_line = super::types::Line {
+        kind: LineKind::Include {
+            context: included_context,
+            parameters: std::collections::HashMap::new(),
+        },
+        text: "".to_string(),
+        anchor: None,
+    };
+
+    // Now, compare the manually constructed line with the one parsed by parse_line
+    let parsed_line = parse_line("@include my_context", &resolver).unwrap();
+    assert_eq!(parsed_line, expected_line);
+
+    temp_dir.close().unwrap();
 }
 
 #[test]
 fn test_parse_line_with_inline_tag_only_argument() {
-    let resolver = MockResolver::new(PathBuf::new());
-    let line_text = "@inline my_snippet";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
-    assert!(matches!(line.kind, LineKind::Inline { .. }));
-    if let LineKind::Inline { snippet, parameters } = line.kind {
-        assert_eq!(snippet.path, resolver.resolve_snippet("my_snippet"));
-        assert!(parameters.is_empty());
-    } else {
-        panic!("Expected Inline LineKind");
-    }
-    assert!(line.anchor.is_none());
+    let temp_dir = tempfile::tempdir().unwrap();
+    let resolver = MockResolver::new(temp_dir.path().to_path_buf());
+    let snip_path = temp_dir.path().join("test_data/my_snippet.sn");
+    create_temp_file(&snip_path, "Snippet content for my_snippet");
+
+    // Manually construct the expected Snippet for the inline tag
+    let included_snippet = super::types::Snippet {
+        path: resolver.resolve_snippet("my_snippet"),
+        lines: vec![super::types::Line { kind: LineKind::Text, text: "Snippet content for my_snippet".to_string(), anchor: None }],
+    };
+
+    let expected_line = super::types::Line {
+        kind: LineKind::Inline {
+            snippet: included_snippet,
+            parameters: std::collections::HashMap::new(),
+        },
+        text: "".to_string(),
+        anchor: None,
+    };
+
+    // Now, compare the manually constructed line with the one parsed by parse_line
+    let parsed_line = parse_line("@inline my_snippet", &resolver).unwrap();
+    assert_eq!(parsed_line, expected_line);
+
+    temp_dir.close().unwrap();
 }
 
 #[test]
 fn test_parse_line_with_summary_tag_only_argument() {
-    let resolver = MockResolver::new(PathBuf::new());
-    let line_text = "@summary my_summary_context";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
-    assert!(matches!(line.kind, LineKind::Summary { .. }));
-    if let LineKind::Summary { context, parameters } = line.kind {
-        assert_eq!(context.path, resolver.resolve_context("my_summary_context"));
-        assert!(parameters.is_empty());
-    } else {
-        panic!("Expected Summary LineKind");
-    }
-    assert!(line.anchor.is_none());
+    let temp_dir = tempfile::tempdir().unwrap();
+    let resolver = MockResolver::new(temp_dir.path().to_path_buf());
+    let ctx_path = temp_dir.path().join("test_data/my_summary_context.md");
+    create_temp_file(&ctx_path, "Summarized content for my_summary_context");
+
+    // Manually construct the expected Context for the summary tag
+    let summarized_context = super::types::Context {
+        path: resolver.resolve_context("my_summary_context"),
+        lines: vec![super::types::Line { kind: LineKind::Text, text: "Summarized content for my_summary_context".to_string(), anchor: None }],
+    };
+
+    let expected_line = super::types::Line {
+        kind: LineKind::Summary {
+            context: summarized_context,
+            parameters: std::collections::HashMap::new(),
+        },
+        text: "".to_string(),
+        anchor: None,
+    };
+
+    // Now, compare the manually constructed line with the one parsed by parse_line
+    let parsed_line = parse_line("@summary my_summary_context", &resolver).unwrap();
+    assert_eq!(parsed_line, expected_line);
+
+    temp_dir.close().unwrap();
 }
 
 #[test]
@@ -261,18 +298,31 @@ fn test_parse_line_with_answer_tag_no_params_no_args() {
 
 #[test]
 fn test_parse_line_with_include_tag_no_params_no_args() {
-    let resolver = MockResolver::new(PathBuf::new());
-    let line_text = "@include";
-    let line = parse_line(line_text, &resolver).unwrap();
-    assert_eq!(line.text, "");
-    assert!(matches!(line.kind, LineKind::Include { .. }));
-    if let LineKind::Include { context, parameters } = line.kind {
-        assert_eq!(context.path, resolver.resolve_context("")); // Should resolve default/empty context
-        assert!(parameters.is_empty());
-    } else {
-        panic!("Expected Include LineKind");
-    }
-    assert!(line.anchor.is_none());
+    let temp_dir = tempfile::tempdir().unwrap();
+    let resolver = MockResolver::new(temp_dir.path().to_path_buf());
+    let ctx_path = temp_dir.path().join("test_data/.md"); // Default/empty context path
+    create_temp_file(&ctx_path, "Included content for default context");
+
+    // Manually construct the expected Context for the include tag
+    let included_context = super::types::Context {
+        path: resolver.resolve_context(""), // Should resolve default/empty context
+        lines: vec![super::types::Line { kind: LineKind::Text, text: "Included content for default context".to_string(), anchor: None }],
+    };
+
+    let expected_line = super::types::Line {
+        kind: LineKind::Include {
+            context: included_context,
+            parameters: std::collections::HashMap::new(),
+        },
+        text: "".to_string(),
+        anchor: None,
+    };
+
+    // Now, compare the manually constructed line with the one parsed by parse_line
+    let parsed_line = parse_line("@include", &resolver).unwrap();
+    assert_eq!(parsed_line, expected_line);
+
+    temp_dir.close().unwrap();
 }
 
 // Helper function to create a temporary file
@@ -291,7 +341,7 @@ fn test_parse_context() {
 
     let content_1 = r###"Line 1
 @include[key = "value"] test_ctx_2 Line 2
-Line 3 <!-- inline-12345678-1234-5678-1234-567812345678:data -->
+Line 3 <!-- inline-12345678-1234-5678-1234-567812345678:begin -->
 "###;
     let content_2 = r###"Included Line 1
 Included Line 2
@@ -322,7 +372,7 @@ Included Line 2
     assert!(context.lines[2].anchor.is_some());
     let anchor = context.lines[2].anchor.as_ref().unwrap();
     assert!(matches!(anchor.kind, AnchorKind::Inline));
-    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Custom("data".to_string())));
+    assert_eq!(anchor.data, Some(super::types::AnchorDataValue::Begin));
 
     temp_dir.close().unwrap();
 }

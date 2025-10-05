@@ -171,3 +171,31 @@ Usa il crate 'pest' per implementare il parsing.
 chiaro?
 se hai dubbi esponili.
 
+Okay, I understand the task. The format is well-defined, and your clarifications address the ambiguities I raised. I will proceed with implementing the parser in Rust using `pest`.
+
+Here's my plan:
+
+1.  **Update `Cargo.toml`**: Add `pest`, `pest_derive`, and `uuid` as dependencies.
+2.  **Create `src/ast/mod.rs`**: This will serve as the module entry point, exposing `types` and `parser`.
+3.  **Create `src/ast/types.rs`**: Define the Rust data structures (`AnchorKind`, `AnchorTag`, `Anchor`, `TagKind`, `LineKind`, `Line`) and implement the `Display` trait for them.
+4.  **Create `src/ast/ast.pest`**: Define the `pest` grammar for the AST format, incorporating all the specified rules and clarifications.
+5.  **Create `src/ast/parser.rs`**: Implement the parsing logic using `pest`, with small, focused functions for each parsing component (e.g., `parse_anchor`, `parse_parameters`).
+6.  **Integrate into `src/lib.rs`**: Add `mod ast;` to make the new module available.
+
+**Assumptions based on our discussion:**
+
+*   **UUID Validation:** I will use the `uuid` crate to ensure UUIDs are valid v4.
+*   **Parameter Value (`vvvv0`) Format:** I will treat parameter values as single-token strings (no spaces) composed of alphanumeric characters, underscores, plus, minus, and dot (`[a-zA-Z0-9_+\-.]+`). If spaces or more complex types are needed in the future, the grammar and parsing logic for `vvvv0` will need to be extended to include quoting.
+*   **Parameter Key (`kkk0`) Format:** Keys will follow Rust identifier rules: starting with a letter or underscore, followed by alphanumeric characters or underscores (`[a-zA-Z_][a-zA-Z0-9_]*`).
+*   **Whitespace Handling:**
+    *   Trailing whitespace after the anchor comment (`-->`) will be trimmed.
+    *   Whitespace around `=` and `;` in parameters will be ignored.
+    *   Leading whitespace on a line will be trimmed before checking for `@` to determine `Tagged` vs. `Text`.
+*   **Escaping in Arguments:** Only `\"` will be handled for escaping a double quote within a quoted argument.
+*   **Distinction between `Text` and `Tagged`:** A line (after trimming leading whitespace) starting with `@` will be parsed as `Tagged`; otherwise, it will be `Text`.
+
+I will start by updating `Cargo.toml`.
+
+The project compiled successfully. The parser is implemented.
+
+Do you want me to write unit tests for the parser, or is there anything else you'd like me to do?

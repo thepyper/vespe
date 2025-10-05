@@ -1,0 +1,41 @@
+WHITESPACE = _{ " " | "\t" }
+
+COMMENT_START = _{ "<!--" }
+COMMENT_END = _{ "-->" }
+
+// Anchor parsing
+anchor_kind = @{ "inline" | "answer" }
+anchor_tag = @{ "begin" | "end" }
+
+// UUID v4 format: 8-4-4-4-12 hex digits
+uuid_hex_digit = { ASCII_HEX_DIGIT }
+uuid = @{ uuid_hex_digit{8} ~ "-" ~ uuid_hex_digit{4} ~ "-" ~ uuid_hex_digit{4} ~ "-" ~ uuid_hex_digit{4} ~ "-" ~ uuid_hex_digit{12} }
+
+anchor_content = {
+    anchor_kind ~ "-" ~ uuid ~ (":" ~ anchor_tag)?
+}
+
+anchor_comment = { COMMENT_START ~ WHITESPACE* ~ anchor_content ~ WHITESPACE* ~ COMMENT_END }
+
+// Tagged line parsing
+tag_kind = @{ "include" | "inline" | "answer" | "summary" }
+
+key = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+value = @{ (ASCII_ALPHANUMERIC | "_" | "+" | "-" | ".")* }
+parameter = { key ~ "=" ~ value }
+parameters = { "[" ~ (parameter ~ (WHITESPACE* ~ ";" ~ WHITESPACE* ~ parameter)*)? ~ "]" }
+
+// Arguments parsing (command-line like)
+argument_char = { !("\"" | WHITESPACE) ~ ANY }
+quoted_argument_char = { !"\"" ~ ANY | "\"" ~ "\"" }
+argument = @{ (argument_char)+ | ("\"" ~ (quoted_argument_char)* ~ "\"") }
+arguments = { (argument ~ WHITESPACE+)* ~ argument? }
+
+tagged_line_content = { "@" ~ tag_kind ~ parameters? ~ (WHITESPACE+ ~ arguments)? }
+
+// Text line
+text_content = @{ (!anchor_comment ~ ANY)* }
+
+// Full line structure
+line = { SOI ~ (tagged_line_content | text_content) ~ WHITESPACE* ~ anchor_comment? ~ EOI }
+

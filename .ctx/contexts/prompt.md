@@ -648,10 +648,3 @@ The compiler warnings about unused code and the unconstructed `Summary` variant 
 
 Is there anything else you'd like me to do?
 
-
-
-Non sono molto d'accordo con l'implementazione in una funzione separata con regex, tradisce completamente la presenza di una AST ben fatta. Non sono nemmeno d'accordo con la rimozione di Summary, infatti poi lo hai lasciato in project.rs, rimettilo a posto.
-La implementazione di inline la immagino in execute_context, nel ciclo for iniziale che copia le righe; se li gestisci Inline, non funziona bene tutto?
-
-@answer
-

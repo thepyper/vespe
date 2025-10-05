@@ -108,8 +108,9 @@ fn parse_anchor(line_text: &str) -> Option<(AnchorData, String)> {
         let data = data_str_opt.map(|s| match s {
             "begin" => AnchorDataValue::Begin,
             "end" => AnchorDataValue::End,
-            _ => AnchorDataValue::Custom(s.to_string()),
-        });
+            //_ => AnchorDataValue::Custom(s.to_string()),
+            _ => panic!("wrong anchor type, TODO better error handling") // TODO error no panic!
+        }).unwrap_or(AnchorDataValue::None);
 
         let anchor_data = AnchorData {
             kind,

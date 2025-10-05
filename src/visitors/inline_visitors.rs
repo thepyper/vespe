@@ -5,6 +5,30 @@ use uuid::Uuid;
 use crate::ast::line_processor::LineTransformer;
 use crate::ast::types::{AnchorData, AnchorDataValue, AnchorKind, Context, Line, LineKind, Parameters, Snippet};
 
+struct InlineBeginDecorator;
+
+impl LineTransformer for InlineBeginDecorator {
+	fn transform_context_line(&self, line: &Line, current_context_path: &PathBuf) -> Option<Vec<Line>> {
+		
+		if let LineKind::Inline { .. } = &line.kind {
+			// Inline line, check if anchor is there
+			if let Some(anchor) = &line.anchor {
+				// There is an anchor, check if it has type Begin   
+				match &line.anchor.data {
+					AnchorDataValue::Begin => return None,
+					_ => {}
+				}
+			}
+			// Anything wrong gets changed to a new Begin anchor 
+						
+		}
+		
+		// Not an inline line, do not modify
+		None 
+    }
+}
+
+/*
 /// A trait for loading snippet content.
 /// This allows the InlineCompleter to be independent of how snippets are stored or retrieved.
 pub trait SnippetLoader {
@@ -26,6 +50,7 @@ impl LineTransformer for InlineDecorator {
 
 impl InlineDecorator {
     fn transform_line(&self, line: &Line) -> Option<Vec<Line>> {
+
         if let LineKind::Inline { snippet, parameters: _ } = &line.kind {
             // Check if an InlineBegin anchor already exists
             let has_begin_anchor = line.anchor.as_ref().map_or(false, |anchor| {
@@ -133,3 +158,4 @@ impl<'a> InlineCompleter<'a> {
         None // No change
     }
 }
+*/

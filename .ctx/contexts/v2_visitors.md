@@ -367,7 +367,7 @@ Does this detailed plan make sense to you? Are there any adjustments you'd like 
 
 Non capisco la necessita' di regex, tieni conto che la AST passata e' gia' parsed, e quindi gia' tutto strutturato.
 Non c'e' da fare altro parsing di sorta, sbaglio?
-
+    
 You are absolutely correct to point that out! My apologies for the unnecessary inclusion of `regex` in the plan. You are right; the AST is already parsed, and we should be working with the structured `Line` and `AnchorData` types, not raw strings. This simplifies things significantly.
 
 My previous thought process was to parse the raw line text to identify `@inline` directives and anchors, but that's redundant given the AST structure.

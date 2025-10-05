@@ -146,3 +146,116 @@ Tutto ok procedi.
 I have successfully implemented the `LineModifyingVisitor` and updated the `Visitor` trait in `src/ast/visitor.rs` to be more generic.
 
 Do you have any further instructions or would you like me to proceed with another task?
+
+
+************
+LineModifyingVisitor non mi soddisfa molto.
+Vorrei implementassi un LineProcessor in src/ast/line_processor.rs, una struttura che riceve un Context, lo percorre (ricorsivamente come il Visitor), e chiama su ogni linea del context (e degli snippet, con due metodi differenziati) una funzione che possa ritornare Option<Vec<Line>>; se e' None, nessuna modifica; se e' Some(x), sostituisce la linea passata con le linee ritornate, MODIFICANDO LA AST, non i files. Alla fine dovrebbe anche tenere una traccia dei Context e degli Snippet modificati nella AST, per permettere di riscrivere selettivamente i files modificati.
+
+Chiaro?
+Fattibile?
+
+You've highlighted a crucial distinction, and you're absolutely right. My previous approach with `LineModifyingVisitor` was still focused on rebuilding file content, not directly modifying the AST as you requested.
+
+The goal is to modify the AST in-place, specifically the `lines` vectors within `Context` and `Snippet` structs. This requires a different approach to the `Visitor` trait, as directly replacing lines within a `Vec` while iterating over it (as `visit_line` would imply) is problematic.
+
+Here's my revised plan, which I believe aligns perfectly with your requirements and Rust's idiomatic practices for AST transformations:
+
+**Plan:**
+
+1.  **Modify `src/ast/types.rs`:**
+    *   Make the `lines` field in both `Context` and `Snippet` structs `pub(crate)` (or `pub` if necessary for external usage, but `pub(crate)` is generally preferred for internal module access).
+    *   Ensure the `Line` struct derives `Clone`, as we'll be cloning lines when no modification occurs or when replacing them.
+
+2.  **Modify `src/ast/visitor.rs`:**
+    *   **Update the `Visitor` trait:**
+        *   Change existing methods (`pre_visit_context`, `post_visit_context`, `pre_visit_snippet`, `post_visit_snippet`) to accept `&mut Context` and `&mut Snippet` respectively. This allows visitors to modify the AST nodes themselves.
+        *   **Remove `visit_line` and `visit_snippet_line` methods.** These are not suitable for in-place line replacement.
+        *   **Add new methods:**
+            *   `fn visit_context_lines(&mut self, context: &mut Context)`: This method will be called for each `Context` node. It will be responsible for iterating over `context.lines` and applying transformations.
+            *   `fn visit_snippet_lines(&mut self, snippet: &mut Snippet)`: Similar for `Snippet` nodes.
+    *   **Update `walk_context` and `walk_snippet` functions:**
+        *   These functions will now accept `&mut Context` and `&mut Snippet`.
+        *   They will call the new `visit_context_lines` and `visit_snippet_lines` methods on the visitor.
+        *   They will also recursively call `walk_context` and `walk_snippet` for included contexts and snippets, passing mutable references.
+
+3.  **Create `src/ast/line_processor.rs`:**
+    *   **Define a `LineTransformer` trait:** This trait will encapsulate your custom line-processing logic.
+        ```rust
+        pub trait LineTransformer {
+            fn transform_context_line(&self, line: &Line, current_context_path: &PathBuf) -> Option<Vec<Line>>;
+            fn transform_snippet_line(&self, line: &Line, current_snippet_path: &PathBuf) -> Option<Vec<Line>>;
+        }
+        ```
+    *   **Create a `LineModifyingVisitor` struct:** This struct will implement the `Visitor` trait.
+        ```rust
+        pub struct LineModifyingVisitor<'a> {
+            transformer: Box<dyn LineTransformer + 'a>,
+            modified_files: HashSet<PathBuf>,
+            // Stack to keep track of the current file path for the transformer
+            current_file_path_stack: Vec<PathBuf>,
+        }
+        ```
+    *   **Implement `Visitor` for `LineModifyingVisitor`:**
+        *   `pre_visit_context` and `post_visit_context`: Will manage the `current_file_path_stack` to provide the `LineTransformer` with the current file's path.
+        *   `visit_context_lines(&mut self, context: &mut Context)`:
+            *   It will get the `current_path` from the top of `self.current_file_path_stack`.
+            *   It will create a `new_lines: Vec<Line>`.
+            *   It will iterate over `context.lines` using `drain(..)`, which takes ownership of the lines and clears the original vector.
+            *   For each `line`, it will call `self.transformer.transform_context_line(&line, &current_path)`.
+            *   If `Some(replacement_lines)` is returned, it will extend `new_lines` with `replacement_lines` and mark `context_modified = true`.
+            *   If `None` is returned, it will push the original `line` (now owned) into `new_lines`.
+            *   Finally, it will replace `context.lines = new_lines`.
+            *   If `context_modified` is true, it will insert `context.path.clone()` into `self.modified_files`.
+        *   `visit_snippet_lines(&mut self, snippet: &mut Snippet)`: Will follow similar logic for snippets.
+
+This approach ensures:
+*   **Direct AST Modification:** The `LineModifyingVisitor` directly alters the `lines` vectors within the `Context` and `Snippet` structs.
+*   **Correct Line Replacement:** Using `drain(..)` and rebuilding the `Vec<Line>` is the robust way to replace lines with zero, one, or many new lines.
+*   **Recursive Traversal:** It leverages the existing `walk_context` and `walk_snippet` functions for consistent AST traversal.
+*   **Tracking Modified Files:** The `modified_files` `HashSet` correctly tracks which files need to be rewritten.
+
+This is a more significant change to the `Visitor` trait, but it's necessary to achieve the desired in-place AST modification.
+
+Does this refined plan make sense and address your concerns? If so, I will proceed with these modifications.
+
+Onestamente mi sono trovato a questionare la reale utilita' del trait visitor... non e' forse quasi meno complicato implementare
+direttamente le funzioni ricorsive necessarie qui e la di volta in volta piuttosto che cercare di forzare tutto nella struttura
+rigida del Visitor? Rifletti su questo e dimmi che ne pensi.
+
+That's an excellent question, and it touches upon a fundamental design decision when working with ASTs and transformations. You're right to question the utility of the `Visitor` trait if it feels like it's adding unnecessary complexity for a specific task.
+
+Let's break down the pros and cons in our context:
+
+**Arguments for keeping the `Visitor` pattern:**
+
+1.  **Separation of Concerns:** The primary benefit of the Visitor pattern is that it separates the algorithm (what you want to *do* with the AST) from the object structure (the AST itself). This means you can add new operations (like different kinds of transformations, analyses, or code generation) without modifying the `Context`, `Snippet`, or `Line` structs. For a context composer, it's highly probable that we'll need various operations on the AST in the future (e.g., validation, optimization, different output formats).
+2.  **Centralized Traversal Logic:** The `walk_context` and `walk_snippet` functions (or similar) encapsulate the logic for traversing the AST. If we abandon the Visitor, each new operation would need to reimplement this traversal logic, leading to potential inconsistencies and duplicated code.
+3.  **Extensibility:** If we anticipate many different ways to process the AST, the Visitor pattern makes it very easy to add new "visitors" without touching existing code.
+
+**Arguments for a direct recursive approach (as you suggested):**
+
+1.  **Simplicity for Specific Tasks:** For a *single, highly specific transformation* that involves in-place modification of collections (like replacing lines in a `Vec`), a direct recursive function might indeed be simpler to write and reason about initially. You have direct control over the iteration and modification without the indirection of the visitor interface.
+2.  **Less Boilerplate:** The Visitor pattern can sometimes introduce more traits, structs, and method calls, which might feel like boilerplate for simple operations.
+3.  **Difficulty with In-Place Modification:** As we've discussed, modifying the AST *in-place*, especially replacing elements in a `Vec`, can be awkward with a traditional Visitor pattern where `visit_line` typically receives an immutable or mutable reference to a single line, not its parent collection. My proposed `visit_context_lines` and `visit_snippet_lines` methods are a way to adapt the Visitor to this, but they do make the visitor responsible for the internal iteration, which is a slight deviation from the purest form of the pattern.
+
+**My Conclusion and Recommendation:**
+
+Given that this project is an LLM context composer, it's likely that the AST will be subject to various transformations and analyses over its lifetime. While the current line-by-line modification is complex, it's just one type of operation.
+
+I believe **keeping the `Visitor` pattern, but adapting it as I proposed, is the better long-term solution.**
+
+Here's why:
+
+*   **We already have a `Visitor` trait and `walk_*` functions.** Abandoning them now means throwing away existing structure and potentially reimplementing traversal logic later.
+*   **The adapted `Visitor` trait (with `visit_context_lines` and `visit_snippet_lines`) provides a clean boundary.** It allows the `LineModifyingVisitor` to take control of the line-level iteration and modification *within* a context or snippet, which is exactly what's needed for your `Option<Vec<Line>>` requirement.
+*   **The `LineTransformer` trait still provides excellent separation.** The actual *logic* of how a line is transformed remains encapsulated in `LineTransformer`, keeping the `LineModifyingVisitor` focused on the mechanics of AST traversal and modification.
+
+This approach gives us the best of both worlds: a structured, extensible way to traverse the AST (the `Visitor` pattern) and a flexible mechanism for complex in-place modifications (the adapted `Visitor` methods combined with the `LineTransformer`).
+
+Therefore, I recommend proceeding with the refined plan I outlined, which involves:
+1.  Modifying `src/ast/types.rs` to make `lines` fields mutable.
+2.  Updating the `Visitor` trait in `src/ast/visitor.rs` to accept `&mut Context` and `&mut Snippet` and adding `visit_context_lines` and `visit_snippet_lines`.
+3.  Creating `src/ast/line_processor.rs` with the `LineTransformer` trait and the `LineModifyingVisitor` struct that implements the adapted `Visitor` trait.
+
+Does this reasoning make sense, and are you comfortable proceeding with this approach?

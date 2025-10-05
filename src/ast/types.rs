@@ -6,18 +6,6 @@ use std::fmt;
 pub enum AnchorKind {
     Inline,
     Answer,
-    // ... possibili altre ...
-    Unknown(String), // For extensibility
-}
-
-impl From<&str> for AnchorKind {
-    fn from(s: &str) -> Self {
-        match s {
-            "inline" => AnchorKind::Inline,
-            "answer" => AnchorKind::Answer,
-            _ => AnchorKind::Unknown(s.to_string()),
-        }
-    }
 }
 
 impl fmt::Display for AnchorKind {
@@ -25,7 +13,6 @@ impl fmt::Display for AnchorKind {
         match self {
             AnchorKind::Inline => write!(f, "inline"),
             AnchorKind::Answer => write!(f, "answer"),
-            AnchorKind::Unknown(s) => write!(f, "{}", s),
         }
     }
 }
@@ -35,19 +22,6 @@ pub enum AnchorTag {
     None,
     Begin,
     End,
-    // .. possibili altri...
-    Unknown(String), // For extensibility
-}
-
-impl From<&str> for AnchorTag {
-    fn from(s: &str) -> Self {
-        match s {
-            "begin" => AnchorTag::Begin,
-            "end" => AnchorTag::End,
-            "" => AnchorTag::None, // Handle empty string for missing tag
-            _ => AnchorTag::Unknown(s.to_string()),
-        }
-    }
 }
 
 impl fmt::Display for AnchorTag {
@@ -56,7 +30,6 @@ impl fmt::Display for AnchorTag {
             AnchorTag::None => write!(f, ""),
             AnchorTag::Begin => write!(f, "begin"),
             AnchorTag::End => write!(f, "end"),
-            AnchorTag::Unknown(s) => write!(f, "{}", s),
         }
     }
 }
@@ -84,19 +57,6 @@ pub enum TagKind {
     Inline,
     Answer,
     Summary,
-    Unknown(String), // For extensibility
-}
-
-impl From<&str> for TagKind {
-    fn from(s: &str) -> Self {
-        match s {
-            "include" => TagKind::Include,
-            "inline" => TagKind::Inline,
-            "answer" => TagKind::Answer,
-            "summary" => TagKind::Summary,
-            _ => TagKind::Unknown(s.to_string()),
-        }
-    }
 }
 
 impl fmt::Display for TagKind {
@@ -106,7 +66,6 @@ impl fmt::Display for TagKind {
             TagKind::Inline => write!(f, "inline"),
             TagKind::Answer => write!(f, "answer"),
             TagKind::Summary => write!(f, "summary"),
-            TagKind::Unknown(s) => write!(f, "{}", s),
         }
     }
 }
@@ -142,7 +101,7 @@ impl fmt::Display for TaggedLine {
                 }
                 if arg.contains(' ') || arg.contains('"') {
                     // Simple quoting for now, proper escaping will be handled in parser
-                    write!(f, ""{}"", arg.replace('"', "\""))?;
+                    write!(f, "\"{}\"", arg.replace('"', "\""))?;
                 } else {
                     write!(f, "{}", arg)?;
                 }
@@ -199,6 +158,9 @@ pub enum AstError {
     EmptyParameterKey,
     InvalidParameterKey(String),
     EmptyParameterValue,
+    InvalidAnchorKind(String),
+    InvalidAnchorTag(String),
+    InvalidTagKind(String),
 }
 
 impl fmt::Display for AstError {
@@ -213,6 +175,9 @@ impl fmt::Display for AstError {
             AstError::EmptyParameterKey => write!(f, "Empty parameter key"),
             AstError::InvalidParameterKey(key) => write!(f, "Invalid parameter key: '{}'", key),
             AstError::EmptyParameterValue => write!(f, "Empty parameter value"),
+            AstError::InvalidAnchorKind(kind) => write!(f, "Invalid anchor kind: '{}'", kind),
+            AstError::InvalidAnchorTag(tag) => write!(f, "Invalid anchor tag: '{}'", tag),
+            AstError::InvalidTagKind(kind) => write!(f, "Invalid tag kind: '{}'", kind),
         }
     }
 }

@@ -82,9 +82,18 @@ fn parse_anchor(anchor_content: &str) -> Result<Anchor, AstError> {
         return Err(AstError::InvalidAnchorFormat);
     }
 
-    let kind = AnchorKind::from(kind_uuid_parts[0]);
+    let kind = match kind_uuid_parts[0] {
+        "inline" => AnchorKind::Inline,
+        "answer" => AnchorKind::Answer,
+        s => return Err(AstError::InvalidAnchorKind(s.to_string())),
+    };
     let uid = Uuid::parse_str(kind_uuid_parts[1]).map_err(AstError::InvalidUuid)?;
-    let tag = AnchorTag::from(tag_str);
+    let tag = match tag_str {
+        "begin" => AnchorTag::Begin,
+        "end" => AnchorTag::End,
+        "" => AnchorTag::None,
+        s => return Err(AstError::InvalidAnchorTag(s.to_string())),
+    };
 
     Ok(Anchor { kind, uid, tag })
 }
@@ -113,7 +122,13 @@ fn parse_tagged_line(line_str: &str) -> Result<LineKind, AstError> {
     if tag_name.is_empty() {
         return Err(AstError::MissingTagName);
     }
-    let tag = TagKind::from(tag_name);
+    let tag = match tag_name {
+        "include" => TagKind::Include,
+        "inline" => TagKind::Inline,
+        "answer" => TagKind::Answer,
+        "summary" => TagKind::Summary,
+        s => return Err(AstError::InvalidTagKind(s.to_string())),
+    };
     current_idx += tag_name_end_offset;
 
     let mut parameters = HashMap::new();
@@ -202,7 +217,7 @@ fn parse_arguments(args_str: &str) -> Result<Vec<String>, AstError> {
 
         if chars[current_pos] == '"' {
             // Quoted argument
-            let start_quote_pos = current_pos;
+            let _start_quote_pos = current_pos;
             current_pos += 1; // Move past opening quote
             let mut arg = String::new();
             let mut escaped = false;

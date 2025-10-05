@@ -477,7 +477,6 @@ Le altre tipologie di linea sono ricostruibili a partire dal tipo di dato strutt
 
 Correggi il parsing, ed implementa Display per Line.
 
-@answer
 
 
 

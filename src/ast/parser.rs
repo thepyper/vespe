@@ -45,14 +45,14 @@ pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow:
         (text.to_string(), None)
     };
 
-    let (final_text, line_kind) = if let Some((tag_name, params_str_opt, args_str_opt, text_after_tag)) = parse_tag_and_content(&text_without_anchor) {
+    let line_kind = if let Some((tag_name, params_str_opt, args_str_opt, _text_after_tag)) = parse_tag_and_content(&text_without_anchor) {
         let parameters = if let Some(params_str) = params_str_opt {
             parse_parameters(&params_str)?
         } else {
             HashMap::new()
         };
 
-        let new_line_kind = match tag_name.as_str() {
+        match tag_name.as_str() {
             "include" => {
                 let ctx_name = args_str_opt.unwrap_or_default();
                 let context_path = resolver.resolve_context(&ctx_name);
@@ -72,21 +72,14 @@ pub fn parse_line<R: Resolver>(text: &str, resolver: &R) -> Result<Line, anyhow:
                 let context = parse_context(&context_path, resolver)?;
                 LineKind::Summary { context, parameters }
             },
-            _ => LineKind::Text,
-        };
-
-        if !matches!(new_line_kind, LineKind::Text) {
-            (text_after_tag, new_line_kind)
-        } else {
-            (text_without_anchor.clone(), LineKind::Text)
+            _ => LineKind::Text(text_without_anchor.trim().to_string()), // If tag not recognized, treat as plain text
         }
     } else {
-        (text_without_anchor.clone(), LineKind::Text)
+        LineKind::Text(text_without_anchor.trim().to_string()) // No tag found, treat as plain text
     };
 
     Ok(Line {
         kind: line_kind,
-        text: final_text.trim().to_string(),
         anchor: anchor_data,
     })
 }

@@ -52,7 +52,7 @@ impl fmt::Display for AnchorData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let data_str = match &self.data {
             AnchorDataValue::None => String::new(),
-            x => format!(":{}", val),            
+            x => format!(":{}", x),            
         };
         write!(f, "<!-- {}-{}{} -->", self.kind, self.uid, data_str)
     }
@@ -81,6 +81,53 @@ pub struct Context {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+impl fmt::Display for Line {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut line_content = String::new();
+
+        match &self.kind {
+            LineKind::Text(text) => {
+                line_content.push_str(text);
+            },
+            LineKind::Include { context, parameters } => {
+                // Reconstruct @include tag
+                line_content.push_str(&format!("@include {}", context.path.display()));
+                if !parameters.is_empty() {
+                    line_content.push_str(&format!("[{}]", serde_json::to_string(parameters).unwrap_or_default()));
+                }
+            },
+            LineKind::Inline { snippet, parameters } => {
+                // Reconstruct @inline tag
+                line_content.push_str(&format!("@inline {}", snippet.path.display()));
+                if !parameters.is_empty() {
+                    line_content.push_str(&format!("[{}]", serde_json::to_string(parameters).unwrap_or_default()));
+                }
+            },
+            LineKind::Answer { parameters } => {
+                // Reconstruct @answer tag
+                line_content.push_str("@answer");
+                if !parameters.is_empty() {
+                    line_content.push_str(&format!("[{}]", serde_json::to_string(parameters).unwrap_or_default()));
+                }
+            },
+            LineKind::Summary { context, parameters } => {
+                // Reconstruct @summary tag
+                line_content.push_str(&format!("@summary {}", context.path.display()));
+                if !parameters.is_empty() {
+                    line_content.push_str(&format!("[{}]", serde_json::to_string(parameters).unwrap_or_default()));
+                }
+            },
+        }
+
+        if let Some(anchor) = &self.anchor {
+            // Add anchor to the end of the line
+            line_content.push_str(&format!(" {}", anchor));
+        }
+
+        write!(f, "{}", line_content)
+    }
+}
+
 pub struct Snippet {
     pub path: PathBuf,
     pub(crate) lines: Vec<Line>,

@@ -303,7 +303,256 @@ potrebbe essere necessario rifare inline di alcuni snippet ed altri no.
 Chiaro?
 Dubbi?
 
-@answer
+Okay, I understand the task. We need to implement two new visitors, `InlineDecorator` and `InlineCompleter`, using the `LineTransformer` and `LineModifyingVisitor` infrastructure we just set up.
 
+Here's a breakdown of my plan, addressing the complexities of snippet resolution and state management:
 
-   
+**Overall Approach:**
+
+Both `InlineDecorator` and `InlineCompleter` will implement the `LineTransformer` trait. This means they will operate on individual lines and return `Option<Vec<Line>>` to indicate modifications.
+
+**1. `InlineDecorator` (Decorating `@inline` directives):**
+
+*   **Goal:** Find `@inline` directives that lack `<!-- inline-uuid:begin -->` and `<!-- inline-uuid:end -->` anchors, and add them. The `begin` anchor will also store the snippet path.
+*   **Implementation:**
+    *   It will be a stateless `LineTransformer`.
+    *   It will parse the line to identify `@inline` directives and extract the snippet path (e.g., from `@inline "path/to/snippet.md"`).
+    *   It will generate a UUID for each new inline block.
+    *   The `begin` anchor will be formatted as `<!-- inline-<uuid>:begin:<snippet_path> -->`.
+    *   The `end` anchor will be `<!-- inline-<uuid>:end -->`.
+    *   If an `@inline` line is found without anchors, it will return `Some(vec![begin_anchor_line, original_inline_line, end_anchor_line])`. Otherwise, it returns `None`.
+
+**2. `InlineCompleter` (Replacing content with snippets):**
+
+*   **Goal:** Replace lines between `<!-- inline-uuid:begin:<snippet_path> -->` and `<!-- inline-uuid:end -->` with the actual content of the referenced snippet.
+*   **Implementation:**
+    *   It will be a stateful `LineTransformer`, tracking if it's currently "inside" an inline block.
+    *   It will need a way to resolve snippet content. I will introduce a new trait, `SnippetLoader`, which the `InlineCompleter` will depend on. This `SnippetLoader` will take a `PathBuf` (the snippet path) and return `Option<Vec<Line>>` (the snippet's content).
+    *   **State:** `current_inline_state: Option<(String, PathBuf)>` to store the UUID and snippet path when inside an inline block.
+    *   **Logic:**
+        *   When `<!-- inline-<uuid>:begin:<snippet_path> -->` is encountered:
+            *   Extract UUID and `snippet_path`.
+            *   Set `current_inline_state = Some((uuid, snippet_path))`.
+            *   Return `Some(vec![line.clone()])` (keep the begin anchor).
+        *   When `<!-- inline-<uuid>:end -->` is encountered *and* `current_inline_state` is `Some`:
+            *   Retrieve `(uuid, snippet_path)` from `current_inline_state`.
+            *   Use the `SnippetLoader` to fetch the snippet content.
+            *   If content is found, return `Some(vec![snippet_content_lines..., end_anchor_line])`.
+            *   If not found, log a warning and return `Some(vec![end_anchor_line])`.
+            *   Reset `current_inline_state = None`.
+        *   When *any other line* is encountered *and* `current_inline_state` is `Some` (i.e., between begin and end anchors):
+            *   Return `Some(vec![])` (delete the line).
+        *   Otherwise (not in an inline block, or not an anchor):
+            *   Return `None` (keep the line as is).
+
+**Dependencies:**
+
+*   `uuid` crate for generating UUIDs in `InlineDecorator`.
+*   `regex` crate for parsing `@inline` directives and anchors.
+
+**File Structure:**
+
+*   `src/visitors/inline_visitors.rs`: Will contain `InlineDecorator`, `InlineCompleter`, and the `SnippetLoader` trait.
+*   `src/visitors/mod.rs`: Will expose these new visitors.
+
+**Pre-computation/Pre-analysis:**
+
+The `InlineCompleter` will need a `SnippetLoader`. For the initial implementation, I will define the `SnippetLoader` trait. The actual implementation of how snippets are loaded (e.g., from disk, from a pre-parsed AST) will be provided when the `InlineCompleter` is instantiated. For now, I'll assume a simple `SnippetLoader` that can read files from disk.
+
+**Step 1: Add `uuid` and `regex` dependencies to `Cargo.toml`**
+
+I will start by reading `Cargo.toml` to add the necessary dependencies.
+
+Does this detailed plan make sense to you? Are there any adjustments you'd like me to make before I proceed?
+
+Non capisco la necessita' di regex, tieni conto che la AST passata e' gia' parsed, e quindi gia' tutto strutturato.
+Non c'e' da fare altro parsing di sorta, sbaglio?
+
+You are absolutely correct to point that out! My apologies for the unnecessary inclusion of `regex` in the plan. You are right; the AST is already parsed, and we should be working with the structured `Line` and `AnchorData` types, not raw strings. This simplifies things significantly.
+
+My previous thought process was to parse the raw line text to identify `@inline` directives and anchors, but that's redundant given the AST structure.
+
+Let me revise the plan to reflect this. We will leverage the existing `Line` and `AnchorData` structures directly.
+
+**Revised Plan (without `regex`):**
+
+**Overall Approach:**
+
+Both `InlineDecorator` and `InlineCompleter` will implement the `LineTransformer` trait. They will operate on `&Line` references and return `Option<Vec<Line>>`.
+
+**1. `InlineDecorator` (Decorating ` @inline` directives):**
+
+*   **Goal:** Find ` @inline` directives that lack `AnchorData` for `inline-uuid:begin` and `inline-uuid:end`, and add them.
+*   **Implementation:**
+    *   It will be a stateless `LineTransformer`.
+    *   When `transform_context_line` or `transform_snippet_line` is called:
+        *   Check if the `line.kind` is `LineKind::Inline`.
+        *   If it is, check if `line.anchor` contains an `AnchorData` of `AnchorKind::InlineBegin`.
+        *   If `LineKind::Inline` and *no* `AnchorKind::InlineBegin` is found:
+            *   Generate a new UUID.
+            *   Extract the snippet path from the `line.text` (assuming the `LineKind::Inline` implies a specific format like `@inline "path"`). We'll need to clarify how the snippet path is stored/accessed from a `Line` of `LineKind::Inline`. For now, I'll assume it's part of the `line.text` and can be extracted with basic string manipulation or that the `Line` struct itself provides a way to get it. *Self-correction: The `Line` struct itself should ideally hold this parsed information, not just the raw text. I will need to inspect `src/ast/types.rs` again to confirm how `LineKind::Inline` lines are structured.*
+            *   Create a new `Line` for the `begin` anchor: `Line { text: format!("<!-- inline-{}:begin:{} -->", uuid, snippet_path), kind: LineKind::Anchor, anchor: Some(AnchorData { kind: AnchorKind::InlineBegin, id: uuid, value: Some(AnchorDataValue::Path(snippet_path)) }) }`.
+            *   Create a new `Line` for the `end` anchor: `Line { text: format!("<!-- inline-{}:end -->", uuid), kind: LineKind::Anchor, anchor: Some(AnchorData { kind: AnchorKind::InlineEnd, id: uuid, value: None }) }`.
+            *   Return `Some(vec![begin_anchor_line, original_inline_line.clone(), end_anchor_line])`.
+        *   Otherwise (not `LineKind::Inline` or already decorated), return `None`.
+
+**2. `InlineCompleter` (Replacing content with snippets):**
+
+*   **Goal:** Replace lines between `<!-- inline-uuid:begin:<snippet_path> -->` and `<!-- inline-uuid:end -->` with the actual content of the referenced snippet.
+*   **Implementation:**
+    *   It will be a stateful `LineTransformer`.
+    *   **State:** `current_inline_block: Option<(String, PathBuf)>` to store the UUID and snippet path when inside an inline block.
+    *   It will need a `SnippetLoader` trait, as previously discussed, to fetch snippet content.
+    *   **Logic in `transform_context_line` / `transform_snippet_line`:**
+        *   **If `current_inline_block` is `Some(...)` (i.e., we are inside an inline block):**
+            *   Check if the current `line.anchor` is `AnchorKind::InlineEnd` and its `id` matches the `uuid` in `current_inline_block`.
+            *   If it's the matching `end` anchor:
+                *   Retrieve `(uuid, snippet_path)` from `current_inline_block`.
+                *   Use the `SnippetLoader` to fetch `snippet_content_lines`.
+                *   Reset `current_inline_block = None`.
+                *   Return `Some(vec![snippet_content_lines..., line.clone()])`. (The `line.clone()` here is the end anchor itself).
+            *   If it's *not* the matching `end` anchor (meaning it's content *within* the inline block):
+                *   Return `Some(vec![])` (delete the line).
+        *   **If `current_inline_block` is `None` (i.e., we are not inside an inline block):**
+            *   Check if the current `line.anchor` is `AnchorKind::InlineBegin`.
+            *   If it is:
+                *   Extract `uuid` and `snippet_path` from `line.anchor`.
+                *   Set `current_inline_block = Some((uuid, snippet_path))`.
+                *   Return `Some(vec![line.clone()])` (keep the begin anchor).
+            *   Otherwise (not an anchor, or not an inline begin anchor):
+                *   Return `None` (keep the line as is).
+
+**Dependencies:**
+
+*   `uuid` crate for generating UUIDs in `InlineDecorator`.
+
+**File Structure:**
+
+*   `src/visitors/inline_visitors.rs`: Will contain `InlineDecorator`, `InlineCompleter`, and the `SnippetLoader` trait.
+*   `src/visitors/mod.rs`: Will expose these new visitors.
+
+**Clarification needed:**
+
+Before proceeding, I need to confirm how the snippet path is stored within a `Line` when its `kind` is `LineKind::Inline`. I will read `src/ast/types.rs` to understand the structure of `LineKind::Inline` and `AnchorDataValue`.
+
+This revised plan correctly leverages the AST structure and avoids unnecessary string parsing with `regex`. Thank you for catching that!
+
+Does this revised plan make more sense and address your concern about `regex`?
+Okay, I've reviewed `src/ast/types.rs`.
+
+Here's what I found regarding `LineKind::Inline`:
+
+```rust
+#[derive(Debug, PartialEq, Clone)]
+pub enum LineKind {
+    Text,
+    Include { context: Context, parameters: Parameters },
+    Inline { snippet: Snippet, parameters: Parameters }, // <--- This is it!
+    Answer { parameters: Parameters },
+    Summary { context: Context, parameters: Parameters },
+}
+```
+
+When `line.kind` is `LineKind::Inline`, it directly contains a `Snippet` struct, which itself has a `path: PathBuf`. This is excellent! It means we don't need to parse the `line.text` to get the snippet path; it's already available in the AST.
+
+This simplifies the `InlineDecorator` and `InlineCompleter` significantly.
+
+**Updated Plan for `InlineDecorator`:**
+
+*   When `line.kind` is `LineKind::Inline { snippet, parameters }`:
+    *   The `snippet.path` is directly accessible.
+    *   The `AnchorDataValue` for the `begin` anchor will be `AnchorDataValue::Custom(snippet.path.to_string_lossy().into_owned())`.
+
+**Updated Plan for `InlineCompleter`:**
+
+*   When `line.anchor` is `Some(AnchorData { kind: AnchorKind::Inline, uid, data: Some(AnchorDataValue::Custom(path_str)) })`:
+    *   We can parse `path_str` back into a `PathBuf` to load the snippet.
+
+This is much cleaner. I will now proceed with implementing `InlineDecorator` and `InlineCompleter` in `src/visitors/inline_visitors.rs`.
+
+First, I need to add the `uuid` dependency to `Cargo.toml`.
+The `uuid` crate is already listed in `Cargo.toml` with the `v4` and `serde` features. This is great, as it means I don't need to modify `Cargo.toml`.
+
+Now I will create the file `src/visitors/inline_visitors.rs` and add the necessary code for `InlineDecorator`, `InlineCompleter`, and the `SnippetLoader` trait. I will also update `src/visitors/mod.rs` to expose these new visitors.
+I've created `src/visitors/inline_visitors.rs` with the `InlineDecorator`, `InlineCompleter`, and `SnippetLoader` trait.
+
+Now I need to update `src/visitors/mod.rs` to expose these new visitors.
+Okay, I will update `src/visitors/mod.rs` to include the new modules.
+Now that the files are created and `mod.rs` is updated, I need to address a few issues in `inline_visitors.rs` that I've identified during the process:
+
+1.  **`AnchorDataValue::Custom` for `begin` anchor:** The `AnchorDataValue::Custom` should store the full string `begin:<snippet_path>` for the `begin` anchor, not just `begin`. This is to ensure that the `InlineCompleter` can correctly extract the snippet path.
+2.  **`LineKind::Text` for anchors:** Anchors are currently set to `LineKind::Text`. While this works, it might be more semantically correct to have a dedicated `LineKind::Anchor` if we want to distinguish them more clearly in the AST. However, for now, `LineKind::Text` is acceptable as long as the `anchor` field is populated.
+3.  **`InlineCompleter` state management:** The `InlineCompleter` needs to be mutable (`&mut self`) in its `transform_line` method because it modifies its `current_inline_block` state. I've already done this in the code I wrote, but it's good to confirm.
+4.  **`AnchorDataValue::Custom` parsing in `InlineCompleter`:** The parsing of `begin:<snippet_path>` from `AnchorDataValue::Custom` needs to be robust.
+
+Let's refine the `InlineDecorator`'s `transform_line` method to correctly format the `begin` anchor's `AnchorDataValue::Custom` and then verify the `InlineCompleter`'s parsing.
+
+First, I'll read `src/visitors/inline_visitors.rs` to make the necessary changes.
+Okay, I've reviewed the code in `src/visitors/inline_visitors.rs`.
+
+Here's the correction for `InlineDecorator` to ensure the `begin` anchor's `AnchorDataValue::Custom` correctly stores `begin:<snippet_path>`:
+
+The current code:
+```rust
+                let begin_anchor_data = AnchorData {
+                    kind: AnchorKind::Inline,
+                    uid: uuid,
+                    data: Some(AnchorDataValue::Custom(format!("begin:{}", snippet_path_str))),
+                };
+```
+This is actually correct! My previous concern was based on a misunderstanding of how `AnchorDataValue::Custom` was being used. It *is* storing the full string `begin:<snippet_path>`.
+
+However, there's a small issue in how the `text` field of the `begin_anchor_line` and `end_anchor_line` is being formatted. It's currently using `begin_anchor_data.kind` and `begin_anchor_data.data.as_ref().unwrap()`. The `Display` implementation for `AnchorData` already handles the full formatting of the anchor comment. So, we should use that.
+
+Let's make that correction.
+
+**Correction for `InlineDecorator`:**
+
+Instead of manually formatting the `text` field for `begin_anchor_line` and `end_anchor_line`, we should leverage the `fmt::Display` implementation of `AnchorData`.
+
+```rust
+// In InlineDecorator::transform_line
+// ...
+                let begin_anchor_data = AnchorData {
+                    kind: AnchorKind::Inline,
+                    uid: uuid,
+                    data: Some(AnchorDataValue::Custom(format!("begin:{}", snippet_path_str))),
+                };
+                let begin_anchor_line = Line {
+                    kind: LineKind::Text, // Anchors are treated as text lines
+                    text: begin_anchor_data.to_string(), // Use the Display impl
+                    anchor: Some(begin_anchor_data),
+                };
+
+                let end_anchor_data = AnchorData {
+                    kind: AnchorKind::Inline,
+                    uid: uuid,
+                    data: Some(AnchorDataValue::End),
+                };
+                let end_anchor_line = Line {
+                    kind: LineKind::Text, // Anchors are treated as text lines
+                    text: end_anchor_data.to_string(), // Use the Display impl
+                    anchor: Some(end_anchor_data),
+                };
+// ...
+```
+
+This will ensure the anchor comments are consistently formatted.
+
+The `InlineCompleter`'s parsing of `begin:<snippet_path>` from `AnchorDataValue::Custom` looks correct:
+```rust
+                            let parts: Vec<&str> = data_str.splitn(2, ':').collect();
+                            if parts.len() == 2 {
+                                let snippet_path = PathBuf::from(parts[1]);
+                                self.current_inline_block = Some((anchor.uid, snippet_path));
+                                return Some(vec![line.clone()]); // Keep the begin anchor
+                            }
+```
+This correctly extracts the path after "begin:".
+
+I will apply this small correction to `src/visitors/inline_visitors.rs`.
+I have applied the correction to `src/visitors/inline_visitors.rs`.
+
+Now, the `InlineDecorator` and `InlineCompleter` are implemented, and the `SnippetLoader` trait is defined.
+
+Do you have any further instructions or would you like me to proceed with another task?

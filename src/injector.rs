@@ -17,6 +17,23 @@ pub fn inject_content(
     let content = std::fs::read_to_string(&context_path)?;
     let mut lines = parser::parse_document(&content)?;
 
+    let modified = inject_content_in_memory(&mut lines, anchor_kind, anchor_uid, new_content)?;
+
+    if modified {
+        let updated_content = parser::format_document(&lines);
+        std::fs::write(&context_path, updated_content)?; 
+    }
+
+    Ok(())
+}
+
+pub fn inject_content_in_memory(
+    lines: &mut Vec<Line>,
+    anchor_kind: AnchorKind,
+    anchor_uid: Uuid,
+    new_content: Vec<Line>,
+) -> Result<bool, Box<dyn std::error::Error>> {
+    let mut modified = false;
     let mut start_index = None;
     let mut end_index = None;
 
@@ -41,6 +58,7 @@ pub fn inject_content(
         for (i, line) in new_content.into_iter().enumerate() {
             lines.insert(start + 1 + i, line);
         }
+        modified = true;
     } else {
         return Err(format!(
             "Could not find both begin and end anchors for kind {:?} and uid {}",
@@ -49,9 +67,5 @@ pub fn inject_content(
         )
         .into());
     }
-
-    let updated_content = parser::format_document(&lines);
-    std::fs::write(&context_path, updated_content)?; 
-
-    Ok(())
+    Ok(modified)
 }

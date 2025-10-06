@@ -9,6 +9,17 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box
     let original_content = fs::read_to_string(&context_path)?;
     let mut lines = parser::parse_document(&original_content)?;
 
+    let modified = decorate_context_in_memory(&mut lines)?;
+
+    if modified {
+        let new_content = parser::format_document(&lines);
+        fs::write(&context_path, new_content)?; 
+    }
+
+    Ok(())
+}
+
+pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool, Box<dyn std::error::Error>> {
     let mut modified = false;
 
     // First Pass: Add missing :begin anchors
@@ -75,11 +86,6 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box
         }
         i += 1;
     }
-
-    if modified {
-        let new_content = parser::format_document(&final_lines);
-        fs::write(&context_path, new_content)?; 
-    }
-
-    Ok(())
+    *lines = final_lines;
+    Ok(modified)
 }

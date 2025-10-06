@@ -17,6 +17,7 @@ pub fn execute(
 
     decorate::decorate_recursive_file(project, &mut context_manager, context_name)?;
     inject::inject_recursive_inline(project, &mut context_manager, context_name)?;
+    decorate::decorate_recursive_file(project, &mut context_manager, context_name)?;
 
     loop {
         let answered_a_question = answer::answer_first_question(project, &mut context_manager, context_name, agent)?;

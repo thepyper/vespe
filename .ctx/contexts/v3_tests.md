@@ -1,40 +1,29 @@
 
 @include rules
 
-bau baubaubau
+Ciao! Salutami!
 
-@inline sni1 <!-- inline-e59a1c6d-3d85-4057-bbc3-9cc75ba170a2:begin -->
-heyheyhey
-huhuhuhuhuhuhu
-hohoho
-lllllllllllllllllllll
-bbbbbbbbbbbbbbb
-asdfa
-sdf
-asdf
-asdf
-sd
- <!-- inline-e59a1c6d-3d85-4057-bbc3-9cc75ba170a2:end -->
+@inline sni1 <!-- inline-3ae3c9b8-7f4e-42db-85c9-87429e1d39a8:begin -->
 
-@answer <!-- answer-27e411f0-bc72-4cab-9dde-52c2d99db948:begin -->
-Agent response to: 
-Quando modifichi un progetto, usa sempre git per fare dei commit con una granularita' fine.
-Metti sempre dei commenti descrittivi ai commit che fai.
+Se sono un cane che verso faccio?
+@answer <!-- answer-02eb11ab-e46a-4327-8cff-1e24c646ee1e:begin -->
+Ciao! Sono pronto ad aiutarti.
 
-Quando scrivi codice, scrivi sempre codice production-ready, usa best practices, non essere frettoloso.
+Se sei un cane, fai "Bau bau!".
+ <!-- answer-02eb11ab-e46a-4327-8cff-1e24c646ee1e:end -->
 
+ <!-- inline-3ae3c9b8-7f4e-42db-85c9-87429e1d39a8:end -->
 
-bau bau
+ E se sono un gatto invece?
 
-heyheyhey
-huhuhuhuhuhuhu
-hohoho
-lllllllllllllllllllll
-bbbbbbbbbbbbbbb
-asdfa
-sdf
-asdf
-asdf
-sd
+ @answer
 
- <!-- answer-27e411f0-bc72-4cab-9dde-52c2d99db948:end -->
+ E se sono un porxeo?
+
+ @answer
+
+ E se sono un cavallo?
+
+ @answer
+
+ 

@@ -818,5 +818,4 @@ Commit successful. `src/execute/answer.rs` has been refactored to improve its st
 Ora sistema src/agent/mod.rs;
 Usa quel modo con le pipe per chiamare realmente un agente.
 
-@answer
-
+Commit successful. `ShellAgentCall::call` is now implemented with pipe-based execution, and `src/execute/answer.rs` is updated to use it. The project compiles cleanly.

@@ -1,10 +1,4 @@
-heyheyhey
-huhuhuhuhuhuhu
-hohoho
-lllllllllllllllllllll
-bbbbbbbbbbbbbbb
-asdfa
-sdf
-asdf
-asdf
-sd
+
+Se sono un cane che verso faccio?
+@answer
+

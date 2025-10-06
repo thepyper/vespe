@@ -67,3 +67,12 @@ Ho notato che l'enum `AnchorKind` in `src/ast/types.rs` non include `Summary`, m
 3.  Ho aggiunto `pub mod decorator;` a `src/lib.rs` per rendere il modulo accessibile.
 
 Il task è completato.
+
+Problemi:
+1) le ancore cosi' vengono aggiunte a fine file, io le voglio subito a seguire della ancora :begin;
+2) per scrivere linee -> stringa aggiungi una funzione format_document(Vec<Line>) -> String, servira' (in ast/format.rs);
+3) sposta in ast/format.rs anche i Display (da ast/types.rs)
+4) format_document puo' anche essere Display di Vec<Line>? se ritieni opportuno fallo
+
+@answer
+

@@ -1395,3 +1395,10 @@ Iniziamo definendo le struct `Context` e `Snippet` in `src/project.rs`. Dovrò a
 Per prima cosa, leggerò di nuovo `src/project.rs` per ottenere il contenuto più recente.
 
 
+
+continua pure l'implementazione della fase 2
+
+@answer
+
+
+

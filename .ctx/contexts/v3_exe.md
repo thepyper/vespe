@@ -113,4 +113,33 @@ Okay, I will refactor `decorate_recursive_file` in `src/execute/mod.rs` into a p
 
 First, I'll read `src/execute/mod.rs` to understand the current implementation.I will refactor `decorate_recursive_file` in `src/execute/mod.rs`. I'll rename the existing function to `_decorate_recursive_file` (making it private) and create a new public `decorate_recursive_file` facade. The facade will handle initial setup, including loading context lines and managing the `decorated_set`, before calling the private recursive helper.Okay, I'll create the public `decorate_recursive_file` function. It will accept `project` and `context_name`, initialize `decorated_set`, load `context_lines`, then call `_decorate_recursive_file` with those lines and the set. Finally, it will update the context lines. I'll place it before `_decorate_recursive_file`.Okay, new `decorate_recursive_file` is in, old one's `_decorate_recursive_file`. Now, update `execute` to call the new public function.Updated `execute` to use the new `decorate_recursive_file`. Now, I'll remove the redundant `project.update_context_lines` call from `execute`.Refactored `decorate_recursive_file`, updated `execute`. Running `cargo check` now.`cargo check` failed: `decorate_recursive_file` is being called with 4 arguments where only 2 are expected. The recursive call within `_decorate_recursive_file` must target `_decorate_recursive_file` itself, not the public facade. I'll correct that. Additionally, I'll address warnings: remove unused `modified` in `src/injector.rs` and fix `context_lines` mutability/usage in `src/execute/mod.rs`. Error first, then warnings.Recursive call fixed. Now, to warnings. `context_lines` in `src/execute/mod.rs` is obsolete due to `decorate_recursive_file` handling context lines. Removing it.Okay, `src/injector.rs` has an unused `modified` variable. I'll check its usage and remove it if it's indeed redundant.The `modified` variable in `inject_content_in_memory` at line 37 is used in the `Ok(modified)` return, making the `cargo check` warning a false positive. I'll ignore it for now, as the logic appears sound. I'll re-run `cargo check` to confirm other errors are resolved.Project compiles. Remaining warnings: `modified` in `src/injector.rs` (false positive, ignoring), and `unused imports` and `unnecessary mut` in `src/bin/ctx/main.rs`. I'll fix the `main.rs` warnings.Okay, fixing the `project` mutability warning in `src/bin/ctx/main.rs`.All warnings in `src/bin/ctx/main.rs` are handled. Running `cargo check` to confirm resolution, excluding the `src/injector.rs` warning.Okay, all warnings except `src/injector.rs` are clear, and the project compiles. `decorate_recursive_file` is refactored. Committing now.Okay, `git status` and `git diff HEAD` confirm the expected changes in `src/bin/ctx/main.rs` (imports, mutability) and `src/execute/mod.rs` (refactored `decorate_recursive_file`). Staging and committing now.Files staged. Committing with message.My mistake, multi-line commit message again. I'll use a single line this time, or multiple `-m` flags if supported, but for now, just one line.Commit successful. `decorate_recursive_file` in `src/execute/mod.rs` is refactored, `src/bin/ctx/main.rs` warnings are fixed, and the project compiles. Request fulfilled.
 
+Ok. ora vorrei capire perche' inject_recursive_inline non funziona.
+
+Nel mio test vedo che la anchor viene inserita, ma non riempida di contenuti.
+
+vedi .ctx/contexts/v3_tests.md
+
+leggilo prima
+
+prova il comando cargo run --bin ctx -- context execute v3_tests
+
+leggilo dopo
+
+e vedi cosa manca
+
+
+Okay, I will debug `inject_recursive_inline`.
+
+First, I'll read `.ctx/contexts/v3_tests.md` to see its initial state.
+I have the initial content. Now, I'll run the command.
+Command executed. Reading `v3_tests.md` again.
+The `@inline sni1` tag was processed, but the injected content "heyheyhey\n\nhohoho\n\n" is incorrect; it should be `sni1.md`'s content. I need to verify `sni1.md`'s actual content, then debug `inject_recursive_inline` in `src/execute/mod.rs` and `injector.rs` to trace where `new_content` is sourced for `inject_content_in_memory`. Starting with `sni1.md` confirmation.
+I misunderstood; `sni1.md`'s content *was* injected. The user's concern was that the anchor wasn't "filled," but it was. It seems they might want the `@inline sni1` line *replaced* by the content, not just bracketed by markers. I'll now examine `src/execute/mod.rs` and `src/injector.rs` to see how `inject_recursive_inline` uses `inject_content_in_memory` and determine if modification is needed to achieve replacement. Starting with `src/execute/mod.rs`.
+I've seen `_inject_recursive_inline` in `src/execute/mod.rs` calls `injector::inject_content_in_memory` after finding inline tags and loading snippets. Now, I'll check `src/injector.rs` to understand `inject_content_in_memory`'s injection logic, specifically its use of `anchor_kind`, `anchor_uid`, and `new_content`.
+I've reviewed `src/injector.rs` and confirmed `inject_content_in_memory` correctly inserts `snippet_lines` between `AnchorTag::Begin` and `AnchorTag::End` markers, which aligns with the observed output in `v3_tests.md`. The `@inline sni1` line itself remains. My initial interpretation of the user's "anchor not filled" comment was a misunderstanding; the content *is* filled as per the current implementation. The user's instruction "copy the lines of the snippet inside the anchors" is also being followed.
+
+The discrepancy likely lies in the user's expectation of `@inline` tag behavior. Currently, `@inline sni1` generates begin/end markers, and the snippet content is placed *between* them. An alternative interpretation is that `@inline sni1` should be *replaced* by the snippet content, potentially without explicit begin/end markers, or with markers surrounding the new content but replacing the original `@inline` line.
+
+I need to clarify with the user whether they intend for the `@inline` line to be replaced by the snippet content, or if the current behavior (insertion between markers, keeping the `@inline` line) is acceptable.
+
 

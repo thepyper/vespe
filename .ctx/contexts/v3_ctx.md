@@ -1,3 +1,4 @@
+@include rules 
 
 Stiamo scrivendo src/project.rs, che contiene una minimale struttura Project.
 

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
-use std::path::PathBuf;
-use crate::project::{Project, Line};
+use crate::project::Project;
 use crate::decorator;
+use crate::ast::parser;
 
 pub fn execute(project: &mut Project, context_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut decorated_set: HashSet<String> = HashSet::new();
@@ -21,9 +21,9 @@ fn decorate_recursive_file(
     }
 
     // Load context_name as Vec<Line>
-    let context_path = project.get_context_path(context_name)?;
+    let context_path = project.resolve_context(context_name);
     let content = std::fs::read_to_string(&context_path)?;
-    let mut lines: Vec<Line> = content.lines().map(|s| Line::from(s.to_string())).collect();
+    let mut lines = parser::parse_document(&content)?;
 
     // Execute decorate on context_name
     let modified = decorator::decorate_context_in_memory(&mut lines)?;
@@ -35,20 +35,12 @@ fn decorate_recursive_file(
 
     // Cycle through lines, follow @include for recursive decoration
     for line in lines {
-        if let Some(included_context) = extract_include_directive(&line.text) {
-            decorate_recursive_file(project, &included_context, decorated_set)?;
+        if let crate::ast::types::LineKind::Tagged { tag: crate::ast::types::TagKind::Include, arguments, .. } = line.kind {
+            if let Some(included_context) = arguments.first() {
+                decorate_recursive_file(project, included_context, decorated_set)?;
+            }
         }
     }
 
     Ok(())
-}
-
-fn extract_include_directive(line: &str) -> Option<String> {
-    if line.trim_start().starts_with("@include") {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() > 1 {
-            return Some(parts[1].to_string());
-        }
-    }
-    None
 }

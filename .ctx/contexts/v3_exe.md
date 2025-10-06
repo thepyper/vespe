@@ -753,5 +753,8 @@ I'll start by fixing `src/execute/decorate.rs`, specifically the `decorate_conte
 
 decorate va pensato per decorare diversi tipi di tag, non solo include. Aggiungi decorazione di @answer e @summary
 
+
+Ok. ora _decorate_recursive_file deve decorare
+
 @answer
 

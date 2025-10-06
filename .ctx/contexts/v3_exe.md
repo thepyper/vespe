@@ -93,11 +93,8 @@ Ho refactorizzato con successo `Context` in `src/project.rs` spostando i campi s
 
 Ora, eseguirò il commit di queste modifiche.`git status` e `git diff HEAD` mostrano le modifiche che ho apportato. Ora le preparerò e le commetterò.Ora che i file sono stati preparati, li commetterò con un messaggio descrittivo.Il commit è andato a buon fine. Ho refactorizzato la struct `Context` e aggiornato il suo utilizzo, e il progetto compila senza errori. Credo di aver soddisfatto la richiesta dell'utente. Sono in attesa di ulteriori istruzioni.
 
-Voglio che ContextData non sia incluso in Context;
-e voglio che si sia una funzione esplicitamente chiamata per calcolare ContextData da Context;
-poi usala dove serve.
 
-@answer
+
 
 
 Ora, iniziamo ad implementare l'esecuzione.

@@ -72,13 +72,9 @@ decorate_recursive_file(context_name, decorated_set)
 
 }
 
+Ok, fatto
 
-***********
-fatto
-
-*********
-
-ora implementa inject_recursive_inline(context_name)
+Ora che hai fatto, implementa inject_recursive_inline(context_name)
 
 inject_recursive_inline(context_name, inlined_set)
 {

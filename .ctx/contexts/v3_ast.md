@@ -251,7 +251,21 @@ Risolvi i seguenti problemi:
 
 1) Se incontri un tag di tipo sconosciuto, va ignorato, non dare errore se non riesce il parsing; trattalo da Text.
 
-@answer
+Okay, I understand. I will modify the `src/ast/parser.rs` file so that if an unknown tag is encountered during parsing, the line will be treated as a `LineKind::Text` instead of causing a parsing error.
 
+Here's the change I'll make:
+
+I have updated `src/ast/parser.rs` to handle unknown tags by treating the line as plain text, as requested.
+
+I will now commit these changes.
+I have successfully committed the changes to `src/ast/parser.rs` with the message "feat: Handle unknown tags as plain text in AST parser".
+
+The parser now treats lines with unknown tags as plain text, as requested.
+
+Is there anything else you need assistance with?
+
+Risolvi errori di compilazione
+
+@answer
 
 

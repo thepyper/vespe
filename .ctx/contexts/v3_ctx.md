@@ -1302,3 +1302,48 @@ Il binario `ctx` è configurato, `src/project.rs` ha le funzioni necessarie e `s
 
 Il task è completato.
 
+Aggiungiamo due comandi alla cli:
+
+- context list, enumera i context disponibili;
+  implementata in Project ritorna un Vec<ContextInfo>, in main.rs usa per display
+
+- snippet list, idem
+
+- context tree, mostra per un file context tutte le dipendenze;
+  anche qui vorrei Project ritornasse una struttura dati, e in main.rs usa per display carino;
+  vorrei capire da un context quali include con @include (ricorsivo) e quali con @summary (ricorsivo) e quali con @inline;
+  (ricora: @include e @summary richiamano context, @inline richiama snippet)
+  se possibile vorrei vedere un tree abbastanza chiaro in cli, con colori diversi per capire cosa incluso integralmente
+  (con @include) e cosa con @summary;
+
+  la struttura dati dovrebbe contenere anche i files completi, vorrei poi usarla per eseguire varie operazioni;
+  propongo una cosa tipo:
+
+  struct Context {
+    name: String,
+    content: Vec<Line>,
+    includes: Map<size_t (line index), Context>,
+    inlines: Map<size_t (line index), Snippet>,
+    summaries: Map<size_t (line index), Context>,
+    answers: Set<size_t (line index)>,
+  }
+
+  struct Snippet {
+    name: String,
+    content: Vec<Line>,    
+  }
+
+  Uso Map volutamente per avere l'ordine delle linee quando itero.
+
+  chiaro?
+  Ha senso? 
+  dubbi?
+
+  Fai una analisi della struttura e del suo fit per operazioni di lettura e analisi dei files context.
+  Per la modifica non c'e' problema perche' usero' le funzioni gia' create, che agiscono direttamente sui files 
+  sulla base della analisi.
+
+  @answer
+
+
+

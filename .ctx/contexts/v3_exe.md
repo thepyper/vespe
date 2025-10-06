@@ -811,5 +811,12 @@ Commit successful. `src/execute/inject.rs` has been refactored to improve its st
 
 Fai la stessa analisi con src/execute/answer.rs
 
+Commit successful. `src/execute/answer.rs` has been refactored to improve its structure and reduce repetition, and the project compiles. I believe I have addressed your request.
+
+
+
+Ora sistema src/agent/mod.rs;
+Usa quel modo con le pipe per chiamare realmente un agente.
+
 @answer
 

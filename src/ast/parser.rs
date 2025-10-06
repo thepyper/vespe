@@ -1,5 +1,5 @@
 use pest::iterators::Pair;
-use pest::error::{Error as PestError, ErrorLocation};
+use pest::error::{Error as PestError, InputLocation};
 use pest::Span;
 use pest::Parser; // This is the trait
 use pest_derive::Parser; // This is the derive macro
@@ -20,11 +20,8 @@ pub fn parse_document(input: &str) -> Result<Vec<Line>, PestError<Rule>> {
         }
         parse_line(line_str).map_err(|e| {
             let error_span = match e.location {
-                ErrorLocation::Span(span) => span,
-                ErrorLocation::LineCol(line_col) => {
-                    // Fallback: create a span for the entire line if only LineCol is available
-                    pest::Span::new(line_str, 0, line_str.len()).unwrap_or_else(|| pest::Span::new("", 0, 0).unwrap())
-                }
+                InputLocation::Pos(pos) => pest::Span::new(line_str, pos, pos).unwrap(),
+                InputLocation::Span((start, end)) => pest::Span::new(line_str, start, end).unwrap(),
             };
 
             PestError::new_from_span(

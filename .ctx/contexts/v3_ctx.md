@@ -1182,5 +1182,8 @@ Ora, in un file src/injector.rs vorrei una funzione che:
 
 chiaro?
 
+Attenzione al tuo strumento write_file ed all'escaping di {}, cerca di capire come funzioni perche' io non lo so.
+Fai un test e fai un report se serve.
+
 @answer
 

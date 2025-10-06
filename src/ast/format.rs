@@ -30,7 +30,7 @@ impl Display for LineKind {
                         if !first {
                             write!(f, "; ")?;
                         }
-                        write!(f, "{{}}={{}}", key, value)?;
+                        write!(f, "{}={}", key, value)?;
                         first = false;
                     }
                     write!(f, "]")?;
@@ -43,7 +43,7 @@ impl Display for LineKind {
                             write!(f, " ")?;
                         }
                         if arg.contains(' ') || arg.contains('"') {
-                            write!(f, "\"{{}}\"", arg.replace('"', "\\\""))?;
+                            write!(f, "\"{}\"", arg.replace('"', "\\\""))?;
                         } else {
                             write!(f, "{}", arg)?;
                         }
@@ -59,9 +59,9 @@ impl Display for LineKind {
 impl Display for Anchor {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if self.tag == AnchorTag::None {
-            write!(f, "<!-- {{}}-{{}} -->", self.kind, self.uid)
+            write!(f, "<!-- {}-{} -->", self.kind, self.uid)
         } else {
-            write!(f, "<!-- {{}}-{{}}:{{}} -->", self.kind, self.uid, self.tag)
+            write!(f, "<!-- {}-{}:{} -->", self.kind, self.uid, self.tag)
         }
     }
 }

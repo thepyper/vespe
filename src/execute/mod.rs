@@ -12,6 +12,8 @@ pub fn execute(project: &mut Project, context_name: &str) -> Result<(), Box<dyn 
     let mut decorated_set = HashSet::new();
     decorate_recursive_file(project, context_name, &mut context_lines, &mut decorated_set)?;
 
+    inject_recursive_inline(project, context_name)?;
+
     // Other things to do after
     // For now, let’s just write the decorated content back to a temporary file or update the project’s in-memory representation
     // This part will need to be refined based on how the ‘project’ struct manages its contexts.

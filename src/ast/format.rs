@@ -22,7 +22,7 @@ impl Display for LineKind {
                 arguments,
             }
             => {
-                write!(f, "@{{}}", tag)?;
+                write!(f, "@{}", tag)?;
                 if !parameters.is_empty() {
                     write!(f, "[")?;
                     let mut first = true;

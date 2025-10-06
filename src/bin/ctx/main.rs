@@ -100,7 +100,7 @@ fn main() -> Result<()> {
             println!("Initialized new .ctx project at: {}", project.project_home().display());
         },
         Commands::Context { command } => {
-            let project = Project::find(&project_path)?;
+            let mut project = Project::find(&project_path)?;
             match command {
                 ContextCommands::New { name } => {
                     let file_path = project.create_context_file(&name)?;
@@ -109,7 +109,7 @@ fn main() -> Result<()> {
                 ContextCommands::Execute { name } => {
                     println!("Executing context '{}'...", name);
                     let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
-                    execute::execute(&project, &name, &agent)?;
+                    execute::execute(&mut project, &name, &agent)?;
                     println!("Context '{}' executed successfully.", name);
                 },
                 ContextCommands::List {} => {

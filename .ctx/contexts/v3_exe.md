@@ -778,3 +778,9 @@ Continua i tuoi test e fai commit quando finito.
 
 Commit successful. `decorate` now handles ` @answer` and ` @summary` tags, and the snippet loading errors for ` @answer` tags have been resolved. The project now compiles and executes `v3_tests.md` without crashing, allowing decoration and injection to proceed as intended.
 
+Ora guarda src/execute/decorate.rs
+Ti sembra scritto bene? a me pare ci siano parecchie ripetizioni tra la funzione front-facing e la ricorsiva.
+Fai una analisi approfondita e scrivi meglio se e' possibile. Best practices, production-code.
+
+@answer
+

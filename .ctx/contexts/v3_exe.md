@@ -807,5 +807,9 @@ I'll start by reading `src/execute/decorate.rs` to get the exact current content
 
 Fai la stessa analisi con src/execute/inject.rs
 
+Commit successful. `src/execute/inject.rs` has been refactored to improve its structure and reduce repetition, and the project compiles. I believe I have addressed your request.
+
+Fai la stessa analisi con src/execute/answer.rs
+
 @answer
 

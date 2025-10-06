@@ -135,7 +135,7 @@ fn _execute2(project: &Project,
 					None => false,
 				Some(anchor) => if anchor.kind != expected_begin_anchor_kind { false } else { if let AnchorTag::Begin = anchor.tag { true} else { false }}}
 				if !is_anchor_ok {
-					patches.insert(i, Line { kind: line.kind, anchor: Anchor { kind: expected_begin_anchor_kind, uuid: Uuid::new(), tag: AnchorTag::Begin }
+					patches.insert(i, vec![Line { kind: line.kind, anchor: Some(Anchor { kind: expected_begin_anchor_kind, uuid: Uuid::new(), tag: AnchorTag::Begin }) }]);
 				}
 			}
 		}

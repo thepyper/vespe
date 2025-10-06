@@ -1,5 +1,6 @@
 // src/injector.rs
 
+use anyhow::Result;
 use uuid::Uuid;
 
 use crate::project::Project;
@@ -12,10 +13,10 @@ pub fn inject_content(
     anchor_kind: AnchorKind,
     anchor_uid: Uuid,
     new_content: Vec<Line>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let context_path = project.resolve_context(ctx_name);
     let content = std::fs::read_to_string(&context_path)?;
-    let mut lines = parser::parse_document(&content)?;
+    let mut lines = parser::parse_document(&content).map_err(anyhow::Error::msg)?;
 
     let modified = inject_content_in_memory(&mut lines, anchor_kind, anchor_uid, new_content)?;
 
@@ -32,7 +33,7 @@ pub fn inject_content_in_memory(
     anchor_kind: AnchorKind,
     anchor_uid: Uuid,
     new_content: Vec<Line>,
-) -> Result<bool, Box<dyn std::error::Error>> {
+) -> Result<bool> {
     let mut modified = false;
     let mut start_index = None;
     let mut end_index = None;
@@ -60,12 +61,11 @@ pub fn inject_content_in_memory(
         }
         modified = true;
     } else {
-        return Err(format!(
+        return Err(anyhow::Error::msg(format!(
             "Could not find both begin and end anchors for kind {:?} and uid {}",
             anchor_kind,
             anchor_uid
-        )
-        .into());
+        )));
     }
     Ok(modified)
 }

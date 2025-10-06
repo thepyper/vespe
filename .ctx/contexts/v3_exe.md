@@ -92,6 +92,9 @@ Il commit è riuscito. Ho implementato le funzioni `execute` e `inject_recursive
 
 Ho soddisfatto la richiesta dell'utente. Attendo ulteriori istruzioni.
 
+Implementa la cli per context execute.
+
+
 
 
 

@@ -1,10 +1,11 @@
+use anyhow::Result;
 use std::collections::HashSet;
 use crate::project::Project;
 use crate::ast::types::Line;
 use crate::decorator;
 use crate::injector;
 
-pub fn execute(project: &mut Project, context_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn execute(project: &mut Project, context_name: &str) -> Result<()> {
     // Load context context_name as Vec<Line>
     let mut context_lines = project.load_context_lines(context_name)?;
 
@@ -29,7 +30,7 @@ fn decorate_recursive_file(
     context_name: &str,
     lines: &mut Vec<Line>,
     decorated_set: &mut HashSet<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<()> {
     if !decorated_set.insert(context_name.to_string()) {
         // Already decorated, prevent circular loops
         return Ok(());
@@ -57,8 +58,7 @@ fn decorate_recursive_file(
 
 pub fn inject_recursive_inline(
     project: &mut Project,
-    context_name: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     let mut inlined_set = HashSet::new();
     _inject_recursive_inline(project, context_name, &mut inlined_set)?;
     Ok(())
@@ -68,7 +68,7 @@ fn _inject_recursive_inline(
     project: &mut Project,
     context_name: &str,
     inlined_set: &mut HashSet<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     if !inlined_set.insert(context_name.to_string()) {
         // Already inlined, prevent circular loops
         return Ok(());

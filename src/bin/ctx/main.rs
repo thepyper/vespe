@@ -1,3 +1,4 @@
+use vespe::execute;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use anyhow::Result;
@@ -38,8 +39,11 @@ enum ContextCommands {
         /// The name of the context file (e.g., "my_feature/overview").
         name: String
     },
-    /// Executes a context (placeholder).
-    Execute {},
+    /// Executes a context.
+    Execute {
+        /// The name of the context to execute.
+        name: String
+    },
     /// Lists all available contexts.
     List {},
     /// Displays the dependency tree for a context.
@@ -95,14 +99,16 @@ fn main() -> Result<()> {
             println!("Initialized new .ctx project at: {}", project.project_home().display());
         },
         Commands::Context { command } => {
-            let project = Project::find(&project_path)?;
+            let mut project = Project::find(&project_path)?;
             match command {
                 ContextCommands::New { name } => {
                     let file_path = project.create_context_file(&name)?;
                     println!("Created new context file: {}", file_path.display());
                 },
-                ContextCommands::Execute {} => {
-                    println!("Executing context (placeholder)...");
+                ContextCommands::Execute { name } => {
+                    println!("Executing context '{}'...", name);
+                    execute::execute(&project, &name)?;
+                    println!("Context '{}' executed successfully.", name);
                 },
                 ContextCommands::List {} => {
                     let contexts = project.list_contexts()?;

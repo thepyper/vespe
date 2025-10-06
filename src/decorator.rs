@@ -1,13 +1,14 @@
+use anyhow::Result;
 use std::fs;
 use uuid::Uuid;
 
 use crate::project::Project;
 use crate::ast::parser;
 use crate::ast::types::{Line, LineKind, Anchor, AnchorKind, AnchorTag, TagKind};
-pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub fn decorate_context(project: &Project, context_name: &str) -> Result<()> {
     let context_path = project.resolve_context(context_name);
     let original_content = fs::read_to_string(&context_path)?;
-    let mut lines = parser::parse_document(&original_content)?;
+    let mut lines = parser::parse_document(&original_content).map_err(anyhow::Error::msg)?;
 
     let modified = decorate_context_in_memory(&mut lines)?;
 
@@ -19,7 +20,7 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box
     Ok(())
 }
 
-pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool, Box<dyn std::error::Error>> {
+pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool> {
     let mut modified = false;
 
     // First Pass: Add missing :begin anchors

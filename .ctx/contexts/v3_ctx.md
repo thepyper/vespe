@@ -57,4 +57,13 @@ fatto cio', se qualcosa e' stato modificato, va riscritto il file letto.
 chiaro?
 se no chiedi
 
-@answer
+Capisco. Creerò il file `src/decorator.rs` con la funzione `decorate_context` che implementerà la logica di decorazione descritta.
+
+Inizierò leggendo `src/ast/parser.rs` per capire come utilizzare `parse_document`.Ho capito come funziona `parse_document`. Ora leggerò `src/ast/types.rs` per comprendere le strutture dati `Line`, `LineKind`, `Anchor`, `AnchorKind`, `AnchorTag` e `TagKind`, che mi serviranno per implementare la logica di decorazione.Ho compreso le strutture dati e ho abbozzato la funzione `decorate_context`. La logica per il secondo passaggio, che prevede l'inserimento delle ancore `:end` immediatamente dopo le ancore `:begin` corrispondenti, è complessa e richiede un'attenta gestione delle inserzioni.
+
+Ho notato che l'enum `AnchorKind` in `src/ast/types.rs` non include `Summary`, mentre `TagKind` sì. Per procedere correttamente, devo prima modificare `src/ast/types.rs` per aggiungere `Summary` a `AnchorKind`.`AnchorKind` ora include `Summary`. Procedo con la creazione di `src/decorator.rs`.`src/decorator.rs` è stato creato. Ora devo renderlo accessibile aggiungendo `mod decorator;` a `src/lib.rs` e la dipendenza `uuid` a `Cargo.toml`.`uuid` è già in `Cargo.toml`. Ottimo. Aggiungo `mod decorator;` a `src/lib.rs`.Aggiungerò `pub mod decorator;` a `src/lib.rs`.Ho completato i seguenti passaggi:
+1.  Ho modificato `src/ast/types.rs` per includere `Summary` nell'enum `AnchorKind`.
+2.  Ho creato il file `src/decorator.rs` con la funzione `decorate_context`.
+3.  Ho aggiunto `pub mod decorator;` a `src/lib.rs` per rendere il modulo accessibile.
+
+Il task è completato.

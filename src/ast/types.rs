@@ -5,6 +5,7 @@ use uuid::Uuid;
 pub enum AnchorKind {
     Inline,
     Answer,
+    Summary,
     // Add other specific kinds as they are defined
 }
 
@@ -15,6 +16,7 @@ impl std::str::FromStr for AnchorKind {
         match s {
             "inline" => Ok(AnchorKind::Inline),
             "answer" => Ok(AnchorKind::Answer),
+            "summary" => Ok(AnchorKind::Summary),
             _ => Err(format!("Unknown AnchorKind: {}", s)),
         }
     }
@@ -25,6 +27,7 @@ impl std::fmt::Display for AnchorKind {
         match self {
             AnchorKind::Inline => write!(f, "inline"),
             AnchorKind::Answer => write!(f, "answer"),
+            AnchorKind::Summary => write!(f, "summary"),
         }
     }
 }

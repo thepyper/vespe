@@ -203,3 +203,21 @@ Here's my plan:
 4.  Commit the changes.
 
 I'll start by reading `src/project.rs`.Okay, I'll modify `src/project.rs` to update the `resolve_metadata` function. I'll change its signature to accept `anchor_kind: &str` and use this to construct the metadata directory name as `"{anchor_kind}-{uid}"`.`src/project.rs` is updated. Now, I'll modify `src/execute/inject.rs` to pass `anchor_kind` to `project.resolve_metadata()`. Reading `src/execute/inject.rs`.Okay, I'll modify `src/execute/inject.rs` to pass `anchor_kind` to `project.resolve_metadata()`.Okay, both files are updated. Time to `cargo check`.Compilation error: `src/execute/inject.rs` expects `&str` for `anchor_kind` but receives `AnchorKind`. I need to convert `AnchorKind` to `&str`. I'll add a `to_str()` method to `AnchorKind` in `src/ast/types.rs`, then use it in `src/execute/inject.rs`. I'll ignore the `modified` warning in `src/injector.rs`. Starting with `src/ast/types.rs`.`AnchorKind` in `src/ast/types.rs` already implements `fmt::Display`, so `anchor_kind.to_string()` works. I'll modify `src/execute/inject.rs` to pass `&anchor_kind.to_string()` to `project.resolve_metadata()`, then run `cargo check`.`AnchorKind` conversion is done. Running `cargo check`.Project compiles, `src/injector.rs` warning aside. I've updated `src/project.rs` for metadata directory naming, passed `anchor_kind` in `src/execute/inject.rs`, and resolved the type mismatch. Committing now.Okay, `git status` and `git diff HEAD` confirm the expected changes in `src/execute/inject.rs`, `src/project.rs`, and `.ctx/contexts/v3_exe.md`. I'll stage and commit, ignoring the CRLF warnings.Staged. Committing with message.My mistake, multi-line commit message again. `run_shell_command` doesn't support it. I'll commit with a single-line message.Commit successful. `src/project.rs` now includes `anchor_kind` in metadata directory names, `src/execute/inject.rs` passes `anchor_kind` to `project.resolve_metadata` with type conversion, compilation verified, and changes committed. Request fulfilled.
+
+
+
+Ora, vorrei che implementassi, con layout simile a decorate e inject, una funzione
+fn answer_questions(project, context_name)
+
+Questa deve:
+- accumulare tutto il contesto da inizio del file, seguento in-order sia i tag @include che @summary,
+  e quando arriva ad un tag @answer, se questo non ha gia' una risposta (gestione simile a InlineState)
+  lancia una query all'agente passato;
+- nell'accumulare il contesto da inizio file, vanno rimosse le righe tagged e le ancore;
+
+chiaro?
+dubbi?
+
+@answer
+
+

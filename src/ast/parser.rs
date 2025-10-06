@@ -1,6 +1,6 @@
 use pest::iterators::Pair;
 use pest::error::{Error as PestError, InputLocation};
-use pest::Span;
+
 use pest::Parser; // This is the trait
 use pest_derive::Parser; // This is the derive macro
 use std::collections::HashMap;

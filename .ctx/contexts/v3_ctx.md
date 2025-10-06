@@ -19,7 +19,23 @@ Per capire i tipi di dato leggi in src/ast/types.rs
 
 chiaro?
 
-@answer
+Capisco. Modificherò `src/project.rs` per implementare le funzionalità di risoluzione dei percorsi e le costanti richieste.
 
+Inizierò leggendo i contenuti di `src/project.rs` e `src/ast/types.rs` per comprendere la struttura esistente e i tipi di dati.
+Ho analizzato i file `src/ast/types.rs` e `src/project.rs`. Procederò con le modifiche richieste.
+
+Ecco il piano:
+
+1.  Definirò le costanti per i nomi delle directory e dei file (`.ctx`, `.ctx_root`, `.meta`, `contexts`, `snippets`).
+2.  Aggiornerò i metodi `init` e `find` per utilizzare queste costanti.
+3.  Implementerò le nuove funzioni `project_home`, `metadata_home`, `contexts_root`, `snippets_root`, `resolve_context`, `resolve_snippet` e `resolve_metadata` all'interno dell'implementazione di `Project`.
+
+Inizierò con l'aggiunta delle costanti e l'aggiornamento dei metodi esistenti, per poi aggiungere le nuove funzioni.Ho sostituito le stringhe hardcoded con costanti e aggiornato i metodi `init` e `find`. Ho anche aggiunto i `use` necessari per le prossime funzioni.
+
+Ora aggiungerò le funzioni richieste alla struct `Project`.Ho aggiunto tutte le funzioni richieste a `src/project.rs`.
+
+Ora, leggerò di nuovo il file per assicurarmi che tutte le modifiche siano state applicate correttamente e che il file sia in uno stato coerente.Il file `src/project.rs` è stato aggiornato con tutte le modifiche richieste: costanti, aggiornamenti a `init` e `find`, e le nuove funzioni di risoluzione dei percorsi. Ho notato che la struct `Project` e i suoi metodi non sono pubblici, ma ho mantenuto lo stato attuale assumendo che sia un'implementazione interna. Ho anche aggiunto `#[allow(dead_code)]` per evitare avvisi.
+
+Il task è completato.
 
 

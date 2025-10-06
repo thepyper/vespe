@@ -16,14 +16,19 @@ Se sei un cane, fai "Bau bau!".
 
  E se sono un gatto invece?
 
- @answer
+@answer <!-- answer-3c42c18f-fff5-4d0c-ab4e-5be94bb533c2:begin -->
+Se sei un gatto, fai "Miao miao!".
+ <!-- answer-3c42c18f-fff5-4d0c-ab4e-5be94bb533c2:end -->
 
  E se sono un porxeo?
 
- @answer
+@answer <!-- answer-d0b3e4dc-92f1-4c50-a8a4-b9567ca79633:begin -->
+Se sei un porco, fai "Oink oink!".
+ <!-- answer-d0b3e4dc-92f1-4c50-a8a4-b9567ca79633:end -->
 
  E se sono un cavallo?
 
- @answer
+@answer <!-- answer-784c3694-987c-4440-82e8-ecac00d70fee:begin -->
+Se sei un cavallo, fai "Nitrito!".
+ <!-- answer-784c3694-987c-4440-82e8-ecac00d70fee:end -->
 
- 

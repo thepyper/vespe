@@ -38,6 +38,7 @@ pub fn execute(
 
 enum Exe2Compitino {
     None,
+	Continue,
     AnswerQuestion(uuid::Uuid),
     Summarize(uuid::Uuid),
 }
@@ -61,6 +62,7 @@ pub fn execute2(
 
         match compitino {
             Exe2Compitino::None => break,
+			Exe2Compitino::Continue => {},
             Exe2Compitino::AnswerQuestion(_id) => {
                 // Handle answering question
             }
@@ -207,6 +209,29 @@ fn _execute2(
         }
         apply_patches(&mut lines, patches)?;
     }
+	
+	{
+		// Apply inline tags if not done
+		for (i, line) in lines.iter().enumerate() {
+			match line.kind {
+				LineKind::Tagged{ tag, parameters, arguments } => {
+					match tag {
+						TagKind::Inline => {
+							let is_done = false; // TODO load InlineState and check if already applied 
+							if !is_done {
+								let snippet = project.load_snippet(arguments.first()); // TODO argument empty? error!
+								patches.insert(i, snippet.content);
+							}
+						}
+						_ => {},
+					}
+				}
+			}
+		}
+
+        apply_patches(&mut lines, patches)?;
+		
+	}
 
     Ok(Exe2Compitino::None)
 }

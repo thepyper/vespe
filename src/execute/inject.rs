@@ -44,7 +44,7 @@ fn _inject_recursive_inline(
 
     // Process in reverse order to avoid issues with index changes
     for (_i, anchor_kind, anchor_uid, snippet_name) in lines_to_process.into_iter().rev() {
-        let anchor_metadata_dir = project.resolve_metadata(&anchor_uid)?;
+        let anchor_metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), &anchor_uid)?;
         let state_file_path = anchor_metadata_dir.join("state.json");
 
         let mut inline_state = InlineState::default();

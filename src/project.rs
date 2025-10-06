@@ -110,10 +110,10 @@ impl Project {
         self.snippets_root().join(format!("{}.md", name))
     }
 
-    pub fn resolve_metadata(&self, uid: &Uuid) -> Result<PathBuf> {
-        let anchor_metadata_dir = self.metadata_home().join(uid.to_string());
+    pub fn resolve_metadata(&self, anchor_kind: &str, uid: &Uuid) -> Result<PathBuf> {
+        let anchor_metadata_dir = self.metadata_home().join(format!("{}-{}", anchor_kind, uid.to_string()));
         std::fs::create_dir_all(&anchor_metadata_dir)
-            .context(format!("Failed to create metadata directory for anchor {}: {}", uid, anchor_metadata_dir.display()))?;
+            .context(format!("Failed to create metadata directory for anchor {}-{}: {}", anchor_kind, uid, anchor_metadata_dir.display()))?;
         Ok(anchor_metadata_dir)
     }
 

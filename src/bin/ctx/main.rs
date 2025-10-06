@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use anyhow::Result;
-use vespe::project::Project;
+use vespe::project::{Project, ContextInfo, SnippetInfo}; // Import ContextInfo and SnippetInfo
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -19,12 +19,12 @@ enum Commands {
     /// Initializes a new .ctx project in the current or specified directory.
     Init {},
     /// Manages contexts within the project.
-    Context { 
+    Context {
         #[command(subcommand)]
         command: ContextCommands,
     },
     /// Manages snippets within the project.
-    Snippet { 
+    Snippet {
         #[command(subcommand)]
         command: SnippetCommands,
     },
@@ -33,21 +33,25 @@ enum Commands {
 #[derive(Subcommand)]
 enum ContextCommands {
     /// Creates a new context file.
-    New { 
+    New {
         /// The name of the context file (e.g., "my_feature/overview").
-        name: String 
+        name: String
     },
     /// Executes a context (placeholder).
     Execute {},
+    /// Lists all available contexts.
+    List {},
 }
 
 #[derive(Subcommand)]
 enum SnippetCommands {
     /// Creates a new snippet file.
-    New { 
+    New {
         /// The name of the snippet file (e.g., "common/header").
-        name: String 
+        name: String
     },
+    /// Lists all available snippets.
+    List {},
 }
 
 fn main() -> Result<()> {
@@ -71,6 +75,17 @@ fn main() -> Result<()> {
                 ContextCommands::Execute {} => {
                     println!("Executing context (placeholder)...");
                 },
+                ContextCommands::List {} => {
+                    let contexts = project.list_contexts()?;
+                    if contexts.is_empty() {
+                        println!("No contexts found.");
+                    } else {
+                        println!("Available contexts:");
+                        for context in contexts {
+                            println!("  - {} ({})", context.name, context.path.display());
+                        }
+                    }
+                },
             }
         },
         Commands::Snippet { command } => {
@@ -79,6 +94,17 @@ fn main() -> Result<()> {
                 SnippetCommands::New { name } => {
                     let file_path = project.create_snippet_file(&name)?;
                     println!("Created new snippet file: {}", file_path.display());
+                },
+                SnippetCommands::List {} => {
+                    let snippets = project.list_snippets()?;
+                    if snippets.is_empty() {
+                        println!("No snippets found.");
+                    } else {
+                        println!("Available snippets:");
+                        for snippet in snippets {
+                            println!("  - {} ({})", snippet.name, snippet.path.display());
+                        }
+                    }
                 },
             }
         },

@@ -1,4 +1,3 @@
-
 use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use crate::ast::types::{AnchorKind};
@@ -9,6 +8,18 @@ const CTX_ROOT_FILE_NAME: &str = ".ctx_root";
 const METADATA_DIR_NAME: &str = ".meta";
 const CONTEXTS_DIR_NAME: &str = "contexts";
 const SNIPPETS_DIR_NAME: &str = "snippets";
+
+#[derive(Debug)] // Add Debug trait for easy printing
+pub struct ContextInfo {
+    pub name: String,
+    pub path: PathBuf,
+}
+
+#[derive(Debug)] // Add Debug trait for easy printing
+pub struct SnippetInfo {
+    pub name: String,
+    pub path: PathBuf,
+}
 
 pub struct Project {
     root_path: PathBuf,
@@ -94,4 +105,65 @@ impl Project {
         std::fs::create_dir_all(parent_dir).context("Failed to create parent directories for snippet file")?;
         std::fs::write(&file_path, "").context("Failed to create snippet file")?;
         Ok(file_path)
-    }}
+    }
+
+    pub fn list_contexts(&self) -> Result<Vec<ContextInfo>> {
+        let mut contexts = Vec::new();
+        let contexts_root = self.contexts_root();
+
+        if !contexts_root.exists() {
+            return Ok(contexts); // Return empty if directory doesn't exist
+        }
+
+        for entry in std::fs::read_dir(&contexts_root)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                if let Some(extension) = path.extension() {
+                    if extension == "md" {
+                        if let Some(file_stem) = path.file_stem() {
+                            if let Some(name) = file_stem.to_str() {
+                                contexts.push(ContextInfo {
+                                    name: name.to_string(),
+                                    path: path.clone(),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(contexts)
+    }
+
+    pub fn list_snippets(&self) -> Result<Vec<SnippetInfo>> {
+        let mut snippets = Vec::new();
+        let snippets_root = self.snippets_root();
+
+        if !snippets_root.exists() {
+            return Ok(snippets); // Return empty if directory doesn't exist
+        }
+
+        for entry in std::fs::read_dir(&snippets_root)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                if let Some(extension) = path.extension() {
+                    if extension == "md" {
+                        if let Some(file_stem) = path.file_stem() {
+                            if let Some(name) = file_stem.to_str() {
+                                snippets.push(SnippetInfo {
+                                    name: name.to_string(),
+                                    path: path.clone(),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(snippets)
+    }
+}

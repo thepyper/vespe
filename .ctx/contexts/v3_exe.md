@@ -610,6 +610,40 @@ Il tag @answer indica la posizione in cui verra' inserita la risposta (nelle opp
 
 Le altre due funzioni, inline e decorate NON hanno bisogno di un return value bool, tanto lavorano in un solo pass.
 
-@answer
+Okay, I understand. I will rename `answer_questions` to `answer_first_question`, modify its logic to answer only one question per call using the accumulated context as the query, and adjust the return types of `decorate` and `inject` to `anyhow::Result<()>`.
 
+Here's the plan:
+
+1.  **Rename and Refactor `answer_questions` in `src/execute/answer.rs`:**
+    *   Rename `answer_questions` to `answer_first_question` (public facade).
+    *   Rename `_answer_questions_recursive` to `_answer_first_question_recursive` (private helper).
+    *   Modify `_answer_first_question_recursive` to:
+        *   Accumulate context for the LLM query.
+        *   When an ` @answer` tag is found:
+            *   Check `AnswerState` (from `state.json`).
+            *   If not `answered`, use the accumulated context as the query for the `agent`.
+            *   Inject the agent's response.
+            *   Update `AnswerState` to `answered: true` and save.
+            *   Return `anyhow::Result<true>` (indicating a question was answered) and stop processing further questions in this call.
+        *   If no question is answered, return `anyhow::Result<false>`.
+    *   Ensure tagged lines and anchors are removed from the context passed to the agent.
+
+2.  **Update `src/execute/mod.rs`:**
+    *   Call `answer::answer_first_question` instead of `answer::answer_questions`.
+    *   Adjust the loop in `execute` to repeatedly call `answer_first_question` until it returns `false`.
+
+3.  **Modify `decorate` and `inject` return types:**
+    *   Change `decorate_recursive_file` and `_decorate_recursive_file` in `src/execute/decorate.rs` to return `anyhow::Result<()>`.
+    *   Change `inject_recursive_inline` and `_inject_recursive_inline` in `src/execute/inject.rs` to return `anyhow::Result<()>`.
+    *   Update `src/execute/mod.rs` to reflect these new return types (remove `if modified` checks).
+
+I'll start by modifying `src/execute/answer.rs` to rename the function and adjust its logic.
+
+Okay, `src/execute/answer.rs` is updated. Now, I'll modify `src/execute/mod.rs` to call `answer::answer_first_question` in a loop, handling its `bool` return. First, I'll read `src/execute/mod.rs`.I need to update `src/execute/mod.rs`. I'll replace `answer::answer_questions` with `answer::answer_first_question` in a loop that continues until `answer_first_question` returns `false`. I'll also remove `modified_decorate`, `modified_inject`, and their associated `if` condition.`src/execute/mod.rs` is updated. Next, I'll change `decorate` and `inject` to return `anyhow::Result<()>`. Starting with `src/execute/decorate.rs`, I'll read its content.I'll modify `src/execute/decorate.rs`. Both `decorate_recursive_file` and `_decorate_recursive_file` will now return `anyhow::Result<()>`, eliminating `bool` returns and `modified` tracking.`src/execute/decorate.rs` is done. Next, I'll update `src/execute/inject.rs` to return `anyhow::Result<()>`. Reading the file now.I'll modify `src/execute/inject.rs`. Both `inject_recursive_inline` and `_inject_recursive_inline` will now return `anyhow::Result<()>`, eliminating `bool` returns and `modified` tracking.`decorate.rs` and `inject.rs` now return `anyhow::Result<()>`. `mod.rs` calls `answer_first_question` in a loop. Time to `cargo check`.I have mutable borrow errors with `context_manager` in `decorate.rs` and `inject.rs`. The issue is `context_manager.get_context` creates a mutable borrow that conflicts with subsequent `context_manager.mark_as_modified` calls. I'll fix `decorate.rs` by moving `context_manager.mark_as_modified` outside the `if` block, setting a local `modified_current_context` flag instead, and then calling `mark_as_modified` only after all operations using `context_lines` are complete. I'll start with `decorate.rs`.Okay, I'm fixing `src/execute/inject.rs`. I'll add a `modified_current_context` boolean, setting it to `true` if `injector::inject_content_in_memory` returns `true`. After the `includes_to_inject` loop, if `modified_current_context` is `true`, I'll call `context_manager.mark_as_modified(context_name)`.`decorate.rs` and `inject.rs` are fixed. Running `cargo check` to verify.Project compiles, false positive warning aside. I've renamed `answer_questions` to `answer_first_question`, updated `src/execute/mod.rs` to loop it, changed `decorate` and `inject` to return `anyhow::Result<()>`, and fixed mutable borrow errors. Committing now.Okay, `git status` and `git diff HEAD` confirm the changes. Staging and committing.Staged. Committing with a descriptive message.Multi-line commit message failed. Retrying with a single line.Commit successful. `answer_questions` is now `answer_first_question`, `decorate` and `inject` return `anyhow::Result<()>`, and all related logic and compilation issues are resolved. Request fulfilled.
+
+
+
+Se in ContextManager inizialmente viene caricato solamente un context, poi nelle varie funzioni va usato load_context non get_context.
+
+@answer
 

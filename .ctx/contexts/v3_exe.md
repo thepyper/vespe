@@ -962,5 +962,13 @@ Il tipo di funzionamento da ottenere e' simile a quello che era fatto nella vecc
 Se hai dei dubbi, chiedi piuttosto che implementare cose ce non funzionano.
 codice production-ready per favore.
 
+Sistemeremo pochi TODO alla volta, ti spiego di volta in volta cosa fare.
+
+Ora, mi interessa il funzionamento di @inline.
+Va aggiunta la gestione dello stato in metadata, per capire se l'@inline e' gia' stato processato.
+Sistema questo TODO solamente.
+
 @answer
+
+
 

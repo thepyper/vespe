@@ -96,64 +96,17 @@ fn _answer_first_question_recursive(
                 i += 1; // Move past the summary tag
             }
             LineKind::Tagged { tag: TagKind::Answer, arguments: _, .. } => {
-            let (tag_kind, arguments) = match &line.kind {
-                LineKind::Tagged { tag, arguments, .. } => (tag, arguments),
-                _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
-            };
-
-            let uid_str = line.anchor.as_ref().map(|a| a.uid.to_string()).unwrap_or_else(|| {
-                arguments.first().map(|s| s.to_string()).unwrap_or_default()
-            });
-            let uid_uuid = Uuid::parse_str(&uid_str).map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
-
-            let anchor_kind = match tag_kind {
-                TagKind::Answer => AnchorKind::Answer,
-                _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
-            };
-            let metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), &uid_uuid)?;
-                let state_file = metadata_dir.join("state.json");
-
-                let mut answer_state: AnswerState = if state_file.exists() {
-                    let content = std::fs::read_to_string(&state_file)?;
-                    serde_json::from_str(&content)?
-                } else {
-                    AnswerState::default()
-                };
-
-                if !answer_state.answered {
-                    // The query is the accumulated context up to this point
-                    let query_lines: Vec<String> = current_context_for_agent
-                        .iter()
-                        .map(|line| line.text_content())
-                        .collect();
-                    let query = query_lines.join("\n");
-
-                    // Call the agent
-                    let agent_response = agent.call(&query)?;
-
-                    // Inject the agent's response
-                    let new_content_lines: Vec<Line> = agent_response
-                        .lines()
-                        .map(|s| Line {
-                            kind: LineKind::Text(s.to_string()),
-                            anchor: None,
-                        })
-                        .collect();
-
-                    let injected_modified = injector::inject_content_in_memory(
-                        &mut lines_to_process,
-                        AnchorKind::Answer,
-                        uid_uuid,
-                        new_content_lines,
-                    )?;
-                    if injected_modified {
-                        context_manager.mark_as_modified(context_name);
-                    }
-
-                    answer_state.answered = true;
-                    std::fs::write(&state_file, serde_json::to_string_pretty(&answer_state)?)?;
-                    *context_manager.load_context(project, context_name)? = lines_to_process; // Put back the modified lines
-                    return Ok(true); // A question was answered, stop and return true
+                let answered = _answer_and_mark_context(
+                    project,
+                    context_manager,
+                    agent,
+                    context_name,
+                    line.clone(),
+                    &current_context_for_agent,
+                    &mut lines_to_process,
+                )?;
+                if answered {
+                    return Ok(true);
                 }
                 i += 1; // Move past the answer tag
             }
@@ -169,6 +122,77 @@ fn _answer_first_question_recursive(
         }
     }
 
-    *context_manager.get_context(context_name)? = lines_to_process; // Put back the modified lines
+    *context_manager.load_context(project, context_name)? = lines_to_process; // Put back the modified lines
     Ok(false) // No question was answered in this context or its includes
+}
+
+fn _answer_and_mark_context(
+    project: &Project,
+    context_manager: &mut ContextManager,
+    agent: &ShellAgentCall,
+    context_name: &str,
+    line: Line,
+    current_context_for_agent: &Vec<Line>,
+    lines_to_process: &mut Vec<Line>,
+) -> anyhow::Result<bool> {
+    let (tag_kind, arguments) = match &line.kind {
+        LineKind::Tagged { tag, arguments, .. } => (tag, arguments),
+        _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
+    };
+
+    let uid_str = line.anchor.as_ref().map(|a| a.uid.to_string()).unwrap_or_else(|| {
+        arguments.first().map(|s| s.to_string()).unwrap_or_default()
+    });
+    let uid_uuid = Uuid::parse_str(&uid_str).map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
+
+    let anchor_kind = match tag_kind {
+        TagKind::Answer => AnchorKind::Answer,
+        _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
+    };
+    let metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), &uid_uuid)?;
+    let state_file = metadata_dir.join("state.json");
+
+    let mut answer_state: AnswerState = if state_file.exists() {
+        let content = std::fs::read_to_string(&state_file)?;
+        serde_json::from_str(&content)?
+    } else {
+        AnswerState::default()
+    };
+
+    if !answer_state.answered {
+        // The query is the accumulated context up to this point
+        let query_lines: Vec<String> = current_context_for_agent
+            .iter()
+            .map(|line| line.text_content())
+            .collect();
+        let query = query_lines.join("\n");
+
+        // Call the agent
+        let agent_response = agent.call(&query)?;
+
+        // Inject the agent's response
+        let new_content_lines: Vec<Line> = agent_response
+            .lines()
+            .map(|s| Line {
+                kind: LineKind::Text(s.to_string()),
+                anchor: None,
+            })
+            .collect();
+
+        let injected_modified = injector::inject_content_in_memory(
+            lines_to_process,
+            AnchorKind::Answer,
+            uid_uuid,
+            new_content_lines,
+        )?;
+        if injected_modified {
+            context_manager.mark_as_modified(context_name);
+        }
+
+        answer_state.answered = true;
+        std::fs::write(&state_file, serde_json::to_string_pretty(&answer_state)?)?;
+        *context_manager.load_context(project, context_name)? = lines_to_process.clone(); // Put back the modified lines
+        return Ok(true); // A question was answered, stop and return true
+    }
+    Ok(false)
 }

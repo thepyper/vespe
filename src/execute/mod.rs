@@ -6,26 +6,32 @@ use crate::decorator;
 use crate::injector;
 
 pub fn execute(project: &Project, context_name: &str) -> Result<()> {
-    // Load context context_name as Vec<Line>
-    let mut context_lines = project.load_context_lines(context_name)?;
+
 
     // Call decorate_recursive_file
-    let mut decorated_set = HashSet::new();
-    decorate_recursive_file(project, context_name, &mut context_lines, &mut decorated_set)?;
-
+    decorate_recursive_file(project, context_name)?;
     inject_recursive_inline(project, context_name)?;
 
     // Other things to do after
     // For now, let’s just write the decorated content back to a temporary file or update the project’s in-memory representation
     // This part will need to be refined based on how the ‘project’ struct manages its contexts.
-    // For now, let’s assume we update the project’s in-memory context.
-    project.update_context_lines(context_name, context_lines)?;
 
 
     Ok(())
 }
 
-fn decorate_recursive_file(
+pub fn decorate_recursive_file(
+    project: &Project,
+    context_name: &str,
+) -> Result<()> {
+    let mut decorated_set = HashSet::new();
+    let mut context_lines = project.load_context_lines(context_name)?;
+    _decorate_recursive_file(project, context_name, &mut context_lines, &mut decorated_set)?;
+    project.update_context_lines(context_name, context_lines)?;
+    Ok(())
+}
+
+fn _decorate_recursive_file(
     project: &Project,
     context_name: &str,
     lines: &mut Vec<Line>,
@@ -49,7 +55,7 @@ fn decorate_recursive_file(
 
     for included_context_name in included_contexts_to_decorate {
         let mut included_lines = project.load_context_lines(&included_context_name)?;
-        decorate_recursive_file(project, &included_context_name, &mut included_lines, decorated_set)?;
+        _decorate_recursive_file(project, &included_context_name, &mut included_lines, decorated_set)?;
         project.update_context_lines(&included_context_name, included_lines)?;
     }
 

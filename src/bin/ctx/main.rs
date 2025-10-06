@@ -2,7 +2,7 @@ use vespe::execute;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use anyhow::Result;
-use vespe::project::{Project, ContextInfo, SnippetInfo, Context, Snippet};
+use vespe::project::{Project, Context};
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
 
 #[derive(Parser)]
@@ -99,7 +99,7 @@ fn main() -> Result<()> {
             println!("Initialized new .ctx project at: {}", project.project_home().display());
         },
         Commands::Context { command } => {
-            let mut project = Project::find(&project_path)?;
+            let project = Project::find(&project_path)?;
             match command {
                 ContextCommands::New { name } => {
                     let file_path = project.create_context_file(&name)?;

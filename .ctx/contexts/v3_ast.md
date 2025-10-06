@@ -208,3 +208,12 @@ Okay, I will add the `parse_document` function to `src/ast/parser.rs`. This func
 Here's the plan:
 1.  Modify `src/ast/parser.rs` to add the `parse_document` function.
 2.  Ensure `parse_line` is a private helper function.
+
+Rifai completamente SOLO parser.rs per NON usare pest, perche' non funziona.
+Specifiche aggiuntive:
+
+tra @tag e [   (la parentesi quadra di apertura dei parametri opzionali) NON c'e' whitespace.
+
+@answer
+
+

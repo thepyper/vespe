@@ -843,3 +843,61 @@ Funziona cosi:
 @answer                                                                         <!-- answer-deb35952-cfcb-4733-8546-3f5e966cc68f:begin -->
 Commit successful. The `watch` command has been implemented and committed.
                                                                                 <!-- answer-deb35952-cfcb-4733-8546-3f5e966cc68f:end -->
+
+
+Ora voglio gestire anche il tag @summary.
+Va gestito in _answer_first_question_recursive, in modo simile alla answer (quindi deve avere uno stato in metadata, che contenga la hash del contenuto
+da riassumere, in modo da eseguire il riassunto con llm solamente se il contenuto e' cambiato).
+Il contenuto va attraversato come un @include, e poi ricorsivamente. Quindi ad esempio se viene trovata una domanda nel contenuto del summary, va risposta.
+Quando il contenuto del summary invece e' statico, va hashato e riassunto, ed il riassunto va salvato nei metadati.
+
+chiaro?
+
+@answer                                                                         <!-- answer-d417b0f6-0493-40db-9580-77a04f835d59:begin -->
+Okay, I understand the requirements for handling the `@summary` tag. This will involve state management, conditional LLM calls based on content hash, recursive processing of summary content, and injecting the generated summary.
+
+Here's my detailed plan:
+
+1.  **Define `SummaryState`:** I will add a new struct `SummaryState` to `src/execute/answer.rs` with `content_hash: String` and `summary_text: String` fields, deriving `Serialize`, `Deserialize`, `Debug`, and `Clone`.
+2.  **Add Hashing Utility:** I will implement a `hash_lines` function in `src/execute/answer.rs` to calculate the SHA256 hash of a `Vec<Line>`.
+3.  **Modify `_answer_first_question_recursive`:**
+    *   **Identify `@summary` tags:** I will add a `match` arm for `TagKind::Summary`.
+    *   **Extract Summary Block:** I will extract the lines between the `TagKind::Summary` and its corresponding `AnchorTag::End`.
+    *   **Recursive Processing of Summary Content:**
+        *   I will generate a unique temporary `context_name` (e.g., `summary_temp_uuid`).
+        *   I will temporarily insert these `summary_block_lines` into the `ContextManager` under this temporary name.
+        *   I will then recursively call `_answer_first_question_recursive` with this temporary `context_name` to process any nested `@answer` or `@summary` tags within the summary content.
+        *   After the recursive call, I will retrieve the processed lines from the `ContextManager` and remove the temporary entry.
+    *   **Calculate Hash:** I will calculate the SHA256 hash of the *processed* `summary_block_lines`.
+    *   **Load/Save `SummaryState`:**
+        *   I will resolve the metadata path for `summary_state.json` for the current `@summary` tag.
+        *   I will load the existing `SummaryState` or create a new one if it doesn't exist.
+        *   If the calculated hash differs from `summary_state.content_hash` or `summary_state.summary_text` is empty:
+            *   I will format the processed `summary_block_lines` into a single string for the LLM query.
+            *   I will call the `agent` with this query.
+            *   I will update `summary_state.summary_text` with the agent's response and `summary_state.content_hash` with the new hash.
+            *   I will save the updated `summary_state.json`.
+            *   I will mark the current context as modified.
+    *   **Inject Summary:** I will use `injector::inject_content_in_memory` to insert `summary_state.summary_text` into the context at the `@summary` tag's location.
+
+I will start by defining `SummaryState` and the `hash_lines` utility function in `src/execute/answer.rs`.
+
+Okay, `SummaryState` and `hash_lines` are in place. Now, I'll modify `_answer_first_question_recursive` to handle `TagKind::Summary`. This involves extracting the summary block, recursively processing it, hashing its content, managing `SummaryState` in metadata, conditionally calling the LLM, and injecting the summary.
+
+I'll start by modifying the `LineKind::Tagged { tag: TagKind::Summary, arguments, .. }` match arm to extract the summary block and prepare for recursive processing.
+
+I've implemented the `@summary` tag handling in `_answer_first_question_recursive`. Now, I'll run `cargo check` to identify and fix any compilation errors.Okay, I need to fix the compilation errors.
+
+1.  **`unresolved import `sha2`**: I'll add `sha2` to `Cargo.toml`.
+2.  **`field `contexts` of struct `ContextManager` is private`**: I'll modify `src/project.rs` to add public methods to `ContextManager` for inserting, getting, and removing contexts.
+3.  **`value assigned to `modified` is never read`**: This is the known false positive, which I will continue to ignore.
+
+I'll start by adding `sha2` to `Cargo.toml`.`sha2 = "0.10"` is in `[dev-dependencies]`. I'll move it to `[dependencies]`.`sha2` is in `[dependencies]`. I'll add public methods to `ContextManager` in `src/project.rs` for context manipulation. Reading `src/project.rs` now.I'll add public methods to `ContextManager` in `src/project.rs` for inserting, getting, and removing contexts, and modify existing methods to use them.Okay, `ContextManager` has public methods. I'll update `src/execute/answer.rs` to use `insert_context`, `get_context_mut`, and `remove_context` instead of direct `contexts` access. Reading `src/execute/answer.rs` for `old_string` now.I'll update `src/execute/answer.rs` to use `insert_context`, `get_context_mut`, and `remove_context` from `context_manager`, replacing direct `contexts` access.`sha2` is in `[dependencies]`, `ContextManager` has public methods, and `src/execute/answer.rs` is updated. Running `cargo check` to confirm compilation.`Cargo.toml` modification failed; `sha2` import still unresolved. Re-reading `Cargo.toml` to verify.My `Cargo.toml` `replace` was wrong. I need to add `sha2 = "0.10"` to `[dependencies]` and keep `walkdir = "2.3"` in `[dev-dependencies]`. I'll use two `replace` calls, starting with adding `sha2` to `[dependencies]`.`sha2` is in `[dependencies]`. `walkdir = "2.3"` was removed; I'll add it back to `[dev-dependencies]`.`Cargo.toml` configured. Running `cargo check` to confirm compilation.Compilation errors are resolved, leaving only the known false positive. I've successfully implemented `SummaryState`, `hash_lines`, and `@summary` tag handling in `_answer_first_question_recursive`, including recursive processing, hashing, state management, conditional LLM calls, and summary injection. `ContextManager` now has public methods, and `Cargo.toml` is corrected. Committing changes.Commit successful. `@summary` tag handling and `ContextManager` refactored. Now, I'll create `v3_summary_test.md` in `.ctx/contexts/` with `@summary` content to verify functionality via `ctx execute`.`v3_summary_test.md` is ready. Executing `ctx execute` to trigger `@summary` and nested `@answer` processing.`cargo run` failed due to "Accesso negato" on `ctx.exe`, probably a lock. I'll clean the project and retry.`cargo clean` failed due to "Accesso negato," indicating `ctx.exe` is locked. I need the user to manually release the lock by closing any processes holding `h:\my\github\vespe\target\debug\ctx.exe` (e.g., terminal windows, IDE). Once unlocked, I can re-run the test.
+                                                                                <!-- answer-d417b0f6-0493-40db-9580-77a04f835d59:end -->
+
+
+riprova pure
+
+@answer
+
+

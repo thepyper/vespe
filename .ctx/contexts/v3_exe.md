@@ -50,7 +50,8 @@ Ora, vorrei separare, in project.rs, da Context i campi:
     pub answers: BTreeSet<usize>, // line index
 
 Forse fanno piu' parte di ContextInfo, perche' in Context mi danno fastidio: appena cambio il content diventa tutto invalido.
-Quindi lascierei piu' come parte informativa, usabile da funzioni che non devono modificare.
+Quindi lascierei piu' come parte informativa, usabile da funzioni che non devono modificare, e la toglierei dalla struttura Context.
+Piuttosto, ritornare delle tuple? (Context, ContextInfo) ?
 
 @answer
 

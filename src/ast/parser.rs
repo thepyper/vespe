@@ -91,7 +91,11 @@ fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
         }
     }
 
-    let tag = tag_name.parse::<TagKind>()?;
+            let tag_str_end = tag_start + tag_str.len();
+            let tag_kind = match TagKind::from_str(tag_str) {
+                Ok(kind) => kind,
+                Err(_) => return Ok(Line { kind: LineKind::Text(line.to_string()), anchor }),
+            };
 
     let remaining = &trimmed_input[1 + tag_name.len()..];
     let mut parameters = HashMap::new();

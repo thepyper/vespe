@@ -1,12 +1,10 @@
-use std::collections::HashMap;
 use std::fs;
-use std::io::{self, Write};
-use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::project::Project;
 use crate::ast::parser::parse_document;
 use crate::ast::types::{Line, LineKind, Anchor, AnchorKind, AnchorTag, TagKind};
+use crate::ast::format::format_document;
 
 pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let context_path = project.resolve_context(context_name);
@@ -43,69 +41,46 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box
         }
     }
 
-    // Second Pass: Add missing :end anchors
-    let mut processed_lines: Vec<Line> = Vec::new();
-    let mut active_begin_anchors: HashMap<AnchorKind, Uuid> = HashMap::new(); // Tracks (kind -> uid) of currently open begin anchors
+    // Second Pass: Add missing :end anchors immediately after their :begin counterparts
+    let mut final_lines: Vec<Line> = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i].clone();
+        final_lines.push(line.clone());
 
-    for line in lines.into_iter() {
         if let Some(anchor) = &line.anchor {
-            match anchor.tag {
-                AnchorTag::Begin => {
-                    // If there's an active begin anchor of the same kind, it means the previous one was not closed.
-                    // Insert an end anchor for the previous one *before* adding the current line.
-                    if let Some(prev_uid) = active_begin_anchors.get(&anchor.kind) {
-                        let end_anchor = Anchor {
-                            kind: anchor.kind.clone(),
-                            uid: *prev_uid,
-                            tag: AnchorTag::End,
-                        };
-                        processed_lines.push(Line {
-                            kind: LineKind::Text(String::new()),
-                            anchor: Some(end_anchor),
-                        });
-                        modified = true;
-                        active_begin_anchors.remove(&anchor.kind);
-                    }
-                    // Now add the current begin anchor to active_begin_anchors
-                    active_begin_anchors.insert(anchor.kind.clone(), anchor.uid);
-                },
-                AnchorTag::End => {
-                    // If this end anchor matches an active begin anchor, close it.
-                    if let Some(expected_uid) = active_begin_anchors.get(&anchor.kind) {
-                        if *expected_uid == anchor.uid {
-                            active_begin_anchors.remove(&anchor.kind);
+            if anchor.tag == AnchorTag::Begin {
+                let mut has_matching_end = false;
+                // Check if a corresponding :end anchor exists anywhere after this :begin anchor
+                for j in (i + 1)..lines.len() {
+                    if let Some(other_anchor) = &lines[j].anchor {
+                        if other_anchor.kind == anchor.kind && other_anchor.uid == anchor.uid && other_anchor.tag == AnchorTag::End {
+                            has_matching_end = true;
+                            break;
                         }
                     }
-                },
-                _ => {},
+                }
+
+                if !has_matching_end {
+                    // Insert the missing :end anchor immediately after the current line
+                    let end_anchor = Anchor {
+                        kind: anchor.kind.clone(),
+                        uid: anchor.uid,
+                        tag: AnchorTag::End,
+                    };
+                    final_lines.push(Line {
+                        kind: LineKind::Text(String::new()), // Empty line for the anchor
+                        anchor: Some(end_anchor),
+                    });
+                    modified = true;
+                }
             }
         }
-        processed_lines.push(line);
-    }
-
-    // After processing all lines, close any remaining active begin anchors
-    for (kind, uid) in active_begin_anchors {
-        let end_anchor = Anchor {
-            kind,
-            uid,
-            tag: AnchorTag::End,
-        };
-        processed_lines.push(Line {
-            kind: LineKind::Text(String::new()),
-            anchor: Some(end_anchor),
-        });
-        modified = true;
-    }
-
-    // Reconstruct content
-    let mut new_content = String::new();
-    for line in &processed_lines {
-        new_content.push_str(&line.to_string());
-        new_content.push('
-');
+        i += 1;
     }
 
     if modified {
+        let new_content = format_document(final_lines);
         fs::write(&context_path, new_content)?; 
     }
 

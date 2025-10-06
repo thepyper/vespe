@@ -43,22 +43,6 @@ Il piano per `src/injector.rs` è:
 
 Procedo con il refactoring.Ho refactorizzato `src/decorator.rs` e `src/injector.rs`. Ora eseguo `cargo check` per verificare la compilazione.Ci sono errori di compilazione in `src/injector.rs` relativi al tipo di ritorno `Box<dyn std::error::Error>`. L'errore `expected one of `,` or `>`, found `.` è fuorviante; il problema è l'uso di `std::error.Error` invece di `std::error::Error`. Correggo il tipo di ritorno della funzione `inject_content_in_memory` in `src/injector.rs` sostituendo `.` con `::`.Ho corretto l'errore di battitura in `src/injector.rs`. Ora eseguo `cargo check` per verificare la correzione.Ottimo! Il progetto compila. I warning sono trascurabili. Ho refactorizzato `decorator.rs` e `injector.rs`. Ora eseguo il commit.`git status` e `git diff HEAD` mostrano le modifiche a `src/decorator.rs` e `src/injector.rs`. Ora le stagiono e le commetto con un messaggio descrittivo.I file sono stati preparati. Ora li commetto.Mi scuso, ho sbagliato il comando di commit usando una stringa multilinea non supportata. Avrei dovuto usare una singola stringa con newline escape o flag `-m` separati. Riprovo con il formato corretto.Mi scuso ancora. Ho problemi con i messaggi di commit multilinea. Il tool `run_shell_command` non interpreta `\n` come newline. Per ora, farò un commit con un messaggio conciso su una riga. Se l'utente desidera un messaggio più dettagliato, fornirò istruzioni o un approccio diverso.Il commit è riuscito. Ho refactorizzato `decorator.rs` e `injector.rs` suddividendo le funzioni in versioni in-memory e facade, e il progetto compila senza errori. Ho anche commesso le modifiche su git. Credo di aver soddisfatto la richiesta dell'utente. Attendo ulteriori istruzioni.
 
-Ora, vorrei separare, in project.rs, da Context i campi:
-    pub includes: BTreeMap<usize, Context>, // line index to Context
-    pub inlines: BTreeMap<usize, Snippet>, // line index to Snippet
-    pub summaries: BTreeMap<usize, Context>, // line index to Context
-    pub answers: BTreeSet<usize>, // line index
-
-Forse fanno piu' parte di ContextInfo, perche' in Context mi danno fastidio: appena cambio il content diventa tutto invalido.
-Quindi lascierei piu' come parte informativa, usabile da funzioni che non devono modificare, e la toglierei dalla struttura Context.
-Piuttosto, ritornare delle tuple? (Context, ContextInfo) ?
-
-@answer
-
-
-
-
-
 Ora, iniziamo ad implementare l'esecuzione.
 Prima di tutto creiamo un modulo in src/execute/mod.rs
 
@@ -68,13 +52,28 @@ Questa funzione ha un internal loop del genere:
 
 execute(project, context_name) {
 
-    let loading_contexts = HashSet::new();
+    // carica context context_name come Vec<Line>
 
-    project.load_context(context_name, loadind_contexts);
-
-    // Decora tutti i context chiamando decorate_in_memory su tutti
-
-
+    chiama decorate_recursive_file(context_name)
+    
+    // altre cose da fare dopo
 
 
 }
+
+decorate_recursive_file(context_name, decorated_set)
+{    
+    esegui decorate(context_name)
+    
+    carica context_name come Vec<Line>
+
+    ciclo su linee, follow di @include per eseguire decorazione ricorsiva
+    usa decorated_set contro loop circolari
+
+}
+
+@answer
+
+
+
+

@@ -830,3 +830,15 @@ con il testo presente). Colonna  80 mettilo in una costante che potro' modificar
 Commit successful. Anchor tags are now formatted to appear at column 80 or beyond, as requested, and the project compiles.
  <!-- answer-7caeb305-2ddb-4867-8aff-f82704a66563:end -->
 
+
+Implementiamo ora la modalita' watch.
+Lo facciamo nel binario, in src/bin/ctx/watch.rs.
+
+Funziona cosi:
+1) in partenza, prova a lanciare un execute_context() su tutti i files context (NON snippet) (non sapendo quali sono modificati)
+2) poi (usa crate notify) lancia execute_context() sui files (colo context NON snippet) che vengono toccati.
+3) mantieni tutto sync, niente async.
+4) rimani in esecuzione sempre finche' non arriva ctrl-c
+
+@answer
+

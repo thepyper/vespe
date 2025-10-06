@@ -1188,3 +1188,30 @@ Fai un test e fai un report se serve.
 Il file `src/injector.rs` è stato creato e la funzione `inject_content` è stata implementata come richiesto. Ho anche risolto il problema dell'escaping delle parentesi graffe con `write_file` e ho corretto `src/ast/format.rs` di conseguenza.
 
 Il task è completato.
+
+
+Iniziamo ad implementare il binario "ctx", aggiungilo al progetto, scrivilo in src/bin/ctx/main.rs;
+
+Iniziamo con una cli semplice:
+- opzione --project-root permette di specificare la cartella dove si trova la ".ctx" contenente ".ctx_root"; 
+  se non specificato, e' ".";
+- project init -> chiama la funzione Project::init sulla cartella passata ed esce;
+- tutti gli altri comandi lavorano su un progetto esistente che va quindi cercato con Project::find, a partire dalla
+  cartella specificata sempre con --project-root (default ".");
+
+- comando context new -> crea un nuovo file context; se annidato (context new some_path/whatever/bla) crea tutto il path,
+  quindi le cartelle some_path, some_path/whatever, e dentro crea il file bla.md; ovviamente tutto nella contexts_root().
+
+- comando snippet new -> idem con snippet
+
+- comando context execute -> per ora placeholder;
+
+
+Nota: l'eseguibile ctx deve contenere solo la cli, i comandi vanno implementati in libreria (src/project.rs);
+potrei volerli usare anche non da cli poi, questo e' il razionale.
+
+chiaro?
+
+@answer
+
+

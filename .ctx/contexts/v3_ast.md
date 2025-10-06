@@ -214,6 +214,13 @@ Specifiche aggiuntive:
 
 tra @tag e [   (la parentesi quadra di apertura dei parametri opzionali) NON c'e' whitespace.
 
+Okay, I understand. I will completely rewrite `src/ast/parser.rs` to remove the `pest` dependency and implement the parsing logic manually. I will also incorporate the new rule that there is no whitespace between `@tag` and the opening square bracket `[` for optional parameters.
+
+First, I will remove the `pest` and `pest_derive` dependencies from `Cargo.toml` and delete the `src/ast/ast.pest` file.
+
+continua
+
 @answer
+
 
 

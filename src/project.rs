@@ -59,16 +59,33 @@ impl ContextManager {
         }
     }
 
+    pub fn insert_context(&mut self, name: String, lines: Vec<Line>) {
+        self.contexts.insert(name, lines);
+    }
+
+    pub fn get_context_mut(&mut self, name: &str) -> Option<&mut Vec<Line>> {
+        self.contexts.get_mut(name)
+    }
+
+    pub fn remove_context(&mut self, name: &str) -> Option<Vec<Line>> {
+        self.contexts.remove(name)
+    }
+
+    pub fn contains_context(&self, name: &str) -> bool {
+        self.contexts.contains_key(name)
+    }
+
     pub fn load_context(&mut self, project: &Project, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
-        if !self.contexts.contains_key(context_name) {
+        if !self.contains_context(context_name) {
             let lines = project.read_and_parse_context_file(context_name)?;
-            self.contexts.insert(context_name.to_string(), lines);
+            self.insert_context(context_name.to_string(), lines);
         }
-        Ok(self.contexts.get_mut(context_name).unwrap())
+        self.get_context_mut(context_name)
+            .context(format!("Context '{}' not found in ContextManager after loading", context_name))
     }
 
     pub fn get_context(&mut self, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
-        self.contexts.get_mut(context_name)
+        self.get_context_mut(context_name)
             .context(format!("Context '{}' not found in ContextManager", context_name))
     }
 

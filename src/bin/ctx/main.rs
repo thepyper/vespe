@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use anyhow::Result;
-use vespe::project::{Project, ContextInfo, SnippetInfo, Context, Snippet};
+use vespe::project::{Project, ContextInfo, SnippetInfo, Context, Snippet, calculate_context_data};
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
+use std::collections::HashSet;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -60,27 +61,30 @@ enum SnippetCommands {
     List {},
 }
 
-fn print_context_tree(context: &Context, indent: usize) {
+fn print_context_tree(project: &Project, context: &Context, indent: usize, loading_contexts: &mut HashSet<String>) -> Result<()> {
     let indent_str = "  ".repeat(indent);
-    println!("{}{}", indent_str, Yellow.paint(format!("Context: {}", context.name)));
+    println!("{}{}", indent_str, Yellow.paint(format!("Context: {}", context.info.name)));
 
-    for (line_index, included_context) in &context.data.includes {
-        println!("{}{}", indent_str, Green.paint(format!("  @include (line {}): {}", line_index, included_context.name)));
-        print_context_tree(included_context, indent + 2);
+    let context_data = vespe::project::calculate_context_data(project, context, loading_contexts)?;
+
+    for (line_index, included_context) in &context_data.includes {
+        println!("{}{}", indent_str, Green.paint(format!("  @include (line {}): {}", line_index, included_context.info.name)));
+        print_context_tree(project, included_context, indent + 2, loading_contexts)?;
     }
 
-    for (line_index, summarized_context) in &context.data.summaries {
-        println!("{}{}", indent_str, Purple.paint(format!("  @summary (line {}): {}", line_index, summarized_context.name)));
-        print_context_tree(summarized_context, indent + 2);
+    for (line_index, summarized_context) in &context_data.summaries {
+        println!("{}{}", indent_str, Purple.paint(format!("  @summary (line {}): {}", line_index, summarized_context.info.name)));
+        print_context_tree(project, summarized_context, indent + 2, loading_contexts)?;
     }
 
-    for (line_index, inlined_snippet) in &context.data.inlines {
+    for (line_index, inlined_snippet) in &context_data.inlines {
         println!("{}{}", indent_str, Cyan.paint(format!("  @inline (line {}): {}", line_index, inlined_snippet.name)));
     }
 
-    for line_index in &context.data.answers {
+    for line_index in &context_data.answers {
         println!("{}{}", indent_str, Red.paint(format!("  @answer (line {})", line_index)));
     }
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -117,7 +121,8 @@ fn main() -> Result<()> {
                 },
                 ContextCommands::Tree { name } => {
                     let context_tree = project.get_context_tree(&name)?;
-                    print_context_tree(&context_tree, 0);
+                    let mut loading_contexts = HashSet::new();
+                    print_context_tree(&project, &context_tree, 0, &mut loading_contexts)?;
                 },
             }
         },

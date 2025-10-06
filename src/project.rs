@@ -6,7 +6,6 @@ use anyhow::Context as AnyhowContext;
 use crate::ast::types::{AnchorKind, Line, LineKind, TagKind};
 use uuid::Uuid;
 
-#[derive(Debug)]
 pub struct ContextData {
     pub includes: BTreeMap<usize, Context>, // line index to Context
     pub inlines: BTreeMap<usize, Snippet>, // line index to Snippet
@@ -14,11 +13,60 @@ pub struct ContextData {
     pub answers: BTreeSet<usize>, // line index
 }
 
+impl Default for ContextData {
+    fn default() -> Self {
+        ContextData {
+            includes: BTreeMap::new(),
+            inlines: BTreeMap::new(),
+            summaries: BTreeMap::new(),
+            answers: BTreeSet::new(),
+        }
+    }
+}
+
+pub fn calculate_context_data(project: &Project, context: &Context, loading_contexts: &mut HashSet<String>) -> Result<ContextData> {
+    let mut includes = BTreeMap::new();
+    let mut inlines = BTreeMap::new();
+    let mut summaries = BTreeMap::new();
+    let mut answers = BTreeSet::new();
+
+    for (line_index, line) in context.content.iter().enumerate() {
+        if let LineKind::Tagged { tag, arguments, .. } = &line.kind {
+            if let Some(arg_name) = arguments.first() {
+                match tag {
+                    TagKind::Include => {
+                        let included_context = project.load_context(arg_name, loading_contexts)?;
+                        includes.insert(line_index, included_context);
+                    },
+                    TagKind::Summary => {
+                        let summarized_context = project.load_context(arg_name, loading_contexts)?;
+                        summaries.insert(line_index, summarized_context);
+                    },
+                    TagKind::Inline => {
+                        let inlined_snippet = project.load_snippet(arg_name)?;
+                        inlines.insert(line_index, inlined_snippet);
+                    },
+                    TagKind::Answer => {
+                        answers.insert(line_index);
+                    },
+                }
+            }
+        }
+    }
+
+    Ok(ContextData {
+        includes,
+        inlines,
+        summaries,
+        answers,
+    })
+}
+
 #[derive(Debug)]
 pub struct Context {
-    pub name: String,
+    pub path: PathBuf,
     pub content: Vec<Line>,
-    pub data: ContextData,
+    pub info: ContextInfo,
 }
 
 #[derive(Debug)]
@@ -218,48 +266,15 @@ impl Project {
             .context(format!("Failed to read context file: {}", file_path.display()))?;
         let lines = parse_document(&content).map_err(|e| anyhow::anyhow!(e)).context("Failed to parse document")?;
 
-        let mut includes = BTreeMap::new();
-        let mut inlines = BTreeMap::new();
-        let mut summaries = BTreeMap::new();
-        let mut answers = BTreeSet::new();
-
-        for (line_index, line) in lines.iter().enumerate() {
-            if let LineKind::Tagged { tag, arguments, .. } = &line.kind {
-                if let Some(arg_name) = arguments.first() {
-                    match tag {
-                        TagKind::Include => {
-                            let included_context = self.load_context(arg_name, loading_contexts)?;
-                            includes.insert(line_index, included_context);
-                        },
-                        TagKind::Summary => {
-                            let summarized_context = self.load_context(arg_name, loading_contexts)?;
-                            summaries.insert(line_index, summarized_context);
-                        },
-                        TagKind::Inline => {
-                            let inlined_snippet = self.load_snippet(arg_name)?;
-                            inlines.insert(line_index, inlined_snippet);
-                        },
-                        TagKind::Answer => {
-                            answers.insert(line_index);
-                        },
-                    }
-                }
-            }
-        }
-
         loading_contexts.remove(name);
 
-        let context_data = ContextData {
-            includes,
-            inlines,
-            summaries,
-            answers,
-        };
-
         Ok(Context {
-            name: name.to_string(),
+            path: file_path.clone(),
             content: lines,
-            data: context_data,
+            info: ContextInfo {
+                name: name.to_string(),
+                path: file_path,
+            },
         })
     }
 

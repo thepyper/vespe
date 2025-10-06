@@ -50,7 +50,7 @@ pub fn execute2(project: &Project,
     let mut exe2_manager = Execute2Manager::new();
 
     loop {
-        let compitino = _execute2(project, context_name, agent, &mut context_manager, &mut exe2_manager);
+        let compitino = _execute2(project, context_name, agent, &mut context_manager, &mut exe2_manager)?;
 
         match compitino {
             Exe2Compitino::None => break,
@@ -90,11 +90,11 @@ impl AnchorIndex
 	fn new(lines: &Vec<Line>) -> AnchorIndex {
 		let a1 = HashMap::<Uuid, usize>::new();
 		let a2 = HashMap::<Uuid, usize>::new();
-		for (i, line) in lines.enumerate() {
+		for (i, line) in lines.iter().enumerate() {
 			if let Some(anchor) = line.get_anchor() {
 				match anchor.tag {
-					AnchorTag::Begin => a1.insert(anchor.uuid, i),
-					AnchorTag::End => a2.insert(anchor.uuid, i),
+					AnchorTag::Begin => { a1.insert(anchor.uid, i); },
+					AnchorTag::End => { a2.insert(anchor.uid, i); },
 					_ => {}
 				}
 			}
@@ -127,7 +127,7 @@ fn _execute2(project: &Project,
 
 	// Check for missing tag anchors 
 	for (i, line) in lines.iter().enumerate() {
-		if let LineKind::Tagged{ tag,  } = &line.kind {	
+		if let LineKind::Tagged{ tag, .. } = &line.kind {	
 			let expected_begin_anchor_kind = match tag {
 				TagKind::Inline => Some(AnchorKind::Inline),
 				TagKind::Answer => Some(AnchorKind::Answer),
@@ -139,7 +139,7 @@ fn _execute2(project: &Project,
 					None => false,
 					Some(anchor) => if anchor.kind != expected_begin_anchor_kind { false } else { if let AnchorTag::Begin = anchor.tag { true} else { false }}
 				};				if !is_anchor_ok {
-					patches.insert(i, vec![Line { kind: line.kind, anchor: Some(Anchor { kind: expected_begin_anchor_kind, uuid: Uuid::new(), tag: AnchorTag::Begin }) }]);
+					patches.insert(i, vec![Line { kind: line.kind, anchor: Some(Anchor { kind: expected_begin_anchor_kind, uid: Uuid::new_v4(), tag: AnchorTag::Begin }) }]);
 				}
 			}
 		}
@@ -165,7 +165,7 @@ fn _execute2(project: &Project,
 		if !anchor_index.end.contains(anchor_begin_uuid) {
 			// Orphan begin anchor, add end anchor just after it 
 			let begin_anchor_line = lines.get(i).unwrap();
-			patches.insert(i, vec![begin_anchor_line.clone(), Line{ kind: LineKind::Text("".to_string()), anchor: Some(Anchor{ kind: begin_anchor_line.anchor.as_ref().unwrap().kind, uuid: *anchor_begin_uuid, tag: AnchorTag::End }) }]);
+			patches.insert(i, vec![begin_anchor_line.clone(), Line{ kind: LineKind::Text("".to_string()), anchor: Some(Anchor{ kind: begin_anchor_line.anchor.as_ref().unwrap().kind, uid: *anchor_begin_uuid, tag: AnchorTag::End }) }]);
 		}
 	}	
 	apply_patches(lines, patches);

@@ -39,8 +39,8 @@ pub fn execute(
 enum Exe2Compitino {
     None,
 	Continue,
-    AnswerQuestion(uuid::Uuid),
-    Summarize(uuid::Uuid),
+    AnswerQuestion{ uid: uuid::Uuid, content: Vec<Line> },
+    Summarize{ uid: uuid::Uuid, content: Vec<Line> },
 }
 
 pub fn execute2(
@@ -209,6 +209,11 @@ fn _execute2(
                 );
             }
         }
+        apply_patches(&mut lines, patches)?;
+    }
+
+    {
+        let mut patches = BTreeMap::<usize, Vec<Line>>::new();
 
 		// Apply inline tags if not done
 		for (i, line) in lines.iter().enumerate() {
@@ -229,8 +234,42 @@ fn _execute2(
 			}
 		}
 
-        apply_patches(&mut lines, patches)?;
+		if !patches.is_empty() {
+			// Some inline applied, let's run all of this again
+			apply_patches(&mut lines, patches)?;
+			return Exe2Compitino::Continue;
+		}
     }
+	
+	{
+        let mut patches = BTreeMap::<usize, Vec<Line>>::new();
+		
+        for line in lines.iter() {
+			match &line.kind {
+				LineKind::Text(_) => _exe2.collect_content.push(line),
+				LineKind::Tagged{ tag, arguments, .. } => {
+					match tag {
+						TagKind::Summary => {
+							let mut exe2_sub_manager = Execute2Manager::new();
+							match _execute2(project, arguments.first().unwrap().as_str(), _agent, context_manager, exe2_sub_manager) {
+								Exe2Compitino::None => {
+									// Can summarize, content is done 
+									return Exe2Compitino::Summarize{ uid: line.anchor.unwrap().uid, content: exe2_sub_manager.collect_content };
+								}
+								x => return x;
+							}		
+						}
+						TagKind::Answer => {
+							return Exe2Compitino::Answer{ uid: line.anchor.unwrap().uid, conten: _exe.collect_content };
+						}
+						_ => {},
+					}
+				}
+			}
+		}
+		
+		apply_patches(&mut lines, patches)?;
+	}
 
     Ok(Exe2Compitino::None)
 }

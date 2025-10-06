@@ -4,6 +4,7 @@ use crate::injector;
 use serde::{Serialize, Deserialize};
 use std::fs;
 use anyhow::Context as AnyhowContext;
+use crate::ast::types::AnchorKind;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct InlineState {
@@ -58,23 +59,25 @@ fn _inject_recursive_inline(
             continue;
         }
 
-        let snippet_lines = project.load_snippet_lines(&snippet_name)?;
+        if anchor_kind == AnchorKind::Inline {
+            let snippet_lines = project.load_snippet_lines(&snippet_name)?;
 
-        if injector::inject_content_in_memory(
-            context_lines,
-            anchor_kind,
-            anchor_uid,
-            snippet_lines,
-        )? {
-            modified_current_context = true;
+            if injector::inject_content_in_memory(
+                context_lines,
+                anchor_kind,
+                anchor_uid,
+                snippet_lines,
+            )? {
+                modified_current_context = true;
+            }
+
+            // Update state after successful injection
+            inline_state.pasted = true;
+            let updated_state_content = serde_json::to_string_pretty(&inline_state)
+                .context("Failed to serialize InlineState")?;
+            fs::write(&state_file_path, updated_state_content)
+                .context(format!("Failed to write state file: {}", state_file_path.display()))?;
         }
-
-        // Update state after successful injection
-        inline_state.pasted = true;
-        let updated_state_content = serde_json::to_string_pretty(&inline_state)
-            .context("Failed to serialize InlineState")?;
-        fs::write(&state_file_path, updated_state_content)
-            .context(format!("Failed to write state file: {}", state_file_path.display()))?;
     }
 
     // Recursively inject for included contexts

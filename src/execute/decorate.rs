@@ -42,29 +42,29 @@ fn _decorate_recursive_file(
     context_name: &str,
     decorated_set: &mut HashSet<String>,
 ) -> Result<()> {
-    if decorated_set.contains(context_name) {
-        return Ok(());
-    }
-    decorated_set.insert(context_name.to_string());
-
-    let context_lines = context_manager.load_context(project, context_name)?;
-
-    let mut includes_to_decorate = Vec::new();
-
-    for line in context_lines.iter() {
-        if let LineKind::Tagged { tag: TagKind::Include, arguments: include_path, .. } = &line.kind {
-            let include_path_str = include_path.first().map(|s| s.as_str()).unwrap_or("");
-            if !decorated_set.contains(include_path_str) {
-                includes_to_decorate.push(include_path_str.to_string());
+    // Load the current context's lines and extract includes to decorate.
+    // This ensures the mutable borrow of `context_manager` for `context_lines` is released
+    // before we attempt to borrow it again for included contexts.
+    let current_context_includes = {
+        let context_lines = context_manager.load_context(project, context_name)?;
+        let mut includes_to_decorate = Vec::new();
+        for line in context_lines.iter() {
+            if let LineKind::Tagged { tag: TagKind::Include, arguments, .. } = &line.kind {
+                let include_path_str = arguments.first().map(|s| s.as_str()).unwrap_or("");
+                if !decorated_set.contains(include_path_str) {
+                    includes_to_decorate.push(include_path_str.to_string());
+                }
             }
         }
-    }
+        includes_to_decorate
+    }; // `context_lines` goes out of scope here, releasing the mutable borrow on `context_manager`
 
-    for included_context_name in includes_to_decorate.into_iter() {
+    for included_context_name in current_context_includes.into_iter() {
         decorated_set.insert(included_context_name.clone());
-        let included_lines = context_manager.load_context(project, &included_context_name)?;
 
-        let modified = decorator::decorate_context_in_memory(included_lines)?;
+        let _included_lines = context_manager.load_context(project, &included_context_name)?; // Now this borrow is fine
+
+        let modified = decorator::decorate_context_in_memory(_included_lines)?;
         if modified {
             context_manager.mark_as_modified(&included_context_name);
         }

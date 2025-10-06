@@ -95,11 +95,22 @@ fn _answer_first_question_recursive(
                 });
                 i += 1; // Move past the summary tag
             }
-            LineKind::Tagged { tag: TagKind::Answer, arguments, .. } => {
-                let uid = arguments.first().map(|s| s.as_str()).unwrap_or("");
-                let anchor_kind = "answer";
-                let uid_uuid = Uuid::parse_str(uid).map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
-                let metadata_dir = project.resolve_metadata(anchor_kind, &uid_uuid)?;
+            LineKind::Tagged { tag: TagKind::Answer, arguments: _, .. } => {
+            let (tag_kind, arguments) = match &line.kind {
+                LineKind::Tagged { tag, arguments, .. } => (tag, arguments),
+                _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
+            };
+
+            let uid_str = line.anchor.as_ref().map(|a| a.uid.to_string()).unwrap_or_else(|| {
+                arguments.first().map(|s| s.to_string()).unwrap_or_default()
+            });
+            let uid_uuid = Uuid::parse_str(&uid_str).map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
+
+            let anchor_kind = match tag_kind {
+                TagKind::Answer => AnchorKind::Answer,
+                _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
+            };
+            let metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), &uid_uuid)?;
                 let state_file = metadata_dir.join("state.json");
 
                 let mut answer_state: AnswerState = if state_file.exists() {

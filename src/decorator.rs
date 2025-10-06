@@ -45,6 +45,13 @@ pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool> {
                         uid: new_uid,
                         tag: AnchorTag::Begin,
                     });
+                    if let LineKind::Tagged { arguments, .. } = &mut line.kind {
+                        if arguments.is_empty() {
+                            arguments.push(new_uid.to_string());
+                        } else {
+                            arguments[0] = new_uid.to_string();
+                        }
+                    }
                     modified = true;
                 }
             }

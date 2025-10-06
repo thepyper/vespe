@@ -46,11 +46,11 @@ decorate_context(project, context_name) -> Result<()>
 che deve usare ast/parser.rs::parse_document per fare parsing del context passato (usa resolve_context per avere il path),
 e deve aggiungere le seguenti decorazioni:
 first-pass:
-- su @inline, se non c'e' ancora, aggiungi ancora <!-- inline-uid:begin -->
-- su @summary, se non c'e' ancora, aggiungi ancora <!-- summary-uid:begin -->
-- su @answer, se non c'e' ancora, aggiungi ancora <!-- answer-uid:begin -->
+- su @inline, se non c'e' ancora, aggiungi ancora <!-- inline-uid:begin -->;
+- su @summary, se non c'e' ancora, aggiungi ancora <!-- summary-uid:begin -->;
+- su @answer, se non c'e' ancora, aggiungi ancora <!-- answer-uid:begin -->;
 second-pass:
-- ripassa tutto, e se manca la ancora <!-- xxx-uid:end -->
+- ripassa tutto, e se manca la ancora <!-- xxx-uid:end -->;
   ad una qualsiasi delle ancore :begin esistenti, aggiungila una nuova riga subito a seguire della ancora :begin con l'ancora :end
 
 fatto cio', se qualcosa e' stato modificato, va riscritto il file letto.
@@ -1407,5 +1407,4 @@ La Fase 2 è completa. Ho implementato:
 - Il comando `context tree` in `src/bin/ctx/main.rs` con output colorato.
 
 Sono pronto per la prossima istruzione.
-
 

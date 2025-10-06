@@ -1171,3 +1171,16 @@ pub fn format_document(lines: Vec<Line>) -> String {
 ```
 
 Scriverò questo contenuto nel file, poi lo leggerò per verificarlo, e poi eseguirò `cargo check`.
+
+Ora, in un file src/injector.rs vorrei una funzione che:
+
+- riceva come parametri (Project, ctx_name, anchor_kind, anchor_uuid, new_content: Vec<Line>)
+- ricerchi le ancore :begin e :end nel context passato
+- rimuova il contenuto esistente tra le ancore :begin e :end se c'e'
+- inserisca il nuovo contenuto new_content tra le ancore :begin e :end
+- riscriva il file 
+
+chiaro?
+
+@answer
+

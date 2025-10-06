@@ -64,13 +64,16 @@ pub fn execute2(
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
             Exe2Compitino::AnswerQuestion{..} => {
-                // Handle answering question
+                // TODO answer the question with llm, save data into answer meta file, so on next _execute2 call content will be patched into context 
             }
             Exe2Compitino::Summarize{..} => {
-                // Handle summarizing
+                // TODO summarize the data with llm, save data into summary meta file, so on next _execute2 call content will be patched into context 
+				// must save hash of content as well for future comparison
             }
         }
     }
+	
+	context_manager.save_modified_contexts(project)?;
 
     Ok(())
 }
@@ -173,9 +176,12 @@ fn _execute2(
                 }
             }
         }
-        apply_patches(&mut lines, patches)?;
-    }
-
+		if !patches.is_empty() {			
+			apply_patches(&mut lines, patches)?;
+			context_manager.mark_as_modified(context_name);
+		}	
+	}
+	
     {
         let mut patches = BTreeMap::<usize, Vec<Line>>::new();
         let anchor_index = AnchorIndex::new(&lines);
@@ -209,7 +215,11 @@ fn _execute2(
                 );
             }
         }
-        apply_patches(&mut lines, patches)?;
+
+		if !patches.is_empty() {			
+			apply_patches(&mut lines, patches)?;
+			context_manager.mark_as_modified(context_name);
+		}	
     }
 
     {
@@ -221,7 +231,7 @@ fn _execute2(
 				LineKind::Tagged{ tag, arguments, .. } => {
 					match tag {
 						TagKind::Inline => {
-							let is_done = false; // TODO load InlineState and check if already applied 
+							let is_done = false; // TODO load InlineState and check if already applied, if so do NOT apply (so will not exit _execute2)
 							if !is_done {
 								let snippet = project.load_snippet(arguments.first().unwrap().as_str())?;
 								patches.insert(i, snippet.content);
@@ -237,6 +247,7 @@ fn _execute2(
 		if !patches.is_empty() {
 			// Some inline applied, let's run all of this again
 			apply_patches(&mut lines, patches)?;
+			context_manager.mark_as_modified(context_name);
 			return Ok(Exe2Compitino::Continue);
 		}
     }
@@ -251,15 +262,19 @@ fn _execute2(
 					match tag {
 						TagKind::Summary => {
 							let mut exe2_sub_manager = Execute2Manager::new();
+							// Execute content to summarize, can only summarize content that is completely executed 
 							match _execute2(project, arguments.first().unwrap().as_str(), _agent, context_manager, &mut exe2_sub_manager) {
 								Ok(Exe2Compitino::None) => {
-									// Can summarize, content is done 
+									// TODO content must be hashed, and hash must be compared to that saved into summary meta data;
+									// if hash match, do not summarize again, just insert with a patch the data from summary meta data into this context 
 									return Ok(Exe2Compitino::Summarize{ uid: line.anchor.as_ref().unwrap().uid, content: exe2_sub_manager.collect_content });
 								}
 								x => { return x; }
 							}		
 						}
 						TagKind::Answer => {
+							// TODO controlla se domanda gia' risposta, ovvero se ci sono dati in oggetto metadati;
+							// se ci sono, patcha direttamente il context con i dati, altrimenti esci e dai il compitino di rispondere alla domanda.
 							return Ok(Exe2Compitino::AnswerQuestion{ uid: line.anchor.as_ref().unwrap().uid, content: _exe2.collect_content.clone() });
 						}
 						_ => {},
@@ -268,7 +283,10 @@ fn _execute2(
 			}
 		}
 		
-		apply_patches(&mut lines, patches)?;
+		if !patches.is_empty() {
+			apply_patches(&mut lines, patches)?;
+			context_manager.mark_as_modified(context_name);
+		}
 	}
 
     Ok(Exe2Compitino::None)

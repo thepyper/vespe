@@ -30,7 +30,7 @@ fn _inject_recursive_inline(
     }
     inlined_set.insert(context_name.to_string());
 
-    let context_lines = context_manager.get_context(context_name)?;
+    let context_lines = context_manager.load_context(project, context_name)?;
     let mut modified_current_context = false;
 
     let mut lines_to_process = Vec::new();

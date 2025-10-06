@@ -52,7 +52,7 @@ fn _answer_first_question_recursive(
 
     let mut current_context_for_agent: Vec<Line> = Vec::new();
 
-    let context_lines = context_manager.get_context(context_name)?;
+    let context_lines = context_manager.load_context(project, context_name)?;
     let mut lines_to_process = std::mem::take(context_lines); // Take ownership to modify and re-insert
 
     let mut i = 0;
@@ -79,7 +79,7 @@ fn _answer_first_question_recursive(
                     return Ok(true); // A question was answered in an included context, stop and return true
                 }
                 // Append processed included lines to current_context_for_agent, excluding tags/anchors
-                let included_lines_for_agent = context_manager.get_context(include_path)?;
+                let included_lines_for_agent = context_manager.load_context(project, include_path)?;
                 for included_line in included_lines_for_agent {
                     if !matches!(included_line.kind, LineKind::Tagged { .. }) && included_line.anchor.is_none() {
                         current_context_for_agent.push(included_line.clone());
@@ -141,7 +141,7 @@ fn _answer_first_question_recursive(
 
                     answer_state.answered = true;
                     std::fs::write(&state_file, serde_json::to_string_pretty(&answer_state)?)?;
-                    *context_manager.get_context(context_name)? = lines_to_process; // Put back the modified lines
+                    *context_manager.load_context(project, context_name)? = lines_to_process; // Put back the modified lines
                     return Ok(true); // A question was answered, stop and return true
                 }
                 i += 1; // Move past the answer tag

@@ -4,6 +4,9 @@ use crate::project::{ContextManager, Project};
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
 use uuid::Uuid;
+use crate::execute::inject::InlineState;
+use std::fs;
+use serde_json;
 
 pub mod answer;
 pub mod decorate;
@@ -231,12 +234,24 @@ fn _execute2(
 				LineKind::Tagged{ tag, arguments, .. } => {
 					match tag {
 						TagKind::Inline => {
-							let is_done = false; // TODO load InlineState and check if already applied, if so do NOT apply (so will not exit _execute2)
-							if !is_done {
-								let snippet = project.load_snippet(arguments.first().unwrap().as_str())?;
-								patches.insert(i, snippet.content);
-							}
-						}
+							                            let uid = line.anchor.as_ref().unwrap().uid;
+							                            let anchor_metadata_dir = project.resolve_metadata(&AnchorKind::Inline.to_string(), &uid)?;
+							                            let state_file_path = anchor_metadata_dir.join("state.json");
+							
+							                            let mut inline_state = InlineState::default();
+							                            if state_file_path.exists() {
+							                                let state_content = fs::read_to_string(&state_file_path)?;
+							                                inline_state = serde_json::from_str(&state_content)?;
+							                            }
+							
+							                            if !inline_state.pasted {
+							                                let snippet = project.load_snippet(arguments.first().unwrap().as_str())?;
+							                                patches.insert(i, snippet.content);
+							
+							                                inline_state.pasted = true;
+							                                let updated_state_content = serde_json::to_string_pretty(&inline_state)?;
+							                                fs::write(&state_file_path, updated_state_content)?;
+							                            }						}
 						_ => {},
 					}
 				}

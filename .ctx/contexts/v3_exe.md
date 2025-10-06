@@ -94,6 +94,10 @@ Ho soddisfatto la richiesta dell'utente. Attendo ulteriori istruzioni.
 
 Implementa la cli per context execute.
 
+Problema da risolvere: le righe vuote vengono cancellate nel ciclo di lettura e riscrittura di un context
+passando per Vec<Line>. Verifica se le linee vuote vengono cancellate in parsing o formatting.
+
+@answer
 
 
 

@@ -11,14 +11,14 @@ pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
     input
         .lines()
         .enumerate()
-        .filter_map(|(line_num, line_str)| {
-            // Skip empty lines or lines that are just whitespace
+        .map(|(line_num, line_str)| {
             if line_str.trim().is_empty() {
-                return None;
+                Ok(Line { kind: LineKind::Text(line_str.to_string()), anchor: None })
+            } else {
+                parse_line(line_str).map_err(|e| format!("Error on line {}: {}", line_num + 1, e))
             }
-            Some(parse_line(line_str).map_err(|e| format!("Error on line {}: {}", line_num + 1, e)))
         })
-        .collect()
+        .collect::<Result<Vec<Line>, String>>()
 }
 
 fn parse_line(input: &str) -> Result<Line, String> {

@@ -10,29 +10,8 @@ pub fn decorate_recursive_file(
     context_manager: &mut ContextManager,
     context_name: &str,
 ) -> Result<()> {
-    let context_lines = context_manager.load_context(project, context_name)?;
-
-    let mut modified_current_context = false;
-
-    let modified = decorator::decorate_context_in_memory(context_lines)?;
-    if modified {
-        modified_current_context = true;
-    }
-
     let mut decorated_set = HashSet::new();
-    decorated_set.insert(context_name.to_string());
-
-    let _ = _decorate_recursive_file(
-        project,
-        context_manager,
-        context_name,
-        &mut decorated_set,
-    )?;
-
-    if modified_current_context {
-        context_manager.mark_as_modified(context_name);
-    }
-
+    _decorate_recursive_file(project, context_manager, context_name, &mut decorated_set)?;
     Ok(())
 }
 
@@ -42,9 +21,11 @@ fn _decorate_recursive_file(
     context_name: &str,
     decorated_set: &mut HashSet<String>,
 ) -> Result<()> {
-    // Load the current context's lines and extract includes to decorate.
-    // This ensures the mutable borrow of `context_manager` for `context_lines` is released
-    // before we attempt to borrow it again for included contexts.
+    // Decorate the current context and mark it as modified if changes occur.
+    _decorate_and_mark_context(project, context_manager, context_name)?;
+    decorated_set.insert(context_name.to_string());
+
+    // Extract includes to decorate from the current context.
     let current_context_includes = {
         let context_lines = context_manager.load_context(project, context_name)?;
         let mut includes_to_decorate = Vec::new();
@@ -57,18 +38,10 @@ fn _decorate_recursive_file(
             }
         }
         includes_to_decorate
-    }; // `context_lines` goes out of scope here, releasing the mutable borrow on `context_manager`
+    };
 
+    // Recursively decorate included contexts.
     for included_context_name in current_context_includes.into_iter() {
-        decorated_set.insert(included_context_name.clone());
-
-        let _included_lines = context_manager.load_context(project, &included_context_name)?; // Now this borrow is fine
-
-        let modified = decorator::decorate_context_in_memory(_included_lines)?;
-        if modified {
-            context_manager.mark_as_modified(&included_context_name);
-        }
-
         _decorate_recursive_file(
             project,
             context_manager,
@@ -77,5 +50,18 @@ fn _decorate_recursive_file(
         )?;
     }
 
+    Ok(())
+}
+
+fn _decorate_and_mark_context(
+    project: &Project,
+    context_manager: &mut ContextManager,
+    context_name: &str,
+) -> Result<()> {
+    let context_lines = context_manager.load_context(project, context_name)?;
+    let modified = decorator::decorate_context_in_memory(context_lines)?;
+    if modified {
+        context_manager.mark_as_modified(context_name);
+    }
     Ok(())
 }

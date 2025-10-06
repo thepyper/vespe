@@ -22,7 +22,7 @@ impl Default for AnswerState {
     }
 }
 
-pub fn answer_questions(
+pub fn answer_first_question(
     project: &Project,
     context_manager: &mut ContextManager,
     context_name: &str,
@@ -30,22 +30,16 @@ pub fn answer_questions(
 ) -> anyhow::Result<bool> {
     let mut answered_set = HashSet::new();
 
-    let modified = _answer_questions_recursive(
+    _answer_first_question_recursive(
         project,
         context_manager,
         context_name,
         agent,
         &mut answered_set,
-    )?;
-
-    if modified {
-        context_manager.mark_as_modified(context_name);
-    }
-
-    Ok(modified)
+    )
 }
 
-fn _answer_questions_recursive(
+fn _answer_first_question_recursive(
     project: &Project,
     context_manager: &mut ContextManager,
     context_name: &str,
@@ -56,7 +50,6 @@ fn _answer_questions_recursive(
         return Ok(false); // Already processed this context to prevent circular dependencies
     }
 
-    let mut modified = false;
     let mut current_context_for_agent: Vec<Line> = Vec::new();
 
     let context_lines = context_manager.get_context(context_name)?;
@@ -70,29 +63,20 @@ fn _answer_questions_recursive(
             LineKind::Tagged { tag: TagKind::Include, arguments, .. } => {
                 let include_path = arguments.first().map(|s| s.as_str()).unwrap_or("");
                 // Decorate the included lines
-                let decorated_modified = decorate::decorate_recursive_file(project, context_manager, include_path)?;
-                if decorated_modified {
-                    context_manager.mark_as_modified(include_path);
-                    modified = true;
-                }
+                decorate::decorate_recursive_file(project, context_manager, include_path)?;
 
                 // Inject into the included lines
-                let injected_modified = inject::inject_recursive_inline(project, context_manager, include_path)?;
-                if injected_modified {
-                    context_manager.mark_as_modified(include_path);
-                    modified = true;
-                }
+                inject::inject_recursive_inline(project, context_manager, include_path)?;
 
-                let included_modified_by_answer = _answer_questions_recursive(
+                let answered_in_included = _answer_first_question_recursive(
                     project,
                     context_manager,
                     include_path,
                     agent,
                     answered_set,
                 )?;
-                if included_modified_by_answer {
-                    context_manager.mark_as_modified(include_path);
-                    modified = true;
+                if answered_in_included {
+                    return Ok(true); // A question was answered in an included context, stop and return true
                 }
                 // Append processed included lines to current_context_for_agent, excluding tags/anchors
                 let included_lines_for_agent = context_manager.get_context(include_path)?;
@@ -126,23 +110,12 @@ fn _answer_questions_recursive(
                 };
 
                 if !answer_state.answered {
-                    let uid_uuid = Uuid::parse_str(uid).map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
-
-                    // Extract the question from the answer tag line itself
-                    let question_line = lines_to_process[i].clone();
-                    let question_text = if let LineKind::Tagged { tag: TagKind::Answer, arguments: q_uid_args, .. } = &question_line.kind {
-                        let q_uid = q_uid_args.first().map(|s| s.as_str()).unwrap_or("");
-                        format!("Question ({}): {}", q_uid, question_line.text_content())
-                    } else {
-                        question_line.text_content()
-                    };
-
+                    // The query is the accumulated context up to this point
                     let query_lines: Vec<String> = current_context_for_agent
                         .iter()
                         .map(|line| line.text_content())
-                        .chain(std::iter::once(question_text))
                         .collect();
-                    let query = query_lines.join("\n"); // Join with escaped newline for agent
+                    let query = query_lines.join("\n");
 
                     // Call the agent
                     let agent_response = agent.call(&query)?;
@@ -163,15 +136,14 @@ fn _answer_questions_recursive(
                         new_content_lines,
                     )?;
                     if injected_modified {
-                        modified = true;
+                        context_manager.mark_as_modified(context_name);
                     }
 
                     answer_state.answered = true;
                     std::fs::write(&state_file, serde_json::to_string_pretty(&answer_state)?)?;
+                    *context_manager.get_context(context_name)? = lines_to_process; // Put back the modified lines
+                    return Ok(true); // A question was answered, stop and return true
                 }
-                // Append the answer content to current_context_for_agent
-                // This assumes the injected content is now part of lines_to_process
-                // and will be processed in subsequent iterations or appended if it's after the current 'i'
                 i += 1; // Move past the answer tag
             }
             LineKind::Text(_) => {
@@ -187,5 +159,5 @@ fn _answer_questions_recursive(
     }
 
     *context_manager.get_context(context_name)? = lines_to_process; // Put back the modified lines
-    Ok(modified)
+    Ok(false) // No question was answered in this context or its includes
 }

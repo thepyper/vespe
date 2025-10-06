@@ -5,14 +5,9 @@ pub fn decorate_recursive_file(
     project: &Project,
     context_manager: &mut ContextManager,
     context_name: &str,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<()> {
     let mut decorated_set = HashSet::new();
-    let modified = _decorate_recursive_file(project, context_manager, context_name, &mut decorated_set)?;
-
-    if modified {
-        context_manager.mark_as_modified(context_name);
-    }
-    Ok(modified)
+    _decorate_recursive_file(project, context_manager, context_name, &mut decorated_set)
 }
 
 fn _decorate_recursive_file(
@@ -20,19 +15,18 @@ fn _decorate_recursive_file(
     context_manager: &mut ContextManager,
     context_name: &str,
     decorated_set: &mut HashSet<String>,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<()> {
     if decorated_set.contains(context_name) {
-        return Ok(false);
+        return Ok(());
     }
     decorated_set.insert(context_name.to_string());
 
-    let mut modified = false;
-
     let context_lines = context_manager.get_context(context_name)?;
+    let mut modified_current_context = false;
 
     // First pass: decorate the current context
     if crate::decorator::decorate_context_in_memory(context_lines)? {
-        modified = true;
+        modified_current_context = true;
     }
 
     // Second pass: follow @include directives and decorate recursively
@@ -44,11 +38,12 @@ fn _decorate_recursive_file(
     }
 
     for included_context_name in includes_to_decorate.into_iter() {
-        if _decorate_recursive_file(project, context_manager, &included_context_name, decorated_set)? {
-            context_manager.mark_as_modified(&included_context_name);
-            modified = true;
-        }
+        _decorate_recursive_file(project, context_manager, &included_context_name, decorated_set)?;
     }
 
-    Ok(modified)
+    if modified_current_context {
+        context_manager.mark_as_modified(context_name);
+    }
+
+    Ok(())
 }

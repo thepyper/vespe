@@ -14,13 +14,9 @@ pub fn inject_recursive_inline(
     project: &Project,
     context_manager: &mut ContextManager,
     context_name: &str,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<()> {
     let mut inlined_set = HashSet::new();
-    let modified = _inject_recursive_inline(project, context_manager, context_name, &mut inlined_set)?;
-    if modified {
-        context_manager.mark_as_modified(context_name);
-    }
-    Ok(modified)
+    _inject_recursive_inline(project, context_manager, context_name, &mut inlined_set)
 }
 
 fn _inject_recursive_inline(
@@ -28,15 +24,14 @@ fn _inject_recursive_inline(
     context_manager: &mut ContextManager,
     context_name: &str,
     inlined_set: &mut HashSet<String>,
-) -> anyhow::Result<bool> {
+) -> anyhow::Result<()> {
     if inlined_set.contains(context_name) {
-        return Ok(false);
+        return Ok(());
     }
     inlined_set.insert(context_name.to_string());
 
-    let mut modified = false;
-
     let context_lines = context_manager.get_context(context_name)?;
+    let mut modified_current_context = false;
 
     let mut lines_to_process = Vec::new();
     for (i, line) in context_lines.iter().enumerate() {
@@ -71,7 +66,7 @@ fn _inject_recursive_inline(
             anchor_uid,
             snippet_lines,
         )? {
-            modified = true;
+            modified_current_context = true;
         }
 
         // Update state after successful injection
@@ -91,11 +86,12 @@ fn _inject_recursive_inline(
     }
 
     for included_context_name in includes_to_inject.into_iter() {
-        if _inject_recursive_inline(project, context_manager, &included_context_name, inlined_set)? {
-            context_manager.mark_as_modified(&included_context_name);
-            modified = true;
-        }
+        _inject_recursive_inline(project, context_manager, &included_context_name, inlined_set)?;
     }
 
-    Ok(modified)
+    if modified_current_context {
+        context_manager.mark_as_modified(context_name);
+    }
+
+    Ok(())
 }

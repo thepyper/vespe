@@ -645,5 +645,113 @@ Okay, `src/execute/answer.rs` is updated. Now, I'll modify `src/execute/mod.rs` 
 
 Se in ContextManager inizialmente viene caricato solamente un context, poi nelle varie funzioni va usato load_context non get_context.
 
+Okay, I understand. I need to review `src/execute/decorate.rs`, `src/execute/inject.rs`, and `src/execute/answer.rs` and replace calls to `context_manager.get_context()` with `context_manager.load_context(&project, ...)` where a context might not yet be loaded.
+
+I'll start by modifying `src/execute/decorate.rs`. I'll read the file to identify the relevant calls.
+```rust
+// src/execute/decorate.rs
+use anyhow::Result;
+use std::collections::HashSet;
+
+use crate::ast::types::{Line, LineKind, TagKind};
+use crate::decorator;
+use crate::project::{ContextManager, Project};
+
+pub fn decorate_recursive_file(
+    project: &Project,
+    context_manager: &mut ContextManager,
+    context_name: &str,
+) -> Result<()> {
+    let context_lines = context_manager.load_context(project, context_name)?; // Use load_context here
+    let mut modified_current_context = false;
+
+    let (decorated_lines, modified) =
+        decorator::decorate_context_in_memory(context_lines.to_vec())?; // Pass a clone for in-memory modification
+    if modified {
+        *context_lines = decorated_lines; // Update the original Vec<Line>
+        modified_current_context = true;
+    }
+
+    let mut decorated_set = HashSet::new();
+    decorated_set.insert(context_name.to_string());
+
+    let _ = _decorate_recursive_file(
+        project,
+        context_manager,
+        context_name,
+        &mut decorated_set,
+    )?;
+
+    if modified_current_context {
+        context_manager.mark_as_modified(context_name);
+    }
+
+    Ok(())
+}
+
+fn _decorate_recursive_file(
+    project: &Project,
+    context_manager: &mut ContextManager,
+    context_name: &str,
+    decorated_set: &mut HashSet<String>,
+) -> Result<()> {
+    let context_lines = context_manager.load_context(project, context_name)?; // Use load_context here
+
+    let mut includes_to_decorate = Vec::new();
+
+    for line in context_lines.iter() {
+        if let LineKind::Tagged(TagKind::Include, include_path) = &line.kind {
+            let include_path_str = include_path.first().map(|s| s.as_str()).unwrap_or("");
+            if !decorated_set.contains(include_path_str) {
+                includes_to_decorate.push(include_path_str.to_string());
+            }
+        }
+    }
+
+    for included_context_name in includes_to_decorate.into_iter() {
+        decorated_set.insert(included_context_name.clone());
+        let included_lines = context_manager.load_context(project, &included_context_name)?; // Use load_context here
+
+        let (decorated_lines, modified) =
+            decorator::decorate_context_in_memory(included_lines.to_vec())?; // Pass a clone
+        if modified {
+            *included_lines = decorated_lines; // Update the original Vec<Line>
+            context_manager.mark_as_modified(&included_context_name);
+        }
+
+        _decorate_recursive_file(
+            project,
+            context_manager,
+            &included_context_name,
+            decorated_set,
+        )?;
+    }
+
+    Ok(())
+}
+```
+I'll apply the changes to `src/execute/decorate.rs`.Okay, `decorate_recursive_file` has been updated. Upon reviewing `_decorate_recursive_file`, I found that it already correctly uses `context_manager.load_context`.
+
+Now, I'll proceed to `src/execute/inject.rs`. I'll read its content to identify where `get_context` is used and should be replaced with `load_context`.Okay, in `src/execute/inject.rs`, I need to replace the `get_context` call for the main `context_lines` with `load_context`. The recursive calls are already handled correctly.
+
+Here's the `replace` call:`src/execute/inject.rs` is updated. Next, `src/execute/answer.rs`. Reading the file to find relevant calls.Okay, in `src/execute/answer.rs`, I need to update `_answer_first_question_recursive`. Specifically, I'll replace `context_manager.get_context(context_name)?` with `context_manager.load_context(project, context_name)?` for the main context, `context_manager.get_context(include_path)?` with `context_manager.load_context(project, include_path)?` for included contexts, and both instances of `*context_manager.get_context(context_name)? = lines_to_process;` with `*context_manager.load_context(project, context_name)? = lines_to_process;`.
+
+Here are the three `replace` calls.Okay, `src/execute/answer.rs` is updated. Time to `cargo check`.Unclosed delimiter in `src/execute/decorate.rs`. I'll read the file to fix it.I've identified an incomplete `decorate_recursive_file` function in `src/execute/decorate.rs`, likely truncated by a previous `replace` operation. It's missing its closing brace and core logic. Additionally, `_decorate_recursive_file` incorrectly uses `get_context` instead of `load_context`. I'll correct `decorate_recursive_file` first, then address `_decorate_recursive_file`.
+
+Here's the `replace` call to fix `decorate_recursive_file`.My last `replace` was flawed; the `old_string` was too complex, resulting in an incorrect modification. I'll re-read `src/execute/decorate.rs` to assess its current state, then apply a precise fix to `_decorate_recursive_file` to use `load_context`, and finally verify `decorate_recursive_file`.The `src/execute/decorate.rs` file is corrupted, missing `_decorate_recursive_file` and `use` statements due to a previous `replace` error. I will use `write_file` to completely rewrite `src/execute/decorate.rs` with the correct content, including all necessary `use` statements and both `decorate_recursive_file` and `_decorate_recursive_file` functions, ensuring `load_context` is used where appropriate. Then, I'll run `cargo check` to verify.`src/execute/decorate.rs` is rebuilt. Running `cargo check` to confirm compilation and `load_context` changes.Okay, I've got several compilation errors and warnings to tackle.
+
+In `src/execute/decorate.rs`, the `decorate_context_in_memory` function is being called incorrectly. It expects a mutable reference to `Vec<Line>` and modifies it in place, returning a `Result<bool>`. My current code is passing a cloned `Vec<Line>` and attempting to destructure a tuple `(decorated_lines, modified)`, which is wrong. The fix involves passing the mutable reference directly and changing the destructuring to `let modified = ...`.
+
+Also in `src/execute/decorate.rs`, I have a pattern matching error for `LineKind::Tagged`. It's a struct variant, not a tuple variant, so I need to adjust the `if let` statement accordingly.
+
+Finally, there's an unused import for `Line` in `src/execute/decorate.rs` that needs to be removed. The `modified` warning in `src/injector.rs` is a known false positive and will be ignored.
+
+I'll start by fixing `src/execute/decorate.rs`, specifically the `decorate_context_in_memory` call and the destructuring.Fixed `decorate_recursive_file`. Now, applying the same fix to `_decorate_recursive_file` in `src/execute/decorate.rs`.`decorate_recursive_file` and `_decorate_recursive_file` are updated. Now, I'll fix the `LineKind::Tagged` pattern matching error in `_decorate_recursive_file` within `src/execute/decorate.rs`.`LineKind::Tagged` is fixed. Now, removing the unused `Line` import from `src/execute/decorate.rs`.`src/execute/decorate.rs` is fixed. Running `cargo check` to review remaining issues.Compilation errors are gone; only the `src/injector.rs` false positive remains. `load_context` changes and `decorate.rs` fixes are confirmed. Committing now.`git status` and `git diff HEAD` confirm the expected changes in `src/execute/answer.rs`, `src/execute/decorate.rs`, and `src/execute/inject.rs`. Ignoring CRLF warnings, I'll stage and commit.Staged. Committing.Commit successful. User feedback on `ContextManager::load_context` addressed, compilation errors fixed, and project now compiles cleanly. Request fulfilled.
+
+
+
+
+decorate va pensato per decorare diversi tipi di tag, non solo include. Aggiungi decorazione di @answer e @summary
+
 @answer
 

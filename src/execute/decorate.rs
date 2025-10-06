@@ -30,7 +30,12 @@ fn _decorate_recursive_file(
         let context_lines = context_manager.load_context(project, context_name)?;
         let mut includes_to_decorate = Vec::new();
         for line in context_lines.iter() {
-            if let LineKind::Tagged { tag: TagKind::Include, arguments, .. } = &line.kind {
+            if let LineKind::Tagged {
+                tag: TagKind::Include,
+                arguments,
+                ..
+            } = &line.kind
+            {
                 let include_path_str = arguments.first().map(|s| s.as_str()).unwrap_or("");
                 if !decorated_set.contains(include_path_str) {
                     includes_to_decorate.push(include_path_str.to_string());

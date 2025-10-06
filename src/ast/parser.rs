@@ -4,7 +4,11 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 pub fn format_document(lines: &Vec<Line>) -> String {
-    lines.iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n")
+    lines
+        .iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<String>>()
+        .join("\n")
 }
 
 pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
@@ -13,7 +17,10 @@ pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
         .enumerate()
         .map(|(line_num, line_str)| {
             if line_str.trim().is_empty() {
-                Ok(Line { kind: LineKind::Text(line_str.to_string()), anchor: None })
+                Ok(Line {
+                    kind: LineKind::Text(line_str.to_string()),
+                    anchor: None,
+                })
             } else {
                 parse_line(line_str).map_err(|e| format!("Error on line {}: {}", line_num + 1, e))
             }
@@ -31,7 +38,10 @@ fn parse_line(input: &str) -> Result<Line, String> {
         LineKind::Text(content_str.to_string())
     };
 
-    Ok(Line { kind: line_kind, anchor })
+    Ok(Line {
+        kind: line_kind,
+        anchor,
+    })
 }
 
 fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
@@ -112,7 +122,9 @@ fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
     // Check for parameters
     // No whitespace allowed between @tag and [parameters]
     if remaining_after_tag.starts_with("[") {
-        let param_end = remaining_after_tag.find("]").ok_or("Missing closing ']' for parameters".to_string())?;
+        let param_end = remaining_after_tag
+            .find("]")
+            .ok_or("Missing closing ']' for parameters".to_string())?;
         let param_str = &remaining_after_tag[1..param_end];
         parameters = parse_parameters(param_str)?;
         current_pos = param_end + 1;
@@ -123,7 +135,11 @@ fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
         arguments = parse_arguments(arg_str)?;
     }
 
-    Ok(LineKind::Tagged { tag, parameters, arguments })
+    Ok(LineKind::Tagged {
+        tag,
+        parameters,
+        arguments,
+    })
 }
 
 fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
@@ -137,7 +153,7 @@ fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
         if trimmed_pair.is_empty() {
             continue;
         }
-        let parts: Vec<&str> = trimmed_pair.splitn(2, '=' ).collect();
+        let parts: Vec<&str> = trimmed_pair.splitn(2, '=').collect();
         if parts.len() != 2 {
             return Err(format!("Invalid parameter format: {}", trimmed_pair));
         }
@@ -145,13 +161,19 @@ fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
         let value = parts[1].trim().to_string();
 
         // Validate key format: [a-zA-Z_][a-zA-Z0-9_]*
-        if !key.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_' ) ||
-           !key.chars().all(|c| c.is_alphanumeric() || c == '_' ) {
+        if !key
+            .chars()
+            .next()
+            .map_or(false, |c| c.is_alphabetic() || c == '_')
+            || !key.chars().all(|c| c.is_alphanumeric() || c == '_')
+        {
             return Err(format!("Invalid parameter key format: {}", key));
         }
 
         // Validate value format: [a-zA-Z0-9_+\-./]* (single token, no spaces)
-        if !value.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '+' || c == '-' || c == '.' || c == '/' ) {
+        if !value.chars().all(|c| {
+            c.is_alphanumeric() || c == '_' || c == '+' || c == '-' || c == '.' || c == '/'
+        }) {
             return Err(format!("Invalid parameter value format: {}", value));
         }
 
@@ -179,14 +201,14 @@ fn parse_arguments(input: &str) -> Result<Vec<String>, String> {
                 } else {
                     current_arg.push(c);
                 }
-            },
+            }
             '"' => {
                 in_quote = !in_quote;
                 if !in_quote && !current_arg.is_empty() {
                     args.push(current_arg.clone());
                     current_arg.clear();
                 }
-            },
+            }
             ' ' => {
                 if in_quote {
                     current_arg.push(c);
@@ -194,10 +216,10 @@ fn parse_arguments(input: &str) -> Result<Vec<String>, String> {
                     args.push(current_arg.clone());
                     current_arg.clear();
                 }
-            },
+            }
             _ => {
                 current_arg.push(c);
-            },
+            }
         }
     }
 

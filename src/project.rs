@@ -1,9 +1,9 @@
 use crate::ast::parser::parse_document;
+use crate::ast::types::{Line, LineKind, TagKind};
+use anyhow::Context as AnyhowContext;
+use anyhow::Result;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use anyhow::Result;
-use anyhow::Context as AnyhowContext;
-use crate::ast::types::{Line, LineKind, TagKind};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -11,9 +11,9 @@ pub struct Context {
     pub name: String,
     pub content: Vec<Line>,
     pub includes: BTreeMap<usize, Context>, // line index to Context
-    pub inlines: BTreeMap<usize, Snippet>, // line index to Snippet
+    pub inlines: BTreeMap<usize, Snippet>,  // line index to Snippet
     pub summaries: BTreeMap<usize, Context>, // line index to Context
-    pub answers: BTreeSet<usize>, // line index
+    pub answers: BTreeSet<usize>,           // line index
 }
 
 #[derive(Debug)]
@@ -23,8 +23,6 @@ pub struct Snippet {
 }
 
 // ... (rest of the file)
-
-
 
 const CTX_DIR_NAME: &str = ".ctx";
 const CTX_ROOT_FILE_NAME: &str = ".ctx_root";
@@ -43,8 +41,6 @@ pub struct SnippetInfo {
     pub name: String,
     pub path: PathBuf,
 }
-
-
 
 pub struct ContextManager {
     contexts: HashMap<String, Vec<Line>>,
@@ -75,18 +71,26 @@ impl ContextManager {
         self.contexts.contains_key(name)
     }
 
-    pub fn load_context(&mut self, project: &Project, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
+    pub fn load_context(
+        &mut self,
+        project: &Project,
+        context_name: &str,
+    ) -> anyhow::Result<&mut Vec<Line>> {
         if !self.contains_context(context_name) {
             let lines = project.read_and_parse_context_file(context_name)?;
             self.insert_context(context_name.to_string(), lines);
         }
-        self.get_context_mut(context_name)
-            .context(format!("Context '{}' not found in ContextManager after loading", context_name))
+        self.get_context_mut(context_name).context(format!(
+            "Context '{}' not found in ContextManager after loading",
+            context_name
+        ))
     }
 
     pub fn get_context(&mut self, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
-        self.get_context_mut(context_name)
-            .context(format!("Context '{}' not found in ContextManager", context_name))
+        self.get_context_mut(context_name).context(format!(
+            "Context '{}' not found in ContextManager",
+            context_name
+        ))
     }
 
     pub fn mark_as_modified(&mut self, context_name: &str) {
@@ -170,24 +174,36 @@ impl Project {
     }
 
     pub fn resolve_metadata(&self, anchor_kind: &str, uid: &Uuid) -> Result<PathBuf> {
-        let anchor_metadata_dir = self.metadata_home().join(format!("{}-{}", anchor_kind, uid.to_string()));
-        std::fs::create_dir_all(&anchor_metadata_dir)
-            .context(format!("Failed to create metadata directory for anchor {}-{}: {}", anchor_kind, uid, anchor_metadata_dir.display()))?;
+        let anchor_metadata_dir =
+            self.metadata_home()
+                .join(format!("{}-{}", anchor_kind, uid.to_string()));
+        std::fs::create_dir_all(&anchor_metadata_dir).context(format!(
+            "Failed to create metadata directory for anchor {}-{}: {}",
+            anchor_kind,
+            uid,
+            anchor_metadata_dir.display()
+        ))?;
         Ok(anchor_metadata_dir)
     }
 
     pub fn create_context_file(&self, name: &str) -> Result<PathBuf> {
         let file_path = self.contexts_root().join(format!("{}.md", name));
-        let parent_dir = file_path.parent().context("Failed to get parent directory")?;
-        std::fs::create_dir_all(parent_dir).context("Failed to create parent directories for context file")?;
+        let parent_dir = file_path
+            .parent()
+            .context("Failed to get parent directory")?;
+        std::fs::create_dir_all(parent_dir)
+            .context("Failed to create parent directories for context file")?;
         std::fs::write(&file_path, "").context("Failed to create context file")?;
         Ok(file_path)
     }
 
     pub fn create_snippet_file(&self, name: &str) -> Result<PathBuf> {
         let file_path = self.snippets_root().join(format!("{}.md", name));
-        let parent_dir = file_path.parent().context("Failed to get parent directory")?;
-        std::fs::create_dir_all(parent_dir).context("Failed to create parent directories for snippet file")?;
+        let parent_dir = file_path
+            .parent()
+            .context("Failed to get parent directory")?;
+        std::fs::create_dir_all(parent_dir)
+            .context("Failed to create parent directories for snippet file")?;
         std::fs::write(&file_path, "").context("Failed to create snippet file")?;
         Ok(file_path)
     }
@@ -254,9 +270,13 @@ impl Project {
 
     pub fn load_snippet(&self, name: &str) -> Result<Snippet> {
         let file_path = self.resolve_snippet(name);
-        let content = std::fs::read_to_string(&file_path)
-            .context(format!("Failed to read snippet file: {}", file_path.display()))?;
-        let lines = parse_document(&content).map_err(|e| anyhow::anyhow!(e)).context("Failed to parse document")?;
+        let content = std::fs::read_to_string(&file_path).context(format!(
+            "Failed to read snippet file: {}",
+            file_path.display()
+        ))?;
+        let lines = parse_document(&content)
+            .map_err(|e| anyhow::anyhow!(e))
+            .context("Failed to parse document")?;
 
         Ok(Snippet {
             name: name.to_string(),
@@ -264,16 +284,24 @@ impl Project {
         })
     }
 
-    pub fn load_context(&self, name: &str, loading_contexts: &mut HashSet<String>) -> Result<Context> {
+    pub fn load_context(
+        &self,
+        name: &str,
+        loading_contexts: &mut HashSet<String>,
+    ) -> Result<Context> {
         if loading_contexts.contains(name) {
             anyhow::bail!("Circular dependency detected for context: {}", name);
         }
         loading_contexts.insert(name.to_string());
 
         let file_path = self.resolve_context(name);
-        let content = std::fs::read_to_string(&file_path)
-            .context(format!("Failed to read context file: {}", file_path.display()))?;
-        let lines = parse_document(&content).map_err(|e| anyhow::anyhow!(e)).context("Failed to parse document")?;
+        let content = std::fs::read_to_string(&file_path).context(format!(
+            "Failed to read context file: {}",
+            file_path.display()
+        ))?;
+        let lines = parse_document(&content)
+            .map_err(|e| anyhow::anyhow!(e))
+            .context("Failed to parse document")?;
 
         let mut includes = BTreeMap::new();
         let mut inlines = BTreeMap::new();
@@ -287,18 +315,19 @@ impl Project {
                         TagKind::Include => {
                             let included_context = self.load_context(arg_name, loading_contexts)?;
                             includes.insert(line_index, included_context);
-                        },
+                        }
                         TagKind::Summary => {
-                            let summarized_context = self.load_context(arg_name, loading_contexts)?;
+                            let summarized_context =
+                                self.load_context(arg_name, loading_contexts)?;
                             summaries.insert(line_index, summarized_context);
-                        },
+                        }
                         TagKind::Inline => {
                             let inlined_snippet = self.load_snippet(arg_name)?;
                             inlines.insert(line_index, inlined_snippet);
-                        },
+                        }
                         TagKind::Answer => {
                             answers.insert(line_index);
-                        },
+                        }
                     }
                 }
             }
@@ -323,9 +352,13 @@ impl Project {
 
     pub fn read_and_parse_context_file(&self, name: &str) -> Result<Vec<Line>> {
         let file_path = self.resolve_context(name);
-        let content = std::fs::read_to_string(&file_path)
-            .context(format!("Failed to read context file: {}", file_path.display()))?;
-        parse_document(&content).map_err(|e| anyhow::anyhow!(e)).context("Failed to parse document")
+        let content = std::fs::read_to_string(&file_path).context(format!(
+            "Failed to read context file: {}",
+            file_path.display()
+        ))?;
+        parse_document(&content)
+            .map_err(|e| anyhow::anyhow!(e))
+            .context("Failed to parse document")
     }
 
     pub fn load_context_lines(&self, name: &str) -> Result<Vec<Line>> {
@@ -340,21 +373,28 @@ impl Project {
     pub fn update_context_lines(&self, name: &str, lines: Vec<Line>) -> Result<()> {
         let file_path = self.resolve_context(name);
         let content = format_lines_to_string(&lines);
-        std::fs::write(&file_path, content)
-            .context(format!("Failed to write context file: {}", file_path.display()))?;
+        std::fs::write(&file_path, content).context(format!(
+            "Failed to write context file: {}",
+            file_path.display()
+        ))?;
         Ok(())
     }
 
     pub fn update_snippet_lines(&self, name: &str, lines: Vec<Line>) -> Result<()> {
         let file_path = self.resolve_snippet(name);
         let content = format_lines_to_string(&lines);
-        std::fs::write(&file_path, content)
-            .context(format!("Failed to write snippet file: {}", file_path.display()))?;
+        std::fs::write(&file_path, content).context(format!(
+            "Failed to write snippet file: {}",
+            file_path.display()
+        ))?;
         Ok(())
     }
 }
 
 fn format_lines_to_string(lines: &Vec<Line>) -> String {
-    lines.iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n")
+    lines
+        .iter()
+        .map(|line| line.to_string())
+        .collect::<Vec<String>>()
+        .join("\n")
 }
-

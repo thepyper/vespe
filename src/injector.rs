@@ -3,9 +3,9 @@
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::project::Project;
 use crate::ast::parser;
 use crate::ast::types::{AnchorKind, AnchorTag, Line};
+use crate::project::Project;
 
 pub fn inject_content(
     project: &Project,
@@ -22,7 +22,7 @@ pub fn inject_content(
 
     if modified {
         let updated_content = parser::format_document(&lines);
-        std::fs::write(&context_path, updated_content)?; 
+        std::fs::write(&context_path, updated_content)?;
     }
 
     Ok(())
@@ -45,7 +45,7 @@ pub fn inject_content_in_memory(
                 match anchor.tag {
                     AnchorTag::Begin => start_index = Some(i),
                     AnchorTag::End => end_index = Some(i),
-                    _ => {},
+                    _ => {}
                 }
             }
         }
@@ -63,8 +63,7 @@ pub fn inject_content_in_memory(
     } else {
         return Err(anyhow::Error::msg(format!(
             "Could not find both begin and end anchors for kind {:?} and uid {}",
-            anchor_kind,
-            anchor_uid
+            anchor_kind, anchor_uid
         )));
     }
     Ok(modified)

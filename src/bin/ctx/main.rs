@@ -1,9 +1,9 @@
-use vespe::execute;
+use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use anyhow::Result;
-use vespe::project::{Project, Context};
-use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
+use vespe::execute;
+use vespe::project::{Context, Project};
 mod watch;
 use vespe::agent::ShellAgentCall;
 
@@ -41,19 +41,19 @@ enum ContextCommands {
     /// Creates a new context file.
     New {
         /// The name of the context file (e.g., "my_feature/overview").
-        name: String
+        name: String,
     },
     /// Executes a context.
     Execute {
         /// The name of the context to execute.
-        name: String
+        name: String,
     },
     /// Lists all available contexts.
     List {},
     /// Displays the dependency tree for a context.
     Tree {
         /// The name of the context to display the tree for.
-        name: String
+        name: String,
     },
 }
 
@@ -62,7 +62,7 @@ enum SnippetCommands {
     /// Creates a new snippet file.
     New {
         /// The name of the snippet file (e.g., "common/header").
-        name: String
+        name: String,
     },
     /// Lists all available snippets.
     List {},
@@ -70,24 +70,53 @@ enum SnippetCommands {
 
 fn print_context_tree(context: &Context, indent: usize) {
     let indent_str = "  ".repeat(indent);
-    println!("{}{}", indent_str, Yellow.paint(format!("Context: {}", context.name)));
+    println!(
+        "{}{}",
+        indent_str,
+        Yellow.paint(format!("Context: {}", context.name))
+    );
 
     for (line_index, included_context) in &context.includes {
-        println!("{}{}", indent_str, Green.paint(format!("  @include (line {}): {}", line_index, included_context.name)));
+        println!(
+            "{}{}",
+            indent_str,
+            Green.paint(format!(
+                "  @include (line {}): {}",
+                line_index, included_context.name
+            ))
+        );
         print_context_tree(included_context, indent + 2);
     }
 
     for (line_index, summarized_context) in &context.summaries {
-        println!("{}{}", indent_str, Purple.paint(format!("  @summary (line {}): {}", line_index, summarized_context.name)));
+        println!(
+            "{}{}",
+            indent_str,
+            Purple.paint(format!(
+                "  @summary (line {}): {}",
+                line_index, summarized_context.name
+            ))
+        );
         print_context_tree(summarized_context, indent + 2);
     }
 
     for (line_index, inlined_snippet) in &context.inlines {
-        println!("{}{}", indent_str, Cyan.paint(format!("  @inline (line {}): {}", line_index, inlined_snippet.name)));
+        println!(
+            "{}{}",
+            indent_str,
+            Cyan.paint(format!(
+                "  @inline (line {}): {}",
+                line_index, inlined_snippet.name
+            ))
+        );
     }
 
     for line_index in &context.answers {
-        println!("{}{}", indent_str, Red.paint(format!("  @answer (line {})", line_index)));
+        println!(
+            "{}{}",
+            indent_str,
+            Red.paint(format!("  @answer (line {})", line_index))
+        );
     }
 }
 
@@ -100,21 +129,24 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Init {} => {
             let project = Project::init(&project_path)?;
-            println!("Initialized new .ctx project at: {}", project.project_home().display());
-        },
+            println!(
+                "Initialized new .ctx project at: {}",
+                project.project_home().display()
+            );
+        }
         Commands::Context { command } => {
             let project = Project::find(&project_path)?;
             match command {
                 ContextCommands::New { name } => {
                     let file_path = project.create_context_file(&name)?;
                     println!("Created new context file: {}", file_path.display());
-                },
+                }
                 ContextCommands::Execute { name } => {
                     println!("Executing context '{}'...", name);
                     let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
                     execute::execute(&project, &name, &agent)?;
                     println!("Context '{}' executed successfully.", name);
-                },
+                }
                 ContextCommands::List {} => {
                     let contexts = project.list_contexts()?;
                     if contexts.is_empty() {
@@ -125,20 +157,20 @@ fn main() -> Result<()> {
                             println!("  - {} ({})", context.name, context.path.display());
                         }
                     }
-                },
+                }
                 ContextCommands::Tree { name } => {
                     let context_tree = project.get_context_tree(&name)?;
                     print_context_tree(&context_tree, 0);
-                },
+                }
             }
-        },
+        }
         Commands::Snippet { command } => {
             let project = Project::find(&project_path)?;
             match command {
                 SnippetCommands::New { name } => {
                     let file_path = project.create_snippet_file(&name)?;
                     println!("Created new snippet file: {}", file_path.display());
-                },
+                }
                 SnippetCommands::List {} => {
                     let snippets = project.list_snippets()?;
                     if snippets.is_empty() {
@@ -149,14 +181,14 @@ fn main() -> Result<()> {
                             println!("  - {} ({})", snippet.name, snippet.path.display());
                         }
                     }
-                },
+                }
             }
-        },
+        }
         Commands::Watch {} => {
             let project = Project::find(&project_path)?;
             let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
             watch::watch(&project, &agent)?;
-        },
+        }
     }
 
     Ok(())

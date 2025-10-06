@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use uuid::Uuid;
 use std::fmt;
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AnchorKind {
@@ -129,7 +129,11 @@ impl fmt::Display for LineKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LineKind::Text(s) => write!(f, "{}", s),
-            LineKind::Tagged { tag, parameters, arguments } => {
+            LineKind::Tagged {
+                tag,
+                parameters,
+                arguments,
+            } => {
                 write!(f, "@{}", tag)?;
                 if !parameters.is_empty() {
                     write!(f, "[")?;
@@ -201,7 +205,12 @@ impl Line {
     }
 
     pub fn get_include_path(&self) -> Option<&str> {
-        if let LineKind::Tagged { tag: TagKind::Include, arguments, .. } = &self.kind {
+        if let LineKind::Tagged {
+            tag: TagKind::Include,
+            arguments,
+            ..
+        } = &self.kind
+        {
             arguments.first().map(|s| s.as_str())
         } else {
             None
@@ -209,7 +218,12 @@ impl Line {
     }
 
     pub fn get_inline_tag_info(&self) -> Option<(AnchorKind, Uuid, String)> {
-        if let LineKind::Tagged { tag: TagKind::Inline, arguments, .. } = &self.kind {
+        if let LineKind::Tagged {
+            tag: TagKind::Inline,
+            arguments,
+            ..
+        } = &self.kind
+        {
             if let Some(anchor) = &self.anchor {
                 if let Some(snippet_name) = arguments.first() {
                     return Some((anchor.kind.clone(), anchor.uid, snippet_name.clone()));
@@ -218,10 +232,16 @@ impl Line {
         }
         None
     }
-	
-	    pub fn get_anchor(&self) -> Option<Anchor> {
-	        if let LineKind::Tagged { tag: TagKind::Inline, arguments, .. } = &self.kind {
-	            return self.anchor.clone();
-	        }
-	        None
-		}}
+
+    pub fn get_anchor(&self) -> Option<Anchor> {
+        if let LineKind::Tagged {
+            tag: TagKind::Inline,
+            arguments,
+            ..
+        } = &self.kind
+        {
+            return self.anchor.clone();
+        }
+        None
+    }
+}

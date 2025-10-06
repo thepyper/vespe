@@ -2,9 +2,9 @@ use anyhow::Result;
 use std::fs;
 use uuid::Uuid;
 
-use crate::project::Project;
 use crate::ast::parser;
-use crate::ast::types::{Line, LineKind, Anchor, AnchorKind, AnchorTag, TagKind};
+use crate::ast::types::{Anchor, AnchorKind, AnchorTag, Line, LineKind, TagKind};
+use crate::project::Project;
 pub fn decorate_context(project: &Project, context_name: &str) -> Result<()> {
     let context_path = project.resolve_context(context_name);
     let original_content = fs::read_to_string(&context_path)?;
@@ -14,7 +14,7 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<()> {
 
     if modified {
         let new_content = parser::format_document(&lines);
-        fs::write(&context_path, new_content)?; 
+        fs::write(&context_path, new_content)?;
     }
 
     Ok(())
@@ -33,7 +33,7 @@ pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool> {
                 _ => None,
             };
 
-            if let Some(expected_kind) = expected_anchor_kind{
+            if let Some(expected_kind) = expected_anchor_kind {
                 let has_begin_anchor = line.anchor.as_ref().map_or(false, |a| {
                     a.kind == expected_kind && a.tag == AnchorTag::Begin
                 });
@@ -64,7 +64,10 @@ pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool> {
                 // Check if a corresponding :end anchor exists anywhere after this :begin anchor
                 for j in (i + 1)..lines.len() {
                     if let Some(other_anchor) = &lines[j].anchor {
-                        if other_anchor.kind == anchor.kind && other_anchor.uid == anchor.uid && other_anchor.tag == AnchorTag::End {
+                        if other_anchor.kind == anchor.kind
+                            && other_anchor.uid == anchor.uid
+                            && other_anchor.tag == AnchorTag::End
+                        {
                             has_matching_end = true;
                             break;
                         }

@@ -1,5 +1,5 @@
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
-use sha2::{Sha256, Digest};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -7,9 +7,9 @@ use uuid::Uuid;
 use crate::{
     agent::ShellAgentCall,
     ast::types::{AnchorKind, Line, LineKind, TagKind},
-    injector,
-    project::{Project, ContextManager},
     execute::{decorate, inject},
+    injector,
+    project::{ContextManager, Project},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -84,7 +84,11 @@ fn _answer_first_question_recursive(
         let line = &lines_to_process[i];
 
         match &line.kind {
-            LineKind::Tagged { tag: TagKind::Include, arguments, .. } => {
+            LineKind::Tagged {
+                tag: TagKind::Include,
+                arguments,
+                ..
+            } => {
                 let include_path = arguments.first().map(|s| s.as_str()).unwrap_or("");
                 // Decorate the included lines
                 decorate::decorate_recursive_file(project, context_manager, include_path)?;
@@ -103,22 +107,35 @@ fn _answer_first_question_recursive(
                     return Ok(true); // A question was answered in an included context, stop and return true
                 }
                 // Append processed included lines to current_context_for_agent, excluding tags/anchors
-                let included_lines_for_agent = context_manager.load_context(project, include_path)?;
+                let included_lines_for_agent =
+                    context_manager.load_context(project, include_path)?;
                 for included_line in included_lines_for_agent {
-                    if !matches!(included_line.kind, LineKind::Tagged { .. }) && included_line.anchor.is_none() {
+                    if !matches!(included_line.kind, LineKind::Tagged { .. })
+                        && included_line.anchor.is_none()
+                    {
                         current_context_for_agent.push(included_line.clone());
                     }
                 }
                 i += 1; // Move past the include tag
             }
-            LineKind::Tagged { tag: TagKind::Summary, arguments, .. } => {
-                let summary_uid_str = line.anchor.as_ref().map(|a| a.uid.to_string()).unwrap_or_else(|| {
-                    arguments.first().map(|s| s.to_string()).unwrap_or_default()
-                });
-                let summary_uid_uuid = Uuid::parse_str(&summary_uid_str).map_err(|e| anyhow::anyhow!("Invalid UID for summary tag: {}", e))?;
+            LineKind::Tagged {
+                tag: TagKind::Summary,
+                arguments,
+                ..
+            } => {
+                let summary_uid_str = line
+                    .anchor
+                    .as_ref()
+                    .map(|a| a.uid.to_string())
+                    .unwrap_or_else(|| {
+                        arguments.first().map(|s| s.to_string()).unwrap_or_default()
+                    });
+                let summary_uid_uuid = Uuid::parse_str(&summary_uid_str)
+                    .map_err(|e| anyhow::anyhow!("Invalid UID for summary tag: {}", e))?;
 
                 let anchor_kind = AnchorKind::Summary;
-                let metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), &summary_uid_uuid)?;
+                let metadata_dir =
+                    project.resolve_metadata(&anchor_kind.to_string(), &summary_uid_uuid)?;
                 let state_file = metadata_dir.join("state.json");
 
                 let mut summary_state: SummaryState = if state_file.exists() {
@@ -135,7 +152,10 @@ fn _answer_first_question_recursive(
                 while j < lines_to_process.len() {
                     let current_line = &lines_to_process[j];
                     if let Some(anchor) = &current_line.anchor {
-                        if anchor.kind == AnchorKind::Summary && anchor.uid == summary_uid_uuid && anchor.tag == crate::ast::types::AnchorTag::End {
+                        if anchor.kind == AnchorKind::Summary
+                            && anchor.uid == summary_uid_uuid
+                            && anchor.tag == crate::ast::types::AnchorTag::End
+                        {
                             end_anchor_found = true;
                             break;
                         }
@@ -145,12 +165,18 @@ fn _answer_first_question_recursive(
                 }
 
                 if !end_anchor_found {
-                    return Err(anyhow::anyhow!("Summary tag without matching end anchor: {}", summary_uid_str));
+                    return Err(anyhow::anyhow!(
+                        "Summary tag without matching end anchor: {}",
+                        summary_uid_str
+                    ));
                 }
 
                 // Generate a unique temporary context name for recursive processing
                 let temp_summary_context_name = format!("summary_temp_{}", Uuid::new_v4());
-                context_manager.insert_context(temp_summary_context_name.clone(), summary_block_lines.clone());
+                context_manager.insert_context(
+                    temp_summary_context_name.clone(),
+                    summary_block_lines.clone(),
+                );
 
                 // Recursively process the summary content
                 let answered_in_summary = _answer_first_question_recursive(
@@ -169,14 +195,22 @@ fn _answer_first_question_recursive(
                 }
 
                 // Retrieve processed lines from the temporary context
-                let processed_summary_lines = context_manager.get_context_mut(&temp_summary_context_name)
-                    .ok_or_else(|| anyhow::anyhow!("Failed to retrieve processed summary lines for {}", temp_summary_context_name))?
+                let processed_summary_lines = context_manager
+                    .get_context_mut(&temp_summary_context_name)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Failed to retrieve processed summary lines for {}",
+                            temp_summary_context_name
+                        )
+                    })?
                     .clone();
                 context_manager.remove_context(&temp_summary_context_name); // Remove temporary entry
 
                 let current_hash = hash_lines(&processed_summary_lines);
 
-                if current_hash != summary_state.content_hash || summary_state.summary_text.is_empty() {
+                if current_hash != summary_state.content_hash
+                    || summary_state.summary_text.is_empty()
+                {
                     let query_lines: Vec<String> = processed_summary_lines
                         .iter()
                         .map(|line| line.text_content())
@@ -191,7 +225,8 @@ fn _answer_first_question_recursive(
                 }
 
                 // Inject the summary text
-                let new_content_lines: Vec<Line> = summary_state.summary_text
+                let new_content_lines: Vec<Line> = summary_state
+                    .summary_text
                     .lines()
                     .map(|s| Line {
                         kind: LineKind::Text(s.to_string()),
@@ -211,7 +246,11 @@ fn _answer_first_question_recursive(
 
                 i = j + 1; // Move past the summary block and its end anchor
             }
-            LineKind::Tagged { tag: TagKind::Answer, arguments: _, .. } => {
+            LineKind::Tagged {
+                tag: TagKind::Answer,
+                arguments: _,
+                ..
+            } => {
                 let answered = _answer_and_mark_context(
                     project,
                     context_manager,
@@ -256,10 +295,13 @@ fn _answer_and_mark_context(
         _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
     };
 
-    let uid_str = line.anchor.as_ref().map(|a| a.uid.to_string()).unwrap_or_else(|| {
-        arguments.first().map(|s| s.to_string()).unwrap_or_default()
-    });
-    let uid_uuid = Uuid::parse_str(&uid_str).map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
+    let uid_str = line
+        .anchor
+        .as_ref()
+        .map(|a| a.uid.to_string())
+        .unwrap_or_else(|| arguments.first().map(|s| s.to_string()).unwrap_or_default());
+    let uid_uuid = Uuid::parse_str(&uid_str)
+        .map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
 
     let anchor_kind = match tag_kind {
         TagKind::Answer => AnchorKind::Answer,

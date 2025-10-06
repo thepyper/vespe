@@ -1,10 +1,10 @@
-use std::collections::HashSet;
-use crate::project::{Project, ContextManager};
-use crate::injector;
-use serde::{Serialize, Deserialize};
-use std::fs;
-use anyhow::Context as AnyhowContext;
 use crate::ast::types::AnchorKind;
+use crate::injector;
+use crate::project::{ContextManager, Project};
+use anyhow::Context as AnyhowContext;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::fs;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct InlineState {
@@ -37,15 +37,20 @@ fn _inject_and_mark_context(
 
     // Process in reverse order to avoid issues with index changes
     for (_i, anchor_kind, anchor_uid, snippet_name) in lines_to_process.into_iter().rev() {
-        let anchor_metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), &anchor_uid)?;
+        let anchor_metadata_dir =
+            project.resolve_metadata(&anchor_kind.to_string(), &anchor_uid)?;
         let state_file_path = anchor_metadata_dir.join("state.json");
 
         let mut inline_state = InlineState::default();
         if state_file_path.exists() {
-            let state_content = fs::read_to_string(&state_file_path)
-                .context(format!("Failed to read state file: {}", state_file_path.display()))?;
-            inline_state = serde_json::from_str(&state_content)
-                .context(format!("Failed to parse state file: {}", state_file_path.display()))?;
+            let state_content = fs::read_to_string(&state_file_path).context(format!(
+                "Failed to read state file: {}",
+                state_file_path.display()
+            ))?;
+            inline_state = serde_json::from_str(&state_content).context(format!(
+                "Failed to parse state file: {}",
+                state_file_path.display()
+            ))?;
         }
 
         if inline_state.pasted {
@@ -69,8 +74,10 @@ fn _inject_and_mark_context(
             inline_state.pasted = true;
             let updated_state_content = serde_json::to_string_pretty(&inline_state)
                 .context("Failed to serialize InlineState")?;
-            fs::write(&state_file_path, updated_state_content)
-                .context(format!("Failed to write state file: {}", state_file_path.display()))?;
+            fs::write(&state_file_path, updated_state_content).context(format!(
+                "Failed to write state file: {}",
+                state_file_path.display()
+            ))?;
         }
     }
 
@@ -104,7 +111,12 @@ fn _inject_recursive_inline(
     }
 
     for included_context_name in includes_to_inject.into_iter() {
-        _inject_recursive_inline(project, context_manager, &included_context_name, inlined_set)?;
+        _inject_recursive_inline(
+            project,
+            context_manager,
+            &included_context_name,
+            inlined_set,
+        )?;
     }
 
     Ok(())

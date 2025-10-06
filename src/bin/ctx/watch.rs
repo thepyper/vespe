@@ -1,13 +1,13 @@
 use anyhow::Result;
+use ctrlc;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use std::sync::mpsc::channel;
 use std::time::Duration;
-use ctrlc;
 
 use crate::execute;
-use vespe::project::Project;
 use vespe::agent::ShellAgentCall;
+use vespe::project::Project;
 
 pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
     println!("Starting watch mode...");
@@ -26,8 +26,12 @@ pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
 
     // Handle Ctrl-C
     let (ctrlc_tx, ctrlc_rx) = channel();
-    ctrlc::set_handler(move || ctrlc_tx.send(()).expect("Could not send signal on channel."))
-        .expect("Error setting Ctrl-C handler");
+    ctrlc::set_handler(move || {
+        ctrlc_tx
+            .send(())
+            .expect("Could not send signal on channel.")
+    })
+    .expect("Error setting Ctrl-C handler");
 
     loop {
         // Check for Ctrl-C
@@ -36,23 +40,25 @@ pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
             break;
         }
 
-        match rx.recv_timeout(Duration::from_millis(100)) { // Poll for events
-            Ok(event_result) => {
-                match event_result {
-                    Ok(event) => {
-                        for path in event.paths {
-                            if is_context_file(project, &path) {
-                                let context_name = path_to_context_name(project, &path)?;
-                                println!("Change detected in context file: {}. Re-executing...", context_name);
-                                if let Err(e) = execute::execute(project, &context_name, agent) {
-                                    eprintln!("Error executing context {}: {}", context_name, e);
-                                }
+        match rx.recv_timeout(Duration::from_millis(100)) {
+            // Poll for events
+            Ok(event_result) => match event_result {
+                Ok(event) => {
+                    for path in event.paths {
+                        if is_context_file(project, &path) {
+                            let context_name = path_to_context_name(project, &path)?;
+                            println!(
+                                "Change detected in context file: {}. Re-executing...",
+                                context_name
+                            );
+                            if let Err(e) = execute::execute(project, &context_name, agent) {
+                                eprintln!("Error executing context {}: {}", context_name, e);
                             }
                         }
                     }
-                    Err(e) => eprintln!("Watch error: {:?}", e),
                 }
-            }
+                Err(e) => eprintln!("Watch error: {:?}", e),
+            },
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
                 // No event, continue loop
             }
@@ -88,6 +94,10 @@ fn is_context_file(project: &Project, path: &Path) -> bool {
 }
 
 fn path_to_context_name(project: &Project, path: &Path) -> Result<String> {
-    let relative_path = path.strip_prefix(project.contexts_root())?;    let context_name = relative_path.with_extension("").to_string_lossy().to_string();
+    let relative_path = path.strip_prefix(project.contexts_root())?;
+    let context_name = relative_path
+        .with_extension("")
+        .to_string_lossy()
+        .to_string();
     Ok(context_name)
 }

@@ -1,5 +1,5 @@
 use crate::ast::parser::parse_document;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use anyhow::Result;
 use anyhow::Context as AnyhowContext;
@@ -42,6 +42,48 @@ pub struct ContextInfo {
 pub struct SnippetInfo {
     pub name: String,
     pub path: PathBuf,
+}
+
+
+
+pub struct ContextManager {
+    contexts: HashMap<String, Vec<Line>>,
+    modified_contexts: HashSet<String>,
+}
+
+impl ContextManager {
+    pub fn new() -> Self {
+        ContextManager {
+            contexts: HashMap::new(),
+            modified_contexts: HashSet::new(),
+        }
+    }
+
+    pub fn load_context(&mut self, project: &Project, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
+        if !self.contexts.contains_key(context_name) {
+            let lines = project.read_and_parse_context_file(context_name)?;
+            self.contexts.insert(context_name.to_string(), lines);
+        }
+        Ok(self.contexts.get_mut(context_name).unwrap())
+    }
+
+    pub fn get_context(&mut self, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
+        self.contexts.get_mut(context_name)
+            .context(format!("Context '{}' not found in ContextManager", context_name))
+    }
+
+    pub fn mark_as_modified(&mut self, context_name: &str) {
+        self.modified_contexts.insert(context_name.to_string());
+    }
+
+    pub fn save_modified_contexts(&self, project: &Project) -> anyhow::Result<()> {
+        for context_name in &self.modified_contexts {
+            if let Some(lines) = self.contexts.get(context_name) {
+                project.update_context_lines(context_name, lines.clone())?;
+            }
+        }
+        Ok(())
+    }
 }
 
 pub struct Project {
@@ -262,10 +304,15 @@ impl Project {
         self.load_context(context_name, &mut loading_contexts)
     }
 
+    pub fn read_and_parse_context_file(&self, name: &str) -> Result<Vec<Line>> {
+        let file_path = self.resolve_context(name);
+        let content = std::fs::read_to_string(&file_path)
+            .context(format!("Failed to read context file: {}", file_path.display()))?;
+        parse_document(&content).map_err(|e| anyhow::anyhow!(e)).context("Failed to parse document")
+    }
+
     pub fn load_context_lines(&self, name: &str) -> Result<Vec<Line>> {
-        let mut loading_contexts = HashSet::new();
-        let context = self.load_context(name, &mut loading_contexts)?;
-        Ok(context.content)
+        self.read_and_parse_context_file(name)
     }
 
     pub fn load_snippet_lines(&self, name: &str) -> Result<Vec<Line>> {

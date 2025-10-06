@@ -1,6 +1,5 @@
 use std::collections::HashSet;
-use crate::project::Project;
-use crate::ast::types::{Line};
+use crate::project::{Project, ContextManager};
 use crate::injector;
 use serde::{Serialize, Deserialize};
 use std::fs;
@@ -12,23 +11,22 @@ pub struct InlineState {
 }
 
 pub fn inject_recursive_inline(
-    project: &mut Project,
+    project: &Project,
+    context_manager: &mut ContextManager,
     context_name: &str,
 ) -> anyhow::Result<bool> {
     let mut inlined_set = HashSet::new();
-    let mut context_lines = project.load_context_lines(context_name)?;
-
-    let modified = _inject_recursive_inline(project, context_name, &mut context_lines, &mut inlined_set)?;
+    let modified = _inject_recursive_inline(project, context_manager, context_name, &mut inlined_set)?;
     if modified {
-        project.update_context_lines(context_name, context_lines)?;
+        context_manager.mark_as_modified(context_name);
     }
     Ok(modified)
 }
 
 fn _inject_recursive_inline(
-    project: &mut Project,
+    project: &Project,
+    context_manager: &mut ContextManager,
     context_name: &str,
-    context_lines: &mut Vec<Line>,
     inlined_set: &mut HashSet<String>,
 ) -> anyhow::Result<bool> {
     if inlined_set.contains(context_name) {
@@ -37,6 +35,8 @@ fn _inject_recursive_inline(
     inlined_set.insert(context_name.to_string());
 
     let mut modified = false;
+
+    let context_lines = context_manager.get_context(context_name)?;
 
     let mut lines_to_process = Vec::new();
     for (i, line) in context_lines.iter().enumerate() {
@@ -91,9 +91,8 @@ fn _inject_recursive_inline(
     }
 
     for included_context_name in includes_to_inject.into_iter() {
-        let mut included_lines = project.load_context_lines(&included_context_name)?;
-        if _inject_recursive_inline(project, &included_context_name, &mut included_lines, inlined_set)? {
-            project.update_context_lines(&included_context_name, included_lines)?;
+        if _inject_recursive_inline(project, context_manager, &included_context_name, inlined_set)? {
+            context_manager.mark_as_modified(&included_context_name);
             modified = true;
         }
     }

@@ -7,7 +7,7 @@ use crate::{
     agent::ShellAgentCall,
     ast::types::{AnchorKind, Line, LineKind, TagKind},
     injector,
-    project::Project,
+    project::{Project, ContextManager},
     execute::{decorate, inject},
 };
 
@@ -23,34 +23,34 @@ impl Default for AnswerState {
 }
 
 pub fn answer_questions(
-    project: &mut Project,
+    project: &Project,
+    context_manager: &mut ContextManager,
     context_name: &str,
     agent: &ShellAgentCall,
 ) -> anyhow::Result<bool> {
     let mut answered_set = HashSet::new();
-    let mut context_lines = project.load_context_lines(context_name)?;
 
     let modified = _answer_questions_recursive(
         project,
+        context_manager,
         context_name,
         agent,
         &mut answered_set,
-        &mut context_lines,
     )?;
 
     if modified {
-        project.update_context_lines(context_name, context_lines)?;
+        context_manager.mark_as_modified(context_name);
     }
 
     Ok(modified)
 }
 
 fn _answer_questions_recursive(
-    project: &mut Project,
+    project: &Project,
+    context_manager: &mut ContextManager,
     context_name: &str,
     agent: &ShellAgentCall,
     answered_set: &mut HashSet<String>,
-    context_lines: &mut Vec<Line>,
 ) -> anyhow::Result<bool> {
     if !answered_set.insert(context_name.to_string()) {
         return Ok(false); // Already processed this context to prevent circular dependencies
@@ -58,6 +58,8 @@ fn _answer_questions_recursive(
 
     let mut modified = false;
     let mut current_context_for_agent: Vec<Line> = Vec::new();
+
+    let context_lines = context_manager.get_context(context_name)?;
     let mut lines_to_process = std::mem::take(context_lines); // Take ownership to modify and re-insert
 
     let mut i = 0;
@@ -67,36 +69,36 @@ fn _answer_questions_recursive(
         match &line.kind {
             LineKind::Tagged { tag: TagKind::Include, arguments, .. } => {
                 let include_path = arguments.first().map(|s| s.as_str()).unwrap_or("");
-                let mut included_lines = project.load_context_lines(include_path)?;
                 // Decorate the included lines
-                let decorated_modified = decorate::decorate_recursive_file(project, include_path)?;
+                let decorated_modified = decorate::decorate_recursive_file(project, context_manager, include_path)?;
                 if decorated_modified {
-                    included_lines = project.load_context_lines(include_path)?;
+                    context_manager.mark_as_modified(include_path);
                     modified = true;
                 }
 
                 // Inject into the included lines
-                let injected_modified = inject::inject_recursive_inline(project, include_path)?;
+                let injected_modified = inject::inject_recursive_inline(project, context_manager, include_path)?;
                 if injected_modified {
-                    included_lines = project.load_context_lines(include_path)?;
+                    context_manager.mark_as_modified(include_path);
                     modified = true;
                 }
 
                 let included_modified_by_answer = _answer_questions_recursive(
                     project,
+                    context_manager,
                     include_path,
                     agent,
                     answered_set,
-                    &mut included_lines,
                 )?;
                 if included_modified_by_answer {
-                    project.update_context_lines(include_path, included_lines.clone())?;
+                    context_manager.mark_as_modified(include_path);
                     modified = true;
                 }
                 // Append processed included lines to current_context_for_agent, excluding tags/anchors
-                for included_line in included_lines {
+                let included_lines_for_agent = context_manager.get_context(include_path)?;
+                for included_line in included_lines_for_agent {
                     if !matches!(included_line.kind, LineKind::Tagged { .. }) && included_line.anchor.is_none() {
-                        current_context_for_agent.push(included_line);
+                        current_context_for_agent.push(included_line.clone());
                     }
                 }
                 i += 1; // Move past the include tag
@@ -184,6 +186,6 @@ fn _answer_questions_recursive(
         }
     }
 
-    *context_lines = lines_to_process; // Put back the modified lines
+    *context_manager.get_context(context_name)? = lines_to_process; // Put back the modified lines
     Ok(modified)
 }

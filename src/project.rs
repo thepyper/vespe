@@ -258,4 +258,36 @@ impl Project {
         let mut loading_contexts = HashSet::new();
         self.load_context(context_name, &mut loading_contexts)
     }
+
+    pub fn load_context_lines(&self, name: &str) -> Result<Vec<Line>> {
+        let mut loading_contexts = HashSet::new();
+        let context = self.load_context(name, &mut loading_contexts)?;
+        Ok(context.content)
+    }
+
+    pub fn load_snippet_lines(&self, name: &str) -> Result<Vec<Line>> {
+        let snippet = self.load_snippet(name)?;
+        Ok(snippet.content)
+    }
+
+    pub fn update_context_lines(&self, name: &str, lines: Vec<Line>) -> Result<()> {
+        let file_path = self.resolve_context(name);
+        let content = format_lines_to_string(&lines);
+        std::fs::write(&file_path, content)
+            .context(format!("Failed to write context file: {}", file_path.display()))?;
+        Ok(())
+    }
+
+    pub fn update_snippet_lines(&self, name: &str, lines: Vec<Line>) -> Result<()> {
+        let file_path = self.resolve_snippet(name);
+        let content = format_lines_to_string(&lines);
+        std::fs::write(&file_path, content)
+            .context(format!("Failed to write snippet file: {}", file_path.display()))?;
+        Ok(())
+    }
 }
+
+fn format_lines_to_string(lines: &Vec<Line>) -> String {
+    lines.iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n")
+}
+

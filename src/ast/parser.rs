@@ -2,6 +2,10 @@ use super::types::*;
 use std::collections::HashMap;
 use uuid::Uuid;
 
+pub fn format_document(lines: &Vec<Line>) -> String {
+    lines.iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n")
+}
+
 pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
     input
         .lines()
@@ -50,9 +54,15 @@ fn parse_line(input: &str) -> Result<Line, String> {
                     ""
                 };
     
-                let kind = kind_str.parse::<AnchorKind>()?;
+                let kind = match kind_str.parse::<AnchorKind>() {
+                    Ok(k) => k,
+                    Err(_) => return Ok((input.to_string(), None)),
+                };
+                let tag = match tag_str.parse::<AnchorTag>() {
+                    Ok(t) => t,
+                    Err(_) => return Ok((input.to_string(), None)),
+                };
                 let uid = Uuid::parse_str(uuid_str).map_err(|e| e.to_string())?;
-                let tag = tag_str.parse::<AnchorTag>()?;
     
                 let content_before_anchor = input[..start_idx].trim_end().to_string();
                 return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })));

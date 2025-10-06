@@ -224,4 +224,12 @@ All compilation errors are resolved. The parser is now implemented as requested.
 
 Do you want me to write unit tests for the parser, or is there anything else you'd like me to do?
 
+Risolvi i seguenti problemi:
+
+1) Se incontri una ancora di tipo sconosciuto, va ignorata, non dare errore se non riesce il parsing;
+2) Utilizza format_document nei punti dove puoi (decorator, injector)
+
+@answer
+
+
 

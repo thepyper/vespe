@@ -2,12 +2,12 @@ use std::fs;
 use uuid::Uuid;
 
 use crate::project::Project;
-use crate::ast::parser::parse_document;
+use crate::ast::parser;
 use crate::ast::types::{Line, LineKind, Anchor, AnchorKind, AnchorTag, TagKind};
 pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let context_path = project.resolve_context(context_name);
     let original_content = fs::read_to_string(&context_path)?;
-    let mut lines = parse_document(&original_content)?;
+    let mut lines = parser::parse_document(&original_content)?;
 
     let mut modified = false;
 
@@ -77,7 +77,7 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box
     }
 
     if modified {
-        let new_content = final_lines.into_iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n");
+        let new_content = parser::format_document(&final_lines);
         fs::write(&context_path, new_content)?; 
     }
 

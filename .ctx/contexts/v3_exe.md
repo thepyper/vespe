@@ -62,7 +62,7 @@ execute(project, context_name) {
 }
 
 decorate_recursive_file(context_name, decorated_set)
-{    
+{
     esegui decorate(context_name)
     
     carica context_name come Vec<Line>
@@ -176,7 +176,7 @@ First, I'll create `src/execute/decorate.rs` and move the decoration functions.`
 Ora vorrei che src/execute/inline.rs funzionasse cosi:
 - per ogni anchor trovata, vorrei un file di status json memorizzato in project.resolve_metadata().join("state.json");
   tra l'altro, project.resolve_metadata() dovrebbe ritornare un nome di cartella, e crearla se non esiste, non un nome di file;
-- lo state.json deve ricalcare un oggetto nuovo, InlineState; attualmente in InlineState mettiamo solo un booleano "pasted", 
+- lo state.json deve ricalcare un oggetto nuovo, InlineState; attualmente in InlineState mettiamo solo un booleano "pasted",
   che viene messo a true quando inline agisce; poi, se vedo che e' a true, non eseguo piu' la iniezione di contenuto;
 - lo scopo e' avere un antiripetizione legato a questo booleano salvato in una cartella dedicata a quell'ancora.
 
@@ -753,7 +753,7 @@ I'll start by fixing `src/execute/decorate.rs`, specifically the `decorate_conte
 
 decorate va pensato per decorare diversi tipi di tag, non solo include. Aggiungi decorazione di @answer e @summary
 
-Problema, prova il comando 
+Problema, prova il comando
 
 cargo run --bin ctx -- context execute v3_tests
 
@@ -819,3 +819,14 @@ Ora sistema src/agent/mod.rs;
 Usa quel modo con le pipe per chiamare realmente un agente.
 
 Commit successful. `ShellAgentCall::call` is now implemented with pipe-based execution, and `src/execute/answer.rs` is updated to use it. The project compiles cleanly.
+
+
+Ottimo.
+Le anchor sono un po' fastidiose messe ad inizio linea.
+Mettile come minimo a colonna 80 (se la riga e' piu' lunga ovviamente mettile oltre, non devono mai interferire
+con il testo presente). Colonna  80 mettilo in una costante che potro' modificare.
+
+@answer <!-- answer-7caeb305-2ddb-4867-8aff-f82704a66563:begin -->
+Commit successful. Anchor tags are now formatted to appear at column 80 or beyond, as requested, and the project compiles.
+ <!-- answer-7caeb305-2ddb-4867-8aff-f82704a66563:end -->
+

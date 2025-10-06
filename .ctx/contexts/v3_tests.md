@@ -1,9 +1,9 @@
 
 @include rules
 
-@inline sni1 <!-- inline-6a3c18ba-3474-43e3-adf7-240f8e5e5272:begin -->
+@inline sni1 <!-- inline-8bc4d575-c3fe-4c06-b803-382ad8002338:begin -->
 heyheyhey
-
+huhuhuhuhuhuhu
 hohoho
 
- <!-- inline-6a3c18ba-3474-43e3-adf7-240f8e5e5272:end -->
+ <!-- inline-8bc4d575-c3fe-4c06-b803-382ad8002338:end -->

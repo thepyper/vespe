@@ -169,7 +169,6 @@ fn _answer_and_mark_context(
 
         // Call the agent
         let agent_response = agent.call(&query)?;
-
         // Inject the agent's response
         let new_content_lines: Vec<Line> = agent_response
             .lines()

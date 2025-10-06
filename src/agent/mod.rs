@@ -1,10 +1,6 @@
-use anyhow::{Result, Context};
+use anyhow::Context;
 use std::process::{Command, Stdio};
 use std::io::Write;
-
-pub trait AgentCall {
-    fn call_llm(&self, prompt: String) -> Result<String>;
-}
 
 pub struct ShellAgentCall {
     command_template: String,
@@ -16,14 +12,6 @@ impl ShellAgentCall {
     }
 
     pub fn call(&self, query: &str) -> anyhow::Result<String> {
-        // In a real scenario, this would execute the shell command and capture its output.
-        // For now, we'll just return a dummy response.
-        Ok(format!("Agent response to: {}", query))
-    }
-}
-
-impl AgentCall for ShellAgentCall {
-    fn call_llm(&self, prompt: String) -> Result<String> {
         let mut command_parts = self.command_template.split_whitespace();
         let program = command_parts.next().context("Command template cannot be empty")?;
         let args: Vec<&str> = command_parts.collect();
@@ -50,7 +38,7 @@ impl AgentCall for ShellAgentCall {
             .spawn()
             .with_context(|| format!("Failed to spawn command: '{}'. Is it in your PATH?", self.command_template))?;
 
-        child.stdin.as_mut().unwrap().write_all(prompt.as_bytes())?;
+        child.stdin.as_mut().unwrap().write_all(query.as_bytes())?;
         let output = child.wait_with_output()?;
 
         if !output.status.success() {

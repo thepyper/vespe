@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
 use anyhow::Result;
 use anyhow::Context as AnyhowContext;
-use crate::ast::types::{AnchorKind, Line, LineKind, TagKind};
+use crate::ast::types::{Line, LineKind, TagKind};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -110,8 +110,11 @@ impl Project {
         self.snippets_root().join(format!("{}.md", name))
     }
 
-    pub fn resolve_metadata(&self, kind: &AnchorKind, uid: &Uuid) -> PathBuf {
-        self.metadata_home().join(format!("{}-{}.md", kind, uid))
+    pub fn resolve_metadata(&self, uid: &Uuid) -> Result<PathBuf> {
+        let anchor_metadata_dir = self.metadata_home().join(uid.to_string());
+        std::fs::create_dir_all(&anchor_metadata_dir)
+            .context(format!("Failed to create metadata directory for anchor {}: {}", uid, anchor_metadata_dir.display()))?;
+        Ok(anchor_metadata_dir)
     }
 
     pub fn create_context_file(&self, name: &str) -> Result<PathBuf> {

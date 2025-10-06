@@ -2,6 +2,14 @@ use std::collections::HashSet;
 use crate::project::Project;
 use crate::ast::types::{Line};
 use crate::injector;
+use serde::{Serialize, Deserialize};
+use std::fs;
+use anyhow::Context as AnyhowContext;
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct InlineState {
+    pub pasted: bool,
+}
 
 pub fn inject_recursive_inline(
     project: &mut Project,
@@ -36,6 +44,22 @@ fn _inject_recursive_inline(
 
     // Process in reverse order to avoid issues with index changes
     for (_i, anchor_kind, anchor_uid, snippet_name) in lines_to_process.into_iter().rev() {
+        let anchor_metadata_dir = project.resolve_metadata(&anchor_uid)?;
+        let state_file_path = anchor_metadata_dir.join("state.json");
+
+        let mut inline_state = InlineState::default();
+        if state_file_path.exists() {
+            let state_content = fs::read_to_string(&state_file_path)
+                .context(format!("Failed to read state file: {}", state_file_path.display()))?;
+            inline_state = serde_json::from_str(&state_content)
+                .context(format!("Failed to parse state file: {}", state_file_path.display()))?;
+        }
+
+        if inline_state.pasted {
+            // Skip injection if already pasted
+            continue;
+        }
+
         let snippet_lines = project.load_snippet_lines(&snippet_name)?;
 
         injector::inject_content_in_memory(
@@ -44,6 +68,13 @@ fn _inject_recursive_inline(
             anchor_uid,
             snippet_lines,
         )?;
+
+        // Update state after successful injection
+        inline_state.pasted = true;
+        let updated_state_content = serde_json::to_string_pretty(&inline_state)
+            .context("Failed to serialize InlineState")?;
+        fs::write(&state_file_path, updated_state_content)
+            .context(format!("Failed to write state file: {}", state_file_path.display()))?;
     }
 
     // Recursively inject for included contexts

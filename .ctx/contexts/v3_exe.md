@@ -72,7 +72,28 @@ decorate_recursive_file(context_name, decorated_set)
 
 }
 
+
+***********
+fatto
+
+*********
+
+ora implementa inject_recursive_inline(context_name)
+
+inject_recursive_inline(context_name, inlined_set)
+{
+    // carica context_name
+
+    cicla sulle linee, trova quelle con tag inline, con ancora begin
+
+    per ogni tag inline, carica lo snippet riferito, e copia le linee dello snippet dentro le ancore usando injector.rs::inject_content
+
+    // cicla poi sulle linee per eseguire ricorsivamente su @include
+
+}
+
 @answer
+
 
 
 

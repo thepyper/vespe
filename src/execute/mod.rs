@@ -5,7 +5,7 @@ use crate::ast::types::Line;
 use crate::decorator;
 use crate::injector;
 
-pub fn execute(project: &mut Project, context_name: &str) -> Result<()> {
+pub fn execute(project: &Project, context_name: &str) -> Result<()> {
     // Load context context_name as Vec<Line>
     let mut context_lines = project.load_context_lines(context_name)?;
 
@@ -26,7 +26,7 @@ pub fn execute(project: &mut Project, context_name: &str) -> Result<()> {
 }
 
 fn decorate_recursive_file(
-    project: &mut Project,
+    project: &Project,
     context_name: &str,
     lines: &mut Vec<Line>,
     decorated_set: &mut HashSet<String>,
@@ -57,7 +57,8 @@ fn decorate_recursive_file(
 }
 
 pub fn inject_recursive_inline(
-    project: &mut Project,
+    project: &Project,
+    context_name: &str,
 ) -> Result<()> {
     let mut inlined_set = HashSet::new();
     _inject_recursive_inline(project, context_name, &mut inlined_set)?;
@@ -65,7 +66,7 @@ pub fn inject_recursive_inline(
 }
 
 fn _inject_recursive_inline(
-    project: &mut Project,
+    project: &Project,
     context_name: &str,
     inlined_set: &mut HashSet<String>,
 ) -> Result<()> {

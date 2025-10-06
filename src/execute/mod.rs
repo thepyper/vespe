@@ -113,8 +113,10 @@ impl AnchorIndex {
     }
 }
 
-fn apply_patches(_lines: &mut Vec<Line>, _patches: BTreeMap<usize, Vec<Line>>) -> Result<()> {
-    // TODO apply patches in reverse order
+fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<usize, Vec<Line>>) -> Result<()> {
+    for (i, patch) in patches.iter().rev() {
+        lines.splice(*i..*i+1, patch.iter().cloned());
+    }
 
     Ok(())
 }

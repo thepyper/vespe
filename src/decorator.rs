@@ -29,6 +29,7 @@ pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool> {
             let expected_anchor_kind = match tag {
                 TagKind::Inline => Some(AnchorKind::Inline),
                 TagKind::Answer => Some(AnchorKind::Answer),
+                TagKind::Summary => Some(AnchorKind::Summary),
                 _ => None,
             };
 

@@ -6,6 +6,7 @@ use std::fmt;
 pub enum AnchorKind {
     Inline,
     Answer,
+    Summary,
     // Add other well-defined anchor kinds here
 }
 
@@ -16,6 +17,7 @@ impl std::str::FromStr for AnchorKind {
         match s {
             "inline" => Ok(AnchorKind::Inline),
             "answer" => Ok(AnchorKind::Answer),
+            "summary" => Ok(AnchorKind::Summary),
             _ => Err(format!("Unknown AnchorKind: {}", s)),
         }
     }
@@ -26,6 +28,7 @@ impl fmt::Display for AnchorKind {
         match self {
             AnchorKind::Inline => write!(f, "inline"),
             AnchorKind::Answer => write!(f, "answer"),
+            AnchorKind::Summary => write!(f, "summary"),
         }
     }
 }

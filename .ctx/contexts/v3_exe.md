@@ -902,3 +902,65 @@ riprova pure
 
                                                                                 <!-- answer-ed79802a-e4f1-4933-8822-59d6bad7dd52:end -->
 
+
+Ora dovresti avere abbastanza contesto su cosa fa la funzione execute().
+
+Tuttavia non mi piace come e' venuta, quindi la ho reimplementata a modo mio, si chiama execute2().
+Non e' completa ma abbastanza ben impostata.
+Leggila, fammi un bel resoconto se capisci bene come funziona, poi se sono soddisfatto delle spiegazioni facciamo qualche improvement.
+
+@answer                                                                         <!-- answer-a69adaeb-fb3b-4343-bbfd-ccf58fee1a3b:begin -->
+Okay, I've analyzed `execute2()` and `_execute2()` in `src/execute/mod.rs`.
+
+**Purpose of `execute2()`:**
+`execute2()` is designed for a more structured, iterative processing of context files, handling tags like `@inline`, `@answer`, and `@summary`. It aims to manage complex operations, especially LLM interactions, through a controlled, multi-pass loop.
+
+**High-Level Flow:**
+1.  **Initialization:** Sets up `ContextManager` (for file content) and `Execute2Manager` (for collecting content during processing).
+2.  **Main Loop:** Repeatedly calls `_execute2()` to perform a single processing pass.
+3.  **`Exe2Compitino` Handling:** `_execute2()` returns an `Exe2Compitino` enum variant, guiding the loop:
+    *   `None`: Processing complete, loop breaks.
+    *   `Continue`: Changes made, another pass needed, loop continues.
+    *   `AnswerQuestion { uid, content }`: An `@answer` tag found; LLM query needed with `content`. (Currently a TODO)
+    *   `Summarize { uid, content }`: An `@summary` tag found; LLM summary needed for `content`. (Currently a TODO)
+4.  **Saving Changes:** After the loop, `context_manager.save_modified_contexts(project)` persists changes.
+
+**`_execute2()` (Single Pass Processing):**
+This function operates on a clone of the context lines, applying modifications via `BTreeMap` patches.
+
+1.  **Anchor Validation & Generation:** Ensures `LineKind::Tagged` lines have correct `AnchorTag::Begin`s. Generates missing or corrects invalid ones. If changes, returns `Continue`.
+2.  **Orphan Anchor Handling:** Identifies and removes orphan end anchors, and adds missing end anchors for orphan begin anchors. If changes, returns `Continue`.
+3.  **Inline Tag Application:** Finds `@inline` tags. **(TODO: Check `InlineState` to prevent re-application)**. If not applied, loads snippet content and adds as a patch. If patches applied, returns `Continue`.
+4.  **Context Collection & Task Identification:**
+    *   Collects `LineKind::Text` into `_exe2.collect_content` (for LLM queries).
+    *   `@summary`: Recursively calls `_execute2()` for summary content. **(TODO: Hash content, compare with `SummaryState` in metadata, conditionally return `Summarize` task for LLM)**.
+    *   `@answer`: **(TODO: Check `AnswerState` in metadata)**. If not answered, returns `AnswerQuestion` task for LLM with collected content.
+5.  **Default Return:** If no specific `Exe2Compitino` is returned, defaults to `None`.
+
+**Key Differences/Improvements from `execute()`:**
+*   **Iterative Processing:** More robust for complex operations.
+*   **Explicit Task Management:** `Exe2Compitino` clearly signals external LLM tasks, separating concerns.
+*   **Patch-Based Modifications:** Controlled modifications using `BTreeMap` and `apply_patches`.
+*   **Clearer LLM Flow:** TODOs highlight where LLM calls and state management should occur in the main loop.
+*   **Anchor Consistency:** Dedicated steps for anchor validation and correction.
+
+**Current State & Next Steps (TODOs):**
+*   Implement LLM calls and state management for `AnswerQuestion` and `Summarize` in `execute2()`'s main loop.
+*   Implement `InlineState` check for `@inline` tags in `_execute2()`.
+*   Implement hashing and state comparison for `@summary` tags.
+*   Implement state checking for `@answer` tags.
+
+`execute2()` is a well-structured, iterative approach with clear separation of concerns, laying a solid foundation for advanced context processing and LLM interactions.
+
+I'm ready for your feedback and further instructions.
+                                                                                <!-- answer-a69adaeb-fb3b-4343-bbfd-ccf58fee1a3b:end -->
+
+
+Ok. Intanto vorrei che sistemassi i vari TODO se ti e' chiaro cosa devi fare.
+Il tipo di funzionamento da ottenere e' simile a quello che era fatto nella vecchia execute, quindi usare per Inline, Summary, Answer dei files metadati nella cartella .meta per salvare quello che serve per ottenere le funzioni descritte dai TODO.
+
+Se hai dei dubbi, chiedi piuttosto che implementare cose ce non funzionano.
+codice production-ready per favore.
+
+@answer
+

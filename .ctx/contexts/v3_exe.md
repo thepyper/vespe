@@ -826,9 +826,9 @@ Le anchor sono un po' fastidiose messe ad inizio linea.
 Mettile come minimo a colonna 80 (se la riga e' piu' lunga ovviamente mettile oltre, non devono mai interferire
 con il testo presente). Colonna  80 mettilo in una costante che potro' modificare.
 
-@answer <!-- answer-7caeb305-2ddb-4867-8aff-f82704a66563:begin -->
+@answer                                                                         <!-- answer-7caeb305-2ddb-4867-8aff-f82704a66563:begin -->
 Commit successful. Anchor tags are now formatted to appear at column 80 or beyond, as requested, and the project compiles.
- <!-- answer-7caeb305-2ddb-4867-8aff-f82704a66563:end -->
+                                                                                <!-- answer-7caeb305-2ddb-4867-8aff-f82704a66563:end -->
 
 
 Implementiamo ora la modalita' watch.
@@ -840,5 +840,6 @@ Funziona cosi:
 3) mantieni tutto sync, niente async.
 4) rimani in esecuzione sempre finche' non arriva ctrl-c
 
-@answer
-
+@answer                                                                         <!-- answer-deb35952-cfcb-4733-8546-3f5e966cc68f:begin -->
+Commit successful. The `watch` command has been implemented and committed.
+                                                                                <!-- answer-deb35952-cfcb-4733-8546-3f5e966cc68f:end -->

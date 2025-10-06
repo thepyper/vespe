@@ -38,4 +38,23 @@ Ora, leggerò di nuovo il file per assicurarmi che tutte le modifiche siano stat
 
 Il task è completato.
 
+Ora creami un nuovo file src/decorator.rs, che da a disposizione la seguente funzione:
 
+decorate_context(project, context_name) -> Result<()>
+
+che deve usare ast/parser.rs::parse_document per fare parsing del context passato (usa resolve_context per avere il path),
+e deve aggiungere le seguenti decorazioni:
+first-pass:
+- su @inline, se non c'e' ancora, aggiungi ancora <!-- inline-uid:begin -->
+- su @summary, se non c'e' ancora, aggiungi ancora <!-- summary-uid:begin -->
+- su @answer, se non c'e' ancora, aggiungi ancora <!-- answer-uid:begin -->
+second-pass:
+- ripassa tutto, e se manca la ancora <!-- xxx-uid:end -->
+  ad una qualsiasi delle ancore :begin esistenti, aggiungila una nuova riga subito a seguire della ancora :begin con l'ancora :end
+
+fatto cio', se qualcosa e' stato modificato, va riscritto il file letto.
+
+chiaro?
+se no chiedi
+
+@answer

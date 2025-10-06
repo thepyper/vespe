@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use vespe::project::{Project, Context};
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
+use vespe::agent::ShellAgentCall;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -107,7 +108,8 @@ fn main() -> Result<()> {
                 },
                 ContextCommands::Execute { name } => {
                     println!("Executing context '{}'...", name);
-                    execute::execute(&project, &name)?;
+                    let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+                    execute::execute(&project, &name, &agent)?;
                     println!("Context '{}' executed successfully.", name);
                 },
                 ContextCommands::List {} => {

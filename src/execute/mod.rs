@@ -4,8 +4,9 @@ use crate::project::Project;
 use crate::ast::types::Line;
 use crate::decorator;
 use crate::injector;
+use crate::agent::ShellAgentCall;
 
-pub fn execute(project: &Project, context_name: &str) -> Result<()> {
+pub fn execute(project: &Project, context_name: &str, _agent: &ShellAgentCall) -> Result<()> {
 
 
     // Call decorate_recursive_file

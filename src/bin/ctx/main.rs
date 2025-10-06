@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use vespe::project::{Project, Context};
 use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
+mod watch;
 use vespe::agent::ShellAgentCall;
 
 #[derive(Parser)]
@@ -31,6 +32,8 @@ enum Commands {
         #[command(subcommand)]
         command: SnippetCommands,
     },
+    /// Watches for changes in context files and re-executes them.
+    Watch {},
 }
 
 #[derive(Subcommand)]
@@ -148,6 +151,11 @@ fn main() -> Result<()> {
                     }
                 },
             }
+        },
+        Commands::Watch {} => {
+            let project = Project::find(&project_path)?;
+            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+            watch::watch(&project, &agent)?;
         },
     }
 

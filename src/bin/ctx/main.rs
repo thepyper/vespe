@@ -64,21 +64,21 @@ fn print_context_tree(context: &Context, indent: usize) {
     let indent_str = "  ".repeat(indent);
     println!("{}{}", indent_str, Yellow.paint(format!("Context: {}", context.name)));
 
-    for (line_index, included_context) in &context.data.includes {
+    for (line_index, included_context) in &context.includes {
         println!("{}{}", indent_str, Green.paint(format!("  @include (line {}): {}", line_index, included_context.name)));
         print_context_tree(included_context, indent + 2);
     }
 
-    for (line_index, summarized_context) in &context.data.summaries {
+    for (line_index, summarized_context) in &context.summaries {
         println!("{}{}", indent_str, Purple.paint(format!("  @summary (line {}): {}", line_index, summarized_context.name)));
         print_context_tree(summarized_context, indent + 2);
     }
 
-    for (line_index, inlined_snippet) in &context.data.inlines {
+    for (line_index, inlined_snippet) in &context.inlines {
         println!("{}{}", indent_str, Cyan.paint(format!("  @inline (line {}): {}", line_index, inlined_snippet.name)));
     }
 
-    for line_index in &context.data.answers {
+    for line_index in &context.answers {
         println!("{}{}", indent_str, Red.paint(format!("  @answer (line {})", line_index)));
     }
 }

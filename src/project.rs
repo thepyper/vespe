@@ -7,18 +7,13 @@ use crate::ast::types::{AnchorKind, Line, LineKind, TagKind};
 use uuid::Uuid;
 
 #[derive(Debug)]
-pub struct ContextData {
+pub struct Context {
+    pub name: String,
+    pub content: Vec<Line>,
     pub includes: BTreeMap<usize, Context>, // line index to Context
     pub inlines: BTreeMap<usize, Snippet>, // line index to Snippet
     pub summaries: BTreeMap<usize, Context>, // line index to Context
     pub answers: BTreeSet<usize>, // line index
-}
-
-#[derive(Debug)]
-pub struct Context {
-    pub name: String,
-    pub content: Vec<Line>,
-    pub data: ContextData,
 }
 
 #[derive(Debug)]
@@ -249,17 +244,13 @@ impl Project {
 
         loading_contexts.remove(name);
 
-        let context_data = ContextData {
+        Ok(Context {
+            name: name.to_string(),
+            content: lines,
             includes,
             inlines,
             summaries,
             answers,
-        };
-
-        Ok(Context {
-            name: name.to_string(),
-            content: lines,
-            data: context_data,
         })
     }
 

@@ -968,7 +968,38 @@ Ora, mi interessa il funzionamento di @inline.
 Va aggiunta la gestione dello stato in metadata, per capire se l'@inline e' gia' stato processato.
 Sistema questo TODO solamente.
 
-@answer
+@answer                                                                         <!-- answer-465b52b9-6542-4eb5-8738-694bd9cc84b9:begin -->
+Okay, I understand. I will implement the state management for the `@inline` tag in `execute2()`, specifically the TODO that checks `InlineState` in metadata to prevent re-application.
+
+Here's my plan:
+1.  **Verify `InlineState` definition:** I will check if `InlineState` is already defined in the project. (It was previously discussed and implemented in `src/execute/inject.rs`).
+2.  **Modify `_execute2` in `src/execute/mod.rs`:**
+    *   When an `@inline` tag is encountered, I will resolve the metadata path for `inline_state.json` using `project.resolve_metadata()`.
+    *   I will load the `InlineState` from this file (or create a new one if it doesn't exist).
+    *   If `inline_state.pasted` is `true`, I will skip the injection of the snippet.
+    *   Otherwise, I will proceed with the snippet injection, set `inline_state.pasted` to `true`, and save the updated `inline_state.json`.
+    *   I will ensure that `context_manager.mark_as_modified()` is called if the state file is updated.
+
+I'll start by reading `src/execute/mod.rs` to locate the relevant section for `@inline` tags and then `src/execute/inject.rs` to confirm the `InlineState` definition.Okay, I will modify `_execute2` in `src/execute/mod.rs` to implement state management for `@inline` tags. This involves loading `InlineState` from metadata, checking the `pasted` flag, and updating the state after snippet injection.
+
+Here's the `replace` call to implement this logic:Okay, I've applied the changes to `src/execute/mod.rs`. Now I need to add the necessary `use` statements for `InlineState`, `fs`, and `serde_json` to the file.Okay, `use` statements are added. Now, I'll run `cargo check` to verify compilation.The project compiles successfully with the `@inline` state management implemented in `_execute2`. The warnings are either minor, expected, or known false positives.
+
+I will now commit these changes.All changes are staged. Now I will commit them with a descriptive message.My apologies, I made the mistake of using a multi-line commit message directly in `run_shell_command` again. I will retry the commit with a single-line message.I'm still having trouble committing. The `git add .` command didn't seem to stage the changes correctly. I'll explicitly add `src/execute/mod.rs` and then commit.`src/execute/mod.rs` is staged. Committing with a single-line message.The commit was successful. I've implemented `@inline` state management in `execute2()`, ensuring snippets are injected only when `InlineState.pasted` is false. The project compiles cleanly. Request fulfilled.
+                                                                                <!-- answer-465b52b9-6542-4eb5-8738-694bd9cc84b9:end -->
+
+
+
+Ora ho bisogno di una modifica alla funzione apply_patch:
+invece di cancellare una riga e inserire il Vec<Line>
+dovrebbe cancellare un range di righe ed inserire il Vec<Line>
+
+@answer                                                                         <!-- answer-9a62071c-17f7-4161-be69-430174cf23e8:begin -->
+
+                                                                                <!-- answer-9a62071c-17f7-4161-be69-430174cf23e8:end -->
+
+
+
+
 
 
 

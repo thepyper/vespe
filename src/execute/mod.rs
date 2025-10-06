@@ -46,6 +46,19 @@ enum Exe2Compitino {
     Summarize{ uid: uuid::Uuid, content: Vec<Line> },
 }
 
+fn hash_content(&lines : Vec<Line>) -> String {
+	// TODO hash da lines
+	unimplemented!()
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AnswerState2 {
+    pub content_hash: String,
+	pub reply_hash: String,
+	pub reply: String,
+	pub injected_hash: String,
+}
+
 pub fn execute2(
     project: &Project,
     context_name: &str,
@@ -66,8 +79,17 @@ pub fn execute2(
         match compitino {
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
-            Exe2Compitino::AnswerQuestion{..} => {
-                // TODO answer the question with llm, save data into answer meta file, so on next _execute2 call content will be patched into context 
+            Exe2Compitino::AnswerQuestion{ uid, content } => {
+                let content = format_document(content);
+				let reply = agent.call(content);
+				
+				let mut answer_state = AnswerState2::default(); // TODO implementa load da metadata o default 
+				
+				answer_state.content_hash = hash_content(content);;
+				answer_state.reply        = reply;
+				answer_state.reply_hash   = hash_content(reply);
+					
+				// TODO save answer_state 
             }
             Exe2Compitino::Summarize{..} => {
                 // TODO summarize the data with llm, save data into summary meta file, so on next _execute2 call content will be patched into context 
@@ -288,9 +310,16 @@ fn _execute2(
 							}		
 						}
 						TagKind::Answer => {
-							// TODO controlla se domanda gia' risposta, ovvero se ci sono dati in oggetto metadati;
-							// se ci sono, patcha direttamente il context con i dati, altrimenti esci e dai il compitino di rispondere alla domanda.
-							return Ok(Exe2Compitino::AnswerQuestion{ uid: line.anchor.as_ref().unwrap().uid, content: _exe2.collect_content.clone() });
+							let answer_state = AnswerState2::default(); // TODO carica da metadata
+							if answer_state.content_hash.is_empty() {
+								// Mai risposta la domanda, lancia compitino 
+								return Ok(Exe2Compitino::AnswerQuestion{ uid: line.anchor.as_ref().unwrap().uid, content: _exe2.collect_content.clone() });
+							} else if answer_state.reply_hash.is_empty() {
+								// Nessuna rispota ancora 
+							} else if answer_state.reply_hash != answer_state.injected_hash {
+								// Disponibile una nuova risposta, iniettala
+								// TODO 								
+							}
 						}
 						_ => {},
 					}

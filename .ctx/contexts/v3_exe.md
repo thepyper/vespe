@@ -597,5 +597,19 @@ Ora, farò il commit delle modifiche.
 
 ok fai il commit!
 
+Commit successful. `ContextManager` implemented, `execute` pipeline refactored, and `answer` CLI command removed. All compilation errors resolved (excluding the known false positive warning). Request fulfilled.
+
+
+
+Non mi piace come funziona answer_questions.
+Facciamo cosi, answer_questions diventa answer_first_question;
+Ritorna true se ha risposto ad una domanda (richiedendo quindi di essere chiamato nuovamente).
+Gestisce internamente i flag modified con il context manager.
+La domanda fatta al llm NON e' nella riga @answer, bensi' e' tutto il contesto precedente.
+Il tag @answer indica la posizione in cui verra' inserita la risposta (nelle opportune anchor messe li apposta).
+
+Le altre due funzioni, inline e decorate NON hanno bisogno di un return value bool, tanto lavorano in un solo pass.
+
 @answer
+
 

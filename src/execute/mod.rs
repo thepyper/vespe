@@ -207,31 +207,28 @@ fn _execute2(
                 );
             }
         }
-        apply_patches(&mut lines, patches)?;
-    }
-	
-	{
+
 		// Apply inline tags if not done
 		for (i, line) in lines.iter().enumerate() {
-			match line.kind {
-				LineKind::Tagged{ tag, parameters, arguments } => {
+			match &line.kind {
+				LineKind::Tagged{ tag, arguments, .. } => {
 					match tag {
 						TagKind::Inline => {
 							let is_done = false; // TODO load InlineState and check if already applied 
 							if !is_done {
-								let snippet = project.load_snippet(arguments.first()); // TODO argument empty? error!
+								let snippet = project.load_snippet(arguments.first().unwrap().as_str())?;
 								patches.insert(i, snippet.content);
 							}
 						}
 						_ => {},
 					}
 				}
+				_ => {}
 			}
 		}
 
         apply_patches(&mut lines, patches)?;
-		
-	}
+    }
 
     Ok(Exe2Compitino::None)
 }

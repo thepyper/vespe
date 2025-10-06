@@ -194,5 +194,12 @@ Ok.
 
 Preferisco che la directory meta per una anchor abbia nome tipo xxxxx-uid con xxxxx tipo di ancora. facilita debug.
 
-@answer
+Okay, I understand. I need to modify `src/project.rs` so that the metadata directory for an anchor is named `"{anchor_kind}-{uid}"` instead of just `"{uid}"`. This will involve passing the `AnchorKind` to `resolve_metadata`.
 
+Here's my plan:
+1.  Read `src/project.rs` to modify `resolve_metadata` to accept `AnchorKind` and use it in the directory name.
+2.  Update the calls to `resolve_metadata` in `src/execute/inject.rs` to pass the `AnchorKind`.
+3.  Run `cargo check` to verify compilation.
+4.  Commit the changes.
+
+I'll start by reading `src/project.rs`.Okay, I'll modify `src/project.rs` to update the `resolve_metadata` function. I'll change its signature to accept `anchor_kind: &str` and use this to construct the metadata directory name as `"{anchor_kind}-{uid}"`.`src/project.rs` is updated. Now, I'll modify `src/execute/inject.rs` to pass `anchor_kind` to `project.resolve_metadata()`. Reading `src/execute/inject.rs`.Okay, I'll modify `src/execute/inject.rs` to pass `anchor_kind` to `project.resolve_metadata()`.Okay, both files are updated. Time to `cargo check`.Compilation error: `src/execute/inject.rs` expects `&str` for `anchor_kind` but receives `AnchorKind`. I need to convert `AnchorKind` to `&str`. I'll add a `to_str()` method to `AnchorKind` in `src/ast/types.rs`, then use it in `src/execute/inject.rs`. I'll ignore the `modified` warning in `src/injector.rs`. Starting with `src/ast/types.rs`.`AnchorKind` in `src/ast/types.rs` already implements `fmt::Display`, so `anchor_kind.to_string()` works. I'll modify `src/execute/inject.rs` to pass `&anchor_kind.to_string()` to `project.resolve_metadata()`, then run `cargo check`.`AnchorKind` conversion is done. Running `cargo check`.Project compiles, `src/injector.rs` warning aside. I've updated `src/project.rs` for metadata directory naming, passed `anchor_kind` in `src/execute/inject.rs`, and resolved the type mismatch. Committing now.Okay, `git status` and `git diff HEAD` confirm the expected changes in `src/execute/inject.rs`, `src/project.rs`, and `.ctx/contexts/v3_exe.md`. I'll stage and commit, ignoring the CRLF warnings.Staged. Committing with message.My mistake, multi-line commit message again. `run_shell_command` doesn't support it. I'll commit with a single-line message.Commit successful. `src/project.rs` now includes `anchor_kind` in metadata directory names, `src/execute/inject.rs` passes `anchor_kind` to `project.resolve_metadata` with type conversion, compilation verified, and changes committed. Request fulfilled.

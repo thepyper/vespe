@@ -170,11 +170,22 @@ pub struct Line {
     pub anchor: Option<Anchor>,
 }
 
+const ANCHOR_COLUMN: usize = 80;
+
 impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.kind)?;
+        let kind_str = format!("{}", self.kind);
+        write!(f, "{}", kind_str)?;
+
         if let Some(anchor) = &self.anchor {
-            write!(f, " {}", anchor)?;
+            let current_len = kind_str.len();
+            let padding_needed = if current_len < ANCHOR_COLUMN {
+                ANCHOR_COLUMN - current_len
+            } else {
+                1 // At least one space if content is already long
+            };
+            write!(f, "{:padding_needed$}", " ")?; // Write padding spaces
+            write!(f, "{}", anchor)?; // Then write the anchor
         }
         Ok(())
     }

@@ -20,9 +20,8 @@ impl Display for LineKind {
                 tag,
                 parameters,
                 arguments,
-            }
-            => {
-                write!(f, "@{}", tag)?;
+            } => {
+                write!(f, " @{}", tag)?;
                 if !parameters.is_empty() {
                     write!(f, "[")?;
                     let mut first = true;
@@ -43,7 +42,7 @@ impl Display for LineKind {
                             write!(f, " ")?;
                         }
                         if arg.contains(' ') || arg.contains('"') {
-                            write!(f, "\"{}\"", arg.replace('"', "\\\""))?;
+                            write!(f, "\"{}\"", arg.replace('"', "\""))?;
                         } else {
                             write!(f, "{}", arg)?;
                         }

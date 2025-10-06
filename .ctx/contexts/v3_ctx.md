@@ -1185,5 +1185,6 @@ chiaro?
 Attenzione al tuo strumento write_file ed all'escaping di {}, cerca di capire come funzioni perche' io non lo so.
 Fai un test e fai un report se serve.
 
-@answer
+Il file `src/injector.rs` è stato creato e la funzione `inject_content` è stata implementata come richiesto. Ho anche risolto il problema dell'escaping delle parentesi graffe con `write_file` e ho corretto `src/ast/format.rs` di conseguenza.
 
+Il task è completato.

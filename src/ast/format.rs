@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use super::types::{Anchor, AnchorKind, AnchorTag, Line, LineKind, TagKind};
+use super::types::{Anchor, AnchorTag, Line, LineKind, TagKind};
 
 impl Display for Line {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

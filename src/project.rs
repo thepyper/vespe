@@ -29,7 +29,7 @@ impl Project {
             .context("Failed to write .ctx_root file")?;
 
         Ok(Project {
-            root_path: ctx_dir.canonicalize()?,
+            root_path: path.canonicalize()?,
         })
     }
 
@@ -40,7 +40,7 @@ impl Project {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
                 return Ok(Project {
-                    root_path: ctx_dir.canonicalize()?,
+                    root_path: current_path.canonicalize()?,
                 });
             }
 
@@ -53,19 +53,19 @@ impl Project {
     }
 
     pub fn project_home(&self) -> PathBuf {
-        self.root_path.clone()
+        self.root_path.join(CTX_DIR_NAME)
     }
 
     pub fn metadata_home(&self) -> PathBuf {
-        self.root_path.join(METADATA_DIR_NAME)
+        self.project_home().join(METADATA_DIR_NAME)
     }
 
     pub fn contexts_root(&self) -> PathBuf {
-        self.root_path.join(CONTEXTS_DIR_NAME)
+        self.project_home().join(CONTEXTS_DIR_NAME)
     }
 
     pub fn snippets_root(&self) -> PathBuf {
-        self.root_path.join(SNIPPETS_DIR_NAME)
+        self.project_home().join(SNIPPETS_DIR_NAME)
     }
 
     pub fn resolve_context(&self, name: &str) -> PathBuf {
@@ -79,4 +79,19 @@ impl Project {
     pub fn resolve_metadata(&self, kind: &AnchorKind, uid: &Uuid) -> PathBuf {
         self.metadata_home().join(format!("{}-{}.md", kind, uid))
     }
-}
+
+    pub fn create_context_file(&self, name: &str) -> Result<PathBuf> {
+        let file_path = self.contexts_root().join(format!("{}.md", name));
+        let parent_dir = file_path.parent().context("Failed to get parent directory")?;
+        std::fs::create_dir_all(parent_dir).context("Failed to create parent directories for context file")?;
+        std::fs::write(&file_path, "").context("Failed to create context file")?;
+        Ok(file_path)
+    }
+
+    pub fn create_snippet_file(&self, name: &str) -> Result<PathBuf> {
+        let file_path = self.snippets_root().join(format!("{}.md", name));
+        let parent_dir = file_path.parent().context("Failed to get parent directory")?;
+        std::fs::create_dir_all(parent_dir).context("Failed to create parent directories for snippet file")?;
+        std::fs::write(&file_path, "").context("Failed to create snippet file")?;
+        Ok(file_path)
+    }}

@@ -143,18 +143,16 @@ fn _execute2(project: &Project,
 				}
 			}
 		}
-	}
-	
-	apply_patches(lines, patches);
+apply_patches(&mut lines, patches);
 	}
 	
 	{
 	let patches = BTreeMap::<usize, Vec<Line>>::new();
-	let anchor_index = AnchorIndex::new(lines);
+	let anchor_index = AnchorIndex::new(&lines);
 
 	// Check for orphan end anchors
 	for (anchor_end_uuid, i) in anchor_index.end {
-		if !anchor_index.begin.contains(anchor_end_uuid) {
+		if !anchor_index.begin.contains_key(anchor_end_uuid) {
 			// Orphan end anchor, remove it 
 			patches.insert(i, Vec::new());
 		}
@@ -162,10 +160,10 @@ fn _execute2(project: &Project,
 		
 	// Check for orphan begin anchors
 	for (anchor_begin_uuid, i) in anchor_index.begin {
-		if !anchor_index.end.contains(anchor_begin_uuid) {
+		if !anchor_index.end.contains_key(anchor_begin_uuid) {
 			// Orphan begin anchor, add end anchor just after it 
 			let begin_anchor_line = lines.get(i).unwrap();
-			patches.insert(i, vec![begin_anchor_line.clone(), Line{ kind: LineKind::Text("".to_string()), anchor: Some(Anchor{ kind: begin_anchor_line.anchor.as_ref().unwrap().kind, uid: *anchor_begin_uuid, tag: AnchorTag::End }) }]);
+			patches.insert(i, vec![begin_anchor_line.clone(), Line{ kind: LineKind::Text("".to_string()), anchor: Some(Anchor{ kind: begin_anchor_line.anchor.as_ref().unwrap().kind, uid: anchor_begin_uuid, tag: AnchorTag::End }) }]);
 		}
 	}	
 	apply_patches(lines, patches);

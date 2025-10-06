@@ -782,5 +782,30 @@ Ora guarda src/execute/decorate.rs
 Ti sembra scritto bene? a me pare ci siano parecchie ripetizioni tra la funzione front-facing e la ricorsiva.
 Fai una analisi approfondita e scrivi meglio se e' possibile. Best practices, production-code.
 
+Okay, I understand. I will refactor `src/execute/decorate.rs` to reduce repetition and improve code structure, following best practices.
+
+Here's my plan:
+
+1.  **Create a private helper function `_decorate_and_mark_context`:**
+    *   This function will encapsulate the logic for loading a context, decorating it in memory, and marking it as modified if changes occur.
+    *   It will take `project: &Project`, `context_manager: &mut ContextManager`, and `context_name: &str` as arguments.
+    *   It will return `anyhow::Result<()>`.
+
+2.  **Refactor `decorate_recursive_file` (public facade):**
+    *   It will initialize the `decorated_set`.
+    *   It will then call `_decorate_recursive_file` with the initial `context_name`.
+
+3.  **Refactor `_decorate_recursive_file` (private recursive helper):**
+    *   It will call `_decorate_and_mark_context` for the current `context_name`.
+    *   It will then iterate through the lines of the *current* context (obtained via `context_manager.load_context`) to find ` @include` tags.
+    *   For each ` @include` tag, it will check `decorated_set` and, if not already decorated, recursively call `_decorate_recursive_file` for the included context.
+
+This approach will centralize the core decoration logic and make the recursive traversal clearer.
+
+I'll start by reading `src/execute/decorate.rs` to get the exact current content.The commit was successful. `src/execute/decorate.rs` has been refactored to improve its structure and reduce repetition, and the project compiles. I believe I have addressed your request.
+
+
+Fai la stessa analisi con src/execute/inject.rs
+
 @answer
 

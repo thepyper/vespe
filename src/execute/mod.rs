@@ -63,10 +63,10 @@ pub fn execute2(
         match compitino {
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
-            Exe2Compitino::AnswerQuestion(_id) => {
+            Exe2Compitino::AnswerQuestion{..} => {
                 // Handle answering question
             }
-            Exe2Compitino::Summarize(_id) => {
+            Exe2Compitino::Summarize{..} => {
                 // Handle summarizing
             }
         }
@@ -237,7 +237,7 @@ fn _execute2(
 		if !patches.is_empty() {
 			// Some inline applied, let's run all of this again
 			apply_patches(&mut lines, patches)?;
-			return Exe2Compitino::Continue;
+			return Ok(Exe2Compitino::Continue);
 		}
     }
 	
@@ -246,21 +246,21 @@ fn _execute2(
 		
         for line in lines.iter() {
 			match &line.kind {
-				LineKind::Text(_) => _exe2.collect_content.push(line),
+				LineKind::Text(_) => _exe2.collect_content.push(line.clone()),
 				LineKind::Tagged{ tag, arguments, .. } => {
 					match tag {
 						TagKind::Summary => {
 							let mut exe2_sub_manager = Execute2Manager::new();
-							match _execute2(project, arguments.first().unwrap().as_str(), _agent, context_manager, exe2_sub_manager) {
-								Exe2Compitino::None => {
+							match _execute2(project, arguments.first().unwrap().as_str(), _agent, context_manager, &mut exe2_sub_manager) {
+								Ok(Exe2Compitino::None) => {
 									// Can summarize, content is done 
-									return Exe2Compitino::Summarize{ uid: line.anchor.unwrap().uid, content: exe2_sub_manager.collect_content };
+									return Ok(Exe2Compitino::Summarize{ uid: line.anchor.as_ref().unwrap().uid, content: exe2_sub_manager.collect_content });
 								}
-								x => return x;
+								x => { return x; }
 							}		
 						}
 						TagKind::Answer => {
-							return Exe2Compitino::Answer{ uid: line.anchor.unwrap().uid, conten: _exe.collect_content };
+							return Ok(Exe2Compitino::AnswerQuestion{ uid: line.anchor.as_ref().unwrap().uid, content: _exe2.collect_content.clone() });
 						}
 						_ => {},
 					}

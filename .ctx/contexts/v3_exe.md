@@ -989,17 +989,10 @@ I will now commit these changes.All changes are staged. Now I will commit them w
 
 
 
-Ora ho bisogno di una modifica alla funzione apply_patch:
+Ora ho bisogno di una modifica alla funzione apply_patches in src/execute/mod.rs:
 invece di cancellare una riga e inserire il Vec<Line>
 dovrebbe cancellare un range di righe ed inserire il Vec<Line>
 
-@answer                                                                         <!-- answer-9a62071c-17f7-4161-be69-430174cf23e8:begin -->
+@answer                                                                         <!-- answer-fdfc8d28-afc5-490b-bfd9-13a3e4c9b5c2:begin -->
 
-                                                                                <!-- answer-9a62071c-17f7-4161-be69-430174cf23e8:end -->
-
-
-
-
-
-
-
+                                                                                <!-- answer-fdfc8d28-afc5-490b-bfd9-13a3e4c9b5c2:end -->

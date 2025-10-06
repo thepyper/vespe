@@ -141,9 +141,9 @@ impl AnchorIndex {
     }
 }
 
-fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<usize, Vec<Line>>) -> Result<()> {
-    for (i, patch) in patches.iter().rev() {
-        lines.splice(*i..*i+1, patch.iter().cloned());
+fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Vec<Line>>) -> Result<()> {
+    for ((i, n), patch) in patches.iter().rev() {
+        lines.splice(*i..*i+n, patch.iter().cloned());
     }
 
     Ok(())
@@ -159,7 +159,7 @@ fn _execute2(
     let mut lines = context_manager.load_context(project, context_name)?.clone();
 
     {
-        let mut patches = BTreeMap::<usize, Vec<Line>>::new();
+        let mut patches = BTreeMap::<(usize,usize), Vec<Line>>::new();
 
         // Check for missing tag anchors
         for (i, line) in lines.iter().enumerate() {
@@ -208,14 +208,16 @@ fn _execute2(
 	}
 	
     {
-        let mut patches = BTreeMap::<usize, Vec<Line>>::new();
+        let mut patches = BTreeMap::<(usize,usize), Vec<Line>>::new();
         let anchor_index = AnchorIndex::new(&lines);
 
         // Check for orphan end anchors
         for (anchor_end_uuid, i) in &anchor_index.end {
             if !anchor_index.begin.contains_key(anchor_end_uuid) {
+				let mut end_anchor_line = lines.get(*i).unwrap();         
+				end_anchor_line.anchor = None;
                 // Orphan end anchor, remove it
-                patches.insert(*i, Vec::new());
+                patches.insert((*i , 1), vec![end_anchor_line]);
             }
         }
 
@@ -225,9 +227,8 @@ fn _execute2(
                 // Orphan begin anchor, add end anchor just after it
                 let begin_anchor_line = lines.get(*i).unwrap();
                 patches.insert(
-                    *i,
+                    (*i + 1, 0),
                     vec![
-                        begin_anchor_line.clone(),
                         Line {
                             kind: LineKind::Text("".to_string()),
                             anchor: Some(Anchor {
@@ -248,7 +249,8 @@ fn _execute2(
     }
 
     {
-        let mut patches = BTreeMap::<usize, Vec<Line>>::new();
+        let mut patches = BTreeMap::<(usize,usize), Vec<Line>>::new();
+		let anchor_index = AnchorIndex::new(&lines);
 
 		// Apply inline tags if not done
 		for (i, line) in lines.iter().enumerate() {
@@ -267,8 +269,10 @@ fn _execute2(
 							                            }
 							
 							                            if !inline_state.pasted {
+															let j = anchor_index.begin.get_value(uid);
+															let k = anchor_index.end.get_value(uid);
 							                                let snippet = project.load_snippet(arguments.first().unwrap().as_str())?;
-							                                patches.insert(i, snippet.content);
+							                                patches.insert((j,k-j), snippet.content);
 							
 							                                inline_state.pasted = true;
 							                                let updated_state_content = serde_json::to_string_pretty(&inline_state)?;
@@ -290,8 +294,9 @@ fn _execute2(
     }
 	
 	{
-        let mut patches = BTreeMap::<usize, Vec<Line>>::new();
-		
+        let mut patches = BTreeMap::<(usize,usize), Vec<Line>>::new();
+				let anchor_index = AnchorIndex::new(&lines);
+
         for line in lines.iter() {
 			match &line.kind {
 				LineKind::Text(_) => _exe2.collect_content.push(line.clone()),
@@ -310,6 +315,7 @@ fn _execute2(
 							}		
 						}
 						TagKind::Answer => {
+							let uid = line.anchor.unwrap().uid;
 							let answer_state = AnswerState2::default(); // TODO carica da metadata
 							if answer_state.content_hash.is_empty() {
 								// Mai risposta la domanda, lancia compitino 
@@ -317,8 +323,10 @@ fn _execute2(
 							} else if answer_state.reply_hash.is_empty() {
 								// Nessuna rispota ancora 
 							} else if answer_state.reply_hash != answer_state.injected_hash {
-								// Disponibile una nuova risposta, iniettala
-								// TODO 								
+								// Disponibile una nuova risposta, iniettala								
+															let j = anchor_index.begin.get_value(uid);
+															let k = anchor_index.end.get_value(uid);
+							                                patches.insert((j,k-j), answer_state.reply);
 							}
 						}
 						_ => {},

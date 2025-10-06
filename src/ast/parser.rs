@@ -1,5 +1,6 @@
 use super::types::*;
 use std::collections::HashMap;
+use std::str::FromStr;
 use uuid::Uuid;
 
 pub fn format_document(lines: &Vec<Line>) -> String {
@@ -24,94 +25,100 @@ fn parse_line(input: &str) -> Result<Line, String> {
     let trimmed_input = input.trim_end();
     let (content_str, anchor) = parse_anchor(trimmed_input)?;
 
-        let line_kind = if content_str.trim_start().starts_with('@') {
-            parse_tagged_line(&content_str)?
-        } else {
-            LineKind::Text(content_str.to_string())
-        };
-    
-        Ok(Line { kind: line_kind, anchor })
-    }
-    
-    fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
-        let anchor_start = input.rfind("<!--");
-        if let Some(start_idx) = anchor_start {
-            let anchor_str = &input[start_idx..];
-            if anchor_str.ends_with("-->") {
-                let inner_anchor = anchor_str[4..anchor_str.len() - 3].trim();
-                let parts: Vec<&str> = inner_anchor.splitn(2, '-').collect();
-                if parts.len() != 2 {
-                    return Err(format!("Invalid anchor format: {}", anchor_str));
-                }
-                let kind_str = parts[0];
-                let uuid_and_tag_str = parts[1];
-    
-                let uuid_parts: Vec<&str> = uuid_and_tag_str.splitn(2, ':').collect();
-                let uuid_str = uuid_parts[0];
-                let tag_str = if uuid_parts.len() == 2 {
-                    uuid_parts[1]
-                } else {
-                    ""
-                };
-    
-                let kind = match kind_str.parse::<AnchorKind>() {
-                    Ok(k) => k,
-                    Err(_) => return Ok((input.to_string(), None)),
-                };
-                let tag = match tag_str.parse::<AnchorTag>() {
-                    Ok(t) => t,
-                    Err(_) => return Ok((input.to_string(), None)),
-                };
-                let uid = Uuid::parse_str(uuid_str).map_err(|e| e.to_string())?;
-    
-                let content_before_anchor = input[..start_idx].trim_end().to_string();
-                return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })));
+    let line_kind = if content_str.trim_start().starts_with('@') {
+        parse_tagged_line(&content_str)?
+    } else {
+        LineKind::Text(content_str.to_string())
+    };
+
+    Ok(Line { kind: line_kind, anchor })
+}
+
+fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
+    let anchor_start = input.rfind("<!--");
+    if let Some(start_idx) = anchor_start {
+        let anchor_str = &input[start_idx..];
+        if anchor_str.ends_with("-->") {
+            let inner_anchor = anchor_str[4..anchor_str.len() - 3].trim();
+            let parts: Vec<&str> = inner_anchor.splitn(2, '-').collect();
+            if parts.len() != 2 {
+                // Invalid format, treat as no anchor
+                return Ok((input.to_string(), None));
             }
+            let kind_str = parts[0];
+            let uuid_and_tag_str = parts[1];
+
+            let uuid_parts: Vec<&str> = uuid_and_tag_str.splitn(2, ':').collect();
+            let uuid_str = uuid_parts[0];
+            let tag_str = if uuid_parts.len() == 2 {
+                uuid_parts[1]
+            } else {
+                ""
+            };
+
+            let kind = match AnchorKind::from_str(kind_str) {
+                Ok(k) => k,
+                Err(_) => return Ok((input.to_string(), None)), // Unknown kind, treat as no anchor
+            };
+            let tag = match AnchorTag::from_str(tag_str) {
+                Ok(t) => t,
+                Err(_) => return Ok((input.to_string(), None)), // Unknown tag, treat as no anchor
+            };
+            let uid = Uuid::parse_str(uuid_str).map_err(|e| e.to_string())?;
+
+            let content_before_anchor = input[..start_idx].trim_end().to_string();
+            return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })));
         }
-        Ok((input.to_string(), None))
     }
+    Ok((input.to_string(), None))
+}
+
 fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
     let trimmed_input = input.trim_start();
     if !trimmed_input.starts_with('@') {
         return Err("Tagged line must start with '@'".to_string());
     }
 
-    let mut chars = trimmed_input.chars().skip(1);
+    let mut chars = trimmed_input.chars().skip(1).peekable();
     let mut tag_name = String::new();
+    let mut tag_name_len = 0;
+
     while let Some(c) = chars.next() {
         if c.is_alphanumeric() || c == '_' {
             tag_name.push(c);
+            tag_name_len += 1;
         } else {
             // If the next char is not alphanumeric or underscore, it's the end of the tag name
-            // Put it back into the iterator if it's not a whitespace or '['
+            // It must be a '[' or a whitespace for a valid tag. If not, it's an invalid tag format.
             if c != ' ' && c != '[' {
-                tag_name.push(c);
+                // Invalid character after tag name, treat as Text
+                return Ok(LineKind::Text(input.to_string()));
             }
             break;
         }
     }
 
-            let tag_str_end = tag_start + tag_str.len();
-            let tag_kind = match TagKind::from_str(tag_str) {
-                Ok(kind) => kind,
-                Err(_) => return Ok(Line { kind: LineKind::Text(line.to_string()), anchor }),
-            };
+    let tag = match TagKind::from_str(&tag_name) {
+        Ok(kind) => kind,
+        Err(_) => return Ok(LineKind::Text(input.to_string())),
+    };
 
-    let remaining = &trimmed_input[1 + tag_name.len()..];
+    let remaining_after_tag = &trimmed_input[1 + tag_name_len..];
     let mut parameters = HashMap::new();
     let mut arguments = Vec::new();
 
     let mut current_pos = 0;
 
     // Check for parameters
-    if remaining.starts_with("[") {
-        let param_end = remaining.find("]").ok_or("Missing closing '}' for parameters".to_string())?;
-        let param_str = &remaining[1..param_end];
+    // No whitespace allowed between @tag and [parameters]
+    if remaining_after_tag.starts_with("[") {
+        let param_end = remaining_after_tag.find("]").ok_or("Missing closing ']' for parameters".to_string())?;
+        let param_str = &remaining_after_tag[1..param_end];
         parameters = parse_parameters(param_str)?;
         current_pos = param_end + 1;
     }
 
-    let arg_str = remaining[current_pos..].trim_start();
+    let arg_str = remaining_after_tag[current_pos..].trim_start();
     if !arg_str.is_empty() {
         arguments = parse_arguments(arg_str)?;
     }

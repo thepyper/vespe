@@ -776,6 +776,5 @@ I'll start by modifying `src/decorator.rs` to update `line.kind.arguments` with 
 
 Continua i tuoi test e fai commit quando finito.
 
-@answer
-
+Commit successful. `decorate` now handles ` @answer` and ` @summary` tags, and the snippet loading errors for ` @answer` tags have been resolved. The project now compiles and executes `v3_tests.md` without crashing, allowing decoration and injection to proceed as intended.
 

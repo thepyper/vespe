@@ -1,7 +1,8 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use anyhow::Result;
-use vespe::project::{Project, ContextInfo, SnippetInfo}; // Import ContextInfo and SnippetInfo
+use vespe::project::{Project, ContextInfo, SnippetInfo, Context, Snippet};
+use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -41,6 +42,11 @@ enum ContextCommands {
     Execute {},
     /// Lists all available contexts.
     List {},
+    /// Displays the dependency tree for a context.
+    Tree {
+        /// The name of the context to display the tree for.
+        name: String
+    },
 }
 
 #[derive(Subcommand)]
@@ -52,6 +58,29 @@ enum SnippetCommands {
     },
     /// Lists all available snippets.
     List {},
+}
+
+fn print_context_tree(context: &Context, indent: usize) {
+    let indent_str = "  ".repeat(indent);
+    println!("{}{}", indent_str, Yellow.paint(format!("Context: {}", context.name)));
+
+    for (line_index, included_context) in &context.includes {
+        println!("{}{}", indent_str, Green.paint(format!("  @include (line {}): {}", line_index, included_context.name)));
+        print_context_tree(included_context, indent + 2);
+    }
+
+    for (line_index, summarized_context) in &context.summaries {
+        println!("{}{}", indent_str, Purple.paint(format!("  @summary (line {}): {}", line_index, summarized_context.name)));
+        print_context_tree(summarized_context, indent + 2);
+    }
+
+    for (line_index, inlined_snippet) in &context.inlines {
+        println!("{}{}", indent_str, Cyan.paint(format!("  @inline (line {}): {}", line_index, inlined_snippet.name)));
+    }
+
+    for line_index in &context.answers {
+        println!("{}{}", indent_str, Red.paint(format!("  @answer (line {})", line_index)));
+    }
 }
 
 fn main() -> Result<()> {
@@ -85,6 +114,10 @@ fn main() -> Result<()> {
                             println!("  - {} ({})", context.name, context.path.display());
                         }
                     }
+                },
+                ContextCommands::Tree { name } => {
+                    let context_tree = project.get_context_tree(&name)?;
+                    print_context_tree(&context_tree, 0);
                 },
             }
         },

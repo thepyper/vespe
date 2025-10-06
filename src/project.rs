@@ -1,7 +1,30 @@
+use crate::ast::parser::parse_document;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
-use anyhow::{Context, Result};
-use crate::ast::types::{AnchorKind};
+use anyhow::Result;
+use anyhow::Context as AnyhowContext;
+use crate::ast::types::{AnchorKind, Line, LineKind, TagKind};
 use uuid::Uuid;
+
+#[derive(Debug)]
+pub struct Context {
+    pub name: String,
+    pub content: Vec<Line>,
+    pub includes: BTreeMap<usize, Context>, // line index to Context
+    pub inlines: BTreeMap<usize, Snippet>, // line index to Snippet
+    pub summaries: BTreeMap<usize, Context>, // line index to Context
+    pub answers: BTreeSet<usize>, // line index
+}
+
+#[derive(Debug)]
+pub struct Snippet {
+    pub name: String,
+    pub content: Vec<Line>,
+}
+
+// ... (rest of the file)
+
+
 
 const CTX_DIR_NAME: &str = ".ctx";
 const CTX_ROOT_FILE_NAME: &str = ".ctx_root";
@@ -142,7 +165,7 @@ impl Project {
         let snippets_root = self.snippets_root();
 
         if !snippets_root.exists() {
-            return Ok(snippets); // Return empty if directory doesn't exist
+            return Ok(snippets); // Return empty if directory doesn\'t exist
         }
 
         for entry in std::fs::read_dir(&snippets_root)? {
@@ -165,5 +188,74 @@ impl Project {
             }
         }
         Ok(snippets)
+    }
+
+    pub fn load_snippet(&self, name: &str) -> Result<Snippet> {
+        let file_path = self.resolve_snippet(name);
+        let content = std::fs::read_to_string(&file_path)
+            .context(format!("Failed to read snippet file: {}", file_path.display()))?;
+        let lines = parse_document(&content)?;
+
+        Ok(Snippet {
+            name: name.to_string(),
+            content: lines,
+        })
+    }
+
+    pub fn load_context(&self, name: &str, loading_contexts: &mut HashSet<String>) -> Result<Context> {
+        if loading_contexts.contains(name) {
+            anyhow::bail!("Circular dependency detected for context: {}", name);
+        }
+        loading_contexts.insert(name.to_string());
+
+        let file_path = self.resolve_context(name);
+        let content = std::fs::read_to_string(&file_path)
+            .context(format!("Failed to read context file: {}", file_path.display()))?;
+        let lines = parse_document(&content)?;
+
+        let mut includes = BTreeMap::new();
+        let mut inlines = BTreeMap::new();
+        let mut summaries = BTreeMap::new();
+        let mut answers = BTreeSet::new();
+
+        for (line_index, line) in lines.iter().enumerate() {
+            if let LineKind::Tagged { tag, arguments, .. } = &line.kind {
+                if let Some(arg_name) = arguments.first() {
+                    match tag {
+                        TagKind::Include => {
+                            let included_context = self.load_context(arg_name, loading_contexts)?;
+                            includes.insert(line_index, included_context);
+                        },
+                        TagKind::Summary => {
+                            let summarized_context = self.load_context(arg_name, loading_contexts)?;
+                            summaries.insert(line_index, summarized_context);
+                        },
+                        TagKind::Inline => {
+                            let inlined_snippet = self.load_snippet(arg_name)?;
+                            inlines.insert(line_index, inlined_snippet);
+                        },
+                        TagKind::Answer => {
+                            answers.insert(line_index);
+                        },
+                    }
+                }
+            }
+        }
+
+        loading_contexts.remove(name);
+
+        Ok(Context {
+            name: name.to_string(),
+            content: lines,
+            includes,
+            inlines,
+            summaries,
+            answers,
+        })
+    }
+
+    pub fn get_context_tree(&self, context_name: &str) -> Result<Context> {
+        let mut loading_contexts = HashSet::new();
+        self.load_context(context_name, &mut loading_contexts)
     }
 }

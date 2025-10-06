@@ -194,7 +194,7 @@ impl Project {
         let file_path = self.resolve_snippet(name);
         let content = std::fs::read_to_string(&file_path)
             .context(format!("Failed to read snippet file: {}", file_path.display()))?;
-        let lines = parse_document(&content)?;
+        let lines = parse_document(&content).map_err(|e| anyhow::anyhow!(e)).context("Failed to parse document")?;
 
         Ok(Snippet {
             name: name.to_string(),
@@ -211,7 +211,7 @@ impl Project {
         let file_path = self.resolve_context(name);
         let content = std::fs::read_to_string(&file_path)
             .context(format!("Failed to read context file: {}", file_path.display()))?;
-        let lines = parse_document(&content)?;
+        let lines = parse_document(&content).map_err(|e| anyhow::anyhow!(e)).context("Failed to parse document")?;
 
         let mut includes = BTreeMap::new();
         let mut inlines = BTreeMap::new();

@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::project::Project;
 use crate::ast::parser::parse_document;
-use crate::ast::format::format_document;
 use crate::ast::types::{AnchorKind, AnchorTag, Line};
 
 pub fn inject_content(
@@ -51,7 +50,7 @@ pub fn inject_content(
         .into());
     }
 
-    let updated_content = format_document(lines);
+    let updated_content = lines.into_iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n");
     std::fs::write(&context_path, updated_content)?;
 
     Ok(())

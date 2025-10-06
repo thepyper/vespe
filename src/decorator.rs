@@ -4,8 +4,6 @@ use uuid::Uuid;
 use crate::project::Project;
 use crate::ast::parser::parse_document;
 use crate::ast::types::{Line, LineKind, Anchor, AnchorKind, AnchorTag, TagKind};
-use crate::ast::format::format_document;
-
 pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let context_path = project.resolve_context(context_name);
     let original_content = fs::read_to_string(&context_path)?;
@@ -18,12 +16,11 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box
         if let LineKind::Tagged { tag, .. } = &line.kind {
             let expected_anchor_kind = match tag {
                 TagKind::Inline => Some(AnchorKind::Inline),
-                TagKind::Summary => Some(AnchorKind::Summary),
                 TagKind::Answer => Some(AnchorKind::Answer),
                 _ => None,
             };
 
-            if let Some(expected_kind) = expected_anchor_kind {
+            if let Some(expected_kind) = expected_anchor_kind{
                 let has_begin_anchor = line.anchor.as_ref().map_or(false, |a| {
                     a.kind == expected_kind && a.tag == AnchorTag::Begin
                 });
@@ -80,7 +77,7 @@ pub fn decorate_context(project: &Project, context_name: &str) -> Result<(), Box
     }
 
     if modified {
-        let new_content = format_document(final_lines);
+        let new_content = final_lines.into_iter().map(|line| line.to_string()).collect::<Vec<String>>().join("\n");
         fs::write(&context_path, new_content)?; 
     }
 

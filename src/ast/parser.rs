@@ -1,141 +1,192 @@
-use pest::iterators::Pair;
-use pest::error::{Error as PestError, InputLocation};
-
-use pest::Parser; // This is the trait
-use pest_derive::Parser; // This is the derive macro
+use super::types::*;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::types::*;
-
-#[derive(Parser)]
-#[grammar = "ast/ast.pest"]
-pub struct AstParser;
-
-pub fn parse_document(input: &str) -> Result<Vec<Line>, PestError<Rule>> {
-    input.lines().enumerate().map(|(line_num, line_str)| {
-        // Skip empty lines or lines that are just whitespace
-        if line_str.trim().is_empty() {
-            return Ok(Line { kind: LineKind::Text(String::new()), anchor: None });
-        }
-        parse_line(line_str).map_err(|e| {
-            let error_span = match e.location {
-                InputLocation::Pos(pos) => pest::Span::new(line_str, pos, pos).unwrap(),
-                InputLocation::Span((start, end)) => pest::Span::new(line_str, start, end).unwrap(),
-            };
-
-            PestError::new_from_span(
-                pest::error::ErrorVariant::CustomError {
-                    message: format!("Error on line {}: {}", line_num + 1, e),
-                },
-                error_span
-            )
+pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
+    input
+        .lines()
+        .enumerate()
+        .filter_map(|(line_num, line_str)| {
+            // Skip empty lines or lines that are just whitespace
+            if line_str.trim().is_empty() {
+                return None;
+            }
+            Some(parse_line(line_str).map_err(|e| format!("Error on line {}: {}", line_num + 1, e)))
         })
-    }).collect()
+        .collect()
 }
 
-fn parse_line(input: &str) -> Result<Line, PestError<Rule>> {
-    let mut pairs = AstParser::parse(Rule::line, input)?;
-    let pair = pairs.next().unwrap();
+fn parse_line(input: &str) -> Result<Line, String> {
+    let trimmed_input = input.trim_end();
+    let (content_str, anchor) = parse_anchor(trimmed_input)?;
 
-    let mut line_kind = LineKind::Text(String::new());
-    let mut anchor: Option<Anchor> = None;
+        let line_kind = if content_str.trim_start().starts_with('@') {
+            parse_tagged_line(&content_str)?
+        } else {
+            LineKind::Text(content_str.to_string())
+        };
+    
+        Ok(Line { kind: line_kind, anchor })
+    }
+    
+    fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
+        let anchor_start = input.rfind("<!--");
+        if let Some(start_idx) = anchor_start {
+            let anchor_str = &input[start_idx..];
+            if anchor_str.ends_with("-->") {
+                let inner_anchor = anchor_str[4..anchor_str.len() - 3].trim();
+                let parts: Vec<&str> = inner_anchor.splitn(2, '-').collect();
+                if parts.len() != 2 {
+                    return Err(format!("Invalid anchor format: {}", anchor_str));
+                }
+                let kind_str = parts[0];
+                let uuid_and_tag_str = parts[1];
+    
+                let uuid_parts: Vec<&str> = uuid_and_tag_str.splitn(2, ':').collect();
+                let uuid_str = uuid_parts[0];
+                let tag_str = if uuid_parts.len() == 2 {
+                    uuid_parts[1]
+                } else {
+                    ""
+                };
+    
+                let kind = kind_str.parse::<AnchorKind>()?;
+                let uid = Uuid::parse_str(uuid_str).map_err(|e| e.to_string())?;
+                let tag = tag_str.parse::<AnchorTag>()?;
+    
+                let content_before_anchor = input[..start_idx].trim_end().to_string();
+                return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })));
+            }
+        }
+        Ok((input.to_string(), None))
+    }
+fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
+    let trimmed_input = input.trim_start();
+    if !trimmed_input.starts_with('@') {
+        return Err("Tagged line must start with '@'".to_string());
+    }
 
-    for inner_pair in pair.into_inner() {
-        match inner_pair.as_rule() {
-            Rule::tagged_line_content => {
-                line_kind = parse_tagged_line(inner_pair)?;
-            },
-            Rule::text_content => {
-                line_kind = LineKind::Text(inner_pair.as_str().trim_end().to_string());
-            },
-            Rule::anchor_comment => {
-                anchor = Some(parse_anchor(inner_pair)?);
-            },
-            _ => {},
+    let mut chars = trimmed_input.chars().skip(1);
+    let mut tag_name = String::new();
+    while let Some(c) = chars.next() {
+        if c.is_alphanumeric() || c == '_' {
+            tag_name.push(c);
+        } else {
+            // If the next char is not alphanumeric or underscore, it's the end of the tag name
+            // Put it back into the iterator if it's not a whitespace or '['
+            if c != ' ' && c != '[' {
+                tag_name.push(c);
+            }
+            break;
         }
     }
 
-    Ok(Line { kind: line_kind, anchor })
-}
+    let tag = tag_name.parse::<TagKind>()?;
 
-fn parse_anchor(pair: Pair<Rule>) -> Result<Anchor, PestError<Rule>> {
-    let span = pair.as_span();
-    let mut kind: Option<AnchorKind> = None;
-    let mut uid: Option<Uuid> = None;
-    let mut tag: AnchorTag = AnchorTag::None;
+    let remaining = &trimmed_input[1 + tag_name.len()..];
+    let mut parameters = HashMap::new();
+    let mut arguments = Vec::new();
 
-    for inner_pair in pair.into_inner() {
-        match inner_pair.as_rule() {
-            Rule::anchor_kind => {
-                kind = Some(inner_pair.as_str().parse().map_err(|e| PestError::new_from_span(pest::error::ErrorVariant::CustomError { message: e }, inner_pair.as_span()))?);
-            },
-            Rule::uuid => {
-                uid = Some(Uuid::parse_str(inner_pair.as_str()).map_err(|e| PestError::new_from_span(pest::error::ErrorVariant::CustomError { message: e.to_string() }, inner_pair.as_span()))?);
-            },
-            Rule::anchor_tag => {
-                tag = inner_pair.as_str().parse().map_err(|e| PestError::new_from_span(pest::error::ErrorVariant::CustomError { message: e }, inner_pair.as_span()))?;
-            },
-            _ => {},
-        }
+    let mut current_pos = 0;
+
+    // Check for parameters
+    if remaining.starts_with("[") {
+        let param_end = remaining.find("]").ok_or("Missing closing '}' for parameters".to_string())?;
+        let param_str = &remaining[1..param_end];
+        parameters = parse_parameters(param_str)?;
+        current_pos = param_end + 1;
     }
 
-    Ok(Anchor {
-        kind: kind.ok_or_else(|| PestError::new_from_span(pest::error::ErrorVariant::CustomError { message: "Missing anchor kind".to_string() }, span.clone()))?,
-        uid: uid.ok_or_else(|| PestError::new_from_span(pest::error::ErrorVariant::CustomError { message: "Missing UUID".to_string() }, span.clone()))?,
-        tag,
-    })
+    let arg_str = remaining[current_pos..].trim_start();
+    if !arg_str.is_empty() {
+        arguments = parse_arguments(arg_str)?;
+    }
+
+    Ok(LineKind::Tagged { tag, parameters, arguments })
 }
 
-fn parse_tagged_line(pair: Pair<Rule>) -> Result<LineKind, PestError<Rule>> {
-    let span = pair.as_span();
-    let mut tag_kind: Option<TagKind> = None;
-    let mut parameters: HashMap<String, String> = HashMap::new();
-    let mut arguments: Vec<String> = Vec::new();
+fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
+    let mut params = HashMap::new();
+    if input.is_empty() {
+        return Ok(params);
+    }
 
-    for inner_pair in pair.into_inner() {
-        match inner_pair.as_rule() {
-            Rule::tag_kind => {
-                tag_kind = Some(inner_pair.as_str().parse().map_err(|e| PestError::new_from_span(pest::error::ErrorVariant::CustomError { message: e }, inner_pair.as_span()))?);
-            },
-            Rule::parameters => {
-                for param_pair in inner_pair.into_inner() {
-                    if let Rule::parameter = param_pair.as_rule() {
-                        let mut key: Option<String> = None;
-                        let mut value: Option<String> = None;
-                        for kv_pair in param_pair.into_inner() {
-                            match kv_pair.as_rule() {
-                                Rule::key => key = Some(kv_pair.as_str().to_string()),
-                                Rule::value => value = Some(kv_pair.as_str().to_string()),
-                                _ => {},
-                            }
-                        }
-                        if let (Some(k), Some(v)) = (key, value) {
-                            parameters.insert(k, v);
-                        }
+    for pair_str in input.split(';') {
+        let trimmed_pair = pair_str.trim();
+        if trimmed_pair.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = trimmed_pair.splitn(2, '=' ).collect();
+        if parts.len() != 2 {
+            return Err(format!("Invalid parameter format: {}", trimmed_pair));
+        }
+        let key = parts[0].trim().to_string();
+        let value = parts[1].trim().to_string();
+
+        // Validate key format: [a-zA-Z_][a-zA-Z0-9_]*
+        if !key.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_' ) ||
+           !key.chars().all(|c| c.is_alphanumeric() || c == '_' ) {
+            return Err(format!("Invalid parameter key format: {}", key));
+        }
+
+        // Validate value format: [a-zA-Z0-9_+\-./]* (single token, no spaces)
+        if !value.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '+' || c == '-' || c == '.' || c == '/' ) {
+            return Err(format!("Invalid parameter value format: {}", value));
+        }
+
+        params.insert(key, value);
+    }
+    Ok(params)
+}
+
+fn parse_arguments(input: &str) -> Result<Vec<String>, String> {
+    let mut args = Vec::new();
+    let mut in_quote = false;
+    let mut current_arg = String::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some(next_c) = chars.peek() {
+                    if *next_c == '"' {
+                        current_arg.push('"');
+                        chars.next(); // Consume the escaped quote
+                    } else {
+                        current_arg.push(c); // Keep the backslash if not escaping a quote
                     }
+                } else {
+                    current_arg.push(c);
                 }
             },
-            Rule::arguments => {
-                for arg_pair in inner_pair.into_inner() {
-                    if let Rule::argument = arg_pair.as_rule() {
-                        let arg_str = arg_pair.as_str();
-                        if arg_str.starts_with('"') && arg_str.ends_with('"') {
-                            // Remove quotes and unescape inner quotes
-                            arguments.push(arg_str[1..arg_str.len() - 1].replace("\"", "\""));
-                        } else {
-                            arguments.push(arg_str.to_string());
-                        }
-                    }
+            '"' => {
+                in_quote = !in_quote;
+                if !in_quote && !current_arg.is_empty() {
+                    args.push(current_arg.clone());
+                    current_arg.clear();
                 }
             },
-            _ => {},
+            ' ' => {
+                if in_quote {
+                    current_arg.push(c);
+                } else if !current_arg.is_empty() {
+                    args.push(current_arg.clone());
+                    current_arg.clear();
+                }
+            },
+            _ => {
+                current_arg.push(c);
+            },
         }
     }
 
-    Ok(LineKind::Tagged {
-        tag: tag_kind.ok_or_else(|| PestError::new_from_span(pest::error::ErrorVariant::CustomError { message: "Missing tag kind".to_string() }, span.clone()))?,
-        parameters,
-        arguments,
-    })
+    if !current_arg.is_empty() {
+        args.push(current_arg);
+    }
+
+    if in_quote {
+        return Err("Unclosed quote in arguments".to_string());
+    }
+
+    Ok(args)
 }

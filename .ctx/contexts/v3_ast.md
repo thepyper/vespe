@@ -266,6 +266,14 @@ Is there anything else you need assistance with?
 
 Risolvi errori di compilazione
 
-@answer
+The compilation errors have been resolved and the changes have been committed with the message "fix: Resolve compilation errors in AST parser".
 
+The issues addressed were:
+*   Missing `use std::str::FromStr;` import.
+*   Incorrect variable scoping within the `parse_tagged_line` function.
+*   Mismatched return types when handling unknown `TagKind` in `parse_tagged_line`.
+
+The project now compiles successfully.
+
+Is there anything else you need assistance with?
 

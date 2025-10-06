@@ -299,3 +299,17 @@ Errors addressed. Running `cargo check` to confirm compilation.Okay, I have one 
 
 `use of moved value` fixed. Running `cargo check` to confirm compilation.Excellent! The project compiles with only the known false positive warning. I've implemented `answer_questions`, refactored `decorate` and `inject` to return modification status, and fixed all compilation errors. Committing now.All changes are confirmed: `ShellAgentCall::new` fixed, `Line::text_content()` added, `Answer` command implemented, `decorate` and `inject` functions now return `anyhow::Result<bool>`, `execute` updated to use them, and `answer_questions` is a new file. I'm staging and committing everything.Staged. Committing with message.I apologize; I used an unsupported command substitution in the multi-line commit message. I'll retry with a single-line message.Commit successful. `answer_questions` implemented, `decorate` and `inject` refactored to return modification status, and all compilation errors resolved. Request fulfilled.
 
+
+C'e' un problema nel tuo approccio di fare tutto in-memory: con gli include potrebbe succedere che vengono modificati anche degli altri files oltre quello indicato nell'argomento di execute(); per questo venivano salvati all'interno delle funzioni.
+Se vuoi fare tutto in memory, serve una HashMap<String, Context> di oggetti caricati, che va sempre passata a tutte le funzioni,
+che possono aggiungere Context caricati se servono.
+Si potrebbe creare questo oggetto, e dargli un metodo di creazione che faccia gia' la ricerca ricorsiva in modo da avere tutto a disposizione poi. Ovviamente dovrebbe avere anche una mappa degli oggetti modificati e un metodo finale che salva tutti i modificati.
+Che  ne pensi?
+
+Altre note:
+answer non e' un metodo cli a se stante, answer_questions fa parte della pipelin execute.
+
+@answer
+
+
+

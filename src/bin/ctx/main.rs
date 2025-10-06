@@ -45,6 +45,11 @@ enum ContextCommands {
         /// The name of the context to execute.
         name: String
     },
+    /// Answers questions in a context.
+    Answer {
+        /// The name of the context to answer questions in.
+        name: String
+    },
     /// Lists all available contexts.
     List {},
     /// Displays the dependency tree for a context.
@@ -111,6 +116,12 @@ fn main() -> Result<()> {
                     let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
                     execute::execute(&mut project, &name, &agent)?;
                     println!("Context '{}' executed successfully.", name);
+                },
+                ContextCommands::Answer { name } => {
+                    println!("Answering questions in context '{}'...", name);
+                    let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+                    execute::answer::answer_questions(&mut project, &name, &agent)?;
+                    println!("Questions in context '{}' answered successfully.", name);
                 },
                 ContextCommands::List {} => {
                     let contexts = project.list_contexts()?;

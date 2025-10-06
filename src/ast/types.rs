@@ -178,6 +178,14 @@ impl fmt::Display for Line {
 }
 
 impl Line {
+    pub fn text_content(&self) -> String {
+        if let LineKind::Text(s) = &self.kind {
+            s.clone()
+        } else {
+            "".to_string()
+        }
+    }
+
     pub fn get_include_path(&self) -> Option<&str> {
         if let LineKind::Tagged { tag: TagKind::Include, arguments, .. } = &self.kind {
             arguments.first().map(|s| s.as_str())

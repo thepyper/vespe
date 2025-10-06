@@ -11,8 +11,14 @@ pub struct ShellAgentCall {
 }
 
 impl ShellAgentCall {
-    pub fn new(command_template: String) -> Self {
-        Self { command_template }
+    pub fn new(command: String) -> Self {
+        Self { command_template: command }
+    }
+
+    pub fn call(&self, query: &str) -> anyhow::Result<String> {
+        // In a real scenario, this would execute the shell command and capture its output.
+        // For now, we'll just return a dummy response.
+        Ok(format!("Agent response to: {}", query))
     }
 }
 

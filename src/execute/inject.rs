@@ -14,14 +14,15 @@ pub struct InlineState {
 pub fn inject_recursive_inline(
     project: &mut Project,
     context_name: &str,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     let mut inlined_set = HashSet::new();
     let mut context_lines = project.load_context_lines(context_name)?;
 
-    _inject_recursive_inline(project, context_name, &mut context_lines, &mut inlined_set)?;
-
-    project.update_context_lines(context_name, context_lines)?;
-    Ok(())
+    let modified = _inject_recursive_inline(project, context_name, &mut context_lines, &mut inlined_set)?;
+    if modified {
+        project.update_context_lines(context_name, context_lines)?;
+    }
+    Ok(modified)
 }
 
 fn _inject_recursive_inline(
@@ -29,11 +30,13 @@ fn _inject_recursive_inline(
     context_name: &str,
     context_lines: &mut Vec<Line>,
     inlined_set: &mut HashSet<String>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     if inlined_set.contains(context_name) {
-        return Ok(());
+        return Ok(false);
     }
     inlined_set.insert(context_name.to_string());
+
+    let mut modified = false;
 
     let mut lines_to_process = Vec::new();
     for (i, line) in context_lines.iter().enumerate() {
@@ -62,12 +65,14 @@ fn _inject_recursive_inline(
 
         let snippet_lines = project.load_snippet_lines(&snippet_name)?;
 
-        injector::inject_content_in_memory(
+        if injector::inject_content_in_memory(
             context_lines,
             anchor_kind,
             anchor_uid,
             snippet_lines,
-        )?;
+        )? {
+            modified = true;
+        }
 
         // Update state after successful injection
         inline_state.pasted = true;
@@ -87,9 +92,11 @@ fn _inject_recursive_inline(
 
     for included_context_name in includes_to_inject.into_iter() {
         let mut included_lines = project.load_context_lines(&included_context_name)?;
-        _inject_recursive_inline(project, &included_context_name, &mut included_lines, inlined_set)?;
-        project.update_context_lines(&included_context_name, included_lines)?;
+        if _inject_recursive_inline(project, &included_context_name, &mut included_lines, inlined_set)? {
+            project.update_context_lines(&included_context_name, included_lines)?;
+            modified = true;
+        }
     }
 
-    Ok(())
+    Ok(modified)
 }

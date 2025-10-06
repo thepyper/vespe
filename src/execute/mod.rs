@@ -30,3 +30,143 @@ pub fn execute(
 
     Ok(())
 }
+
+enum Exe2Compitino {
+    None,
+    AnswerQuestion(uuid::Uuid),
+    Summarize(uuid::Uuid),
+}
+
+pub fn execute2(project: &Project,
+    context_name: &str,
+    agent: &ShellAgentCall,
+) -> anyhow::Result<()>  {
+
+    let mut context_manager = ContextManager::new();
+    let mut exe2_manager = Execute2Manager::new();
+
+    loop {
+        let compitino = _execute2(project, context_name, agent, context_manager, exe2);
+
+        match compitino {
+            Exe2Compitino::None => break,
+            Exe2Compitino::AnswerQuestion(id) => {
+                // Handle answering question
+            },
+            Exe2Compitino::Summarize(id) => {
+                // Handle summarizing
+            },
+        }
+    }
+
+    Ok(())
+}
+
+struct Execute2Manager 
+{
+    collect_content: Vec<Line>,
+}
+
+impl Execute2Manager {
+    fn new() -> Execute2Manager {
+        Execute2Manager {
+            collect_content: Vec::new(),
+        }
+    }
+}
+
+struct AnchorIndex
+{
+	begin: HashMap<Uuid, usize>,
+	end: HashMap<Uuid, usize>,
+}
+
+impl AnchorIndex 
+{
+	fn new(lines: &Vec<Line>) -> AnchorIndex {
+		let a1 = HashMap<Uuid, usize>::new();
+		let a2 = HashMap<Uuid, usize>::new();
+		for (i, line) in lines.enumerate() {
+			if let Some(anchor) = line.get_anchor() {
+				match anchor.tag {
+					AnchorTag::Begin => a1.insert(anchor.uuid, i),
+					AnchorTag::End => a2.insert(anchor.uuid, i),
+					_ => {}
+				}
+			}
+		}
+		AnchorIndex {
+			begin: a1,
+			end: a2,
+		}
+	}
+}
+
+fn apply_patches(&mut lines : Vec<Line>, patches: BTreeMap::<usize, Vec<Line>>) -> Result<()> {
+
+	// TODO apply patches in reverse order
+	
+	Ok(())
+}
+
+
+
+fn _execute2(project: &Project,
+    context_name: &str,
+    agent: &ShellAgentCall, context_manager: &mut ContextManager, exe2: &mut Execute2Manager,
+) -> anyhow::Result<()>  {
+	
+    let mut lines = context_manager.load_context(context_name)?;
+	
+	{
+	let patches = BTreeMap::<usize, Vec<Line>>::new();
+
+	// Check for missing tag anchors 
+	for line in lines {
+		if let LineKind::Tagged{ tag,  } = &line.kind {	
+			let expected_begin_anchor_kind = match tag {
+				TagKind::Inline => Some(AnchorKind::Inline),
+				TagKind::Answer => Some(AnchorKind::Answer),
+				TagKind::Summary => Some(AnchorKind::Summary),
+				_ => None,
+			};
+			if let Some(expected_begin_anchor_kind) = expected_begin_anchor_kind {
+				let is_anchor_ok = match line.anchor {
+					None => false,
+				Some(anchor) => if anchor.kind != expected_begin_anchor_kind { false } else { if let AnchorTag::Begin = anchor.tag { true} else { false }}}
+				if !is_anchor_ok {
+					patches.insert(i, Line { kind: line.kind, anchor: Anchor { kind: expected_begin_anchor_kind, uuid: Uuid::new(), tag: AnchorTag::Begin }
+				}
+			}
+		}
+	}
+	
+	apply_patches(lines, patches);
+	}
+	
+	{
+	let patches = BTreeMap::<usize, Vec<Line>>::new();
+	let anchor_index = AnchorIndex::new(lines);
+
+	// Check for orphan end anchors
+	for (anchor_end_uuid, i) in anchor_index.end {
+		if !anchor_index.begin.contains(anchor_end_uuid) {
+			// Orphan end anchor, remove it 
+			patches.insert(i, Vec::new());
+		}
+	}
+		
+	// Check for orphan begin anchors
+	for (anchor_begin_uuid, i) in anchor_index.begin {
+		if !anchor_index.end.contains(anchor_begin_uuid) {
+			// Orphan begin anchor, add end anchor just after it 
+			let begin_anchor_line = lines.at(i);
+			patches.insert(i, vec![begin_anchor_line, Line{ kind: LineKind::Text(""), anchor: { kind: begin_anchor_line.anchor.kind, uuid: anchor_begin_uuid, tag: AnchorTag::End }}]);
+		}
+	}	
+	apply_patches(lines, patches);
+	}
+
+	
+	
+}

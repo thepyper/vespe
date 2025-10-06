@@ -218,4 +218,11 @@ impl Line {
         }
         None
     }
+	
+	pub fn get_anchor(&self) -> Option<Anchor> {
+        if let LineKind::Tagged { tag: TagKind::Inline, arguments, .. } = &self.kind {
+            return &self.anchor;
+        }
+        None
+	}
 }

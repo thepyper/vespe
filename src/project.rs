@@ -1,5 +1,5 @@
-use crate::syntax::parser::parse_document;
-use crate::syntax::types::Line;
+use crate::semantic::parse_document;
+use crate::semantic::Line;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -285,7 +285,7 @@ impl Project {
             "Failed to read snippet file: {}",
             file_path.display()
         ))?;
-        let lines = parse_document(&content)
+        let lines = crate::semantic::parse_document(self, &content)
             .map_err(|e| anyhow!("Failed to parse snippet document: {}", e))
             .context("Failed to parse document")?;
 

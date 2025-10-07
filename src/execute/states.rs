@@ -3,36 +3,46 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InlineState {
     pub snippet_name: String,
-    pub pasted: bool,
 }
 
 impl InlineState {
     pub fn new(snippet_name: &str) -> Self {
         InlineState {
             snippet_name: snippet_name.into(),
-            pasted: false,
         }
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum SummaryStatus {
+    NeedContext,
+    NeedInjection,
+    Completed,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SummaryState {
+    pub status: SummaryStatus,
     pub context_name: String,
-    pub summarized_hash: String,
+    pub context: String,
+    pub context_hash: String,
+    pub summary: String,
 }
 
 impl SummaryState {
     pub fn new(context_name: &str) -> Self {
         SummaryState {
+            status: SummaryStatus::NeedContext,
             context_name: context_name.into(),
-            summarized_hash: String::new(),
+            context: String::new(),
+            context_hash: String::new(),
+            summary: String::new(),
         }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AnswerStatus {
-    NeedContext,
     NeedAnswer,
     NeedInjection,
     Completed,
@@ -46,10 +56,10 @@ pub struct AnswerState {
 }
 
 impl AnswerState {
-    pub fn new() -> Self {
+    pub fn new(query: String) -> Self {
         AnswerState {
-            status: AnswerStatus::NeedContext,
-            query: String::new(),
+            status: AnswerStatus::NeedAnswer,
+            query: query,
             reply: String::new(),
         }
     }

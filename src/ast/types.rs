@@ -169,79 +169,66 @@ impl fmt::Display for LineKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Line {
-    pub kind: LineKind,
-    pub anchor: Option<Anchor>,
+pub enum Line {
+    Text(String),
+    Tagged {
+        tag: TagKind,
+        parameters: HashMap<String, String>,
+        arguments: Vec<String>,
+    },
+    Anchor(Anchor),
 }
-
-const ANCHOR_COLUMN: usize = 80;
 
 impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let kind_str = format!("{}", self.kind);
-        write!(f, "{}", kind_str)?;
-
-        if let Some(anchor) = &self.anchor {
-            let current_len = kind_str.len();
-            let padding_needed = if current_len < ANCHOR_COLUMN {
-                ANCHOR_COLUMN - current_len
-            } else {
-                1 // At least one space if content is already long
-            };
-            write!(f, "{:padding_needed$}", " ")?; // Write padding spaces
-            write!(f, "{}", anchor)?; // Then write the anchor
+        match self {
+            Line::Text(s) => write!(f, "{}", s),
+            Line::Tagged {
+                tag,
+                parameters,
+                arguments,
+            } => {
+                write!(f, "@{}", tag)?;
+                if !parameters.is_empty() {
+                    write!(f, "[")?;
+                    let mut first = true;
+                    for (key, value) in parameters.iter() {
+                        if !first {
+                            write!(f, "; ")?;
+                        }
+                        write!(f, "{}={}", key, value)?;
+                        first = false;
+                    }
+                    write!(f, "]")?;
+                }
+                if !arguments.is_empty() {
+                    write!(f, " ")?;
+                    let mut first = true;
+                    for arg in arguments.iter() {
+                        if !first {
+                            write!(f, " ")?;
+                        }
+                        if arg.contains(' ') || arg.contains('"') {
+                            write!(f, "\"{}\"", arg.replace('"', "\""))?;
+                        } else {
+                            write!(f, "{}", arg)?;
+                        }
+                        first = false;
+                    }
+                }
+                Ok(())
+            }
+            Line::Anchor(anchor) => write!(f, "{}", anchor),
         }
-        Ok(())
     }
 }
 
 impl Line {
-    pub fn text_content(&self) -> String {
-        if let LineKind::Text(s) = &self.kind {
-            s.clone()
-        } else {
-            "".to_string()
-        }
-    }
-
-    pub fn get_include_path(&self) -> Option<&str> {
-        if let LineKind::Tagged {
-            tag: TagKind::Include,
-            arguments,
-            ..
-        } = &self.kind
-        {
-            arguments.first().map(|s| s.as_str())
+    pub fn get_anchor(&self) -> Option<&Anchor> {
+        if let Line::Anchor(anchor) = self {
+            Some(anchor)
         } else {
             None
         }
-    }
-
-    pub fn get_inline_tag_info(&self) -> Option<(AnchorKind, Uuid, String)> {
-        if let LineKind::Tagged {
-            tag: TagKind::Inline,
-            arguments,
-            ..
-        } = &self.kind
-        {
-            if let Some(anchor) = &self.anchor {
-                if let Some(snippet_name) = arguments.first() {
-                    return Some((anchor.kind.clone(), anchor.uid, snippet_name.clone()));
-                }
-            }
-        }
-        None
-    }
-
-    pub fn get_anchor(&self) -> Option<Anchor> {
-        if let LineKind::Tagged {
-            tag: TagKind::Inline,
-            arguments,
-            ..
-        } = &self.kind
-        {
-            return self.anchor.clone();
-        }
-        None
     }
 }

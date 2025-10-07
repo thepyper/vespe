@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::ErrorKind;
 use thiserror::Error;
-use crate::execute::inject::InlineState;
+//use crate::execute::inject::InlineState;
 
 // Error type for semantic processing
 #[derive(Error, Debug)]
@@ -84,6 +84,35 @@ impl Line {
         }
     }
 }
+
+impl Line {
+    pub fn new_inline_anchors(state: InlineState) -> Vec<Self> {
+        vec![Line::InlineBeginAnchor {
+            uuid: Uuid::new_v4(),
+            state,
+        },
+        Line::InlineEndAnchor {
+            uuid: Uuid::new_v4(),
+        }]
+    }
+    pub fn new_summary_anchors(state: SummaryState) ->  Vec<Self> {
+        vec![Line::SummaryBeginAnchor {
+            uuid: Uuid::new_v4(),
+            state,
+        },
+        Line::SummaryEndAnchor {
+            uuid: Uuid::new_v4(),
+        }]
+    }
+    pub fn new_answer_anchors(state: AnswerState) ->  Vec<Self> {
+        vec![Line::AnswerBeginAnchor {
+            uuid: Uuid::new_v4(),
+            state,
+        },
+        Line::AnswerEndAnchor { uuid: Uuid::new_v4() }]
+    }
+}
+
 impl InlineState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
         load_state_from_metadata(project, &AnchorKind::Inline, uid).unwrap_or_default()
@@ -94,12 +123,48 @@ impl InlineState {
     }
 }
 
-// Placeholder for SummaryState
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub enum SummaryState {
-    #[default]
-    Default,
-    // Add other states as needed
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct InlineState {
+    snippet_name: String,
+    pasted: bool,
+}
+
+impl InlineState {
+    fn new(snippet_name: &str) -> Self {
+        InlineState {
+            snippet_name: snippet_name.into(),
+            pasted: false,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct SummaryState {
+    context_name: String,
+    summarized_hash: String,
+}
+
+impl SummaryState {
+    fn new(context_name: &str) -> Self {
+        SummaryState {
+            context_name: context_name.into(),
+            summarized_hash: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AnswerState {
+
+}
+
+impl AnswerState {
+    fn new() -> Self {
+        AnswerState {
+
+        }
+    }
 }
 
 impl SummaryState {
@@ -110,14 +175,6 @@ impl SummaryState {
     pub fn save(&self, project: &Project, uid: &Uuid) -> std::result::Result<(), SemanticError> {
         save_state_to_metadata(project, AnchorKind::Summary, uid, self)
     }
-}
-
-// Placeholder for AnswerState
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub enum AnswerState {
-    #[default]
-    Default,
-    // Add other states as needed
 }
 
 impl AnswerState {

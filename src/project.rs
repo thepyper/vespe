@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+/*
 #[derive(Debug)]
 pub struct Context {
     pub name: String,
@@ -15,6 +16,7 @@ pub struct Context {
     pub summaries: BTreeMap<usize, Context>, // line index to Context
     pub answers: BTreeSet<usize>,           // line index
 }
+*/
 
 #[derive(Debug)]
 pub struct Snippet {
@@ -42,6 +44,7 @@ pub struct SnippetInfo {
     pub path: PathBuf,
 }
 
+/*
 pub struct ContextManager {
     contexts: HashMap<String, Vec<Line>>,
     modified_contexts: HashSet<String>,
@@ -106,6 +109,7 @@ impl ContextManager {
         Ok(())
     }
 }
+*/
 
 pub struct Project {
     root_path: PathBuf,

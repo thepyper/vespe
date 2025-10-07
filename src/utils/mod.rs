@@ -7,9 +7,12 @@ struct Context {
     name: String,
     path: PathBuf,
     lines: Vec<Line>,
-    patches: BTreeMap<(usize, usize), Vec<Line>>, 
     modified: bool,
 }
+
+/// start = last line not to patch
+    /// end = first line not to patch
+type Patches = BTreeMap<(usize, usize), Vec<Line>>; // (start, end) -> replacement lines
 
 impl Context {
      pub fn load(project: &Project, name: &str) -> Result<Self> {
@@ -21,30 +24,23 @@ impl Context {
             name: name.into(),
             path,
             lines,
-            patches: BTreeMap::new(),
             modified: false,
         })
     }
 
-    /// start = last line not to patch
-    /// end = first line not to patch
-    pub fn add_patch(&mut self, start: usize, end: usize, new_lines: Vec<Line>) {
-        self.patches.insert((start, end), new_lines);
-    }
-
-    pub fn apply_patches(&mut self) {
-        if self.patches.is_empty() {
-            return;
+    /// true = some patch has been applied
+    pub fn apply_patches(&mut self, patches: Patches) -> bool {
+        if patches.is_empty() {
+            return false;
         }
 
         // TODO apply in reverse start order to avoid shifting indices
 
-        self.patches.clear();
         self.modified = true;
+        true
     }
 
     pub fn save(&mut self) -> Result<()> {
-        self.apply_patches();
         if (!self.modified) {
             return Ok(());
         }

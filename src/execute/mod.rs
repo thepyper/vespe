@@ -1,5 +1,6 @@
 use crate::agent::ShellAgentCall;
-use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
+//use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
+use crate::semantic::Line;
 use crate::project::{ContextManager, Project};
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
@@ -10,9 +11,48 @@ use serde_json;
 use serde::{Deserialize, Serialize};
 
 
-pub mod inject;
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct InlineState {
+    snippet_name: String,
+    pasted: bool,
+}
 
+impl InlineState {
+    fn new(snippet_name: &str) -> Self {
+        InlineState {
+            snippet_name: snippet_name.into(),
+            pasted: false,
+        }
+    }
+}
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct SummaryState {
+    context_name: String,
+    summarized_hash: String,
+}
+
+impl SummaryState {
+    fn new(context_name: &str) -> Self {
+        SummaryState {
+            context_name: context_name.into(),
+            summarized_hash: String::new(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct AnswerState {
+
+}
+
+impl AnswerState {
+    fn new() -> Self {
+        AnswerState {
+
+        }
+    }
+}
 
 enum Exe2Compitino {
     None,
@@ -50,6 +90,8 @@ pub fn execute(
     context_name: &str,
     agent: &ShellAgentCall,
 ) -> anyhow::Result<()> {
+    //let mut context_manager = ContextManager::new();
+    
     let mut context_manager = ContextManager::new();
     let mut exe2_manager = Execute2Manager::new();
 
@@ -91,6 +133,7 @@ pub fn execute(
     Ok(())
 }
 
+/*
 fn format_document(lines: Vec<Line>) -> String {
     lines.into_iter().map(|line| {
         match line {
@@ -100,7 +143,7 @@ fn format_document(lines: Vec<Line>) -> String {
         }
     }).collect::<Vec<String>>().join("\n")
 }
-
+*/
 
 struct Execute2Manager {
     collect_content: Vec<Line>,
@@ -114,6 +157,7 @@ impl Execute2Manager {
     }
 }
 
+/*
 struct AnchorIndex {
     begin: HashMap<Uuid, usize>,
     end: HashMap<Uuid, usize>,
@@ -155,16 +199,51 @@ pub fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Ve
 
     Ok(())
 }
+*/
 
 fn decorate_with_new_anchors(
     project: &Project,
-    context_name: &str,
-    context_manager: &mut ContextManager,
+    context: &mut Context,
+    //context_name: &str,
+    //context_manager: &mut ContextManager,
 ) -> anyhow::Result<()> {
-    let mut lines = context_manager.get_context(context_name)?;
-    let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
+    //let mut lines = context_manager.get_context(context_name)?;
+    //let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
+
+    let mut patches = Patches::new();
+
+    context.lines.iter().enumerate().for_each(|(i, line)| {
+        match line {
+            Line::InlineTag { snippet_name } => {
+                let anchors = Line::new_inline_anchors(InlineState::new(snippet_name));
+                anchors.iter().for_each(|line| line.save_state(project)?);
+                patches.insert(
+                (i, i+1), // Replace the current line (the tag line) with the anchor
+                anchors,
+                );
+            },
+            Line::AnswerTag => {
+                         let anchors = Line::new_answer_anchors(AnswerState::new());
+       patches.insert(
+                (i, i+1), // Replace the current line (the tag line) with the anchor
+                anchors,
+            )
+        },
+            Line::SummaryTag { context_name } => {
+                let anchors = Line::new_summary_anchors(SummaryState::new(context_name));
+                patches.insert(
+                (i, i+1), // Replace the current line (the tag line) with the anchor
+                anchors,
+            )
+        },
+            _ => { /* Do nothing */ }
+        }
+        
+        
+    });
 
     // Check for missing tag anchors
+    /*
     for i in 0..lines.len() {
         if let Line::Tagged { tag, .. } = &lines[i] {
             let expected_begin_anchor_kind = match tag {
@@ -202,6 +281,9 @@ fn decorate_with_new_anchors(
         context_manager.mark_as_modified(context_name);
     }
     Ok(())
+    */
+
+
 }
 
 fn check_for_orphan_anchors(

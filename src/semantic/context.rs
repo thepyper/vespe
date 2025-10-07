@@ -34,10 +34,7 @@ impl Context {
             return false;
         }
 
-        let mut patches_vec: Vec<_> = patches.into_iter().collect();
-        patches_vec.sort_by(|a, b| b.0.0.cmp(&a.0.0)); // Sort by start_line_index in reverse
-
-        for ((start_line_index, end_line_index), replacement_lines) in patches_vec {
+        for ((start_line_index, end_line_index), replacement_lines) in patches.into_iter().rev() {
             // Remove the old lines
             self.lines.drain(start_line_index..end_line_index);
             // Insert the new lines

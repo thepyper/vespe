@@ -40,7 +40,7 @@ pub fn inject_content_in_memory(
 
     // Find the begin and end anchors
     for (i, line) in lines.iter().enumerate() {
-        if let Some(anchor) = &line.anchor {
+        if let Line::Anchor(anchor) = line {
             if anchor.kind == anchor_kind && anchor.uid == anchor_uid {
                 match anchor.tag {
                     AnchorTag::Begin => start_index = Some(i),

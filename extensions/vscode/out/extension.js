@@ -24,8 +24,8 @@ function activate(context) {
     }
     // Define the paths for the communication files
     // IMPORTANT: Adjust these paths to where your Rust program will create them
-    const requestFilePath = path.join(workspaceRoot, 'request.json');
-    const responseFilePath = path.join(workspaceRoot, 'response.json');
+    const requestFilePath = process.env.VESPE_REQUEST_FILE_PATH || path.join(workspaceRoot, 'request.json');
+    const responseFilePath = process.env.VESPE_RESPONSE_FILE_PATH || path.join(workspaceRoot, 'response.json');
     // --- File Watcher for request.json ---
     const watcher = vscode.workspace.createFileSystemWatcher(requestFilePath);
     watcher.onDidChange((uri) => __awaiter(this, void 0, void 0, function* () {

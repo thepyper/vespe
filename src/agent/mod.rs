@@ -2,16 +2,32 @@ use anyhow::Context;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tracing::{debug, error};
+use std::path::{Path, PathBuf};
+
+use crate::editor::{EditorCommunicator, DummyEditorCommunicator};
+use crate::editor::lockfile::FileBasedEditorCommunicator;
 
 pub struct ShellAgentCall {
     command_template: String,
+    editor_communicator: Box<dyn EditorCommunicator>,
 }
 
 impl ShellAgentCall {
-    pub fn new(command: String) -> Self {
-        Self {
+    pub fn new(command: String, editor_interface: &str, project_root: &Path) -> anyhow::Result<Self> {
+        let editor_communicator: Box<dyn EditorCommunicator> = match editor_interface {
+            "vscode" => {
+                let request_file = project_root.join("request.json");
+                let response_file = project_root.join("response.json");
+                Box::new(FileBasedEditorCommunicator::new(request_file, response_file)?)
+            },
+            "none" => Box::new(DummyEditorCommunicator),
+            _ => anyhow::bail!("Unknown editor interface: {}", editor_interface),
+        };
+
+        Ok(Self {
             command_template: command,
-        }
+            editor_communicator,
+        })
     }
 
     pub fn call(&self, query: &str) -> anyhow::Result<String> {

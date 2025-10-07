@@ -14,6 +14,10 @@ struct Cli {
     #[arg(long, value_name = "PATH")]
     project_root: Option<PathBuf>,
 
+    /// Specify the editor interface to use (e.g., "vscode", "none"). Defaults to "vscode".
+    #[arg(long, value_name = "INTERFACE", default_value = "vscode")]
+    editor_interface: String,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -149,7 +153,7 @@ fn main() -> Result<()> {
                 }
                 ContextCommands::Execute { name } => {
                     println!("Executing context '{}'...", name);
-                    let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+                    let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &cli.editor_interface, &project_path)?;
                     execute::execute(&project, &name, &agent)?;
                     println!("Context '{}' executed successfully.", name);
                 }
@@ -192,7 +196,7 @@ fn main() -> Result<()> {
         }
         Commands::Watch {} => {
             let project = Project::find(&project_path)?;
-            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string());
+            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &cli.editor_interface, &project_path)?;
             watch::watch(&project, &agent)?;
         }
     }

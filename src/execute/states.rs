@@ -1,6 +1,4 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InlineState {

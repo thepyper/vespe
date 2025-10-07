@@ -6,7 +6,6 @@ use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState};
 use crate::utils::AnchorIndex;
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tracing::{debug};
 

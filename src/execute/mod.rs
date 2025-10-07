@@ -3,7 +3,7 @@
 use crate::project::Project;
 use crate::semantic::{self, AnswerStatus, AnswerState, InlineState, Line, SummaryState};
 use crate::syntax::parser::format_document;
-use crate::utils::{AnchorIndex, Context, ContextManager, Patches};
+use crate::utils::{AnchorIndex, Context, Patches};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -48,7 +48,6 @@ pub fn execute(
 ) -> anyhow::Result<()> {
     //let mut context_manager = ContextManager::new();
     
-    let mut context_manager = ContextManager::new();
     let mut exe2_manager = Execute2Manager::new();
 
     //let mut lines = context_manager.load_context(project, context_name)?;
@@ -57,7 +56,6 @@ pub fn execute(
         let compitino = _execute(
             project,
             context_name,
-            &mut context_manager,
             &mut exe2_manager,
         )?;
         match compitino {
@@ -84,7 +82,6 @@ pub fn execute(
         }
     }
 	
-	    context_manager.save_modified_contexts();
     Ok(())
 }
 
@@ -277,7 +274,7 @@ fn apply_answer_summary(
 
              },
              Line::IncludeTag { context_name } => {
-                 let included_compitino = _execute(project, &context_name, context_manager, exe2)?;
+                 let included_compitino = _execute(project, &context_name, exe2)?;
                  match included_compitino {
                         Exe2Compitino::None => {
                             // Do nothing, continue processing
@@ -299,25 +296,26 @@ fn apply_answer_summary(
 fn _execute(
     project: &Project,
     context_name: &str,
-    context_manager: &mut ContextManager,
     exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
 
-    let context = Context::load(project, context_name)?;
+    let mut context = Context::load(project, context_name)?;
 
-    decorate_with_new_anchors(project, context)?;
+    decorate_with_new_anchors(project, &mut context)?;
 
     // TODO let orphans_checked = check_for_orphan_anchors(context_name, context_manager)?;
 
-    match apply_inline(project, context)? {
+    match apply_inline(project, &mut context)? {
         Exe2Compitino::None => {},
         compitino => return Ok(compitino),
     }
 
-    match apply_answer_summary(project, context, exe2)? {
+    match apply_answer_summary(project, &mut context, exe2)? {
         Exe2Compitino::None => {},
         compitino => return Ok(compitino),  
     }
-
+    
+    context.save()?;
+    
     Ok(Exe2Compitino::None)
 }

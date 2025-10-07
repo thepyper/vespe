@@ -1,14 +1,24 @@
-use crate::ast::types::{AnchorKind, Line, TagKind};
+use crate::ast::types::{AnchorKind, Line, TagKind, AnchorTag, Anchor};
 use crate::injector;
 use crate::project::{ContextManager, Project};
 use anyhow::Context as AnyhowContext;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashSet, BTreeMap};
 use std::fs;
+use uuid::Uuid;
+use crate::execute::apply_patches;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InlineState {
     pub pasted: bool,
+}
+
+impl Default for InlineState {
+    fn default() -> Self {
+        InlineState {
+            pasted: false,
+        }
+    }
 }
 
 pub fn inject_recursive_inline(
@@ -55,7 +65,7 @@ fn _inject_recursive_inline(
     // Process inline tags in reverse order to avoid index invalidation
     for (i, anchor_kind, anchor_uid, snippet_name) in inline_tags_info.into_iter().rev() {
         let anchor_metadata_dir =
-            project.resolve_metadata(&anchor_kind.to_string(), &anchor_uid.to_string())?;
+            project.resolve_metadata(&anchor_kind.to_string(), &anchor_uid)?;
         let state_file_path = anchor_metadata_dir.join("state.json");
 
         let mut inline_state = InlineState::default();

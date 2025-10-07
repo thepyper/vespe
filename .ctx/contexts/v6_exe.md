@@ -378,3 +378,5 @@ Sistema i seguenti problemi:
 2) in semantic::Line, le uuid devono essere di tipo Uuid, non stringa
 3) implementa le funzioni di formattazione (Display) per semantic::Line
 
+@answer
+

@@ -3,14 +3,6 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use uuid::Uuid;
 
-pub fn format_document(lines: &Vec<Line>) -> String {
-    lines
-        .iter()
-        .map(|line| line.to_string())
-        .collect::<Vec<String>>()
-        .join("\n")
-}
-
 pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
     input
         .lines()

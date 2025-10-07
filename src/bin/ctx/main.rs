@@ -1,4 +1,3 @@
-use ansi_term::Colour::{Cyan, Green, Purple, Red, Yellow};
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -74,38 +73,38 @@ enum SnippetCommands {
     println!(
         "{}{}",
         indent_str,
-        Yellow.paint(format!("Context: {}", context.name))
+        //Yellow.paint(format!("Context: {}", context.name))
     );
 
     for (line_index, included_context) in &context.includes {
         println!(
             "{}{}",
             indent_str,
-            Green.paint(format!(
+            //Green.paint(format!(
                 "  @include (line {}): {}",
                 line_index, included_context.name
             ))
         );
-        print_context_tree(included_context, indent + 2);
+        //print_context_tree(included_context, indent + 2);
     }
 
     for (line_index, summarized_context) in &context.summaries {
         println!(
             "{}{}",
             indent_str,
-            Purple.paint(format!(
+            //Purple.paint(format!(
                 "  @summary (line {}): {}",
                 line_index, summarized_context.name
             ))
         );
-        print_context_tree(summarized_context, indent + 2);
+        //print_context_tree(summarized_context, indent + 2);
     }
 
     for (line_index, inlined_snippet) in &context.inlines {
         println!(
             "{}{}",
             indent_str,
-            Cyan.paint(format!(
+            //Cyan.paint(format!(
                 "  @inline (line {}): {}",
                 line_index, inlined_snippet.name
             ))
@@ -116,7 +115,7 @@ enum SnippetCommands {
         println!(
             "{}{}",
             indent_str,
-            Red.paint(format!("  @answer (line {})", line_index))
+            //Red.paint(format!("  @answer (line {})", line_index))
         );
     }
     
@@ -160,7 +159,7 @@ fn main() -> Result<()> {
                         }
                     }
                 }
-                ContextCommands::Tree { name } => {
+                ContextCommands::Tree { name: _name } => {
                     // TODO redo let context_tree = project.get_context_tree(&name)?;
                     //print_context_tree(&context_tree, 0);
                 }

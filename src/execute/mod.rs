@@ -5,15 +5,13 @@ use crate::semantic::{self, AnswerStatus, AnswerState, Context, InlineState, Lin
 use crate::utils::AnchorIndex;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use uuid::Uuid;
 
 
 enum Exe2Compitino {
     None,
 	Continue,
     AnswerQuestion{ uid: uuid::Uuid, content: Vec<Line> },
-    Summarize{ uid: uuid::Uuid, content: Vec<Line> },
+    // Summarize{ uid: uuid::Uuid, content: Vec<Line> },
 }
 
 fn hash_content(_lines : &Vec<Line>) -> String {
@@ -73,10 +71,6 @@ pub fn execute(
 				answer_state.reply_hash   = hash_content(&actual_reply.lines().map(|s| Line::Text(s.to_string())).collect());
 				
 				// TODO save answer_state 
-            }
-            Exe2Compitino::Summarize{..} => {
-                // TODO summarize the data with llm, save data into summary meta file, so on next _execute2 call content will be patched into context 
-				// must save hash of content as well for future comparison
             }
         }
     }

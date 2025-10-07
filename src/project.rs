@@ -1,12 +1,10 @@
 use crate::execute::states::{AnswerState, InlineState, SummaryState};
-use crate::semantic::parse_document;
 use crate::semantic::Line;
 use crate::semantic::SemanticError;
 use crate::syntax::types::AnchorKind;
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;

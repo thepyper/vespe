@@ -2,13 +2,18 @@ pub mod states;
 
 use crate::agent::ShellAgentCall;
 use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState, SummaryStatus};
-use crate::project::{Project, Snippet};
+use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
-use notify::event::ModifyKind;
-use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use thiserror::Error;
 use tracing::debug;
-use uuid::timestamp::context;
+
+#[derive(Error, Debug)]
+pub enum ExecuteError {
+    #[error("End anchor not found for UUID: {0}")]
+    MissingEndAnchor(uuid::Uuid),
+}
 
 pub fn execute(
     project: &Project,
@@ -32,19 +37,23 @@ pub fn execute(
 
 struct ExecuteCollector {
     content: Vec<String>,
-    content_hash: String,
+    hasher: Sha256,
 }
 
 impl ExecuteCollector {
     fn new() -> Self {
         ExecuteCollector {
             content: Vec::new(),
-            content_hash: String::new(),
+            hasher: Sha256::new(),
         }
     }
     fn add_line(&mut self, line: &str) {
         self.content.push(line.to_string());
-        // TODO update hash
+        self.hasher.update(line.as_bytes());
+    }
+
+    fn get_hash(&self) -> String {
+        format!("{:x}", self.hasher.clone().finalize())
     }
 }
 
@@ -137,27 +146,18 @@ fn _execute(
 
         for (i, line) in context.lines.iter().enumerate() {
             match line {
-                Line::InlineBeginAnchor { uuid } => {
-                    // Inline state is handled in the first pass, no further action needed here
-                }
+                // Inline state is handled in the first pass, no further action needed here
                 Line::AnswerBeginAnchor { uuid } => {
                     let state = project.load_answer_state(uuid)?;
-                    let j = anchor_index.get_end(&uuid).ok_or_else(|| {
-                        anyhow::anyhow!("End anchor not found for UUID: {}", uuid)
+                    let j = anchor_index.get_end(uuid).ok_or_else(|| {
+                        ExecuteError::MissingEndAnchor(*uuid)
                     })?;
                     match state.status {
                         AnswerStatus::NeedAnswer => {
                             // Do nothing, wait for answer to be provided
                         }
                         AnswerStatus::NeedInjection => {
-                            patches.insert(
-                                (i + 1, j),
-                                state
-                                    .reply
-                                    .lines()
-                                    .map(|s| Line::Text(s.to_string()))
-                                    .collect(),
-                            );
+                            inject_content(&mut patches, i + 1, j, &state.reply)?;
                             let mut new_state = state.clone();
                             new_state.status = AnswerStatus::Completed;
                             project.save_answer_state(uuid, &new_state)?;
@@ -170,22 +170,15 @@ fn _execute(
                 }
                 Line::SummaryBeginAnchor { uuid } => {
                     let state = project.load_summary_state(uuid)?;
-                    let j = anchor_index.get_end(&uuid).ok_or_else(|| {
-                        anyhow::anyhow!("End anchor not found for UUID: {}", uuid)
+                    let j = anchor_index.get_end(uuid).ok_or_else(|| {
+                        ExecuteError::MissingEndAnchor(*uuid)
                     })?;
                     match state.status {
                         SummaryStatus::NeedContext => {
                             // Do nothing, wait for context to be provided
                         }
                         SummaryStatus::NeedInjection => {
-                            patches.insert(
-                                (i + 1, j),
-                                state
-                                    .summary
-                                    .lines()
-                                    .map(|s| Line::Text(s.to_string()))
-                                    .collect(),
-                            );
+                            inject_content(&mut patches, i + 1, j, &state.summary)?;
                             let mut new_state = state.clone();
                             new_state.status = SummaryStatus::Completed;
                             project.save_summary_state(uuid, &new_state)?;
@@ -216,9 +209,6 @@ fn _execute(
         // Third pass: execute long tasks like summaries or answer generation, without further context modification
         for line in &context.lines {
             match line {
-                Line::InlineBeginAnchor { uuid } => {
-                    // Inline state is handled in the first pass, no further action needed here
-                }
                 Line::AnswerBeginAnchor { uuid } => {
                     let state = project.load_answer_state(uuid)?;
                     match state.status {
@@ -266,4 +256,18 @@ fn _execute(
     }
 
     Ok(modified)
+}
+
+fn inject_content(
+    patches: &mut Patches,
+    start_index: usize,
+    end_index: usize,
+    content: &str,
+) -> anyhow::Result<()> {
+    let lines = content
+        .lines()
+        .map(|s| Line::Text(s.to_string()))
+        .collect();
+    patches.insert((start_index, end_index), lines);
+    Ok(())
 }

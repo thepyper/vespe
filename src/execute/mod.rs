@@ -92,7 +92,7 @@ pub fn execute2(
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
             Exe2Compitino::AnswerQuestion{ uid, content } => {
-                let content_str = format_document(content);
+                let content_str = format_document(content.clone()); // Clone content here
 				let reply = agent.call(&content_str);
 				
 				let mut answer_state = AnswerState2::default();

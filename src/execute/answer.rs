@@ -219,8 +219,9 @@ fn _answer_first_question_recursive(
                     .collect();
 
                 // Replace the summary block with the generated summary
+                let len_new_content_lines = new_content_lines.len();
                 lines_to_process.splice(i + 1..j, new_content_lines);
-                i += new_content_lines.len(); // Adjust index for inserted lines
+                i += len_new_content_lines; // Adjust index for inserted lines
             }
             Line::Tagged {
                 tag: TagKind::Answer,
@@ -277,8 +278,9 @@ fn _answer_first_question_recursive(
                     .collect();
 
                 // Replace the answer tag with the generated answer
+                let len_new_content_lines = new_content_lines.len();
                 lines_to_process.splice(i..i + 1, new_content_lines);
-                i += new_content_lines.len(); // Adjust index for inserted lines
+                i += len_new_content_lines; // Adjust index for inserted lines
             }
             Line::Tagged {
                 tag: TagKind::Inline,

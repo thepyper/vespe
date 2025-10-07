@@ -74,9 +74,27 @@ where
     }
 }
 
+fn save_state_to_metadata<T>(project: &Project, anchor_kind: &AnchorKind, uid: &Uuid, state: &T) -> Result<(), SemanticError>
+where
+    T: Serialize,
+{
+    let metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), uid)?;
+    fs::create_dir_all(&metadata_dir)?; // Ensure the directory exists
+    let state_file_path = metadata_dir.join("state.json");
+
+    let content = serde_json::to_string_pretty(state)?;
+    fs::write(&state_file_path, content)?;
+
+    Ok(())
+}
+
 impl InlineState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
         load_state_from_metadata(project, &AnchorKind::Inline, uid)
+    }
+
+    pub fn save(&self, project: &Project, uid: &Uuid) -> Result<(), SemanticError> {
+        save_state_to_metadata(project, &AnchorKind::Inline, uid, self)
     }
 }
 
@@ -92,6 +110,10 @@ impl SummaryState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
         load_state_from_metadata(project, &AnchorKind::Summary, uid)
     }
+
+    pub fn save(&self, project: &Project, uid: &Uuid) -> Result<(), SemanticError> {
+        save_state_to_metadata(project, &AnchorKind::Summary, uid, self)
+    }
 }
 
 // Placeholder for AnswerState
@@ -105,6 +127,10 @@ pub enum AnswerState {
 impl AnswerState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
         load_state_from_metadata(project, &AnchorKind::Answer, uid)
+    }
+
+    pub fn save(&self, project: &Project, uid: &Uuid) -> Result<(), SemanticError> {
+        save_state_to_metadata(project, &AnchorKind::Answer, uid, self)
     }
 }
 

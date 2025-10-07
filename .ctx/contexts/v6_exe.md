@@ -180,11 +180,39 @@ Inizio modificando `src/semantic/mod.rs`.`src/semantic/mod.rs` è aggiornato. Co
                                                                                 <!-- answer-42770418-1174-4f1e-8a2f-3529c677e6b1:end -->
 
 
-ottimo. 
+ottimo.
 
 Per caso c'e' modo di scrivere una volta sola la logica di lettura dello stato json? i tre costruttori sono quasi identici.
 Fattorizzare parte della funzione? template?
 Se c'e' un modo pulito fallo altrimenti lascia cosi.
+
+@answer                                                                         <!-- answer-e77d9f10-6520-4d1e-a068-a59e63313484:begin -->
+Ho capito. Cercherò di fattorizzare la logica di lettura dello stato JSON per evitare duplicazioni, se esiste un modo pulito per farlo.
+
+Ecco il mio piano:
+
+1.  **Analizzerò le funzioni `load` esistenti** in `src/semantic/mod.rs` per identificare la logica comune.
+2.  **Creerò una funzione helper generica** che incapsuli la logica di lettura del file JSON e la deserializzazione, gestendo gli errori e restituendo il valore di default in caso di fallimento. Questa funzione accetterà il `Project`, l'`AnchorKind`, l'`uuid` e un tipo generico che implementa `Default` e `serde::de::DeserializeOwned`.
+3.  **Sostituirò la logica duplicata** nelle funzioni `InlineState::load`, `SummaryState::load` e `AnswerState::load` con chiamate a questa nuova funzione helper.
+4.  **Eseguirò `cargo check`** per verificare la compilazione.
+5.  **Effettuerò un commit** con un messaggio descrittivo.
+
+Iniziamo rileggendo `src/semantic/mod.rs` per analizzare le funzioni `load`.Sì, è possibile fattorizzare la logica di lettura dello stato JSON in una funzione helper generica. Questo ridurrà la duplicazione del codice e renderà il modulo più pulito.
+
+Ecco come procederò:
+
+1.  **Creerò una funzione helper generica `load_state_from_metadata`** che accetterà il `Project`, l'`AnchorKind` e l'`Uuid`, e restituirà un tipo generico `T` che implementa `Default` e `serde::de::DeserializeOwned`.
+2.  **Sostituirò la logica duplicata** nelle implementazioni di `load` per `InlineState`, `SummaryState` e `AnswerState` con una chiamata a questa nuova funzione helper.
+3.  **Eseguirò `cargo check`** per verificare che il progetto compili correttamente.
+4.  **Effettuerò un commit** con un messaggio descrittivo.
+
+Inizio modificando `src/semantic/mod.rs`.Ho aggiornato `src/semantic/mod.rs`. Ora eseguo `cargo check` per verificare la compilazione.`cargo check` è riuscito con soli warning, confermando che il refactoring della logica di caricamento dello stato non ha introdotto errori di compilazione. Ora farò il commit delle modifiche.Ho aggiunto le modifiche. Ora le committerò con un messaggio descrittivo.Il commit è riuscito. Ho rifattorizzato la logica di caricamento dello stato in una funzione helper generica, verificato la compilazione e commesso le modifiche.
+
+La richiesta dell'utente di fattorizzare la logica di caricamento dello stato è ora completa.
+                                                                                <!-- answer-e77d9f10-6520-4d1e-a068-a59e63313484:end -->
+
+
+Puoi implementare anche la funzione save_state_to_metadata similmente, e dare a disposizione un metodo save() sui vari stati ancora?
 
 @answer
 

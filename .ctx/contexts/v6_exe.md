@@ -148,7 +148,7 @@ Ora, farò il commit delle modifiche.Modifiche in staging. Commit con messaggio 
                                                                                 <!-- answer-435e1cf0-f72f-4e59-9e75-f764d209f4ee:end -->
 
 
-Ottimo. ora risolvi i 
+Ottimo. ora risolvi i
 // TODO: Implement actual loading logic from project metadata
 
 Implementa cosi:
@@ -158,6 +158,33 @@ Implementa cosi:
 
 chiaro?
 
-@answer
+@answer                                                                         <!-- answer-42770418-1174-4f1e-8a2f-3529c677e6b1:begin -->
+Ho capito. Implementerò la logica di caricamento per gli stati `InlineState`, `SummaryState` e `AnswerState` nel modulo `semantic`.
 
+Ecco il mio piano:
+
+1.  Leggerò `src/semantic/mod.rs` per identificare i `TODO` e le funzioni `load` da implementare.
+2.  Leggerò `src/project.rs` per capire come funziona `project.resolve_metadata` e come accedere ai metadati del progetto.
+3.  Implementerò la logica di caricamento:
+    *   Per ogni `load` (Inline, Summary, Answer), userò `project.resolve_metadata` per ottenere il percorso del file di stato.
+    *   Se il file esiste, tenterò di leggerlo come JSON usando `serde_json`.
+    *   Se la lettura ha successo, deserializzerò il JSON nello stato corrispondente.
+    *   Se il file non esiste o la deserializzazione fallisce, ritornerò lo stato `default()`.
+4.  Aggiungerò le dipendenze necessarie (`serde_json`) a `Cargo.toml` se non già presenti.
+5.  Eseguirò `cargo check` per verificare la compilazione.
+6.  Effettuerò un commit con un messaggio descrittivo.
+
+Iniziamo leggendo `src/semantic/mod.rs`.Ho `src/semantic/mod.rs`. Ora, `src/project.rs` per `project.resolve_metadata`.Ho analizzato `src/project.rs` e la funzione `resolve_metadata`. Ora implementerò la logica di caricamento degli stati in `src/semantic/mod.rs`. Userò `project.resolve_metadata` per ottenere la directory dei metadati, cercherò un file `state.json` al suo interno, e tenterò di leggerlo e deserializzarlo con `serde_json`. Se il file non esiste o si verificano errori, restituirò lo stato di default. Verificherò anche la dipendenza `serde_json` in `Cargo.toml` e poi eseguirò `cargo check` e un commit.
+
+Inizio modificando `src/semantic/mod.rs`.`src/semantic/mod.rs` è aggiornato. Controllo `Cargo.toml` per `serde_json`.`serde_json = "1"` è già in `Cargo.toml`. Eseguo `cargo check`.`cargo check` è riuscito, solo warning. La logica di caricamento è implementata e compila. I warning sono per variabili inutilizzate, risolvibili dopo. Ora, commit.Modifiche in staging. Commit con messaggio descrittivo.Commit riuscito. Ho implementato e commesso la logica di caricamento degli stati per `InlineState`, `SummaryState` e `AnswerState` nel modulo `semantic`. Compito completato.
+                                                                                <!-- answer-42770418-1174-4f1e-8a2f-3529c677e6b1:end -->
+
+
+ottimo. 
+
+Per caso c'e' modo di scrivere una volta sola la logica di lettura dello stato json? i tre costruttori sono quasi identici.
+Fattorizzare parte della funzione? template?
+Se c'e' un modo pulito fallo altrimenti lascia cosi.
+
+@answer
 

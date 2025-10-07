@@ -4,6 +4,7 @@ pub mod project;
 pub mod semantic;
 pub mod syntax;
 pub mod utils;
+pub mod editor;
 
 pub fn init_telemetry() {
     tracing_subscriber::fmt()

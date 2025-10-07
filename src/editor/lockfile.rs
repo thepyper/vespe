@@ -5,6 +5,7 @@ use std::io;
 use std::thread::sleep;
 use std::time::Duration;
 use uuid::Uuid;
+use std::env;
 
 use super::EditorCommunicator;
 
@@ -63,6 +64,10 @@ impl FileBasedEditorCommunicator {
         // Initialize request and response files with None state
         fs::write(&request_file, serde_json::to_string(&RequestState::None)?)?;
         fs::write(&response_file, serde_json::to_string(&ResponseState::None)?)?;
+
+        // Set environment variables for the VSCode extension to pick up
+        env::set_var("VESPE_REQUEST_FILE_PATH", request_file.to_str().ok_or_else(|| anyhow::anyhow!("Invalid request file path"))?);
+        env::set_var("VESPE_RESPONSE_FILE_PATH", response_file.to_str().ok_or_else(|| anyhow::anyhow!("Invalid response file path"))?);
 
         Ok(Self {
             request_file_path: request_file,

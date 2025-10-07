@@ -30,33 +30,53 @@ pub enum InlineState {
     // Add other states as needed
 }
 
+fn load_state_from_metadata<T>(project: &Project, anchor_kind: &AnchorKind, uid: &Uuid) -> T
+where
+    T: Default + for<'de> Deserialize<'de>,
+{
+    let metadata_dir_result = project.resolve_metadata(&anchor_kind.to_string(), uid);
+    let metadata_dir = match metadata_dir_result {
+        Ok(dir) => dir,
+        Err(e) => {
+            eprintln!(
+                "Error resolving metadata directory for {:?} state ({}): {}",
+                anchor_kind, uid, e
+            );
+            return T::default();
+        }
+    };
+
+    let state_file_path = metadata_dir.join("state.json");
+
+    match fs::read_to_string(&state_file_path) {
+        Ok(content) => match serde_json::from_str(&content) {
+            Ok(state) => state,
+            Err(e) => {
+                eprintln!(
+                    "Error deserializing {:?} state from {}: {}",
+                    anchor_kind,
+                    state_file_path.display(),
+                    e
+                );
+                T::default()
+            }
+        },
+        Err(e) if e.kind() == ErrorKind::NotFound => T::default(),
+        Err(e) => {
+            eprintln!(
+                "Error reading {:?} state file {}: {}",
+                anchor_kind,
+                state_file_path.display(),
+                e
+            );
+            T::default()
+        }
+    }
+}
+
 impl InlineState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
-        let metadata_dir_result = project.resolve_metadata(&AnchorKind::Inline.to_string(), uid);
-        let metadata_dir = match metadata_dir_result {
-            Ok(dir) => dir,
-            Err(e) => {
-                eprintln!("Error resolving metadata directory for InlineState: {}", e);
-                return Self::default();
-            }
-        };
-
-        let state_file_path = metadata_dir.join("state.json");
-
-        match fs::read_to_string(&state_file_path) {
-            Ok(content) => match serde_json::from_str(&content) {
-                Ok(state) => state,
-                Err(e) => {
-                    eprintln!("Error deserializing InlineState from {}: {}", state_file_path.display(), e);
-                    Self::default()
-                }
-            },
-            Err(e) if e.kind() == ErrorKind::NotFound => Self::default(),
-            Err(e) => {
-                eprintln!("Error reading InlineState file {}: {}", state_file_path.display(), e);
-                Self::default()
-            }
-        }
+        load_state_from_metadata(project, &AnchorKind::Inline, uid)
     }
 }
 
@@ -70,31 +90,7 @@ pub enum SummaryState {
 
 impl SummaryState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
-        let metadata_dir_result = project.resolve_metadata(&AnchorKind::Summary.to_string(), uid);
-        let metadata_dir = match metadata_dir_result {
-            Ok(dir) => dir,
-            Err(e) => {
-                eprintln!("Error resolving metadata directory for SummaryState: {}", e);
-                return Self::default();
-            }
-        };
-
-        let state_file_path = metadata_dir.join("state.json");
-
-        match fs::read_to_string(&state_file_path) {
-            Ok(content) => match serde_json::from_str(&content) {
-                Ok(state) => state,
-                Err(e) => {
-                    eprintln!("Error deserializing SummaryState from {}: {}", state_file_path.display(), e);
-                    Self::default()
-                }
-            },
-            Err(e) if e.kind() == ErrorKind::NotFound => Self::default(),
-            Err(e) => {
-                eprintln!("Error reading SummaryState file {}: {}", state_file_path.display(), e);
-                Self::default()
-            }
-        }
+        load_state_from_metadata(project, &AnchorKind::Summary, uid)
     }
 }
 
@@ -108,31 +104,7 @@ pub enum AnswerState {
 
 impl AnswerState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
-        let metadata_dir_result = project.resolve_metadata(&AnchorKind::Answer.to_string(), uid);
-        let metadata_dir = match metadata_dir_result {
-            Ok(dir) => dir,
-            Err(e) => {
-                eprintln!("Error resolving metadata directory for AnswerState: {}", e);
-                return Self::default();
-            }
-        };
-
-        let state_file_path = metadata_dir.join("state.json");
-
-        match fs::read_to_string(&state_file_path) {
-            Ok(content) => match serde_json::from_str(&content) {
-                Ok(state) => state,
-                Err(e) => {
-                    eprintln!("Error deserializing AnswerState from {}: {}", state_file_path.display(), e);
-                    Self::default()
-                }
-            },
-            Err(e) if e.kind() == ErrorKind::NotFound => Self::default(),
-            Err(e) => {
-                eprintln!("Error reading AnswerState file {}: {}", state_file_path.display(), e);
-                Self::default()
-            }
-        }
+        load_state_from_metadata(project, &AnchorKind::Answer, uid)
     }
 }
 

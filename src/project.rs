@@ -2,8 +2,14 @@ use crate::syntax::parser::parse_document;
 use crate::syntax::types::Line;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
+use anyhow::anyhow;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+use crate::execute::states::{AnswerState, InlineState, SummaryState};
+use crate::syntax::types::AnchorKind;
+use crate::semantic::SemanticError;
+use std::io::ErrorKind;
+use serde::{Deserialize, Serialize};
 
 /*
 #[derive(Debug)]
@@ -247,7 +253,7 @@ impl Project {
         let snippets_root = self.snippets_root();
 
         if !snippets_root.exists() {
-            return Ok(snippets); // Return empty if directory doesn\'t exist
+            return Ok(snippets); // Return empty if directory doesn't exist
         }
 
         // TODO : Recursively list files in subdirectories as well!!!
@@ -280,7 +286,7 @@ impl Project {
             file_path.display()
         ))?;
         let lines = parse_document(&content)
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(|e| anyhow!("Failed to parse snippet document: {}", e))
             .context("Failed to parse document")?;
 
         Ok(Snippet {
@@ -306,7 +312,7 @@ impl Project {
             file_path.display()
         ))?;
         let lines = parse_document(&content)
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(|e| anyhow::Error::new(e))
             .context("Failed to parse document")?;
 
         let mut includes = BTreeMap::new();
@@ -362,7 +368,7 @@ impl Project {
             file_path.display()
         ))?;
         parse_document(&content)
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(|e| anyhow::Error::new(e))
             .context("Failed to parse document")
     }
 
@@ -395,6 +401,72 @@ impl Project {
         Ok(())
     }
     */
+
+    fn save_state_to_metadata<T>(
+        &self,
+        anchor_kind: AnchorKind,
+        uuid: &Uuid,
+        state: &T,
+    ) -> std::result::Result<(), SemanticError>
+    where
+        T: serde::Serialize,
+    {
+        let metadata_dir = self.resolve_metadata(anchor_kind.to_string().as_str(), uuid).map_err(SemanticError::AnyhowError)?;
+        std::fs::create_dir_all(&metadata_dir)?;
+        let state_path = metadata_dir.join("state.json");
+        let serialized = serde_json::to_string_pretty(state)?;
+        std::fs::write(&state_path, serialized)?;
+        Ok(())
+    }
+
+    fn load_state_from_metadata<T>(
+        &self,
+        anchor_kind: &AnchorKind,
+        uid: &Uuid,
+    ) -> std::result::Result<T, SemanticError>
+    where
+        T: for<'de> serde::Deserialize<'de>,
+    {
+        let metadata_dir = self.resolve_metadata(anchor_kind.to_string().as_str(), uid)
+            .map_err(SemanticError::AnyhowError)?;
+        let state_path = metadata_dir.join("state.json");
+
+        match std::fs::read_to_string(&state_path) {
+            Ok(content) => Ok(serde_json::from_str(&content)?),
+            Err(e) if e.kind() == ErrorKind::NotFound => Err(SemanticError::Generic(format!("State file not found for anchor {}-{}", anchor_kind, uid))),
+            Err(e) => Err(SemanticError::IoError(e)),
+        }
+    }
+
+    pub fn save_inline_state(&self, uid: &Uuid, state: &InlineState) -> Result<()> {
+        self.save_state_to_metadata(AnchorKind::Inline, uid, state)
+            .map_err(|e| anyhow::Error::new(e))
+    }
+
+    pub fn load_inline_state(&self, uid: &Uuid) -> Result<InlineState> {
+        self.load_state_from_metadata( &AnchorKind::Inline, uid)
+            .map_err(|e| anyhow::Error::new(e))
+    }
+
+    pub fn save_summary_state(&self, uid: &Uuid, state: &SummaryState) -> Result<()> {
+        self.save_state_to_metadata(AnchorKind::Summary, uid, state)
+            .map_err(|e| anyhow::Error::new(e))
+    }
+
+    pub fn load_summary_state(&self, uid: &Uuid) -> Result<SummaryState> {
+        self.load_state_from_metadata(&AnchorKind::Summary, uid)
+            .map_err(|e| anyhow::Error::new(e))
+    }
+
+    pub fn save_answer_state(&self, uid: &Uuid, state: &AnswerState) -> Result<()> {
+        self.save_state_to_metadata(AnchorKind::Answer, uid, state)
+            .map_err(|e| anyhow::Error::new(e))
+    }
+
+    pub fn load_answer_state(&self, uid: &Uuid) -> Result<AnswerState> {
+        self.load_state_from_metadata(&AnchorKind::Answer, uid)
+            .map_err(|e| anyhow::Error::new(e))
+    }
 }
 
 /*
@@ -403,6 +475,7 @@ fn format_lines_to_string(lines: &Vec<Line>) -> String {
         .iter()
         .map(|line| line.to_string())
         .collect::<Vec<String>>()
-        .join("\n")
+        .join("
+")
 }
 */

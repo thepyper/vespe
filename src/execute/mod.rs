@@ -1,7 +1,10 @@
 
+pub mod states;
+
 use crate::agent::ShellAgentCall;
 use crate::project::Project;
-use crate::semantic::{self, AnswerStatus, AnswerState, Context, InlineState, Line, Patches, SummaryState};
+use crate::semantic::{self, Context, Line, Patches};
+use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState};
 use crate::utils::AnchorIndex;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -112,10 +115,9 @@ fn decorate_with_new_anchors(
         match line {
             Line::InlineTag { snippet_name } => {
                 debug!("Found InlineTag at line {}: {}", i, snippet_name);
-                let anchors = semantic::Line::new_inline_anchors(InlineState::new(&snippet_name));
-                for anchor in &anchors {
-                    anchor.save_state(project)?;
-                }
+                let uuid = uuid::Uuid::new_v4();
+                let anchors = semantic::Line::new_inline_anchors(uuid);
+                project.save_inline_state(&uuid, &InlineState::new(&snippet_name))?;
                 patches.insert(
                     (i, i + 1), // Replace the current line (the tag line) with the anchor
                     anchors,
@@ -124,10 +126,9 @@ fn decorate_with_new_anchors(
             }
             Line::AnswerTag => {
                 debug!("Found AnswerTag at line {}", i);
-                let anchors = semantic::Line::new_answer_anchors(AnswerState::new());
-                for anchor in &anchors {
-                    anchor.save_state(project)?;
-                }
+                let uuid = uuid::Uuid::new_v4();
+                let anchors = semantic::Line::new_answer_anchors(uuid);
+                project.save_answer_state(&uuid, &AnswerState::new())?;
                 patches.insert(
                     (i, i + 1), // Replace the current line (the tag line) with the anchor
                     anchors,
@@ -136,10 +137,9 @@ fn decorate_with_new_anchors(
             }
             Line::SummaryTag { context_name } => {
                 debug!("Found SummaryTag at line {}: {}", i, context_name);
-                let anchors = semantic::Line::new_summary_anchors(SummaryState::new(&context_name));
-                for anchor in &anchors {
-                    anchor.save_state(project)?;
-                }
+                let uuid = uuid::Uuid::new_v4();
+                let anchors = semantic::Line::new_summary_anchors(uuid);
+                project.save_summary_state(&uuid, &SummaryState::new(&context_name))?;
                 patches.insert(
                     (i, i + 1), // Replace the current line (the tag line) with the anchor
                     anchors,
@@ -213,8 +213,9 @@ fn apply_inline(
     let mut patches = Patches::new();
 
     for (i, line) in context.lines.iter().enumerate() {
-        if let Line::InlineBeginAnchor { uuid, state } = line {
+        if let Line::InlineBeginAnchor { uuid } = line {
             debug!("Found InlineBeginAnchor at line {} with UUID: {}", i, uuid);
+            let state = project.load_inline_state(uuid)?;
             if !state.pasted {
                 debug!("Snippet '{}' not yet pasted. Pasting now.", state.snippet_name);
                 let j = anchor_index.get_end(&uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
@@ -226,12 +227,10 @@ fn apply_inline(
                 );
                 
                 // Update state to mark as pasted
-                let mut new_line = line.clone();
-                if let Line::InlineBeginAnchor { state, .. } = &mut new_line {
-                    state.pasted = true;
-                }
+                let mut updated_state = state.clone();
+                updated_state.pasted = true;
+                project.save_inline_state(uuid, &updated_state)?;
                 
-                patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
                 debug!("Snippet '{}' pasted and state updated.", state.snippet_name);
             }
         }
@@ -265,7 +264,8 @@ fn apply_answer_summary(
                 debug!("Collecting text line: {}", x);
                 exe2.collect_content.push(Line::Text(x.clone()))
             },
-             Line::AnswerBeginAnchor { uuid, state } => {
+             Line::AnswerBeginAnchor { uuid } => {
+                let state = project.load_answer_state(uuid)?;
                 debug!("Found AnswerBeginAnchor at line {} with UUID: {} and status: {:?}", i, uuid, state.status);
                 let j = anchor_index.get_end(&uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
                 match state.status {
@@ -273,11 +273,9 @@ fn apply_answer_summary(
                         debug!("AnswerStatus::NeedContext: Requesting answer for UUID: {}", uuid);
                         // The tag line has been replaced by the anchor
                         let uid = uuid.clone();
-                        let mut new_line = line.clone();
-                        if let Line::AnswerBeginAnchor { state, .. } = &mut new_line {
-                            state.status = AnswerStatus::NeedAnswer;
-                        }
-                        patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
+                        let mut updated_state = state.clone();
+                        updated_state.status = AnswerStatus::NeedAnswer;
+                        project.save_answer_state(uuid, &updated_state)?;
                         compitino = Exe2Compitino::AnswerQuestion { uid: uid, content: exe2.collect_content.clone() };
                         break;
                     },
@@ -291,11 +289,9 @@ fn apply_answer_summary(
                             (i + 1, j),
                             state.reply.lines().map(|s| Line::Text(s.to_string())).collect(),
                         );
-                        let mut new_line = line.clone();
-                        if let Line::AnswerBeginAnchor { state, .. } = &mut new_line {
-                            state.status = AnswerStatus::Completed;
-                        }
-                        patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
+                        let mut updated_state = state.clone();
+                        updated_state.status = AnswerStatus::Completed;
+                        project.save_answer_state(uuid, &updated_state)?;
                         debug!("Answer injected and state updated for UUID: {}", uuid);
                     },
                     AnswerStatus::Completed => {

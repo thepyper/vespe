@@ -3,11 +3,11 @@ pub use context::*;
 
 use crate::project::Project;
 use crate::syntax::types::{self, Anchor, AnchorKind, AnchorTag, TagKind};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
 use std::io::ErrorKind;
 use thiserror::Error;
+use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState}; // New import
 //use crate::execute::inject::InlineState;
 
 // Error type for semantic processing
@@ -31,92 +31,15 @@ pub enum SemanticError {
     InvalidAnchorFormat(String),
 }
 
-pub fn save_state_to_metadata<T>(
-    project: &Project,
-    anchor_kind: AnchorKind,
-    uuid: &Uuid,
-    state: &T,
-) -> std::result::Result<(), SemanticError>
-where
-    T: serde::Serialize,
-{
-    let metadata_dir = project.resolve_metadata(anchor_kind.to_string().as_str(), uuid).map_err(SemanticError::AnyhowError)?;
-    std::fs::create_dir_all(&metadata_dir)?;
-    let state_path = metadata_dir.join("state.json");
-    let serialized = serde_json::to_string_pretty(state)?;
-    std::fs::write(&state_path, serialized)?;
-    Ok(())
-}
-
-pub fn load_state_from_metadata<T>(
-    project: &Project,
-    anchor_kind: &AnchorKind,
-    uid: &Uuid,
-) -> std::result::Result<T, SemanticError>
-where
-    T: for<'de> serde::Deserialize<'de>,
-{
-    let metadata_dir = project.resolve_metadata(anchor_kind.to_string().as_str(), uid)
-        .map_err(SemanticError::AnyhowError)?;
-    let state_path = metadata_dir.join("state.json");
-
-    match std::fs::read_to_string(&state_path) {
-        Ok(content) => Ok(serde_json::from_str(&content)?),
-        Err(e) if e.kind() == ErrorKind::NotFound => Err(SemanticError::Generic(format!("State file not found for anchor {}-{}", anchor_kind, uid))),
-        Err(e) => Err(SemanticError::IoError(e)),
-    }
-}
-
 impl Line {
-    pub fn save_state(&self, project: &Project) -> std::result::Result<(), SemanticError> {
-        match self {
-            Line::InlineBeginAnchor { uuid, state } => {
-                save_state_to_metadata(project, AnchorKind::Inline, uuid, state)?;
-                Ok(())
-            }
-            Line::SummaryBeginAnchor { uuid, state } => {
-                save_state_to_metadata(project, AnchorKind::Summary, uuid, state)?;
-                Ok(())
-            }
-            Line::AnswerBeginAnchor { uuid, state } => {
-                save_state_to_metadata(project, AnchorKind::Answer, uuid, state)?;
-                Ok(())
-            }
-            _ => Ok(()),
-        }
+    pub fn new_inline_anchors(uuid: Uuid) -> Vec<Self> {
+        vec![Line::InlineBeginAnchor { uuid: uuid.clone() }, Line::InlineEndAnchor { uuid }]
     }
-}
-
-impl Line {
-    pub fn new_inline_anchors(state: InlineState) -> Vec<Self> {
-        let uuid = Uuid::new_v4();
-        vec![Line::InlineBeginAnchor {
-            uuid: uuid.clone(),
-            state,
-        },
-        Line::InlineEndAnchor {
-            uuid
-        }]
+    pub fn new_summary_anchors(uuid: Uuid) -> Vec<Self> {
+        vec![Line::SummaryBeginAnchor { uuid: uuid.clone() }, Line::SummaryEndAnchor { uuid }]
     }
-    pub fn new_summary_anchors(state: SummaryState) ->  Vec<Self> {
-        let uuid = Uuid::new_v4();
-        vec![Line::SummaryBeginAnchor {
-            uuid: uuid.clone(),
-            state,
-        },
-        Line::SummaryEndAnchor {
-            uuid
-        }]
-    }
-    pub fn new_answer_anchors(state: AnswerState) ->  Vec<Self> {
-        let uuid = Uuid::new_v4();
-        vec![Line::AnswerBeginAnchor {
-            uuid: uuid.clone(),
-            state,
-        },
-        Line::AnswerEndAnchor { 
-            uuid
-        }]
+    pub fn new_answer_anchors(uuid: Uuid) -> Vec<Self> {
+        vec![Line::AnswerBeginAnchor { uuid: uuid.clone() }, Line::AnswerEndAnchor { uuid }]
     }
     pub fn is_begin_anchor(&self) -> bool {
         matches!(
@@ -137,98 +60,14 @@ impl Line {
 
     pub fn get_uid(&self) -> Uuid {
         match self {
-            Line::InlineBeginAnchor { uuid, .. } => *uuid,
+            Line::InlineBeginAnchor { uuid } => *uuid,
             Line::InlineEndAnchor { uuid } => *uuid,
-            Line::SummaryBeginAnchor { uuid, .. } => *uuid,
+            Line::SummaryBeginAnchor { uuid } => *uuid,
             Line::SummaryEndAnchor { uuid } => *uuid,
-            Line::AnswerBeginAnchor { uuid, .. } => *uuid,
+            Line::AnswerBeginAnchor { uuid } => *uuid,
             Line::AnswerEndAnchor { uuid } => *uuid,
             _ => panic!("get_uid called on a non-anchor line"),
         }
-    }
-}
-
-impl InlineState {
-    pub fn load(project: &Project, uid: &Uuid) -> std::result::Result<Self, SemanticError> {
-        load_state_from_metadata(project, &AnchorKind::Inline, uid)
-    }
-
-    pub fn save(&self, project: &Project, uid: &Uuid) -> std::result::Result<(), SemanticError> {
-        save_state_to_metadata(project, AnchorKind::Inline, uid, self)
-    }
-}
-
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct InlineState {
-    pub snippet_name: String,
-    pub pasted: bool,
-}
-
-impl InlineState {
-    pub fn new(snippet_name: &str) -> Self {
-        InlineState {
-            snippet_name: snippet_name.into(),
-            pasted: false,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SummaryState {
-    pub context_name: String,
-    pub summarized_hash: String,
-}
-
-impl SummaryState {
-    pub fn new(context_name: &str) -> Self {
-        SummaryState {
-            context_name: context_name.into(),
-            summarized_hash: String::new(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum AnswerStatus {
-    NeedContext,
-    NeedAnswer,
-    NeedInjection,
-    Completed,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct AnswerState {
-    pub status: AnswerStatus,
-    pub reply: String,
-}
-
-impl AnswerState {
-    pub fn new() -> Self {
-        AnswerState {
-            status: AnswerStatus::NeedContext,
-            reply: String::new(),
-        }
-    }
-}
-
-impl SummaryState {
-    pub fn load(project: &Project, uid: &Uuid) -> std::result::Result<Self, SemanticError> {
-        load_state_from_metadata(project, &AnchorKind::Summary, uid)
-    }
-
-    pub fn save(&self, project: &Project, uid: &Uuid) -> std::result::Result<(), SemanticError> {
-        save_state_to_metadata(project, AnchorKind::Summary, uid, self)
-    }
-}
-
-impl AnswerState {
-    pub fn load(project: &Project, uid: &Uuid) -> std::result::Result<Self, SemanticError> {
-        load_state_from_metadata(project, &AnchorKind::Answer, uid)
-    }
-
-    pub fn save(&self, project: &Project, uid: &Uuid) -> std::result::Result<(), SemanticError> {
-        save_state_to_metadata(project, AnchorKind::Answer, uid, self)
     }
 }
 
@@ -239,11 +78,11 @@ pub enum Line {
     SummaryTag { context_name: String },
     AnswerTag,
     IncludeTag { context_name: String },
-    InlineBeginAnchor { uuid: Uuid, state: InlineState },
+    InlineBeginAnchor { uuid: Uuid },
     InlineEndAnchor { uuid: Uuid },
-    SummaryBeginAnchor { uuid: Uuid, state: SummaryState },
+    SummaryBeginAnchor { uuid: Uuid },
     SummaryEndAnchor { uuid: Uuid },
-    AnswerBeginAnchor { uuid: Uuid, state: AnswerState },
+    AnswerBeginAnchor { uuid: Uuid },
     AnswerEndAnchor { uuid: Uuid },
 }
 
@@ -283,7 +122,7 @@ impl std::fmt::Display for Line {
                 };
                 write!(f, "{}", syntax_line)
             }
-            Line::InlineBeginAnchor { uuid, .. } => {
+            Line::InlineBeginAnchor { uuid } => {
                 let anchor = Anchor {
                     kind: AnchorKind::Inline,
                     uid: *uuid,
@@ -299,7 +138,7 @@ impl std::fmt::Display for Line {
                 };
                 write!(f, "{}", types::Line::Anchor(anchor))
             }
-            Line::SummaryBeginAnchor { uuid, .. } => {
+            Line::SummaryBeginAnchor { uuid } => {
                 let anchor = Anchor {
                     kind: AnchorKind::Summary,
                     uid: *uuid,
@@ -315,7 +154,7 @@ impl std::fmt::Display for Line {
                 };
                 write!(f, "{}", types::Line::Anchor(anchor))
             }
-            Line::AnswerBeginAnchor { uuid, .. } => {
+            Line::AnswerBeginAnchor { uuid } => {
                 let anchor = Anchor {
                     kind: AnchorKind::Answer,
                     uid: *uuid,
@@ -355,16 +194,15 @@ fn enrich_syntax_tagged_line(_project: &Project, tag: &TagKind, _parameters: &Ha
 
 fn enrich_syntax_anchor_line(project: &Project, anchor: &Anchor) -> std::result::Result<Line, SemanticError> {
     match (anchor.kind.clone(), anchor.tag.clone()) {
-        (AnchorKind::Inline, AnchorTag::Begin) => Ok(Line::InlineBeginAnchor { uuid: anchor.uid, state: InlineState::load(project, &anchor.uid)? }),
+        (AnchorKind::Inline, AnchorTag::Begin) => Ok(Line::InlineBeginAnchor { uuid: anchor.uid }),
         (AnchorKind::Inline, AnchorTag::End) => Ok(Line::InlineEndAnchor { uuid: anchor.uid }),
-        (AnchorKind::Summary, AnchorTag::Begin) => Ok(Line::SummaryBeginAnchor { uuid: anchor.uid, state: SummaryState::load(project, &anchor.uid)? }),
+        (AnchorKind::Summary, AnchorTag::Begin) => Ok(Line::SummaryBeginAnchor { uuid: anchor.uid }),
         (AnchorKind::Summary, AnchorTag::End) => Ok(Line::SummaryEndAnchor { uuid: anchor.uid }),
-        (AnchorKind::Answer, AnchorTag::Begin) => Ok(Line::AnswerBeginAnchor { uuid: anchor.uid, state: AnswerState::load(project, &anchor.uid)? }),
+        (AnchorKind::Answer, AnchorTag::Begin) => Ok(Line::AnswerBeginAnchor { uuid: anchor.uid }),
         (AnchorKind::Answer, AnchorTag::End) => Ok(Line::AnswerEndAnchor { uuid: anchor.uid }),
         _ => Err(SemanticError::InvalidAnchorFormat(anchor.to_string())),
     }
 }
-
 pub fn enrich_syntax_line(project: &Project, line: &types::Line) -> std::result::Result<Line, SemanticError> {
     match line {
        types::Line::Text(text) => Ok(Line::Text(text.clone())),

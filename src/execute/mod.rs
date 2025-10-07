@@ -1,13 +1,14 @@
-use crate::agent::ShellAgentCall;
+
 //use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
-use crate::semantic::Line;
-use crate::project::{Project};
+use crate::project::Project;
+use crate::semantic::{self, AnswerState, InlineState, Line, SummaryState};
+use crate::syntax::parser::format_document;
+use crate::utils::{AnchorIndex, Context, ContextManager, Patches};
 use anyhow::Result;
-use std::collections::{BTreeMap, HashMap};
-use uuid::Uuid;
-use std::fs;
-use serde_json;
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
+use std::fs;
+use uuid::Uuid;
 
 
 enum Exe2Compitino {
@@ -44,7 +45,6 @@ impl Default for AnswerState2 {
 pub fn execute(
     project: &Project,
     context_name: &str,
-    agent: &ShellAgentCall,
 ) -> anyhow::Result<()> {
     //let mut context_manager = ContextManager::new();
     
@@ -57,7 +57,6 @@ pub fn execute(
         let compitino = _execute(
             project,
             context_name,
-            agent,
             &mut context_manager,
             &mut exe2_manager,
         )?;
@@ -66,7 +65,8 @@ pub fn execute(
 			Exe2Compitino::Continue => {},
             Exe2Compitino::AnswerQuestion{ uid: _uid, content } => {
                 let content_str = format_document(content.clone()); // Clone content here
-				let reply = agent.call(&content_str);
+                // TODO: get reply from somewhere
+				let reply = Ok("".to_string());
 				
 				let mut answer_state = AnswerState2::default();
 				
@@ -108,35 +108,41 @@ fn decorate_with_new_anchors(
   
     let mut patches = Patches::new();
 
-    context.lines.iter().enumerate().for_each(|(i, line)| {
+    for (i, line) in context.lines.iter().enumerate() {
         match line {
             Line::InlineTag { snippet_name } => {
-                let anchors = Line::new_inline_anchors(InlineState::new(snippet_name));
-                anchors.iter().for_each(|line| line.save_state(project)?);
+                let anchors = semantic::Line::new_inline_anchors(InlineState::new(snippet_name));
+                for anchor in &anchors {
+                    anchor.save_state(project)?;
+                }
                 patches.insert(
-                (i, i+1), // Replace the current line (the tag line) with the anchor
-                anchors,
+                    (i, i + 1), // Replace the current line (the tag line) with the anchor
+                    anchors,
                 );
-            },
+            }
             Line::AnswerTag => {
-                         let anchors = Line::new_answer_anchors(AnswerState::new());
-       patches.insert(
-                (i, i+1), // Replace the current line (the tag line) with the anchor
-                anchors,
-            )
-        },
-            Line::SummaryTag { context_name } => {
-                let anchors = Line::new_summary_anchors(SummaryState::new(context_name));
+                let anchors = semantic::Line::new_answer_anchors(AnswerState::new());
+                for anchor in &anchors {
+                    anchor.save_state(project)?;
+                }
                 patches.insert(
-                (i, i+1), // Replace the current line (the tag line) with the anchor
-                anchors,
-            )
-        },
+                    (i, i + 1), // Replace the current line (the tag line) with the anchor
+                    anchors,
+                );
+            }
+            Line::SummaryTag { context_name } => {
+                let anchors = semantic::Line::new_summary_anchors(SummaryState::new(context_name));
+                for anchor in &anchors {
+                    anchor.save_state(project)?;
+                }
+                patches.insert(
+                    (i, i + 1), // Replace the current line (the tag line) with the anchor
+                    anchors,
+                );
+            }
             _ => { /* Do nothing */ }
         }
-        
-        
-    });
+    }
 
     context.apply_patches(patches);
     Ok(())
@@ -289,7 +295,7 @@ fn _execute(
     project: &Project,
     context_name: &str,
     context_manager: &mut ContextManager,
-    _exe2: &mut Execute2Manager,
+    exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
 
     let context = context_manager.load_context(project, context_name)?;

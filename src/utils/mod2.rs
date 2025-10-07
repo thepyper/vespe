@@ -1,27 +1,25 @@
 
-use crate::project::Project;
-use crate::semantic::{self, Line};
-use anyhow::Result;
-use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
-use uuid::Uuid;
 
-pub struct Context {
-    pub name: String,
-    pub path: PathBuf,
-    pub lines: Vec<Line>,
-    pub modified: bool,
+use crate::semantic::Line;
+
+struct Context {
+    name: String,
+    path: PathBuf,
+    lines: Vec<Line>,
+    modified: bool,
 }
 
-/// start = last line not to patch
-    /// end = first line not to patch
-pub type Patches = BTreeMap<(usize, usize), Vec<Line>>; // (start, end) -> replacement lines
+/// start = first line to patch
+/// end = first line not to patch
+type Patches = BTreeMap<(usize, usize), Vec<Line>>; // (start, end) -> replacement lines
 
 impl Context {
      pub fn load(project: &Project, name: &str) -> Result<Self> {
         let path = project.resolve_context(name);
-        let content = std::fs::read_to_string(&path)?;
-        let lines = crate::semantic::parse_document(project, &content)?;
+        let lines = std::fs::read_to_string(path)?;
+        let lines = crate::syntax::parse_document(&lines)?;
+        let lines = crate::semantic::enrich_syntax_document(project, lines)?;
         Ok(Context{ 
             name: name.into(),
             path,
@@ -43,7 +41,7 @@ impl Context {
     }
 
     pub fn save(&mut self) -> Result<()> {
-        if !self.modified {
+        if (!self.modified) {
             return Ok(());
         }
         let formatted = crate::semantic::format_document(&self.lines);
@@ -52,7 +50,7 @@ impl Context {
     }
 }
 
-pub struct ContextManager {
+struct ContextManager {
     contexts: HashMap<String, Context>,
 }
 
@@ -63,23 +61,24 @@ impl ContextManager {
         }
     }
 
-    pub fn load_context(&mut self, project: &Project, name: &str) -> Result<&mut Context> {
-        if !self.contexts.contains_key(name) {
-            let context = Context::load(project, name)?;
-            self.contexts.insert(name.to_string(), context);
+    pub fn load_context(&mut self, project: &Project, name: &str) -> Result<&Context> {
+        let entry = self.contexts.entry(name.to_string());
+        if entry.or_insert_with(|| Context::load(project, name)?).is_none() {
+            return Err(format!("Failed to load context: {}", name).into());
         }
-        Ok(self.contexts.get_mut(name).unwrap())
+        entry.get()
     }
 
-    pub fn save_modified_contexts(&mut self) -> Result<()> {
+    pub fn save_all(&mut self) -> Result<()> {
         for context in self.contexts.values_mut() {
             context.save()?;
         }
         Ok(())
     }
 }
+        
 
-pub struct AnchorIndex {
+struct AnchorIndex {
     begin: HashMap<Uuid, usize>, // uid -> line index
     end: HashMap<Uuid, usize>,   // uid -> line index
 }
@@ -108,4 +107,3 @@ impl AnchorIndex {
         self.end.get(uid).copied()
     }
 }
-        

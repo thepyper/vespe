@@ -1,18 +1,30 @@
 use crate::agent::ShellAgentCall;
 use crate::ast::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
-use crate::project::{ContextManager, Project};
+use crate::project::{Project};
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
 use uuid::Uuid;
-use crate::execute::inject::InlineState;
+//use crate::execute::inject::InlineState;
 use std::fs;
 use serde_json;
 use serde::{Deserialize, Serialize};
 
 
-pub mod inject;
+//pub mod inject;
 
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InlineState {
+    pub pasted: bool,
+}
+
+impl Default for InlineState {
+    fn default() -> Self {
+        InlineState {
+            pasted: false,
+        }
+    }
+}
 
 enum Exe2Compitino {
     None,
@@ -46,11 +58,10 @@ impl Default for AnswerState2 {
 }
 
 pub fn execute(
-    project: &Project,
+    project: &mut Project,
     context_name: &str,
     agent: &ShellAgentCall,
 ) -> anyhow::Result<()> {
-    let mut context_manager = ContextManager::new();
     let mut exe2_manager = Execute2Manager::new();
 
     //let mut lines = context_manager.load_context(project, context_name)?;
@@ -60,7 +71,6 @@ pub fn execute(
             project,
             context_name,
             agent,
-            &mut context_manager,
             &mut exe2_manager,
         )?;
         match compitino {
@@ -86,7 +96,7 @@ pub fn execute(
         }
     }
 	
-	context_manager.save_modified_contexts(project)?;
+	project.flush_modified_contexts()?;
 
     Ok(())
 }
@@ -157,11 +167,10 @@ pub fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Ve
 }
 
 fn decorate_with_new_anchors(
-    project: &Project,
+    project: &mut Project,
     context_name: &str,
-    context_manager: &mut ContextManager,
 ) -> anyhow::Result<()> {
-    let mut lines = context_manager.get_context(context_name)?;
+    let mut lines = project.get_context_from_cache(context_name)?;
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
 
     // Check for missing tag anchors
@@ -199,16 +208,16 @@ fn decorate_with_new_anchors(
 
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
+        project.mark_as_modified(context_name);
     }
     Ok(())
 }
 
 fn check_for_orphan_anchors(
+    project: &mut Project,
     context_name: &str,
-    context_manager: &mut ContextManager,
 ) -> anyhow::Result<()> {
-    let mut lines = context_manager.get_context(context_name)?;
+    let mut lines = project.get_context_from_cache(context_name)?;
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
     let anchor_index = AnchorIndex::new(lines);
 
@@ -239,17 +248,16 @@ fn check_for_orphan_anchors(
 
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
+        project.mark_as_modified(context_name);
     }
     Ok(())
 }
 
 fn apply_inline(
-    project: &Project,
+    project: &mut Project,
     context_name: &str,
-    context_manager: &mut ContextManager,
 ) -> anyhow::Result<Exe2Compitino> {
-    let mut lines = context_manager.get_context(context_name)?;
+    let mut lines = project.get_context_from_cache(context_name)?;
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
     let anchor_index = AnchorIndex::new(lines);
 
@@ -287,20 +295,19 @@ fn apply_inline(
     if !patches.is_empty() {
         // Some inline applied, let's run all of this again
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
+        project.mark_as_modified(context_name);
         return Ok(Exe2Compitino::Continue);
     }
     Ok(Exe2Compitino::None)
 }
 
 fn apply_answer_summary(
-    project: &Project,
+    project: &mut Project,
     context_name: &str,
     agent: &ShellAgentCall,
     exe2: &mut Execute2Manager,
-    context_manager: &mut ContextManager,
 ) -> anyhow::Result<Exe2Compitino> {
-    let mut lines = context_manager.get_context(context_name)?;
+    let mut lines = project.get_context_from_cache(context_name)?;
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
     let anchor_index = AnchorIndex::new(lines);
 
@@ -358,31 +365,30 @@ fn apply_answer_summary(
         }
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
+        project.mark_as_modified(context_name);
     }
     Ok(Exe2Compitino::None)
 }
 
 
 fn _execute(
-    project: &Project,
+    project: &mut Project,
     context_name: &str,
     _agent: &ShellAgentCall,
-    context_manager: &mut ContextManager,
     _exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
 
-    let _ = context_manager.load_context(project, context_name);
+    let _ = project.load_context_from_cache(context_name);
 
-    let decorated = decorate_with_new_anchors(project, context_name, context_manager)?;
-    let orphans_checked = check_for_orphan_anchors(context_name, context_manager)?;
+    let decorated = decorate_with_new_anchors(project, context_name)?;
+    let orphans_checked = check_for_orphan_anchors(project, context_name)?;
 
-    let inline_compitino = apply_inline(project, context_name, context_manager)?;
+    let inline_compitino = apply_inline(project, context_name)?;
     if let Exe2Compitino::Continue = inline_compitino {
         return Ok(Exe2Compitino::Continue);
     }
 
-    let answer_summary_compitino = apply_answer_summary(project, context_name, _agent, _exe2, context_manager)?;
+    let answer_summary_compitino = apply_answer_summary(project, context_name, _agent, _exe2)?;
     if let Exe2Compitino::Summarize { uid, content } = answer_summary_compitino {
         return Ok(Exe2Compitino::Summarize { uid, content });
     }

@@ -5,8 +5,10 @@ use crate::semantic::{self, AnswerStatus, AnswerState, Context, InlineState, Lin
 use crate::utils::AnchorIndex;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tracing::{debug};
 
 
+#[derive(Debug)]
 enum Exe2Compitino {
     None,
 	Continue,
@@ -43,22 +45,28 @@ pub fn execute(
     context_name: &str,
     _agent: &ShellAgentCall,
 ) -> anyhow::Result<()> {
-    //let mut context_manager = ContextManager::new();
+    debug!("Executing context: {}", context_name);
     
     let mut exe2_manager = Execute2Manager::new();
 
-    //let mut lines = context_manager.load_context(project, context_name)?;
-
     loop {
+        debug!("Starting _execute loop for context: {}", context_name);
         let compitino = _execute(
             project,
             context_name,
             &mut exe2_manager,
         )?;
+        debug!("_execute returned: {:?}", compitino);
         match compitino {
-            Exe2Compitino::None => break,
-			Exe2Compitino::Continue => {},
+            Exe2Compitino::None => {
+                debug!("Exe2Compitino::None received, breaking loop.");
+                break;
+            },
+			Exe2Compitino::Continue => {
+                debug!("Exe2Compitino::Continue received, continuing loop.");
+            },
             Exe2Compitino::AnswerQuestion{ uid: _uid, content } => {
+                debug!("Exe2Compitino::AnswerQuestion received for UID: {:?}", _uid);
                 // let content_str = semantic::format_document(&content); // Clone content here
                 // TODO: get reply from somewhere
 				let reply: Result<String, anyhow::Error> = Ok("".to_string());
@@ -71,10 +79,12 @@ pub fn execute(
 				answer_state.reply_hash   = hash_content(&actual_reply.lines().map(|s| Line::Text(s.to_string())).collect());
 				
 				// TODO save answer_state 
+                debug!("AnswerQuestion processed for UID: {:?}", _uid);
             }
         }
     }
 	
+    debug!("Context execution finished for: {}", context_name);
     Ok(())
 }
 
@@ -94,12 +104,14 @@ fn decorate_with_new_anchors(
     project: &Project,
     context: &mut Context,
 ) -> anyhow::Result<()> {
+    debug!("Decorating context with new anchors.");
   
     let mut patches = Patches::new();
 
     for (i, line) in context.lines.iter().enumerate() {
         match line {
             Line::InlineTag { snippet_name } => {
+                debug!("Found InlineTag at line {}: {}", i, snippet_name);
                 let anchors = semantic::Line::new_inline_anchors(InlineState::new(&snippet_name));
                 for anchor in &anchors {
                     anchor.save_state(project)?;
@@ -108,8 +120,10 @@ fn decorate_with_new_anchors(
                     (i, i + 1), // Replace the current line (the tag line) with the anchor
                     anchors,
                 );
+                debug!("Inserted inline anchors for snippet: {}", snippet_name);
             }
             Line::AnswerTag => {
+                debug!("Found AnswerTag at line {}", i);
                 let anchors = semantic::Line::new_answer_anchors(AnswerState::new());
                 for anchor in &anchors {
                     anchor.save_state(project)?;
@@ -118,8 +132,10 @@ fn decorate_with_new_anchors(
                     (i, i + 1), // Replace the current line (the tag line) with the anchor
                     anchors,
                 );
+                debug!("Inserted answer anchors.");
             }
             Line::SummaryTag { context_name } => {
+                debug!("Found SummaryTag at line {}: {}", i, context_name);
                 let anchors = semantic::Line::new_summary_anchors(SummaryState::new(&context_name));
                 for anchor in &anchors {
                     anchor.save_state(project)?;
@@ -128,12 +144,17 @@ fn decorate_with_new_anchors(
                     (i, i + 1), // Replace the current line (the tag line) with the anchor
                     anchors,
                 );
+                debug!("Inserted summary anchors for context: {}", context_name);
             }
             _ => { /* Do nothing */ }
         }
     }
 
-    context.apply_patches(patches);
+    if context.apply_patches(patches) {
+        debug!("Patches applied in decorate_with_new_anchors.");
+    } else {
+        debug!("No patches applied in decorate_with_new_anchors.");
+    }
     Ok(())
     
 }
@@ -184,6 +205,7 @@ fn apply_inline(
     project: &Project,
     context: &mut Context,
 ) -> anyhow::Result<Exe2Compitino> {
+    debug!("Applying inline snippets.");
 
     let anchor_index = AnchorIndex::new(&context.lines);
 
@@ -191,7 +213,9 @@ fn apply_inline(
 
     for (i, line) in context.lines.iter().enumerate() {
         if let Line::InlineBeginAnchor { uuid, state } = line {
+            debug!("Found InlineBeginAnchor at line {} with UUID: {}", i, uuid);
             if !state.pasted {
+                debug!("Snippet '{}' not yet pasted. Pasting now.", state.snippet_name);
                 let j = anchor_index.get_end(&uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
                 let snippet = project.load_snippet(&state.snippet_name)?;
                 let enriched_snippet = semantic::enrich_syntax_document(project, &snippet.content)?;
@@ -207,13 +231,16 @@ fn apply_inline(
                 }
                 
                 patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
+                debug!("Snippet '{}' pasted and state updated.", state.snippet_name);
             }
         }
     }
 
     if context.apply_patches(patches) {
+        debug!("Patches applied in apply_inline. Continuing execution.");
         Ok(Exe2Compitino::Continue)
     } else {
+        debug!("No patches applied in apply_inline. No more inlines to process.");
         Ok(Exe2Compitino::None)
     }
 }
@@ -222,8 +249,9 @@ fn apply_answer_summary(
     context: &mut Context,
     exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
+    debug!("Applying answer and summary processing.");
 
-        let anchor_index = AnchorIndex::new(&context.lines);
+    let anchor_index = AnchorIndex::new(&context.lines);
 
     let mut patches = Patches::new();
 
@@ -231,11 +259,16 @@ fn apply_answer_summary(
 
     for (i, line) in context.lines.iter().enumerate() {
         match line {
-             Line::Text(x) => exe2.collect_content.push(Line::Text(x.clone())),
-             Line::AnswerBeginAnchor { uuid, state } => { 
+             Line::Text(x) => {
+                debug!("Collecting text line: {}", x);
+                exe2.collect_content.push(Line::Text(x.clone()))
+            },
+             Line::AnswerBeginAnchor { uuid, state } => {
+                debug!("Found AnswerBeginAnchor at line {} with UUID: {} and status: {:?}", i, uuid, state.status);
                 let j = anchor_index.get_end(&uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
                 match state.status {
                     AnswerStatus::NeedContext => {
+                        debug!("AnswerStatus::NeedContext: Requesting answer for UUID: {}", uuid);
                         // The tag line has been replaced by the anchor
                         let uid = uuid.clone();
                         let mut new_line = line.clone();
@@ -247,9 +280,11 @@ fn apply_answer_summary(
                         break;
                     },
                     AnswerStatus::NeedAnswer => {
+                        debug!("AnswerStatus::NeedAnswer: Waiting for answer for UUID: {}", uuid);
                         // Do nothing, wait for answer to be provided
                     },
                     AnswerStatus::NeedInjection => {
+                        debug!("AnswerStatus::NeedInjection: Injecting answer for UUID: {}", uuid);
                         patches.insert(
                             (i + 1, j),
                             state.reply.lines().map(|s| Line::Text(s.to_string())).collect(),
@@ -259,20 +294,25 @@ fn apply_answer_summary(
                             state.status = AnswerStatus::Completed;
                         }
                         patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
+                        debug!("Answer injected and state updated for UUID: {}", uuid);
                     },
                     AnswerStatus::Completed => {
+                        debug!("AnswerStatus::Completed: Answer already processed for UUID: {}", uuid);
                         // Do nothing, already completed
                     },
                 }
 
              },
              Line::IncludeTag { context_name } => {
+                 debug!("Found IncludeTag for context: {}", context_name);
                  let included_compitino = _execute(project, &context_name, exe2)?;
                  match included_compitino {
                         Exe2Compitino::None => {
+                            debug!("Included context '{}' processed without compitino.", context_name);
                             // Do nothing, continue processing
                         },
                         _ => {
+                            debug!("Included context '{}' returned compitino: {:?}. Propagating.", context_name, included_compitino);
                             // Included needs attention, propagate it up
                             compitino = included_compitino;
                             break;
@@ -291,24 +331,45 @@ fn _execute(
     context_name: &str,
     exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
+    debug!("Starting _execute for context: {}", context_name);
 
     let mut context = Context::load(project, context_name)?;
+    debug!("Context '{}' loaded.", context_name);
 
+    debug!("Calling decorate_with_new_anchors for context: {}", context_name);
     decorate_with_new_anchors(project, &mut context)?;
+    debug!("decorate_with_new_anchors completed for context: {}", context_name);
 
     // TODO let orphans_checked = check_for_orphan_anchors(context_name, context_manager)?;
 
+    debug!("Calling apply_inline for context: {}", context_name);
     match apply_inline(project, &mut context)? {
-        Exe2Compitino::None => {},
-        compitino => return Ok(compitino),
+        Exe2Compitino::None => {
+            debug!("apply_inline returned Exe2Compitino::None.");
+        },
+        compitino => {
+            debug!("apply_inline returned {:?}. Returning early.", compitino);
+            return Ok(compitino)
+        },
     }
+    debug!("apply_inline completed for context: {}", context_name);
 
+    debug!("Calling apply_answer_summary for context: {}", context_name);
     match apply_answer_summary(project, &mut context, exe2)? {
-        Exe2Compitino::None => {},
-        compitino => return Ok(compitino),  
+        Exe2Compitino::None => {
+            debug!("apply_answer_summary returned Exe2Compitino::None.");
+        },
+        compitino => {
+            debug!("apply_answer_summary returned {:?}. Returning early.", compitino);
+            return Ok(compitino);  
+        },
     }
+    debug!("apply_answer_summary completed for context: {}", context_name);
     
+    debug!("Saving context: {}", context_name);
     context.save()?;
+    debug!("Context '{}' saved.", context_name);
 
+    debug!("_execute finished for context: {}", context_name);
     Ok(Exe2Compitino::None)
 }

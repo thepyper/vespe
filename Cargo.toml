@@ -26,8 +26,8 @@ dirs = "5.0"
 notify = "6"
 ctrlc = "3.2"
 ansi_term = "0.12"
-#tracing = "0.1"
-#tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 #reqwest = { version = "0.12", features = ["json", "rustls-tls", "blocking"] }
 #async-trait = "0.1"
 #genai = "0.4.0"
@@ -36,6 +36,9 @@ handlebars = "5.1.0"
 #tracing-appender = "0.2"
 regex = "1.10.0"
 sha2 = "0.10"
+
+[features]
+telemetry = []
 
 [[bin]]
 name = "ctx"

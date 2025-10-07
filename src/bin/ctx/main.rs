@@ -122,6 +122,9 @@ enum SnippetCommands {
 }*/
 
 fn main() -> Result<()> {
+    #[cfg(feature = "telemetry")]
+    vespe::init_telemetry();
+
     let cli = Cli::parse();
 
     let current_dir = std::env::current_dir()?;

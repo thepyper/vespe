@@ -5,6 +5,7 @@ use vespe::execute;
 use vespe::project::{Project};
 mod watch;
 use vespe::agent::ShellAgentCall;
+use tracing::debug;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -122,8 +123,9 @@ enum SnippetCommands {
 }*/
 
 fn main() -> Result<()> {
-    #[cfg(feature = "telemetry")]
     vespe::init_telemetry();
+
+    debug!("Starting vespe CLI...");
 
     let cli = Cli::parse();
 

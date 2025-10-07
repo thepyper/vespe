@@ -149,16 +149,86 @@ impl std::fmt::Display for Line {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Line::Text(s) => write!(f, "{}", s),
-            Line::InlineTag { snippet_name } => write!(f, "@inline{{{}}}", snippet_name),
-            Line::SummaryTag { context_name } => write!(f, "@summary{{{}}}", context_name),
-            Line::AnswerTag => write!(f, "@answer"),
-            Line::IncludeTag { context_name } => write!(f, "@include{{{}}}", context_name),
-            Line::InlineBeginAnchor { uuid, state } => write!(f, "[[inline_begin:{} (state: {:?})]]", uuid, state),
-            Line::InlineEndAnchor { uuid } => write!(f, "[[inline_end:{}]]", uuid),
-            Line::SummaryBeginAnchor { uuid, state } => write!(f, "[[summary_begin:{} (state: {:?})]]", uuid, state),
-            Line::SummaryEndAnchor { uuid } => write!(f, "[[summary_end:{}]]", uuid),
-            Line::AnswerBeginAnchor { uuid, state } => write!(f, "[[answer_begin:{} (state: {:?})]]", uuid, state),
-            Line::AnswerEndAnchor { uuid } => write!(f, "[[answer_end:{}]]", uuid),
+            Line::InlineTag { snippet_name } => {
+                let syntax_line = types::Line::Tagged {
+                    tag: TagKind::Inline,
+                    parameters: HashMap::new(),
+                    arguments: vec![snippet_name.clone()],
+                };
+                write!(f, "{}", syntax_line)
+            }
+            Line::SummaryTag { context_name } => {
+                let syntax_line = types::Line::Tagged {
+                    tag: TagKind::Summary,
+                    parameters: HashMap::new(),
+                    arguments: vec![context_name.clone()],
+                };
+                write!(f, "{}", syntax_line)
+            }
+            Line::AnswerTag => {
+                let syntax_line = types::Line::Tagged {
+                    tag: TagKind::Answer,
+                    parameters: HashMap::new(),
+                    arguments: Vec::new(),
+                };
+                write!(f, "{}", syntax_line)
+            }
+            Line::IncludeTag { context_name } => {
+                let syntax_line = types::Line::Tagged {
+                    tag: TagKind::Include,
+                    parameters: HashMap::new(),
+                    arguments: vec![context_name.clone()],
+                };
+                write!(f, "{}", syntax_line)
+            }
+            Line::InlineBeginAnchor { uuid, .. } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Inline,
+                    uid: *uuid,
+                    tag: AnchorTag::Begin,
+                };
+                write!(f, "{}", types::Line::Anchor(anchor))
+            }
+            Line::InlineEndAnchor { uuid } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Inline,
+                    uid: *uuid,
+                    tag: AnchorTag::End,
+                };
+                write!(f, "{}", types::Line::Anchor(anchor))
+            }
+            Line::SummaryBeginAnchor { uuid, .. } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Summary,
+                    uid: *uuid,
+                    tag: AnchorTag::Begin,
+                };
+                write!(f, "{}", types::Line::Anchor(anchor))
+            }
+            Line::SummaryEndAnchor { uuid } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Summary,
+                    uid: *uuid,
+                    tag: AnchorTag::End,
+                };
+                write!(f, "{}", types::Line::Anchor(anchor))
+            }
+            Line::AnswerBeginAnchor { uuid, .. } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Answer,
+                    uid: *uuid,
+                    tag: AnchorTag::Begin,
+                };
+                write!(f, "{}", types::Line::Anchor(anchor))
+            }
+            Line::AnswerEndAnchor { uuid } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Answer,
+                    uid: *uuid,
+                    tag: AnchorTag::End,
+                };
+                write!(f, "{}", types::Line::Anchor(anchor))
+            }
         }
     }
 }

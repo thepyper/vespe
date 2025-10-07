@@ -138,14 +138,14 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Init {} => {
-            let project = Project::init(&project_path)?;
+            let project = Project::init(&project_path, &cli.editor_interface)?;
             println!(
                 "Initialized new .ctx project at: {}",
                 project.project_home().display()
             );
         }
         Commands::Context { command } => {
-            let project = Project::find(&project_path)?;
+            let project = Project::find(&project_path, &cli.editor_interface)?;
             match command {
                 ContextCommands::New { name } => {
                     let file_path = project.create_context_file(&name)?;
@@ -153,7 +153,7 @@ fn main() -> Result<()> {
                 }
                 ContextCommands::Execute { name } => {
                     println!("Executing context '{}'...", name);
-                    let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &cli.editor_interface, &project_path)?;
+                    let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
                     execute::execute(&project, &name, &agent)?;
                     println!("Context '{}' executed successfully.", name);
                 }
@@ -175,7 +175,7 @@ fn main() -> Result<()> {
             }
         }
         Commands::Snippet { command } => {
-            let project = Project::find(&project_path)?;
+            let project = Project::find(&project_path, &cli.editor_interface)?;
             match command {
                 SnippetCommands::New { name } => {
                     let file_path = project.create_snippet_file(&name)?;
@@ -195,8 +195,8 @@ fn main() -> Result<()> {
             }
         }
         Commands::Watch {} => {
-            let project = Project::find(&project_path)?;
-            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &cli.editor_interface, &project_path)?;
+            let project = Project::find(&project_path, &cli.editor_interface)?;
+            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
             watch::watch(&project, &agent)?;
         }
     }

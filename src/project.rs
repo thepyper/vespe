@@ -5,9 +5,12 @@ use crate::syntax::types::AnchorKind;
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
+use std::env;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+
+use crate::editor::{DummyEditorCommunicator, EditorCommunicator, FileBasedEditorCommunicator};
 
 /*
 #[derive(Debug)]
@@ -50,6 +53,7 @@ pub struct SnippetInfo {
 /*
 pub struct ContextManager {
     contexts: HashMap<String, Vec<Line>>,
+    modified_contexts: HashSet<String>,
     modified_contexts: HashSet<String>,
 }
 
@@ -116,11 +120,12 @@ impl ContextManager {
 
 pub struct Project {
     root_path: PathBuf,
+    editor_communicator: Box<dyn EditorCommunicator>,
 }
 
 #[allow(dead_code)]
 impl Project {
-    pub fn init(path: &Path) -> Result<Project> {
+    pub fn init(path: &Path, editor_interface: &str) -> Result<Project> {
         let ctx_dir = path.join(CTX_DIR_NAME);
         if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
             anyhow::bail!("ctx project already initialized in this directory.");
@@ -132,19 +137,31 @@ impl Project {
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
             .context("Failed to write .ctx_root file")?;
 
+        let editor_communicator: Box<dyn EditorCommunicator> = match editor_interface {
+            "vscode" => Box::new(FileBasedEditorCommunicator::new(path)?),
+            _ => Box::new(DummyEditorCommunicator),
+        };
+
         Ok(Project {
             root_path: path.canonicalize()?,
+            editor_communicator,
         })
     }
 
-    pub fn find(path: &Path) -> Result<Project> {
+    pub fn find(path: &Path, editor_interface: &str) -> Result<Project> {
         let mut current_path = path.to_path_buf();
 
         loop {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
+                let editor_communicator: Box<dyn EditorCommunicator> = match editor_interface {
+                    "vscode" => Box::new(FileBasedEditorCommunicator::new(&current_path)?),
+                    _ => Box::new(DummyEditorCommunicator),
+                };
+
                 return Ok(Project {
                     root_path: current_path.canonicalize()?,
+                    editor_communicator,
                 });
             }
 
@@ -471,6 +488,14 @@ impl Project {
         self.load_state_from_metadata(&AnchorKind::Answer, uid)
             .map_err(|e| anyhow::Error::new(e))
     }
+
+    pub fn request_file_modification(&self, file_path: &PathBuf) -> Result<()> {
+        self.editor_communicator.request_file_modification(file_path)
+    }
+
+    pub fn notify_file_modified(&self, file_path: &PathBuf) -> Result<()> {
+        self.editor_communicator.notify_file_modified(file_path)
+    }
 }
 
 /*
@@ -479,7 +504,6 @@ fn format_lines_to_string(lines: &Vec<Line>) -> String {
         .iter()
         .map(|line| line.to_string())
         .collect::<Vec<String>>()
-        .join("
-")
+        .join("\n")
 }
 */

@@ -4,29 +4,18 @@ use std::process::{Command, Stdio};
 use tracing::{debug, error};
 use std::path::{Path, PathBuf};
 
-use crate::editor::{EditorCommunicator, DummyEditorCommunicator};
-use crate::editor::lockfile::FileBasedEditorCommunicator;
+use crate::project::Project;
 
-pub struct ShellAgentCall {
+pub struct ShellAgentCall<'a> {
     command_template: String,
-    editor_communicator: Box<dyn EditorCommunicator>,
+    project: &'a Project,
 }
 
-impl ShellAgentCall {
-    pub fn new(command: String, editor_interface: &str, project_root: &Path) -> anyhow::Result<Self> {
-        let editor_communicator: Box<dyn EditorCommunicator> = match editor_interface {
-            "vscode" => {
-                let request_file = project_root.join("request.json");
-                let response_file = project_root.join("response.json");
-                Box::new(FileBasedEditorCommunicator::new(request_file, response_file)?)
-            },
-            "none" => Box::new(DummyEditorCommunicator),
-            _ => anyhow::bail!("Unknown editor interface: {}", editor_interface),
-        };
-
+impl<'a> ShellAgentCall<'a> {
+    pub fn new(command: String, project: &'a Project) -> anyhow::Result<Self> {
         Ok(Self {
             command_template: command,
-            editor_communicator,
+            project,
         })
     }
 

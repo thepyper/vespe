@@ -1,8 +1,8 @@
 use crate::syntax::parser::parse_document;
-use crate::syntax::types::{Line, TagKind};
+use crate::syntax::types::Line;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 

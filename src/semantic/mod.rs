@@ -1,9 +1,11 @@
+mod context;
+pub use context::*;
+
 use crate::project::Project;
 use crate::syntax::types::{self, Anchor, AnchorKind, AnchorTag, TagKind};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
-use std::fs;
 use std::io::ErrorKind;
 use thiserror::Error;
 //use crate::execute::inject::InlineState;
@@ -328,7 +330,7 @@ impl std::fmt::Display for Line {
     }
 }
 
-fn enrich_syntax_tagged_line(project: &Project, tag: &TagKind, parameters: &HashMap<String, String>, arguments: &Vec<String>) -> std::result::Result<Line, SemanticError> {
+fn enrich_syntax_tagged_line(_project: &Project, tag: &TagKind, _parameters: &HashMap<String, String>, arguments: &Vec<String>) -> std::result::Result<Line, SemanticError> {
     match tag {
         TagKind::Include => {
             let context_name = arguments.get(0).cloned().ok_or(SemanticError::MissingArgument("Context not specified in @include tag.".to_string()))?;

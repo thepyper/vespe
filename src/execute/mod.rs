@@ -1,14 +1,11 @@
 
 use crate::agent::ShellAgentCall;
-//use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::Project;
-use crate::semantic::{self, AnswerStatus, AnswerState, InlineState, Line, SummaryState};
-use crate::syntax::parser::format_document;
-use crate::utils::{AnchorIndex, Context, Patches};
+use crate::semantic::{self, AnswerStatus, AnswerState, Context, InlineState, Line, Patches, SummaryState};
+use crate::utils::AnchorIndex;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::fs;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 
@@ -46,7 +43,7 @@ impl Default for AnswerState2 {
 pub fn execute(
     project: &Project,
     context_name: &str,
-    agent: &ShellAgentCall,
+    _agent: &ShellAgentCall,
 ) -> anyhow::Result<()> {
     //let mut context_manager = ContextManager::new();
     
@@ -64,7 +61,7 @@ pub fn execute(
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
             Exe2Compitino::AnswerQuestion{ uid: _uid, content } => {
-                let content_str = semantic::format_document(&content); // Clone content here
+                // let content_str = semantic::format_document(&content); // Clone content here
                 // TODO: get reply from somewhere
 				let reply: Result<String, anyhow::Error> = Ok("".to_string());
 				
@@ -109,7 +106,7 @@ fn decorate_with_new_anchors(
     for (i, line) in context.lines.iter().enumerate() {
         match line {
             Line::InlineTag { snippet_name } => {
-                let anchors = semantic::Line::new_inline_anchors(InlineState::new(snippet_name));
+                let anchors = semantic::Line::new_inline_anchors(InlineState::new(&snippet_name));
                 for anchor in &anchors {
                     anchor.save_state(project)?;
                 }
@@ -129,7 +126,7 @@ fn decorate_with_new_anchors(
                 );
             }
             Line::SummaryTag { context_name } => {
-                let anchors = semantic::Line::new_summary_anchors(SummaryState::new(context_name));
+                let anchors = semantic::Line::new_summary_anchors(SummaryState::new(&context_name));
                 for anchor in &anchors {
                     anchor.save_state(project)?;
                 }
@@ -201,7 +198,7 @@ fn apply_inline(
     for (i, line) in context.lines.iter().enumerate() {
         if let Line::InlineBeginAnchor { uuid, state } = line {
             if !state.pasted {
-                let j = anchor_index.get_end(uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
+                let j = anchor_index.get_end(&uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
                 let snippet = project.load_snippet(&state.snippet_name)?;
                 let enriched_snippet = semantic::enrich_syntax_document(project, &snippet.content)?;
                 patches.insert(
@@ -242,11 +239,11 @@ fn apply_answer_summary(
         match line {
              Line::Text(x) => exe2.collect_content.push(Line::Text(x.clone())),
              Line::AnswerBeginAnchor { uuid, state } => { 
-                let j = anchor_index.get_end(uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
+                let j = anchor_index.get_end(&uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
                 match state.status {
                     AnswerStatus::NeedContext => {
                         // The tag line has been replaced by the anchor
-                        let uid = *uuid;
+                        let uid = uuid.clone();
                         let mut new_line = line.clone();
                         if let Line::AnswerBeginAnchor { state, .. } = &mut new_line {
                             state.status = AnswerStatus::NeedAnswer;

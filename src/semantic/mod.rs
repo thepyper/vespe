@@ -8,86 +8,63 @@ use std::fs;
 use std::io::ErrorKind;
 
 // Error type for semantic processing
-#[derive(Debug, thiserror::Error)]
+#[derive(Error, Debug)]
 pub enum SemanticError {
+    #[error("Semantic error: {0}")]
+    Generic(String),
     #[error("Missing argument: {0}")]
     MissingArgument(String),
-    #[error("Invalid anchor format: {0}")]
-    InvalidAnchorFormat(String),
-    #[error("Anyhow error: {0}")]
-    Anyhow(#[from] anyhow::Error),
-    #[error("Serde JSON error: {0}")]
-    SerdeJson(#[from] serde_json::Error),
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
+    #[error("UUID parsing error: {0}")]
+    UuidParsingError(#[from] uuid::Error),
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    IoError(#[from] std::io::Error),
+    #[error("JSON serialization/deserialization error: {0}")]
+    JsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    AnyhowError(#[from] anyhow::Error),
 }
 
-// Placeholder for InlineState
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub enum InlineState {
-    #[default]
-    Default,
-    // Add other states as needed
-}
-
-fn load_state_from_metadata<T>(project: &Project, anchor_kind: &AnchorKind, uid: &Uuid) -> T
+pub fn save_state_to_metadata<T>(
+    project: &Project,
+    anchor_kind: AnchorKind,
+    uuid: &Uuid,
+    state: &T,
+) -> Result<(), SemanticError>
 where
-    T: Default + for<'de> Deserialize<'de>,
+    T: serde::Serialize,
 {
-    let metadata_dir_result = project.resolve_metadata(&anchor_kind.to_string(), uid);
-    let metadata_dir = match metadata_dir_result {
-        Ok(dir) => dir,
-        Err(e) => {
-            eprintln!(
-                "Error resolving metadata directory for {:?} state ({}): {}",
-                anchor_kind, uid, e
-            );
-            return T::default();
-        }
-    };
-
-    let state_file_path = metadata_dir.join("state.json");
-
-    match fs::read_to_string(&state_file_path) {
-        Ok(content) => match serde_json::from_str(&content) {
-            Ok(state) => state,
-            Err(e) => {
-                eprintln!(
-                    "Error deserializing {:?} state from {}: {}",
-                    anchor_kind,
-                    state_file_path.display(),
-                    e
-                );
-                T::default()
-            }
-        },
-        Err(e) if e.kind() == ErrorKind::NotFound => T::default(),
-        Err(e) => {
-            eprintln!(
-                "Error reading {:?} state file {}: {}",
-                anchor_kind,
-                state_file_path.display(),
-                e
-            );
-            T::default()
-        }
-    }
-}
-
-fn save_state_to_metadata<T>(project: &Project, anchor_kind: &AnchorKind, uid: &Uuid, state: &T) -> Result<(), SemanticError>
-where
-    T: Serialize,
-{
-    let metadata_dir = project.resolve_metadata(&anchor_kind.to_string(), uid)?;
-    fs::create_dir_all(&metadata_dir)?; // Ensure the directory exists
-    let state_file_path = metadata_dir.join("state.json");
-
-    let content = serde_json::to_string_pretty(state)?;
-    fs::write(&state_file_path, content)?;
-
+    let metadata_dir = project.resolve_metadata(anchor_kind.to_string().as_str(), uuid)?;
+    std::fs::create_dir_all(&metadata_dir)?;
+    let state_path = metadata_dir.join("state.json");
+    let serialized = serde_json::to_string_pretty(state)?;
+    std::fs::write(&state_path, serialized)?;
     Ok(())
 }
 
+impl Line {
+    pub fn save_state(&self, project: &Project) -> Result<(), SemanticError> {
+        match self {
+            Line::InlineBeginAnchor { uuid, state } => {
+                let parsed_uuid = Uuid::parse_str(uuid)?;
+                save_state_to_metadata(project, AnchorKind::Inline, &parsed_uuid, state)?;
+                Ok(())
+            }
+            Line::SummaryBeginAnchor { uuid, state } => {
+                let parsed_uuid = Uuid::parse_str(uuid)?;
+                save_state_to_metadata(project, AnchorKind::Summary, &parsed_uuid, state)?;
+                Ok(())
+            }
+            Line::AnswerBeginAnchor { uuid, state } => {
+                let parsed_uuid = Uuid::parse_str(uuid)?;
+                save_state_to_metadata(project, AnchorKind::Answer, &parsed_uuid, state)?;
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+}
 impl InlineState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
         load_state_from_metadata(project, &AnchorKind::Inline, uid)

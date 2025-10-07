@@ -173,7 +173,7 @@ impl AnchorIndex {
     }
 }
 
-pub pub fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Vec<Line>>) -> Result<()> {
+pub fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Vec<Line>>) -> Result<()> {
     for ((i, n), patch) in patches.iter().rev() {
         lines.splice(*i..*i+n, patch.iter().cloned());
     }

@@ -42,15 +42,77 @@ pub struct SnippetInfo {
     pub path: PathBuf,
 }
 
-
-pub struct Project {
-    root_path: PathBuf,
+pub struct ContextManager {
     contexts: HashMap<String, Vec<Line>>,
     modified_contexts: HashSet<String>,
 }
 
-impl Project {
+impl ContextManager {
+    pub fn new() -> Self {
+        ContextManager {
+            contexts: HashMap::new(),
+            modified_contexts: HashSet::new(),
+        }
+    }
 
+    pub fn insert_context(&mut self, name: String, lines: Vec<Line>) {
+        self.contexts.insert(name, lines);
+    }
+
+    pub fn get_context_mut(&mut self, name: &str) -> Option<&mut Vec<Line>> {
+        self.contexts.get_mut(name)
+    }
+
+    pub fn remove_context(&mut self, name: &str) -> Option<Vec<Line>> {
+        self.contexts.remove(name)
+    }
+
+    pub fn contains_context(&self, name: &str) -> bool {
+        self.contexts.contains_key(name)
+    }
+
+    pub fn load_context(
+        &mut self,
+        project: &Project,
+        context_name: &str,
+    ) -> anyhow::Result<&mut Vec<Line>> {
+        if !self.contains_context(context_name) {
+            let lines = project.read_and_parse_context_file(context_name)?;
+            self.insert_context(context_name.to_string(), lines);
+        }
+        self.get_context_mut(context_name).context(format!(
+            "Context '{}' not found in ContextManager after loading",
+            context_name
+        ))
+    }
+
+    pub fn get_context(&mut self, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
+        self.get_context_mut(context_name).context(format!(
+            "Context '{}' not found in ContextManager",
+            context_name
+        ))
+    }
+
+    pub fn mark_as_modified(&mut self, context_name: &str) {
+        self.modified_contexts.insert(context_name.to_string());
+    }
+
+    pub fn save_modified_contexts(&self, project: &Project) -> anyhow::Result<()> {
+        for context_name in &self.modified_contexts {
+            if let Some(lines) = self.contexts.get(context_name) {
+                project.update_context_lines(context_name, lines.clone())?;
+            }
+        }
+        Ok(())
+    }
+}
+
+pub struct Project {
+    root_path: PathBuf,
+}
+
+#[allow(dead_code)]
+impl Project {
     pub fn init(path: &Path) -> Result<Project> {
         let ctx_dir = path.join(CTX_DIR_NAME);
         if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
@@ -65,8 +127,6 @@ impl Project {
 
         Ok(Project {
             root_path: path.canonicalize()?,
-            contexts: HashMap::new(),
-            modified_contexts: HashSet::new(),
         })
     }
 
@@ -78,8 +138,6 @@ impl Project {
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
                 return Ok(Project {
                     root_path: current_path.canonicalize()?,
-                    contexts: HashMap::new(),
-                    modified_contexts: HashSet::new(),
                 });
             }
 
@@ -328,57 +386,6 @@ impl Project {
             "Failed to write snippet file: {}",
             file_path.display()
         ))?;
-        Ok(())
-    }
-
-    pub fn insert_context(&mut self, name: String, lines: Vec<Line>) {
-        self.contexts.insert(name, lines);
-    }
-
-    pub fn get_context_mut(&mut self, name: &str) -> Option<&mut Vec<Line>> {
-        self.contexts.get_mut(name)
-    }
-
-    pub fn remove_context(&mut self, name: &str) -> Option<Vec<Line>> {
-        self.contexts.remove(name)
-    }
-
-    pub fn contains_context(&self, name: &str) -> bool {
-        self.contexts.contains_key(name)
-    }
-
-    pub fn load_context_from_cache(
-        &mut self,
-        context_name: &str,
-    ) -> anyhow::Result<&mut Vec<Line>> {
-        if !self.contains_context(context_name) {
-            let lines = self.read_and_parse_context_file(context_name)?;
-            self.insert_context(context_name.to_string(), lines);
-        }
-        self.get_context_mut(context_name).context(format!(
-            "Context '{}' not found in Project after loading",
-            context_name
-        ))
-    }
-
-    pub fn get_context_from_cache(&mut self, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
-        self.get_context_mut(context_name).context(format!(
-            "Context '{}' not found in Project",
-            context_name
-        ))
-    }
-
-    pub fn mark_as_modified(&mut self, context_name: &str) {
-        self.modified_contexts.insert(context_name.to_string());
-    }
-
-    pub fn flush_modified_contexts(&mut self) -> anyhow::Result<()> {
-        for context_name in &self.modified_contexts {
-            if let Some(lines) = self.contexts.get(context_name) {
-                self.update_context_lines(context_name, lines.clone())?;
-            }
-        }
-        self.modified_contexts.clear();
         Ok(())
     }
 }

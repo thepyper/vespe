@@ -9,7 +9,7 @@ use crate::{
     ast::types::{AnchorKind, AnchorTag, Line, LineKind, TagKind},
     execute::{decorate, inject},
     injector,
-    project::Project,
+    project::{ContextManager, Project},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -54,7 +54,9 @@ fn hash_lines(lines: &[Line]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-    project: &mut Project,
+pub fn answer_first_question(
+    project: &Project,
+    context_manager: &mut ContextManager,
     context_name: &str,
     agent: &ShellAgentCall,
 ) -> anyhow::Result<bool> {

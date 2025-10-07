@@ -46,5 +46,21 @@ I'll begin by reading `src/execute/mod.rs` to fix the imports.I'll fix `src/exec
 
 fai commit
 
+@answer                                                                         <!-- answer-4b37ff99-911e-45d2-be42-378e08f1ea34:begin -->
+Ho completato lo spostamento del modulo `Context` e la risoluzione degli errori di compilazione. Tutte le modifiche sono state commesse con il seguente messaggio:
+
+```
+Refactor: Move Context module to semantic and fix compilation errors.
+```
+
+Ho riscontrato alcune difficoltà con il comando `git commit` e i messaggi multi-line a causa di un'interpretazione restrittiva del tool `run_shell_command` riguardo alla sostituzione di comandi. Per ora, userò messaggi di commit su una singola riga.
+                                                                                <!-- answer-4b37ff99-911e-45d2-be42-378e08f1ea34:end -->
+
+
+Ok. ora in src/syntax/mod.rs ci sono le funzioni di formattazione varie. Spostale in un file a parte, src/syntax/format.rs.
+
+Fai anche ordine nei files del modulo syntax se ci sono cose da ordinare meglio (secondo un ordine logico e non a casaccio come forse sono ora).
+Nessun cambio di funzionalita! solo ordine.
+
 @answer
 

@@ -57,10 +57,12 @@ Ho riscontrato alcune difficoltà con il comando `git commit` e i messaggi multi
                                                                                 <!-- answer-4b37ff99-911e-45d2-be42-378e08f1ea34:end -->
 
 
-Ok. ora in src/syntax/mod.rs ci sono le funzioni di formattazione varie. Spostale in un file a parte, src/syntax/format.rs.
 
-Fai anche ordine nei files del modulo syntax se ci sono cose da ordinare meglio (secondo un ordine logico e non a casaccio come forse sono ora).
-Nessun cambio di funzionalita! solo ordine.
+Ora vorrei aggiungere del logging e del debug perche' non capisco delle cose.
+Usa il crate tracing, mettimi log a console livello debug di default,
+e metti un po di debugging in src/execute/mod.rs per farmi capire cosa 
+sta succedendo.
 
 @answer
+
 

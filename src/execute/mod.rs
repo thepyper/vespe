@@ -337,45 +337,34 @@ fn _execute(
     context_name: &str,
     exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
+
+    let mut compitino = Exe2Compitino::None;
+
     debug!("Starting _execute for context: {}", context_name);
 
     let mut context = Context::load(project, context_name)?;
     debug!("Context '{}' loaded.", context_name);
 
-    debug!("Calling decorate_with_new_anchors for context: {}", context_name);
-    decorate_with_new_anchors(project, &mut context)?;
-    debug!("decorate_with_new_anchors completed for context: {}", context_name);
-
+    if let Exe2Compitino::None = compitino {
+        debug!("Calling decorate_with_new_anchors for context: {}", context_name);
+        decorate_with_new_anchors(project, &mut context)?;
+    }
+    
     // TODO let orphans_checked = check_for_orphan_anchors(context_name, context_manager)?;
 
-    debug!("Calling apply_inline for context: {}", context_name);
-    match apply_inline(project, &mut context)? {
-        Exe2Compitino::None => {
-            debug!("apply_inline returned Exe2Compitino::None.");
-        },
-        compitino => {
-            debug!("apply_inline returned {:?}. Returning early.", compitino);
-            return Ok(compitino)
-        },
+    if let Exe2Compitino::None = compitino {
+        debug!("Calling apply_inline for context: {}", context_name);
+        compitino = apply_inline(project, &mut context)?;
     }
-    debug!("apply_inline completed for context: {}", context_name);
 
-    debug!("Calling apply_answer_summary for context: {}", context_name);
-    match apply_answer_summary(project, &mut context, exe2)? {
-        Exe2Compitino::None => {
-            debug!("apply_answer_summary returned Exe2Compitino::None.");
-        },
-        compitino => {
-            debug!("apply_answer_summary returned {:?}. Returning early.", compitino);
-            return Ok(compitino);  
-        },
+    if let Exe2Compitino::None = compitino {
+        debug!("Calling apply_answer_summary for context: {}", context_name);
+        compitino = match apply_answer_summary(project, &mut context, exe2)?;
     }
-    debug!("apply_answer_summary completed for context: {}", context_name);
-    
+
     debug!("Saving context: {}", context_name);
     context.save()?;
-    debug!("Context '{}' saved.", context_name);
 
     debug!("_execute finished for context: {}", context_name);
-    Ok(Exe2Compitino::None)
+    Ok(compitino)
 }

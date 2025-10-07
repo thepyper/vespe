@@ -1,11 +1,11 @@
-use crate::ast::types::{AnchorKind, Line, TagKind, AnchorTag, Anchor};
-use crate::injector;
+use crate::ast::types::{AnchorKind, Line, TagKind, AnchorTag};
+
 use crate::project::{ContextManager, Project};
 use anyhow::Context as AnyhowContext;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, BTreeMap};
 use std::fs;
-use uuid::Uuid;
+
 use crate::execute::apply_patches;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

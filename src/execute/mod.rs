@@ -1,5 +1,5 @@
 use crate::agent::ShellAgentCall;
-use crate::ast::types::{Anchor, AnchorKind, AnchorTag, Line, LineKind, TagKind};
+use crate::ast::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::{ContextManager, Project};
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
@@ -21,7 +21,7 @@ enum Exe2Compitino {
     Summarize{ uid: uuid::Uuid, content: Vec<Line> },
 }
 
-fn hash_content(lines : &Vec<Line>) -> String {
+fn hash_content(_lines : &Vec<Line>) -> String {
 	// TODO hash da lines
 	unimplemented!()
 }
@@ -65,7 +65,7 @@ pub fn execute(
         match compitino {
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
-            Exe2Compitino::AnswerQuestion{ uid, content } => {
+            Exe2Compitino::AnswerQuestion{ uid: _uid, content } => {
                 let content_str = format_document(content.clone()); // Clone content here
 				let reply = agent.call(&content_str);
 				
@@ -279,7 +279,6 @@ fn apply_inline(
                         }
                     }
                 }
-            }
         }
     }
 

@@ -62,7 +62,7 @@ pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool> {
     }
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
-        patches = BTreeMap::new(); // Clear patches for next stage
+
     }
 
     // Check for orphan end anchors

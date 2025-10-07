@@ -34,7 +34,17 @@ impl Context {
             return false;
         }
 
-        // TODO apply in reverse start order to avoid shifting indices
+        let mut patches_vec: Vec<_> = patches.into_iter().collect();
+        patches_vec.sort_by(|a, b| b.0.0.cmp(&a.0.0)); // Sort by start_line_index in reverse
+
+        for ((start_line_index, end_line_index), replacement_lines) in patches_vec {
+            // Remove the old lines
+            self.lines.drain(start_line_index..end_line_index);
+            // Insert the new lines
+            for (i, line) in replacement_lines.into_iter().enumerate() {
+                self.lines.insert(start_line_index + i, line);
+            }
+        }
 
         self.modified = true;
         true

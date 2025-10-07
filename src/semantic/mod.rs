@@ -159,7 +159,7 @@ pub struct InlineState {
 }
 
 impl InlineState {
-    fn new(snippet_name: &str) -> Self {
+    pub fn new(snippet_name: &str) -> Self {
         InlineState {
             snippet_name: snippet_name.into(),
             pasted: false,
@@ -174,7 +174,7 @@ pub struct SummaryState {
 }
 
 impl SummaryState {
-    fn new(context_name: &str) -> Self {
+    pub fn new(context_name: &str) -> Self {
         SummaryState {
             context_name: context_name.into(),
             summarized_hash: String::new(),
@@ -182,15 +182,25 @@ impl SummaryState {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum AnswerStatus {
+    NeedContext,
+    NeedAnswer,
+    NeedInjection,
+    Completed,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
-
+    pub status: AnswerStatus,
+    pub reply: String,
 }
 
 impl AnswerState {
-    fn new() -> Self {
+    pub fn new() -> Self {
         AnswerState {
-
+            status: AnswerStatus::NeedContext,
+            reply: String::new(),
         }
     }
 }

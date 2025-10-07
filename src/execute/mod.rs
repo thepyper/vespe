@@ -1,7 +1,7 @@
 
 //use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::Project;
-use crate::semantic::{self, AnswerState, InlineState, Line, SummaryState};
+use crate::semantic::{self, AnswerStatus, InlineState, Line, SummaryState};
 use crate::syntax::parser::format_document;
 use crate::utils::{AnchorIndex, Context, ContextManager, Patches};
 use anyhow::Result;
@@ -64,9 +64,9 @@ pub fn execute(
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
             Exe2Compitino::AnswerQuestion{ uid: _uid, content } => {
-                let content_str = format_document(content.clone()); // Clone content here
+                let content_str = semantic::format_document(&content); // Clone content here
                 // TODO: get reply from somewhere
-				let reply = Ok("".to_string());
+				let reply: Result<String, anyhow::Error> = Ok("".to_string());
 				
 				let mut answer_state = AnswerState2::default();
 				
@@ -84,8 +84,7 @@ pub fn execute(
         }
     }
 	
-	context_manager.save_modified_contexts(project)?;
-
+	    context_manager.save_modified_contexts();
     Ok(())
 }
 
@@ -200,32 +199,34 @@ fn apply_inline(
 
     let mut patches = Patches::new();
 
-    context.lines.iter().enumerate().for_each(|(i, line)| {
+    for (i, line) in context.lines.iter().enumerate() {
         if let Line::InlineBeginAnchor { uuid, state } = line {
             if !state.pasted {
-                let j = anchor_index.get_end_value(uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid));
+                let j = anchor_index.get_end(uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
                 let snippet = project.load_snippet(&state.snippet_name)?;
+                let enriched_snippet = semantic::enrich_syntax_document(project, &snippet.content)?;
                 patches.insert(
                     (i + 1, j),
-                    snippet.content.clone(),
+                    enriched_snippet,
                 );
                 
                 // Update state to mark as pasted
                 let mut new_line = line.clone();
-                new_line.state.pasted = true;
+                if let Line::InlineBeginAnchor { state, .. } = &mut new_line {
+                    state.pasted = true;
+                }
                 
                 patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
             }
-        }        
-    });
+        }
+    }
 
     if context.apply_patches(patches) {
         Ok(Exe2Compitino::Continue)
     } else {
         Ok(Exe2Compitino::None)
-    }    
+    }
 }
-
 fn apply_answer_summary(
     project: &Project,
     context: &mut Context,
@@ -241,15 +242,17 @@ fn apply_answer_summary(
 
     for (i, line) in context.lines.iter().enumerate() {
         match line {
-             Line::Text(x) => exe2.collect_content.push(x),
+             Line::Text(x) => exe2.collect_content.push(Line::Text(x.clone())),
              Line::AnswerBeginAnchor { uuid, state } => { 
-                let j = anchor_index.get_end_value(uuid)?;
+                let j = anchor_index.get_end(uuid).ok_or_else(|| anyhow::anyhow!("End anchor not found for UUID: {}", uuid))?;
                 match state.status {
                     AnswerStatus::NeedContext => {
                         // The tag line has been replaced by the anchor
                         let uid = *uuid;
                         let mut new_line = line.clone();
-                        new_line.state.status = AnswerStatus::NeedAnswer;
+                        if let Line::AnswerBeginAnchor { state, .. } = &mut new_line {
+                            state.status = AnswerStatus::NeedAnswer;
+                        }
                         patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
                         compitino = Exe2Compitino::AnswerQuestion { uid: uid, content: exe2.collect_content.clone() };
                         break;
@@ -263,7 +266,9 @@ fn apply_answer_summary(
                             state.reply.lines().map(|s| Line::Text(s.to_string())).collect(),
                         );
                         let mut new_line = line.clone();
-                        new_line.state.status = AnswerStatus::Completed;
+                        if let Line::AnswerBeginAnchor { state, .. } = &mut new_line {
+                            state.status = AnswerStatus::Completed;
+                        }
                         patches.insert((i, i + 1), vec![new_line]); // Replace the begin anchor with updated state
                     },
                     AnswerStatus::Completed => {

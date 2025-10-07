@@ -70,18 +70,22 @@ pub fn execute(
             },
             Exe2Compitino::AnswerQuestion{ uid: _uid, content } => {
                 debug!("Exe2Compitino::AnswerQuestion received for UID: {:?}", _uid);
-                // let content_str = semantic::format_document(&content); // Clone content here
-                // TODO: get reply from somewhere
-				let reply: Result<String, anyhow::Error> = Ok("".to_string());
-				
-				let mut answer_state = AnswerState2::default();
-				
-				answer_state.content_hash = hash_content(&content);
-				let actual_reply = reply?;
-				answer_state.reply        = actual_reply.clone();
-				answer_state.reply_hash   = hash_content(&actual_reply.lines().map(|s| Line::Text(s.to_string())).collect());
-				
-				// TODO save answer_state 
+
+                let mut state = project.load_answer_state(&_uid)?;
+                if state.status != AnswerStatus::NeedAnswer {
+                    debug!("State status is not NeedAnswer, continuing loop.");
+                    continue;
+                }
+                // TODO: dovrei fare in qulche ltro modo non con compitino... ricerca estensiva domande da rispondere?
+                // limitata al context in corso? comunque...
+
+				let reply = _agent.call(&state.query)?;
+                
+                state.status = AnswerStatus::NeedInjection;
+                state.reply = reply;
+                
+                project.save_answer_state(&_uid, &state)?;
+
                 debug!("AnswerQuestion processed for UID: {:?}", _uid);
             }
         }
@@ -227,9 +231,9 @@ fn apply_inline(
                 );
                 
                 // Update state to mark as pasted
-                let mut updated_state = state.clone();
-                updated_state.pasted = true;
-                project.save_inline_state(uuid, &updated_state)?;
+                let mut new_state = state.clone();
+                new_state.pasted = true;
+                project.save_inline_state(uuid, &new_state)?;
                 
                 debug!("Snippet '{}' pasted and state updated.", state.snippet_name);
             }
@@ -245,6 +249,7 @@ fn apply_inline(
         Ok(Exe2Compitino::None)
     }
 }
+
 fn apply_answer_summary(
     project: &Project,
     context: &mut Context,

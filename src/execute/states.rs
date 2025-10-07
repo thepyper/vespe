@@ -43,6 +43,7 @@ pub enum AnswerStatus {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
     pub status: AnswerStatus,
+    pub query: String,
     pub reply: String,
 }
 
@@ -50,6 +51,7 @@ impl AnswerState {
     pub fn new() -> Self {
         AnswerState {
             status: AnswerStatus::NeedContext,
+            query: String::new(),
             reply: String::new(),
         }
     }

@@ -53,15 +53,16 @@ pub fn execute(
     let mut context_manager = ContextManager::new();
     let mut exe2_manager = Execute2Manager::new();
 
+    let mut lines = context_manager.load_context(project, context_name)?;
+
     loop {
         let compitino = _execute(
             project,
             context_name,
             agent,
-            &mut context_manager,
+            &mut lines,
             &mut exe2_manager,
         )?;
-
         match compitino {
             Exe2Compitino::None => break,
 			Exe2Compitino::Continue => {},
@@ -158,9 +159,8 @@ pub fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Ve
 fn decorate_with_new_anchors(
     project: &Project,
     context_name: &str,
-    context_manager: &mut ContextManager,
     lines: &mut Vec<Line>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
 
     // Check for missing tag anchors
@@ -189,24 +189,24 @@ fn decorate_with_new_anchors(
                             kind: expected_begin_anchor_kind,
                             uid: Uuid::new_v4(),
                             tag: AnchorTag::Begin,
-                        })],
+                        })], // <--- This closing brace and parenthesis are missing
                     );
                 }
             }
         }
     }
+
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
+        return Ok(true);
     }
-    Ok(())
+    Ok(false)
 }
 
 fn check_for_orphan_anchors(
     context_name: &str,
-    context_manager: &mut ContextManager,
     lines: &mut Vec<Line>,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<bool> {
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
     let anchor_index = AnchorIndex::new(lines);
 
@@ -237,17 +237,16 @@ fn check_for_orphan_anchors(
 
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
+        return Ok(true);
     }
-    Ok(())
+    Ok(false)
 }
 
 fn apply_inline(
     project: &Project,
     context_name: &str,
-    context_manager: &mut ContextManager,
     lines: &mut Vec<Line>,
-) -> anyhow::Result<Exe2Compitino> {
+) -> anyhow::Result<(Exe2Compitino, bool)> {
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
     let anchor_index = AnchorIndex::new(lines);
 
@@ -285,20 +284,18 @@ fn apply_inline(
     if !patches.is_empty() {
         // Some inline applied, let's run all of this again
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
-        return Ok(Exe2Compitino::Continue);
+        return Ok((Exe2Compitino::Continue, true));
     }
-    Ok(Exe2Compitino::None)
+    Ok((Exe2Compitino::None, false))
 }
 
 fn apply_answer_summary(
     project: &Project,
     context_name: &str,
     agent: &ShellAgentCall,
-    context_manager: &mut ContextManager,
     exe2: &mut Execute2Manager,
     lines: &mut Vec<Line>,
-) -> anyhow::Result<Exe2Compitino> {
+) -> anyhow::Result<(Exe2Compitino, bool)> {
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
     let anchor_index = AnchorIndex::new(lines);
 
@@ -310,17 +307,17 @@ fn apply_answer_summary(
                         TagKind::Summary => {
                             let mut exe2_sub_manager = Execute2Manager::new();
                             // Execute content to summarize, can only summarize content that is completely executed
-                            match _execute(project, arguments.first().unwrap().as_str(), agent, context_manager, &mut exe2_sub_manager) {
-                                Ok(Exe2Compitino::None) => {
+                            match _execute(project, arguments.first().unwrap().as_str(), agent, &mut lines, &mut exe2_sub_manager) {
+                                Ok(compitino) => {
                                     // The tag line has been replaced by the anchor
                                     if let Line::Anchor(begin_anchor) = &lines[i] {
                                         if begin_anchor.tag == AnchorTag::Begin && begin_anchor.kind == AnchorKind::Summary {
-                                            return Ok(Exe2Compitino::Summarize { uid: begin_anchor.uid, content: exe2_sub_manager.collect_content });
+                                            return Ok((Exe2Compitino::Summarize { uid: begin_anchor.uid, content: exe2_sub_manager.collect_content }, true));
                                         }
                                     }
-                                    return Ok(Exe2Compitino::None); // Should not happen if decorate_with_new_anchors works
+                                    return Ok((Exe2Compitino::None, false)); // Should not happen if decorate_with_new_anchors works
                                 }
-                                x => { return x; }
+                                Err(e) => { return Err(e); }
                             }
                         }
                         TagKind::Answer => {
@@ -331,7 +328,7 @@ fn apply_answer_summary(
                                     let answer_state = AnswerState2::default(); // TODO carica da metadata
                                     if answer_state.content_hash.is_empty() {
                                         // Mai risposta la domanda, lancia compitino
-                                        return Ok(Exe2Compitino::AnswerQuestion { uid: uid, content: exe2.collect_content.clone() });
+                                        return Ok((Exe2Compitino::AnswerQuestion { uid: uid, content: exe2.collect_content.clone() }, true));
                                     } else if answer_state.reply_hash.is_empty() {
                                         // Nessuna rispota ancora
                                     } else if answer_state.reply_hash != answer_state.injected_hash {
@@ -352,9 +349,8 @@ fn apply_answer_summary(
         }
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
-        context_manager.mark_as_modified(context_name);
     }
-    Ok(Exe2Compitino::None)
+    Ok((Exe2Compitino::None, false))
 }
 
 
@@ -362,25 +358,33 @@ fn _execute(
     project: &Project,
     context_name: &str,
     _agent: &ShellAgentCall,
-    context_manager: &mut ContextManager,
+    lines: &mut Vec<Line>,
     _exe2: &mut Execute2Manager,
-) -> anyhow::Result<Exe2Compitino> {
-    let mut lines = context_manager.load_context(project, context_name)?.clone();
+) -> anyhow::Result<(Exe2Compitino, bool)> {
+    let mut modified_in_this_iteration = false;
 
-    decorate_with_new_anchors(project, context_name, context_manager, &mut lines)?;
-    check_for_orphan_anchors(context_name, context_manager, &mut lines)?;
+    let decorated = decorate_with_new_anchors(project, context_name, &mut lines)?;
+    modified_in_this_iteration |= decorated;
+    let orphans_checked = check_for_orphan_anchors(context_name, &mut lines)?;
+    modified_in_this_iteration |= orphans_checked;
 
-    let inline_result = apply_inline(project, context_name, context_manager, &mut lines)?;
-    if let Exe2Compitino::Continue = inline_result {
+        let (inline_compitino, inline_modified) = apply_inline(project, context_name, &mut lines)?;
+        modified_in_this_iteration |= inline_modified;
+    if let Exe2Compitino::Continue = inline_compitino {
         return Ok(Exe2Compitino::Continue);
     }
 
-    let answer_summary_result = apply_answer_summary(project, context_name, _agent, context_manager, _exe2, &mut lines)?;
-    if let Exe2Compitino::Summarize { uid, content } = answer_summary_result {
+        let (answer_summary_compitino, answer_summary_modified) = apply_answer_summary(project, context_name, _agent, context_manager, _exe2, &mut lines)?;
+        modified_in_this_iteration |= answer_summary_modified;
+    if let Exe2Compitino::Summarize { uid, content } = answer_summary_compitino {
         return Ok(Exe2Compitino::Summarize { uid, content });
     }
-    if let Exe2Compitino::AnswerQuestion { uid, content } = answer_summary_result {
+    if let Exe2Compitino::AnswerQuestion { uid, content } = answer_summary_compitino {
         return Ok(Exe2Compitino::AnswerQuestion { uid, content });
+    }
+
+    if modified_in_this_iteration {
+        context_manager.mark_as_modified(context_name);
     }
 
     Ok(Exe2Compitino::None)

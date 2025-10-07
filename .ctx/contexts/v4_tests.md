@@ -3,17 +3,16 @@
 
 Ciao! Salutami!
 
-@inline sni1 
+@inline sni1
 
  E se sono un gatto invece?
 
-@answer 
+@answer
 
  E se sono un porxeo?
 
-@answer 
+@answer
 
  E se sono un cavallo?
 
-@answer 
-
+@answer

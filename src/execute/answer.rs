@@ -14,12 +14,20 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
-    pub answered: bool,
+    pub content_hash: String,
+    pub reply_hash: String,
+    pub reply: String,
+    pub injected_hash: String,
 }
 
 impl Default for AnswerState {
     fn default() -> Self {
-        Self { answered: false }
+        AnswerState {
+            content_hash: String::new(),
+            reply_hash: String::new(),
+            reply: String::new(),
+            injected_hash: String::new(),
+        }
     }
 }
 
@@ -56,9 +64,9 @@ pub fn answer_first_question(
 
     _answer_first_question_recursive(
         project,
-        context_manager,
         context_name,
         agent,
+        context_manager,
         &mut answered_set,
     )
 }
@@ -88,7 +96,7 @@ fn _answer_first_question_recursive(
             Line::Tagged {
                 tag: TagKind::Include,
                 arguments,
-                ..
+                .. 
             } => {
                 let included_context_name = arguments.first().unwrap().as_str();
                 // Decorate the included lines
@@ -121,7 +129,7 @@ fn _answer_first_question_recursive(
             Line::Tagged {
                 tag: TagKind::Summary,
                 arguments,
-                ..
+                .. 
             } => {
                 let summary_target_name = arguments.first().unwrap().as_str();
                 let summary_uid_str = if let Some(Line::Anchor(anchor)) = lines_to_process.get(i + 1) {
@@ -131,7 +139,7 @@ fn _answer_first_question_recursive(
                 };
                 let summary_anchor_kind = AnchorKind::Summary;
                 let summary_metadata_dir =
-                    project.resolve_metadata(&summary_anchor_kind.to_string(), &summary_uid_str)?;
+                    project.resolve_metadata(&summary_anchor_kind.to_string(), &Uuid::parse_str(&summary_uid_str)?)?;
                 let state_file_path = summary_metadata_dir.join("state.json");
 
                 let mut summary_state = SummaryState::default();
@@ -158,7 +166,7 @@ fn _answer_first_question_recursive(
 
                 let current_hash = hash_lines(&summary_block_lines);
 
-                if summary_state.content_hash != current_hash || summary_state.summary.is_empty() {
+                if summary_state.content_hash != current_hash || summary_state.summary_text.is_empty() {
                     // Create a temporary context for summarization
                     let temp_context_name = format!("_summary_{}", summary_uid_str);
                     context_manager.insert_context(temp_context_name.clone(), summary_block_lines.clone());
@@ -195,17 +203,17 @@ fn _answer_first_question_recursive(
                         .collect();
                     let query = query_lines.join("\n");
 
-                    let summary_text = agent.call(query);
+                    let summary_text = agent.call(&query)?;
 
                     summary_state.content_hash = current_hash;
-                    summary_state.summary = summary_text;
+                    summary_state.summary_text = summary_text;
                     let updated_state_content = serde_json::to_string_pretty(&summary_state)?;
                     std::fs::write(&state_file_path, updated_state_content)?;
                     modified_current_context = true;
                 }
 
                 let new_content_lines: Vec<Line> = summary_state
-                    .summary
+                    .summary_text
                     .lines()
                     .map(|s| Line::Text(s.to_string()))
                     .collect();
@@ -217,7 +225,7 @@ fn _answer_first_question_recursive(
             Line::Tagged {
                 tag: TagKind::Answer,
                 arguments,
-                ..
+                .. 
             } => {
                 let q_uid = if let Some(Line::Anchor(anchor)) = lines_to_process.get(i + 1) {
                     anchor.uid.to_string()
@@ -228,7 +236,7 @@ fn _answer_first_question_recursive(
 
                 let answer_anchor_kind = AnchorKind::Answer;
                 let answer_metadata_dir =
-                    project.resolve_metadata(&answer_anchor_kind.to_string(), &q_uid_uuid.to_string())?;
+                    project.resolve_metadata(&answer_anchor_kind.to_string(), &q_uid_uuid)?;
                 let state_file_path = answer_metadata_dir.join("state.json");
 
                 let mut answer_state = AnswerState::default();
@@ -238,7 +246,7 @@ fn _answer_first_question_recursive(
                 }
 
                 if answer_state.content_hash != hash_lines(&current_context_for_agent)
-                    || answer_state.answer.is_empty()
+                    || answer_state.reply.is_empty()
                 {
                     let query_lines: Vec<String> = current_context_for_agent
                         .iter()
@@ -253,22 +261,19 @@ fn _answer_first_question_recursive(
                         .collect();
                     let query = query_lines.join("\n");
 
-                    let answer_text = agent.call(query);
+                    let answer_text = agent.call(&query)?;
 
                     answer_state.content_hash = hash_lines(&current_context_for_agent);
-                    answer_state.answer = answer_text;
+                    answer_state.reply = answer_text;
                     let updated_state_content = serde_json::to_string_pretty(&answer_state)?;
-                    std::fs::write(&state_file_path, updated_state_content)?;;
+                    std::fs::write(&state_file_path, updated_state_content)?;
                     modified_current_context = true;
                 }
 
                 let new_content_lines: Vec<Line> = answer_state
-                    .answer
+                    .reply
                     .lines()
-                    .map(|s| Line {
-                        kind: LineKind::Text(s.to_string()),
-                        anchor: None,
-                    })
+                    .map(|s| Line::Text(s.to_string()))
                     .collect();
 
                 // Replace the answer tag with the generated answer
@@ -295,6 +300,8 @@ fn _answer_first_question_recursive(
     Ok(modified_current_context)
 }
 
+/*
+// Commented out _answer_and_mark_context for now as it's not called and causes errors.
 fn _answer_and_mark_context(
     project: &Project,
     context_manager: &mut ContextManager,
@@ -304,16 +311,16 @@ fn _answer_and_mark_context(
     current_context_for_agent: &Vec<Line>,
     lines_to_process: &mut Vec<Line>,
 ) -> anyhow::Result<bool> {
-    let (tag_kind, arguments) = match &line.kind {
-        LineKind::Tagged { tag, arguments, .. } => (tag, arguments),
+    let (tag_kind, arguments) = match line {
+        Line::Tagged { tag, arguments, .. } => (tag, arguments),
         _ => unreachable!(), // Should not happen as we are in a TagKind::Answer block
     };
 
-    let uid_str = line
-        .anchor
-        .as_ref()
-        .map(|a| a.uid.to_string())
-        .unwrap_or_else(|| arguments.first().map(|s| s.to_string()).unwrap_or_default());
+    let uid_str = if let Line::Anchor(anchor) = line {
+        anchor.uid.to_string()
+    } else {
+        arguments.first().map(|s| s.to_string()).unwrap_or_default()
+    };
     let uid_uuid = Uuid::parse_str(&uid_str)
         .map_err(|e| anyhow::anyhow!("Invalid UID for answer tag: {}", e))?;
 
@@ -344,10 +351,7 @@ fn _answer_and_mark_context(
         // Inject the agent's response
         let new_content_lines: Vec<Line> = agent_response
             .lines()
-            .map(|s| Line {
-                kind: LineKind::Text(s.to_string()),
-                anchor: None,
-            })
+            .map(|s| Line::Text(s.to_string()))
             .collect();
 
         let injected_modified = injector::inject_content_in_memory(
@@ -367,3 +371,4 @@ fn _answer_and_mark_context(
     }
     Ok(false)
 }
+*/

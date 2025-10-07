@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::collections::HashSet;
 
-use crate::ast::types::{LineKind, TagKind};
+use crate::ast::types::{Line, TagKind};
 use crate::decorator;
 use crate::project::{ContextManager, Project};
 
@@ -30,11 +30,11 @@ fn _decorate_recursive_file(
         let context_lines = context_manager.load_context(project, context_name)?;
         let mut includes_to_decorate = Vec::new();
         for line in context_lines.iter() {
-            if let LineKind::Tagged {
+            if let Line::Tagged {
                 tag: TagKind::Include,
                 arguments,
                 ..
-            } = &line.kind
+            } = line
             {
                 let include_path_str = arguments.first().map(|s| s.as_str()).unwrap_or("");
                 if !decorated_set.contains(include_path_str) {

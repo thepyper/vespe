@@ -280,6 +280,13 @@ fn _answer_first_question_recursive(
                 lines_to_process.splice(i..i + 1, new_content_lines);
                 i += new_content_lines.len(); // Adjust index for inserted lines
             }
+            Line::Tagged {
+                tag: TagKind::Inline,
+                .. 
+            } => {
+                // Inline tags are handled by inject::inject_recursive_inline, so we just skip them here.
+                i += 1;
+            }
             Line::Text(_) => {
                 // Append text lines to current_context_for_agent
                 current_context_for_agent.push(line.clone());

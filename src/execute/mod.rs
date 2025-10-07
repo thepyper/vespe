@@ -9,36 +9,10 @@ use std::fs;
 use serde_json;
 use serde::{Deserialize, Serialize};
 
-pub mod answer;
-pub mod decorate;
+
 pub mod inject;
 
-pub fn execute(
-    project: &Project,
-    context_name: &str,
-    agent: &ShellAgentCall,
-) -> anyhow::Result<()> {
-    let mut context_manager = ContextManager::new();
 
-    // Load the initial context
-    context_manager.load_context(project, context_name)?;
-
-    decorate::decorate_recursive_file(project, &mut context_manager, context_name)?;
-    inject::inject_recursive_inline(project, &mut context_manager, context_name)?;
-    decorate::decorate_recursive_file(project, &mut context_manager, context_name)?;
-
-    loop {
-        let answered_a_question =
-            answer::answer_first_question(project, &mut context_manager, context_name, agent)?;
-        if !answered_a_question {
-            break;
-        }
-    }
-
-    context_manager.save_modified_contexts(project)?;
-
-    Ok(())
-}
 
 enum Exe2Compitino {
     None,
@@ -71,7 +45,7 @@ impl Default for AnswerState2 {
     }
 }
 
-pub fn execute2(
+pub fn execute(
     project: &Project,
     context_name: &str,
     agent: &ShellAgentCall,
@@ -80,7 +54,7 @@ pub fn execute2(
     let mut exe2_manager = Execute2Manager::new();
 
     loop {
-        let compitino = _execute2(
+        let compitino = _execute(
             project,
             context_name,
             agent,
@@ -338,7 +312,7 @@ fn apply_answer_summary(
                         TagKind::Summary => {
                             let mut exe2_sub_manager = Execute2Manager::new();
                             // Execute content to summarize, can only summarize content that is completely executed
-                            match _execute2(project, arguments.first().unwrap().as_str(), agent, context_manager, &mut exe2_sub_manager) {
+                            match _execute(project, arguments.first().unwrap().as_str(), agent, context_manager, &mut exe2_sub_manager) {
                                 Ok(Exe2Compitino::None) => {
                                     // Assuming the next line is the begin anchor
                                     if i + 1 < lines.len() {
@@ -390,7 +364,7 @@ fn apply_answer_summary(
 }
 
 
-fn _execute2(
+fn _execute(
     project: &Project,
     context_name: &str,
     _agent: &ShellAgentCall,

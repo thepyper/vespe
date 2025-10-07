@@ -98,8 +98,9 @@ pub fn execute2(
 				let mut answer_state = AnswerState2::default();
 				
 				answer_state.content_hash = hash_content(&content);
-				answer_state.reply        = reply.clone();
-				answer_state.reply_hash   = hash_content(&reply.lines().map(|s| Line::Text(s.to_string())).collect());
+				let actual_reply = reply?;
+				answer_state.reply        = actual_reply.clone();
+				answer_state.reply_hash   = hash_content(&actual_reply.lines().map(|s| Line::Text(s.to_string())).collect());
 				
 				// TODO save answer_state 
             }
@@ -119,8 +120,7 @@ fn format_document(lines: Vec<Line>) -> String {
     lines.into_iter().map(|line| {
         match line {
             Line::Text(s) => s,
-            Line::Tagged { tag, arguments, .. } => format!("{}
-", tag.to_string(), arguments.join(" ")),
+            Line::Tagged { tag, arguments, .. } => format!("{} {}", tag.to_string(), arguments.join(" ")),
             Line::Anchor(anchor) => format!("{}", anchor),
         }
     }).collect::<Vec<String>>().join("\n")
@@ -173,7 +173,7 @@ impl AnchorIndex {
     }
 }
 
-fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Vec<Line>>) -> Result<()> {
+pub fn apply_patches(lines: &mut Vec<Line>, patches: BTreeMap<(usize, usize), Vec<Line>>) -> Result<()> {
     for ((i, n), patch) in patches.iter().rev() {
         lines.splice(*i..*i+n, patch.iter().cloned());
     }

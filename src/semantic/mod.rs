@@ -89,29 +89,34 @@ impl Line {
 
 impl Line {
     pub fn new_inline_anchors(state: InlineState) -> Vec<Self> {
+        let uuid = Uuid::new_v4();
         vec![Line::InlineBeginAnchor {
-            uuid: Uuid::new_v4(),
+            uuid: uuid.clone(),
             state,
         },
         Line::InlineEndAnchor {
-            uuid: Uuid::new_v4(),
+            uuid
         }]
     }
     pub fn new_summary_anchors(state: SummaryState) ->  Vec<Self> {
+        let uuid = Uuid::new_v4();
         vec![Line::SummaryBeginAnchor {
-            uuid: Uuid::new_v4(),
+            uuid: uuid.clone(),
             state,
         },
         Line::SummaryEndAnchor {
-            uuid: Uuid::new_v4(),
+            uuid
         }]
     }
     pub fn new_answer_anchors(state: AnswerState) ->  Vec<Self> {
+        let uuid = Uuid::new_v4();
         vec![Line::AnswerBeginAnchor {
-            uuid: Uuid::new_v4(),
+            uuid: uuid.clone(),
             state,
         },
-        Line::AnswerEndAnchor { uuid: Uuid::new_v4() }]
+        Line::AnswerEndAnchor { 
+            uuid
+        }]
     }
     pub fn is_begin_anchor(&self) -> bool {
         matches!(

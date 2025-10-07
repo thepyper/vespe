@@ -152,6 +152,7 @@ fn decorate_with_new_anchors(
 
     if context.apply_patches(patches) {
         debug!("Patches applied in decorate_with_new_anchors.");
+        debug!("Modified context is now\n***\n{}\n***\n", semantic::format_document(&context.lines));
     } else {
         debug!("No patches applied in decorate_with_new_anchors.");
     }
@@ -238,6 +239,7 @@ fn apply_inline(
 
     if context.apply_patches(patches) {
         debug!("Patches applied in apply_inline. Continuing execution.");
+        debug!("Modified context is now\n***\n{}\n***\n", semantic::format_document(&context.lines));
         Ok(Exe2Compitino::Continue)
     } else {
         debug!("No patches applied in apply_inline. No more inlines to process.");
@@ -323,6 +325,10 @@ fn apply_answer_summary(
             }
     };
  
+    if context.apply_patches(patches) {
+        debug!("Patches applied in fn apply_answer_summary. Continuing execution.");
+        debug!("Modified context is now\n***\n{}\n***\n", semantic::format_document(&context.lines));
+    }
     Ok(compitino) 
 }
 

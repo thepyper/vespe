@@ -349,7 +349,7 @@ fn _execute(
         debug!("Calling decorate_with_new_anchors for context: {}", context_name);
         decorate_with_new_anchors(project, &mut context)?;
     }
-    
+
     // TODO let orphans_checked = check_for_orphan_anchors(context_name, context_manager)?;
 
     if let Exe2Compitino::None = compitino {
@@ -359,7 +359,7 @@ fn _execute(
 
     if let Exe2Compitino::None = compitino {
         debug!("Calling apply_answer_summary for context: {}", context_name);
-        compitino = match apply_answer_summary(project, &mut context, exe2)?;
+        compitino = apply_answer_summary(project, &mut context, exe2)?;
     }
 
     debug!("Saving context: {}", context_name);

@@ -371,3 +371,10 @@ Modifico `src/semantic/mod.rs`.Ho spostato `save_state_to_metadata` come funzion
 Modifico `src/semantic/mod.rs`.Ho applicato le ultime correzioni a `src/semantic/mod.rs`, inclusa la variante `AnyhowError` a `SemanticError` e la modifica delle chiamate `save_state`. Ora eseguo `cargo check` per assicurarmi che tutti gli errori di compilazione siano risolti.
                                                                                 <!-- answer-5f3b5ae5-8a30-4824-b86d-22f6f96820fc:end -->
 
+
+
+Sistema i seguenti problemi:
+1) Errori di compilazione
+2) in semantic::Line, le uuid devono essere di tipo Uuid, non stringa
+3) implementa le funzioni di formattazione (Display) per semantic::Line
+

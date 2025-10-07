@@ -9,5 +9,13 @@ Una funzione aggiuntiva che deve essere disponibile e' un flush_modified() che
 scriva su file tutti i context marcati come modificati e cancelli poi
 la memoria dei modificati.
 
-@answer
+!!! no se no diventa god object, non buono.
+
+
+
+! parsing aggiungere ai Tag Inline{ path }, finire parsing argomenti in parser!
+
+! parsing aggiungere State a ancore? gestire da la ?
+
+stratificazione del parser? arricchimento della struttura parsed?
 

@@ -88,6 +88,8 @@ pub fn execute(
                 debug!("AnswerQuestion processed for UID: {:?}", _uid);
             }
         }
+
+
     }
 	
     debug!("Context execution finished for: {}", context_name);
@@ -365,6 +367,7 @@ fn _execute(
 
     debug!("Saving context: {}", context_name);
     context.save()?;
+    
 
     debug!("_execute finished for context: {}", context_name);
     Ok(compitino)

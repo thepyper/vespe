@@ -1,5 +1,5 @@
 use crate::ast::parser::parse_document;
-use crate::ast::types::{Line, LineKind, TagKind};
+use crate::ast::types::{Line, TagKind};
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -308,9 +308,8 @@ impl Project {
         let mut summaries = BTreeMap::new();
         let mut answers = BTreeSet::new();
 
-        for (line_index, line) in lines.iter().enumerate() {
-            if let LineKind::Tagged { tag, arguments, .. } = &line.kind {
-                if let Some(arg_name) = arguments.first() {
+            for (line_index, line) in lines.iter().enumerate() {
+                if let Line::Tagged { tag, arguments, .. } = line {                if let Some(arg_name) = arguments.first() {
                     match tag {
                         TagKind::Include => {
                             let included_context = self.load_context(arg_name, loading_contexts)?;

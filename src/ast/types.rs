@@ -224,6 +224,14 @@ impl fmt::Display for Line {
 }
 
 impl Line {
+    pub fn get_text_content(&self) -> String {
+        match self {
+            Line::Text(s) => s.clone(),
+            Line::Tagged { .. } => self.to_string(),
+            Line::Anchor(anchor) => anchor.to_string(),
+        }
+    }
+
     pub fn get_anchor(&self) -> Option<&Anchor> {
         if let Line::Anchor(anchor) = self {
             Some(anchor)

@@ -1,4 +1,4 @@
-use crate::ast::types::AnchorKind;
+use crate::ast::types::{AnchorKind, Line, TagKind};
 use crate::injector;
 use crate::project::{ContextManager, Project};
 use anyhow::Context as AnyhowContext;
@@ -20,74 +20,6 @@ pub fn inject_recursive_inline(
     _inject_recursive_inline(project, context_manager, context_name, &mut inlined_set)
 }
 
-fn _inject_and_mark_context(
-    project: &Project,
-    context_manager: &mut ContextManager,
-    context_name: &str,
-) -> anyhow::Result<()> {
-    let context_lines = context_manager.load_context(project, context_name)?;
-    let mut modified_current_context = false;
-
-    let mut lines_to_process = Vec::new();
-    for (i, line) in context_lines.iter().enumerate() {
-        if let Some((anchor_kind, anchor_uid, snippet_name)) = line.get_inline_tag_info() {
-            lines_to_process.push((i, anchor_kind, anchor_uid, snippet_name));
-        }
-    }
-
-    // Process in reverse order to avoid issues with index changes
-    for (_i, anchor_kind, anchor_uid, snippet_name) in lines_to_process.into_iter().rev() {
-        let anchor_metadata_dir =
-            project.resolve_metadata(&anchor_kind.to_string(), &anchor_uid)?;
-        let state_file_path = anchor_metadata_dir.join("state.json");
-
-        let mut inline_state = InlineState::default();
-        if state_file_path.exists() {
-            let state_content = fs::read_to_string(&state_file_path).context(format!(
-                "Failed to read state file: {}",
-                state_file_path.display()
-            ))?;
-            inline_state = serde_json::from_str(&state_content).context(format!(
-                "Failed to parse state file: {}",
-                state_file_path.display()
-            ))?;
-        }
-
-        if inline_state.pasted {
-            // Skip injection if already pasted
-            continue;
-        }
-
-        if anchor_kind == AnchorKind::Inline {
-            let snippet_lines = project.load_snippet_lines(&snippet_name)?;
-
-            if injector::inject_content_in_memory(
-                context_lines,
-                anchor_kind,
-                anchor_uid,
-                snippet_lines,
-            )? {
-                modified_current_context = true;
-            }
-
-            // Update state after successful injection
-            inline_state.pasted = true;
-            let updated_state_content = serde_json::to_string_pretty(&inline_state)
-                .context("Failed to serialize InlineState")?;
-            fs::write(&state_file_path, updated_state_content).context(format!(
-                "Failed to write state file: {}",
-                state_file_path.display()
-            ))?;
-        }
-    }
-
-    if modified_current_context {
-        context_manager.mark_as_modified(context_name);
-    }
-
-    Ok(())
-}
-
 fn _inject_recursive_inline(
     project: &Project,
     context_manager: &mut ContextManager,
@@ -99,24 +31,77 @@ fn _inject_recursive_inline(
     }
     inlined_set.insert(context_name.to_string());
 
-    _inject_and_mark_context(project, context_manager, context_name)?;
-
-    // Recursively inject for included contexts
     let context_lines = context_manager.load_context(project, context_name)?;
-    let mut includes_to_inject = Vec::new();
-    for line in context_lines.iter() {
-        if let Some(included_context_name) = line.get_include_path() {
-            includes_to_inject.push(included_context_name.to_string());
+    let mut lines_to_process = std::mem::take(context_lines); // Take ownership to modify and re-insert
+
+    let mut modified_current_context = false;
+    let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
+
+    // Collect inline tags and their positions
+    let mut inline_tags_info = Vec::new();
+    for i in 0..lines_to_process.len() {
+        if let Line::Tagged { tag: TagKind::Inline, arguments, .. } = &lines_to_process[i] {
+            // Assuming the next line is the begin anchor
+            if i + 1 < lines_to_process.len() {
+                if let Line::Anchor(begin_anchor) = &lines_to_process[i + 1] {
+                    if begin_anchor.tag == AnchorTag::Begin && begin_anchor.kind == AnchorKind::Inline {
+                        inline_tags_info.push((i, begin_anchor.kind.clone(), begin_anchor.uid, arguments.first().unwrap().to_string()));
+                    }
+                }
+            }
         }
     }
 
-    for included_context_name in includes_to_inject.into_iter() {
-        _inject_recursive_inline(
-            project,
-            context_manager,
-            &included_context_name,
-            inlined_set,
-        )?;
+    // Process inline tags in reverse order to avoid index invalidation
+    for (i, anchor_kind, anchor_uid, snippet_name) in inline_tags_info.into_iter().rev() {
+        let anchor_metadata_dir =
+            project.resolve_metadata(&anchor_kind.to_string(), &anchor_uid.to_string())?;
+        let state_file_path = anchor_metadata_dir.join("state.json");
+
+        let mut inline_state = InlineState::default();
+        if state_file_path.exists() {
+            let state_content = fs::read_to_string(&state_file_path)?;
+            inline_state = serde_json::from_str(&state_content).context(format!(
+                "Failed to deserialize InlineState from {}",
+                state_file_path.display()
+            ))?;
+        }
+
+        if inline_state.pasted {
+            continue;
+        }
+
+        let snippet_lines = project.load_snippet_lines(&snippet_name)?;
+        // Replace the inline tag and its begin anchor with the snippet content
+        patches.insert((i, 2), snippet_lines); // Replace the tagged line and its begin anchor
+        modified_current_context = true;
+
+        inline_state.pasted = true;
+        let updated_state_content = serde_json::to_string_pretty(&inline_state)
+            .context("Failed to serialize InlineState")?;
+        fs::write(&state_file_path, updated_state_content)?;
+    }
+
+    if !patches.is_empty() {
+        apply_patches(&mut lines_to_process, patches)?;
+    }
+
+    // Recursively process included contexts
+    for line in lines_to_process.iter() {
+        if let Line::Tagged { tag: TagKind::Include, arguments, .. } = line {
+            let included_context_name = arguments.first().unwrap().as_str();
+            _inject_recursive_inline(
+                project,
+                context_manager,
+                included_context_name,
+                inlined_set,
+            )?;
+        }
+    }
+
+    *context_manager.load_context(project, context_name)? = lines_to_process; // Put back the modified lines
+    if modified_current_context {
+        context_manager.mark_as_modified(context_name);
     }
 
     Ok(())

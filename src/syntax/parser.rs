@@ -27,7 +27,11 @@ pub fn parse_line(input: &str) -> Result<Line, String> {
     if content_str.trim_start().starts_with('@') {
         let tagged_line_kind = parse_tagged_line(&content_str)?;
         match tagged_line_kind {
-            LineKind::Tagged { tag, parameters, arguments } => {
+            LineKind::Tagged {
+                tag,
+                parameters,
+                arguments,
+            } => {
                 return Ok(Line::Tagged {
                     tag,
                     parameters,
@@ -77,7 +81,7 @@ fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
             let uid = Uuid::parse_str(uuid_str).map_err(|e| e.to_string())?;
 
             let content_before_anchor = input[..start_idx].trim_end().to_string();
-            return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })))
+            return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })));
         }
     }
     Ok((input.to_string(), None))
@@ -122,10 +126,11 @@ fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
     // Check for parameters
     // No whitespace allowed between @tag and [parameters]
     if remaining_after_tag.starts_with("[") {
-        let param_end = remaining_after_tag
-            .find("]")
-            .ok_or("Missing closing ']'
- for parameters".to_string())?;
+        let param_end = remaining_after_tag.find("]").ok_or(
+            "Missing closing ']'
+ for parameters"
+                .to_string(),
+        )?;
         let param_str = &remaining_after_tag[1..param_end];
         parameters = parse_parameters(param_str)?;
         current_pos = param_end + 1;

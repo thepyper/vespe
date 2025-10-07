@@ -1,15 +1,15 @@
+use crate::execute::states::{AnswerState, InlineState, SummaryState};
 use crate::semantic::parse_document;
 use crate::semantic::Line;
+use crate::semantic::SemanticError;
+use crate::syntax::types::AnchorKind;
+use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
-use anyhow::anyhow;
+use serde::{Deserialize, Serialize};
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
-use crate::execute::states::{AnswerState, InlineState, SummaryState};
-use crate::syntax::types::AnchorKind;
-use crate::semantic::SemanticError;
-use std::io::ErrorKind;
-use serde::{Deserialize, Serialize};
 
 /*
 #[derive(Debug)]
@@ -411,7 +411,9 @@ impl Project {
     where
         T: serde::Serialize,
     {
-        let metadata_dir = self.resolve_metadata(anchor_kind.to_string().as_str(), uuid).map_err(SemanticError::AnyhowError)?;
+        let metadata_dir = self
+            .resolve_metadata(anchor_kind.to_string().as_str(), uuid)
+            .map_err(SemanticError::AnyhowError)?;
         std::fs::create_dir_all(&metadata_dir)?;
         let state_path = metadata_dir.join("state.json");
         let serialized = serde_json::to_string_pretty(state)?;
@@ -427,13 +429,17 @@ impl Project {
     where
         T: for<'de> serde::Deserialize<'de>,
     {
-        let metadata_dir = self.resolve_metadata(anchor_kind.to_string().as_str(), uid)
+        let metadata_dir = self
+            .resolve_metadata(anchor_kind.to_string().as_str(), uid)
             .map_err(SemanticError::AnyhowError)?;
         let state_path = metadata_dir.join("state.json");
 
         match std::fs::read_to_string(&state_path) {
             Ok(content) => Ok(serde_json::from_str(&content)?),
-            Err(e) if e.kind() == ErrorKind::NotFound => Err(SemanticError::Generic(format!("State file not found for anchor {}-{}", anchor_kind, uid))),
+            Err(e) if e.kind() == ErrorKind::NotFound => Err(SemanticError::Generic(format!(
+                "State file not found for anchor {}-{}",
+                anchor_kind, uid
+            ))),
             Err(e) => Err(SemanticError::IoError(e)),
         }
     }
@@ -444,7 +450,7 @@ impl Project {
     }
 
     pub fn load_inline_state(&self, uid: &Uuid) -> Result<InlineState> {
-        self.load_state_from_metadata( &AnchorKind::Inline, uid)
+        self.load_state_from_metadata(&AnchorKind::Inline, uid)
             .map_err(|e| anyhow::Error::new(e))
     }
 

@@ -2,10 +2,10 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use vespe::execute;
-use vespe::project::{Project};
+use vespe::project::Project;
 mod watch;
-use vespe::agent::ShellAgentCall;
 use tracing::debug;
+use vespe::agent::ShellAgentCall;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -119,7 +119,7 @@ enum SnippetCommands {
             //Red.paint(format!("  @answer (line {})", line_index))
         );
     }
-    
+
 }*/
 
 fn main() -> Result<()> {

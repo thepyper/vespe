@@ -16,11 +16,11 @@ pub struct Context {
 pub type Patches = BTreeMap<(usize, usize), Vec<Line>>; // (start, end) -> replacement lines
 
 impl Context {
-     pub fn load(project: &Project, name: &str) -> Result<Self> {
+    pub fn load(project: &Project, name: &str) -> Result<Self> {
         let path = project.resolve_context(name);
         let content = std::fs::read_to_string(&path)?;
         let lines = crate::semantic::parse_document(project, &content)?;
-        Ok(Context{ 
+        Ok(Context {
             name: name.into(),
             path,
             lines,

@@ -1,14 +1,14 @@
 mod context;
 pub use context::*;
 
+use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState};
 use crate::project::Project;
 use crate::syntax::types::{self, Anchor, AnchorKind, AnchorTag, TagKind};
-use uuid::Uuid;
 use std::collections::HashMap;
 use std::io::ErrorKind;
 use thiserror::Error;
-use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState}; // New import
-//use crate::execute::inject::InlineState;
+use uuid::Uuid; // New import
+                //use crate::execute::inject::InlineState;
 
 // Error type for semantic processing
 #[derive(Error, Debug)]
@@ -33,13 +33,22 @@ pub enum SemanticError {
 
 impl Line {
     pub fn new_inline_anchors(uuid: Uuid) -> Vec<Self> {
-        vec![Line::InlineBeginAnchor { uuid: uuid.clone() }, Line::InlineEndAnchor { uuid }]
+        vec![
+            Line::InlineBeginAnchor { uuid: uuid.clone() },
+            Line::InlineEndAnchor { uuid },
+        ]
     }
     pub fn new_summary_anchors(uuid: Uuid) -> Vec<Self> {
-        vec![Line::SummaryBeginAnchor { uuid: uuid.clone() }, Line::SummaryEndAnchor { uuid }]
+        vec![
+            Line::SummaryBeginAnchor { uuid: uuid.clone() },
+            Line::SummaryEndAnchor { uuid },
+        ]
     }
     pub fn new_answer_anchors(uuid: Uuid) -> Vec<Self> {
-        vec![Line::AnswerBeginAnchor { uuid: uuid.clone() }, Line::AnswerEndAnchor { uuid }]
+        vec![
+            Line::AnswerBeginAnchor { uuid: uuid.clone() },
+            Line::AnswerEndAnchor { uuid },
+        ]
     }
     pub fn is_begin_anchor(&self) -> bool {
         matches!(
@@ -174,49 +183,91 @@ impl std::fmt::Display for Line {
     }
 }
 
-fn enrich_syntax_tagged_line(_project: &Project, tag: &TagKind, _parameters: &HashMap<String, String>, arguments: &Vec<String>) -> std::result::Result<Line, SemanticError> {
+fn enrich_syntax_tagged_line(
+    _project: &Project,
+    tag: &TagKind,
+    _parameters: &HashMap<String, String>,
+    arguments: &Vec<String>,
+) -> std::result::Result<Line, SemanticError> {
     match tag {
         TagKind::Include => {
-            let context_name = arguments.get(0).cloned().ok_or(SemanticError::MissingArgument("Context not specified in @include tag.".to_string()))?;
+            let context_name = arguments
+                .get(0)
+                .cloned()
+                .ok_or(SemanticError::MissingArgument(
+                    "Context not specified in @include tag.".to_string(),
+                ))?;
             Ok(Line::IncludeTag { context_name })
-        },
+        }
         TagKind::Inline => {
-            let snippet_name = arguments.get(0).cloned().ok_or(SemanticError::MissingArgument("Snippet not specified in @inline tag.".to_string()))?;
+            let snippet_name = arguments
+                .get(0)
+                .cloned()
+                .ok_or(SemanticError::MissingArgument(
+                    "Snippet not specified in @inline tag.".to_string(),
+                ))?;
             Ok(Line::InlineTag { snippet_name })
-        },
+        }
         TagKind::Answer => Ok(Line::AnswerTag),
         TagKind::Summary => {
-            let context_name = arguments.get(0).cloned().ok_or(SemanticError::MissingArgument("Context not specified in @summary tag.".to_string()))?;
+            let context_name = arguments
+                .get(0)
+                .cloned()
+                .ok_or(SemanticError::MissingArgument(
+                    "Context not specified in @summary tag.".to_string(),
+                ))?;
             Ok(Line::SummaryTag { context_name })
-        },
+        }
     }
 }
 
-fn enrich_syntax_anchor_line(project: &Project, anchor: &Anchor) -> std::result::Result<Line, SemanticError> {
+fn enrich_syntax_anchor_line(
+    project: &Project,
+    anchor: &Anchor,
+) -> std::result::Result<Line, SemanticError> {
     match (anchor.kind.clone(), anchor.tag.clone()) {
         (AnchorKind::Inline, AnchorTag::Begin) => Ok(Line::InlineBeginAnchor { uuid: anchor.uid }),
         (AnchorKind::Inline, AnchorTag::End) => Ok(Line::InlineEndAnchor { uuid: anchor.uid }),
-        (AnchorKind::Summary, AnchorTag::Begin) => Ok(Line::SummaryBeginAnchor { uuid: anchor.uid }),
+        (AnchorKind::Summary, AnchorTag::Begin) => {
+            Ok(Line::SummaryBeginAnchor { uuid: anchor.uid })
+        }
         (AnchorKind::Summary, AnchorTag::End) => Ok(Line::SummaryEndAnchor { uuid: anchor.uid }),
         (AnchorKind::Answer, AnchorTag::Begin) => Ok(Line::AnswerBeginAnchor { uuid: anchor.uid }),
         (AnchorKind::Answer, AnchorTag::End) => Ok(Line::AnswerEndAnchor { uuid: anchor.uid }),
         _ => Err(SemanticError::InvalidAnchorFormat(anchor.to_string())),
     }
 }
-pub fn enrich_syntax_line(project: &Project, line: &types::Line) -> std::result::Result<Line, SemanticError> {
+pub fn enrich_syntax_line(
+    project: &Project,
+    line: &types::Line,
+) -> std::result::Result<Line, SemanticError> {
     match line {
-       types::Line::Text(text) => Ok(Line::Text(text.clone())),
-       types::Line::Tagged{ tag, parameters, arguments } => enrich_syntax_tagged_line(project, tag, parameters, arguments),
-       types::Line::Anchor(anchor) => enrich_syntax_anchor_line(project, anchor),
+        types::Line::Text(text) => Ok(Line::Text(text.clone())),
+        types::Line::Tagged {
+            tag,
+            parameters,
+            arguments,
+        } => enrich_syntax_tagged_line(project, tag, parameters, arguments),
+        types::Line::Anchor(anchor) => enrich_syntax_anchor_line(project, anchor),
     }
 }
 
-pub fn enrich_syntax_document(project: &Project, lines: &Vec<types::Line>) -> std::result::Result<Vec<Line>, SemanticError> {
-    lines.iter().map(|line| enrich_syntax_line(project, line)).collect()
+pub fn enrich_syntax_document(
+    project: &Project,
+    lines: &Vec<types::Line>,
+) -> std::result::Result<Vec<Line>, SemanticError> {
+    lines
+        .iter()
+        .map(|line| enrich_syntax_line(project, line))
+        .collect()
 }
 
-pub fn parse_document(project: &Project, content: &str) -> std::result::Result<Vec<Line>, SemanticError> {
-    let syntax_lines = crate::syntax::parser::parse_document(content).map_err(|e| SemanticError::Generic(e.to_string()))?;
+pub fn parse_document(
+    project: &Project,
+    content: &str,
+) -> std::result::Result<Vec<Line>, SemanticError> {
+    let syntax_lines = crate::syntax::parser::parse_document(content)
+        .map_err(|e| SemanticError::Generic(e.to_string()))?;
     enrich_syntax_document(project, &syntax_lines)
 }
 

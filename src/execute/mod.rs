@@ -99,7 +99,7 @@ pub fn execute2(
 				
 				answer_state.content_hash = hash_content(&content);
 				answer_state.reply        = reply.clone();
-				answer_state.reply_hash   = hash_content(&reply.lines().map(|s| Line { kind: LineKind::Text(s.to_string()), anchor: None }).collect());
+				answer_state.reply_hash   = hash_content(&reply.lines().map(|s| Line::Text(s.to_string())).collect());
 				
 				// TODO save answer_state 
             }
@@ -117,11 +117,11 @@ pub fn execute2(
 
 fn format_document(lines: Vec<Line>) -> String {
     lines.into_iter().map(|line| {
-        match line.kind {
-            LineKind::Text(s) => s,
-            LineKind::Tagged { tag, arguments, .. } => format!("{}
+        match line {
+            Line::Text(s) => s,
+            Line::Tagged { tag, arguments, .. } => format!("{}
 ", tag.to_string(), arguments.join(" ")),
-            LineKind::Blank => String::new(),
+            Line::Anchor(anchor) => format!("{}", anchor),
         }
     }).collect::<Vec<String>>().join("\n")
 }
@@ -149,7 +149,7 @@ impl AnchorIndex {
         let mut a1 = HashMap::<Uuid, usize>::new();
         let mut a2 = HashMap::<Uuid, usize>::new();
         for (i, line) in lines.iter().enumerate() {
-            if let Some(anchor) = line.get_anchor() {
+            if let Line::Anchor(anchor) = line {
                 match anchor.tag {
                     AnchorTag::Begin => {
                         a1.insert(anchor.uid, i);
@@ -190,8 +190,8 @@ fn decorate_with_new_anchors(
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
 
     // Check for missing tag anchors
-    for (i, line) in lines.iter().enumerate() {
-        if let LineKind::Tagged { tag, .. } = &line.kind {
+    for i in 0..lines.len() {
+        if let Line::Tagged { tag, .. } = &lines[i] {
             let expected_begin_anchor_kind = match tag {
                 TagKind::Inline => Some(AnchorKind::Inline),
                 TagKind::Answer => Some(AnchorKind::Answer),
@@ -199,31 +199,23 @@ fn decorate_with_new_anchors(
                 _ => None,
             };
             if let Some(expected_begin_anchor_kind) = expected_begin_anchor_kind {
-                let is_anchor_ok = match &line.anchor {
-                    None => false,
-                    Some(anchor) => {
-                        if anchor.kind != expected_begin_anchor_kind {
-                            false
-                        } else {
-                            if let AnchorTag::Begin = anchor.tag {
-                                true
-                            } else {
-                                false
-                            }
+                let mut is_anchor_ok = false;
+                if i + 1 < lines.len() {
+                    if let Line::Anchor(anchor) = &lines[i + 1] {
+                        if anchor.kind == expected_begin_anchor_kind && anchor.tag == AnchorTag::Begin {
+                            is_anchor_ok = true;
                         }
                     }
-                };
+                }
+
                 if !is_anchor_ok {
                     patches.insert(
-                        (i, 0),
-                        vec![Line {
-                            kind: line.kind.clone(),
-                            anchor: Some(Anchor {
-                                kind: expected_begin_anchor_kind,
-                                uid: Uuid::new_v4(),
-                                tag: AnchorTag::Begin,
-                            }),
-                        }],
+                        (i + 1, 0), // Insert after the current line
+                        vec![Line::Anchor(Anchor {
+                            kind: expected_begin_anchor_kind,
+                            uid: Uuid::new_v4(),
+                            tag: AnchorTag::Begin,
+                        })],
                     );
                 }
             }
@@ -247,10 +239,8 @@ fn check_for_orphan_anchors(
     // Check for orphan end anchors
     for (anchor_end_uuid, i) in &anchor_index.end {
         if !anchor_index.begin.contains_key(anchor_end_uuid) {
-            let mut end_anchor_line = lines.get(*i).unwrap().clone();
-            end_anchor_line.anchor = None;
-            // Orphan end anchor, remove it
-            patches.insert((*i, 1), vec![end_anchor_line]);
+            // Orphan end anchor, remove it (or replace with a blank line if needed)
+            patches.insert((*i, 1), vec![Line::Text("".to_string())]); // Replace with a blank text line
         }
     }
 
@@ -258,20 +248,16 @@ fn check_for_orphan_anchors(
     for (anchor_begin_uuid, i) in &anchor_index.begin {
         if !anchor_index.end.contains_key(anchor_begin_uuid) {
             // Orphan begin anchor, add end anchor just after it
-            let begin_anchor_line = lines.get(*i).unwrap();
-            patches.insert(
-                (*i + 1, 0),
-                vec![
-                    Line {
-                        kind: LineKind::Text("".to_string()),
-                        anchor: Some(Anchor {
-                            kind: begin_anchor_line.anchor.as_ref().unwrap().kind.clone(),
-                            uid: *anchor_begin_uuid,
-                            tag: AnchorTag::End,
-                        }),
-                    },
-                ],
-            );
+            if let Line::Anchor(begin_anchor) = &lines[*i] {
+                patches.insert(
+                    (*i + 1, 0),
+                    vec![Line::Anchor(Anchor {
+                        kind: begin_anchor.kind.clone(),
+                        uid: *anchor_begin_uuid,
+                        tag: AnchorTag::End,
+                    })],
+                );
+            }
         }
     }
 
@@ -292,12 +278,13 @@ fn apply_inline(
     let anchor_index = AnchorIndex::new(lines);
 
     // Apply inline tags if not done
-    for (_i, line) in lines.iter().enumerate() {
-        match &line.kind {
-            LineKind::Tagged { tag, arguments, .. } => {
-                match tag {
-                    TagKind::Inline => {
-                        let uid = line.anchor.as_ref().unwrap().uid;
+    for i in 0..lines.len() {
+        if let Line::Tagged { tag: TagKind::Inline, arguments, .. } = &lines[i] {
+            // Assuming the next line is the begin anchor
+            if i + 1 < lines.len() {
+                if let Line::Anchor(begin_anchor) = &lines[i + 1] {
+                    if begin_anchor.tag == AnchorTag::Begin && begin_anchor.kind == AnchorKind::Inline {
+                        let uid = begin_anchor.uid;
                         let anchor_metadata_dir = project.resolve_metadata(&AnchorKind::Inline.to_string(), &uid)?;
                         let state_file_path = anchor_metadata_dir.join("state.json");
 
@@ -318,10 +305,8 @@ fn apply_inline(
                             fs::write(&state_file_path, updated_state_content)?;
                         }
                     }
-                    _ => {},
                 }
             }
-            _ => {}
         }
     }
 
@@ -345,48 +330,58 @@ fn apply_answer_summary(
     let mut patches = BTreeMap::<(usize, usize), Vec<Line>>::new();
     let anchor_index = AnchorIndex::new(lines);
 
-    for line in lines.iter() {
-        match &line.kind {
-            LineKind::Text(_) => exe2.collect_content.push(line.clone()),
-            LineKind::Tagged { tag, arguments, .. } => {
-                match tag {
-                    TagKind::Summary => {
-                        let mut exe2_sub_manager = Execute2Manager::new();
-                        // Execute content to summarize, can only summarize content that is completely executed 
-                        match _execute2(project, arguments.first().unwrap().as_str(), agent, context_manager, &mut exe2_sub_manager) {
-                            Ok(Exe2Compitino::None) => {
-                                // TODO content must be hashed, and hash must be compared to that saved into summary meta data;
-                                // if hash match, do not summarize again, just insert with a patch the data from summary meta data into this context 
-                                return Ok(Exe2Compitino::Summarize { uid: line.anchor.as_ref().unwrap().uid, content: exe2_sub_manager.collect_content });
+        for i in 0..lines.len() {
+            match &lines[i] {
+                Line::Text(_) => exe2.collect_content.push(lines[i].clone()),
+                Line::Tagged { tag, arguments, .. } => {
+                    match tag {
+                        TagKind::Summary => {
+                            let mut exe2_sub_manager = Execute2Manager::new();
+                            // Execute content to summarize, can only summarize content that is completely executed
+                            match _execute2(project, arguments.first().unwrap().as_str(), agent, context_manager, &mut exe2_sub_manager) {
+                                Ok(Exe2Compitino::None) => {
+                                    // Assuming the next line is the begin anchor
+                                    if i + 1 < lines.len() {
+                                        if let Line::Anchor(begin_anchor) = &lines[i + 1] {
+                                            if begin_anchor.tag == AnchorTag::Begin && begin_anchor.kind == AnchorKind::Summary {
+                                                return Ok(Exe2Compitino::Summarize { uid: begin_anchor.uid, content: exe2_sub_manager.collect_content });
+                                            }
+                                        }
+                                    }
+                                    return Ok(Exe2Compitino::None); // Should not happen if decorate_with_new_anchors works
+                                }
+                                x => { return x; }
                             }
-                            x => { return x; }
                         }
-                    }
-                    TagKind::Answer => {
-                        let uid = line.anchor.as_ref().unwrap().uid;
-                        let answer_state = AnswerState2::default(); // TODO carica da metadata
-                        if answer_state.content_hash.is_empty() {
-                            // Mai risposta la domanda, lancia compitino 
-                            return Ok(Exe2Compitino::AnswerQuestion { uid: line.anchor.as_ref().unwrap().uid, content: exe2.collect_content.clone() });
-                        } else if answer_state.reply_hash.is_empty() {
-                            // Nessuna rispota ancora 
-                        } else if answer_state.reply_hash != answer_state.injected_hash {
-                            // Disponibile una nuova risposta, iniettala
-                            let j = anchor_index.get_begin_value(uid);
-                            let k = anchor_index.get_end_value(uid);
-                            let reply_lines: Vec<Line> = answer_state.reply.lines().map(|s| Line {
-                                kind: LineKind::Text(s.to_string()),
-                                anchor: None,
-                            }).collect();
-                            patches.insert((j, k - j), reply_lines);
+                        TagKind::Answer => {
+                            // Assuming the next line is the begin anchor
+                            if i + 1 < lines.len() {
+                                if let Line::Anchor(begin_anchor) = &lines[i + 1] {
+                                    if begin_anchor.tag == AnchorTag::Begin && begin_anchor.kind == AnchorKind::Answer {
+                                        let uid = begin_anchor.uid;
+                                        let answer_state = AnswerState2::default(); // TODO carica da metadata
+                                        if answer_state.content_hash.is_empty() {
+                                            // Mai risposta la domanda, lancia compitino
+                                            return Ok(Exe2Compitino::AnswerQuestion { uid: uid, content: exe2.collect_content.clone() });
+                                        } else if answer_state.reply_hash.is_empty() {
+                                            // Nessuna rispota ancora
+                                        } else if answer_state.reply_hash != answer_state.injected_hash {
+                                            // Disponibile una nuova risposta, iniettala
+                                            let j = anchor_index.get_begin_value(uid);
+                                            let k = anchor_index.get_end_value(uid);
+                                            let reply_lines: Vec<Line> = answer_state.reply.lines().map(|s| Line::Text(s.to_string())).collect();
+                                            patches.insert((j, k - j), reply_lines);
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        _ => {},
                     }
-                    _ => {},
                 }
+                Line::Anchor(_) => { /* Do nothing, anchors are handled by other logic */ }
             }
         }
-    }
-
     if !patches.is_empty() {
         apply_patches(lines, patches)?;
         context_manager.mark_as_modified(context_name);

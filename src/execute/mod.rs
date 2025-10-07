@@ -1,4 +1,5 @@
 
+use crate::agent::ShellAgentCall;
 //use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::Project;
 use crate::semantic::{self, AnswerStatus, AnswerState, InlineState, Line, SummaryState};
@@ -45,6 +46,7 @@ impl Default for AnswerState2 {
 pub fn execute(
     project: &Project,
     context_name: &str,
+    agent: &ShellAgentCall,
 ) -> anyhow::Result<()> {
     //let mut context_manager = ContextManager::new();
     
@@ -316,6 +318,6 @@ fn _execute(
     }
     
     context.save()?;
-    
+
     Ok(Exe2Compitino::None)
 }

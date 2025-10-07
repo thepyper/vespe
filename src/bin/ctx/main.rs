@@ -3,7 +3,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use vespe::execute;
-use vespe::project::{Context, Project};
+use vespe::project::{Project};
 mod watch;
 use vespe::agent::ShellAgentCall;
 
@@ -68,8 +68,8 @@ enum SnippetCommands {
     List {},
 }
 
-fn print_context_tree(context: &Context, indent: usize) {
-    /* TODO redo
+/*fn print_context_tree(context: &Context, indent: usize) {
+     TODO redo
     let indent_str = "  ".repeat(indent);
     println!(
         "{}{}",
@@ -119,8 +119,8 @@ fn print_context_tree(context: &Context, indent: usize) {
             Red.paint(format!("  @answer (line {})", line_index))
         );
     }
-    */
-}
+    
+}*/
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -161,8 +161,8 @@ fn main() -> Result<()> {
                     }
                 }
                 ContextCommands::Tree { name } => {
-                    let context_tree = project.get_context_tree(&name)?;
-                    print_context_tree(&context_tree, 0);
+                    // TODO redo let context_tree = project.get_context_tree(&name)?;
+                    //print_context_tree(&context_tree, 0);
                 }
             }
         }

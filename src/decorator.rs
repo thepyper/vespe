@@ -1,10 +1,13 @@
 use anyhow::Result;
 use std::fs;
 use uuid::Uuid;
+use std::collections::BTreeMap;
 
 use crate::ast::parser;
-use crate::ast::types::{AnchorKind, AnchorTag, Line, LineKind, TagKind};
+use crate::ast::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::Project;
+use crate::execute::apply_patches;
+
 pub fn decorate_context(project: &Project, context_name: &str) -> Result<()> {
     let context_path = project.resolve_context(context_name);
     let original_content = fs::read_to_string(&context_path)?;
@@ -58,7 +61,7 @@ pub fn decorate_context_in_memory(lines: &mut Vec<Line>) -> Result<bool> {
         }
     }
     if !patches.is_empty() {
-        apply_patches(lines, patches)?; // Assuming apply_patches is defined elsewhere
+        apply_patches(lines, patches)?;
         patches = BTreeMap::new(); // Clear patches for next stage
     }
 

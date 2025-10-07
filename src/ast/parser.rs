@@ -17,10 +17,7 @@ pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
         .enumerate()
         .map(|(line_num, line_str)| {
             if line_str.trim().is_empty() {
-                Ok(Line {
-                    kind: LineKind::Text(line_str.to_string()),
-                    anchor: None,
-                })
+                Ok(Line::Text(line_str.to_string()))
             } else {
                 parse_line(line_str).map_err(|e| format!("Error on line {}: {}", line_num + 1, e))
             }
@@ -28,20 +25,31 @@ pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
         .collect::<Result<Vec<Line>, String>>()
 }
 
-fn parse_line(input: &str) -> Result<Line, String> {
-    let trimmed_input = input.trim_end();
-    let (content_str, anchor) = parse_anchor(trimmed_input)?;
+pub fn parse_line(input: &str) -> Result<Line, String> {
+    let (content_str, anchor_opt) = parse_anchor(input)?;
 
-    let line_kind = if content_str.trim_start().starts_with('@') {
-        parse_tagged_line(&content_str)?
-    } else {
-        LineKind::Text(content_str.to_string())
-    };
+    if let Some(anchor) = anchor_opt {
+        return Ok(Line::Anchor(anchor));
+    }
 
-    Ok(Line {
-        kind: line_kind,
-        anchor,
-    })
+    if content_str.trim_start().starts_with('@') {
+        let tagged_line_kind = parse_tagged_line(&content_str)?;
+        match tagged_line_kind {
+            LineKind::Tagged { tag, parameters, arguments } => {
+                return Ok(Line::Tagged {
+                    tag,
+                    parameters,
+                    arguments,
+                });
+            }
+            LineKind::Text(s) => {
+                // If parse_tagged_line returned Text, it means it wasn't a valid tagged line
+                return Ok(Line::Text(s));
+            }
+        }
+    }
+
+    Ok(Line::Text(content_str.to_string()))
 }
 
 fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
@@ -77,7 +85,7 @@ fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
             let uid = Uuid::parse_str(uuid_str).map_err(|e| e.to_string())?;
 
             let content_before_anchor = input[..start_idx].trim_end().to_string();
-            return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })));
+            return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })))
         }
     }
     Ok((input.to_string(), None))
@@ -86,7 +94,7 @@ fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
 fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
     let trimmed_input = input.trim_start();
     if !trimmed_input.starts_with('@') {
-        return Err("Tagged line must start with '@'".to_string());
+        return Err("Tagged line must start with '@'\n".to_string());
     }
 
     let mut chars = trimmed_input.chars().skip(1).peekable();
@@ -124,7 +132,8 @@ fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
     if remaining_after_tag.starts_with("[") {
         let param_end = remaining_after_tag
             .find("]")
-            .ok_or("Missing closing ']' for parameters".to_string())?;
+            .ok_or("Missing closing ']'
+ for parameters".to_string())?;
         let param_str = &remaining_after_tag[1..param_end];
         parameters = parse_parameters(param_str)?;
         current_pos = param_end + 1;

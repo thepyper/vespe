@@ -14,7 +14,7 @@ use tracing::{debug};
 enum Exe2Compitino {
     None,
 	Continue,
-    AnswerQuestion{ uid: uuid::Uuid, content: Vec<Line> },
+    AnswerQuestion{ uid: uuid::Uuid },
     // Summarize{ uid: uuid::Uuid, content: Vec<Line> },
 }
 
@@ -67,7 +67,7 @@ pub fn execute(
 			Exe2Compitino::Continue => {
                 debug!("Exe2Compitino::Continue received, continuing loop.");
             },
-            Exe2Compitino::AnswerQuestion{ uid: _uid, content } => {
+            Exe2Compitino::AnswerQuestion{ uid: _uid } => {
                 debug!("Exe2Compitino::AnswerQuestion received for UID: {:?}", _uid);
 
                 let mut state = project.load_answer_state(&_uid)?;
@@ -279,8 +279,9 @@ fn apply_answer_summary(
                         let uid = uuid.clone();
                         let mut updated_state = state.clone();
                         updated_state.status = AnswerStatus::NeedAnswer;
+                        updated_state.query = semantic::format_document(&exe2.collect_content.clone());
                         project.save_answer_state(uuid, &updated_state)?;
-                        compitino = Exe2Compitino::AnswerQuestion { uid: uid, content: exe2.collect_content.clone() };
+                        compitino = Exe2Compitino::AnswerQuestion { uid: uid };
                         break;
                     },
                     AnswerStatus::NeedAnswer => {

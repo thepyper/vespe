@@ -1,7 +1,7 @@
 
 //use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::Project;
-use crate::semantic::{self, AnswerStatus, InlineState, Line, SummaryState};
+use crate::semantic::{self, AnswerStatus, AnswerState, InlineState, Line, SummaryState};
 use crate::syntax::parser::format_document;
 use crate::utils::{AnchorIndex, Context, ContextManager, Patches};
 use anyhow::Result;
@@ -289,7 +289,8 @@ fn apply_answer_summary(
                             break;
                         }
                  }
-             }
+             },
+             _ => { /* Do nothing */ },
             }
     };
  

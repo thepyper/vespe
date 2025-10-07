@@ -1,12 +1,10 @@
 //! This module defines the interface for communicating with a text editor extension.
 
 use std::path::Path;
-use async_trait::async_trait;
 use anyhow::Result;
 use uuid::Uuid;
 
 /// Trait for communicating with a text editor extension.
-#[async_trait]
 pub trait EditorCommunicator {
     /// Requests the editor to prepare a file for modification.
     /// If the file is open, the editor should save it and ideally lock it to prevent external changes.
@@ -16,7 +14,7 @@ pub trait EditorCommunicator {
     ///
     /// # Returns
     /// `Ok(Uuid)` with a request ID if the request was successful, `Err` otherwise.
-    async fn request_file_modification(&self, file_path: &Path) -> Result<Uuid>;
+    fn request_file_modification(&self, file_path: &Path) -> Result<Uuid>;
 
     /// Notifies the editor that a file has been modified by the program.
     /// If the file is open, the editor should reload it and unlock it.
@@ -27,8 +25,7 @@ pub trait EditorCommunicator {
     ///
     /// # Returns
     /// `Ok(())` if the notification was successful, `Err` otherwise.
-    async fn notify_file_modified(&self, file_path: &Path, request_id: Uuid) -> Result<()>;
+    fn notify_file_modified(&self, file_path: &Path, request_id: Uuid) -> Result<()>;
 }
 
 pub mod lockfile;
-

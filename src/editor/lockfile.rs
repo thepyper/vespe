@@ -2,11 +2,9 @@ use serde::{Serialize, Deserialize};
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::io;
-use tokio::time::{sleep, Duration};
-use async_trait::async_trait;
+use std::thread::sleep;
+use std::time::Duration;
 use uuid::Uuid;
-use notify::{RecommendedWatcher, Watcher, RecursiveMode, EventKind};
-use tokio::sync::mpsc;
 
 use super::EditorCommunicator;
 
@@ -50,15 +48,10 @@ pub enum ResponseState {
 pub struct FileBasedEditorCommunicator {
     request_file_path: PathBuf,
     response_file_path: PathBuf,
-    // Channel for receiving filesystem events
-    #[allow(dead_code)]
-    watcher_event_receiver: mpsc::Receiver<notify::Result<notify::Event>>,
-    #[allow(dead_code)]
-    watcher: RecommendedWatcher,
 }
 
 impl FileBasedEditorCommunicator {
-    pub async fn new(request_file: PathBuf, response_file: PathBuf) -> anyhow::Result<Self> {
+    pub fn new(request_file: PathBuf, response_file: PathBuf) -> anyhow::Result<Self> {
         // Ensure the parent directories exist
         if let Some(parent) = request_file.parent() {
             fs::create_dir_all(parent)?;
@@ -71,29 +64,19 @@ impl FileBasedEditorCommunicator {
         fs::write(&request_file, serde_json::to_string(&RequestState::None)?)?;
         fs::write(&response_file, serde_json::to_string(&ResponseState::None)?)?;
 
-        let (tx, rx) = mpsc::channel(10);
-
-        let watcher = RecommendedWatcher::new(move |res| {
-            futures::executor::block_on(async {
-                tx.send(res).await.expect("Failed to send watcher event");
-            })
-        }, notify::Config::default())?;
-
         Ok(Self {
             request_file_path: request_file,
             response_file_path: response_file,
-            watcher_event_receiver: rx,
-            watcher,
         })
     }
 
-    async fn _write_request(&self, state: RequestState) -> anyhow::Result<()> {
+    fn _write_request(&self, state: RequestState) -> anyhow::Result<()> {
         let json = serde_json::to_string_pretty(&state)?;
         fs::write(&self.request_file_path, json)?;
         Ok(())
     }
 
-    async fn _read_response(&self, expected_request_id: Uuid) -> anyhow::Result<ResponseState> {
+    fn _read_response(&self, expected_request_id: Uuid) -> anyhow::Result<ResponseState> {
         // TODO: Implement actual filesystem event watching and polling
         // For now, a simple polling mechanism
         let mut attempts = 0;
@@ -118,23 +101,22 @@ impl FileBasedEditorCommunicator {
             if attempts > 60 { // Timeout after 5 minutes (60 * 5 seconds)
                 return Err(anyhow::anyhow!("Timeout waiting for editor response"));
             }
-            sleep(Duration::from_secs(5)).await;
+            sleep(Duration::from_secs(5));
         }
     }
 }
 
-#[async_trait]
 impl EditorCommunicator for FileBasedEditorCommunicator {
-    async fn request_file_modification(&self, file_path: &Path) -> anyhow::Result<Uuid> {
+    fn request_file_modification(&self, file_path: &Path) -> anyhow::Result<Uuid> {
         let request_id = Uuid::new_v4();
         let request = RequestState::RequestModification {
             file_path: file_path.to_path_buf(),
             request_id,
         };
-        self._write_request(request).await?;
+        self._write_request(request)?;
 
         // Wait for the editor's response
-        let response = self._read_response(request_id).await?;
+        let response = self._read_response(request_id)?;
         match response {
             ResponseState::FileLocked { .. } => Ok(request_id),
             ResponseState::Error { message, .. } => Err(anyhow::anyhow!("Editor error: {}", message)),
@@ -142,15 +124,15 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         }
     }
 
-    async fn notify_file_modified(&self, file_path: &Path, request_id: Uuid) -> anyhow::Result<()> {
+    fn notify_file_modified(&self, file_path: &Path, request_id: Uuid) -> anyhow::Result<()> {
         let request = RequestState::ModificationComplete {
             file_path: file_path.to_path_buf(),
             request_id,
         };
-        self._write_request(request).await?;
+        self._write_request(request)?;
 
         // Wait for the editor's response
-        let response = self._read_response(request_id).await?;
+        let response = self._read_response(request_id)?;
         match response {
             ResponseState::FileUnlocked { .. } => Ok(()),
             ResponseState::Error { message, .. } => Err(anyhow::anyhow!("Editor error: {}", message)),

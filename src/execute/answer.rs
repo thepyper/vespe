@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     agent::ShellAgentCall,
-    ast::types::{AnchorKind, AnchorTag, Line, LineKind, TagKind},
+    syntax::types::{AnchorKind, AnchorTag, Line, LineKind, TagKind},
     execute::{decorate, inject},
     injector,
     project::{ContextManager, Project},

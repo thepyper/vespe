@@ -3,8 +3,8 @@ use std::fs;
 use uuid::Uuid;
 use std::collections::BTreeMap;
 
-use crate::ast::parser;
-use crate::ast::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
+use crate::syntax::parser;
+use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::Project;
 use crate::execute::apply_patches;
 

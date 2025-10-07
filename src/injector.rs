@@ -3,8 +3,8 @@
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::ast::parser;
-use crate::ast::types::{AnchorKind, AnchorTag, Line};
+use crate::syntax::parser;
+use crate::syntax::types::{AnchorKind, AnchorTag, Line};
 use crate::project::Project;
 
 pub fn inject_content(

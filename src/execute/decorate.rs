@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::collections::HashSet;
 
-use crate::ast::types::{Line, TagKind};
+use crate::syntax::types::{Line, TagKind};
 use crate::decorator;
 use crate::project::{ContextManager, Project};
 

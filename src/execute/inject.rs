@@ -1,4 +1,4 @@
-use crate::ast::types::{AnchorKind, Line, TagKind, AnchorTag};
+use crate::syntax::types::{AnchorKind, Line, TagKind, AnchorTag};
 
 use crate::project::{ContextManager, Project};
 use anyhow::Context as AnyhowContext;

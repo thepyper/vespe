@@ -1,5 +1,5 @@
 use crate::agent::ShellAgentCall;
-use crate::ast::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
+use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line, TagKind};
 use crate::project::{ContextManager, Project};
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};

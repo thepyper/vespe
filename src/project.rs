@@ -1,5 +1,5 @@
-use crate::ast::parser::parse_document;
-use crate::ast::types::{Line, TagKind};
+use crate::syntax::parser::parse_document;
+use crate::syntax::types::{Line, TagKind};
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};

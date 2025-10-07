@@ -230,7 +230,6 @@ fn apply_inline(
 fn apply_answer_summary(
     project: &Project,
     context: &mut Context,
-    context_manager: &mut ContextManager,
     exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
 
@@ -304,7 +303,7 @@ fn _execute(
     exe2: &mut Execute2Manager,
 ) -> anyhow::Result<Exe2Compitino> {
 
-    let context = context_manager.load_context(project, context_name)?;
+    let context = Context::load(project, context_name)?;
 
     decorate_with_new_anchors(project, context)?;
 
@@ -315,7 +314,7 @@ fn _execute(
         compitino => return Ok(compitino),
     }
 
-    match apply_answer_summary(project, context, context_manager, exe2)? {
+    match apply_answer_summary(project, context, exe2)? {
         Exe2Compitino::None => {},
         compitino => return Ok(compitino),  
     }

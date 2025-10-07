@@ -52,33 +52,6 @@ impl Context {
     }
 }
 
-pub struct ContextManager {
-    contexts: HashMap<String, Context>,
-}
-
-impl ContextManager {
-    pub fn new() -> Self {
-        Self {
-            contexts: HashMap::new(),
-        }
-    }
-
-    pub fn load_context(&mut self, project: &Project, name: &str) -> Result<&mut Context> {
-        if !self.contexts.contains_key(name) {
-            let context = Context::load(project, name)?;
-            self.contexts.insert(name.to_string(), context);
-        }
-        Ok(self.contexts.get_mut(name).unwrap())
-    }
-
-    pub fn save_modified_contexts(&mut self) -> Result<()> {
-        for context in self.contexts.values_mut() {
-            context.save()?;
-        }
-        Ok(())
-    }
-}
-
 pub struct AnchorIndex {
     begin: HashMap<Uuid, usize>, // uid -> line index
     end: HashMap<Uuid, usize>,   // uid -> line index

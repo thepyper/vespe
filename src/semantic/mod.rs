@@ -111,6 +111,22 @@ impl Line {
         },
         Line::AnswerEndAnchor { uuid: Uuid::new_v4() }]
     }
+    pub fn is_begin_anchor(&self) -> bool {
+        matches!(
+            self,
+            Line::InlineBeginAnchor { .. }
+                | Line::SummaryBeginAnchor { .. }
+                | Line::AnswerBeginAnchor { .. }
+        )
+    }
+    pub fn is_end_anchor(&self) -> bool {
+        matches!(
+            self,
+            Line::InlineEndAnchor { .. }
+                | Line::SummaryEndAnchor { .. }
+                | Line::AnswerEndAnchor { .. }
+        )
+    }
 }
 
 impl InlineState {

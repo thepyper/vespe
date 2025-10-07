@@ -69,6 +69,7 @@ enum SnippetCommands {
 }
 
 fn print_context_tree(context: &Context, indent: usize) {
+    /* TODO redo
     let indent_str = "  ".repeat(indent);
     println!(
         "{}{}",
@@ -118,6 +119,7 @@ fn print_context_tree(context: &Context, indent: usize) {
             Red.paint(format!("  @answer (line {})", line_index))
         );
     }
+    */
 }
 
 fn main() -> Result<()> {

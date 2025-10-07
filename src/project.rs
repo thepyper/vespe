@@ -220,6 +220,7 @@ impl Project {
             return Ok(contexts); // Return empty if directory doesn't exist
         }
 
+        // TODO: Recursively list files in subdirectories as well!!!
         for entry in std::fs::read_dir(&contexts_root)? {
             let entry = entry?;
             let path = entry.path();
@@ -250,6 +251,7 @@ impl Project {
             return Ok(snippets); // Return empty if directory doesn\'t exist
         }
 
+        // TODO : Recursively list files in subdirectories as well!!!
         for entry in std::fs::read_dir(&snippets_root)? {
             let entry = entry?;
             let path = entry.path();
@@ -288,6 +290,7 @@ impl Project {
         })
     }
 
+    /*
     pub fn load_context(
         &self,
         name: &str,
@@ -392,8 +395,10 @@ impl Project {
         ))?;
         Ok(())
     }
+    */
 }
 
+/*
 fn format_lines_to_string(lines: &Vec<Line>) -> String {
     lines
         .iter()
@@ -401,3 +406,4 @@ fn format_lines_to_string(lines: &Vec<Line>) -> String {
         .collect::<Vec<String>>()
         .join("\n")
 }
+*/

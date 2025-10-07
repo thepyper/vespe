@@ -8,6 +8,7 @@ struct Context {
     path: PathBuf,
     lines: Vec<Line>,
     patches: BTreeMap<(usize, usize), Vec<Line>>, 
+    modified: bool,
 }
 
 impl Context {
@@ -21,20 +22,46 @@ impl Context {
             path,
             lines,
             patches: BTreeMap::new(),
+            modified: false,
         })
+    }
+
+    /// start = last line not to patch
+    /// end = first line not to patch
+    pub fn add_patch(&mut self, start: usize, end: usize, new_lines: Vec<Line>) {
+        self.patches.insert((start, end), new_lines);
+    }
+
+    pub fn apply_patches(&mut self) {
+        if self.patches.is_empty() {
+            return;
+        }
+
+        // TODO apply in reverse start order to avoid shifting indices
+
+        self.patches.clear();
+        self.modified = true;
+    }
+
+    pub fn save(&mut self) -> Result<()> {
+        self.apply_patches();
+        if (!self.modified) {
+            return Ok(());
+        }
+        let formatted = crate::semantic::format_document(&self.lines);
+        std::fs::write(&self.path, formatted)?;
+        Ok(())
     }
 }
 
 struct ContextManager {
     contexts: HashMap<String, Context>,
-    modified: HashSet<String>,
 }
 
 impl ContextManager {
     pub fn new() -> Self {
         Self {
             contexts: HashMap::new(),
-            modified: HashSet::new(),
         }
     }
 
@@ -44,6 +71,13 @@ impl ContextManager {
             return Err(format!("Failed to load context: {}", name).into());
         }
         entry.get()
+    }
+
+    pub fn save_all(&mut self) -> Result<()> {
+        for context in self.contexts.values_mut() {
+            context.save()?;
+        }
+        Ok(())
     }
 }
         

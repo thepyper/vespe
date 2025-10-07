@@ -383,3 +383,15 @@ Il commit è riuscito. Ho risolto gli errori di compilazione, modificato i tipi 
 
 Il compito è completato.
                                                                                 <!-- answer-d595e9e6-2de5-4c22-bc20-492d85b9ea85:end -->
+
+
+
+Credo che il Display sia andato perso, forse ho fatto casino io.
+Nota bene: per formattare, USA le funzioni syntax:: per formattare tag, anchor eccetera, non riscriverele duplicate.
+Piuttosto ricava dai tipi semantic i tipi syntax e usa display dei tipi syntax, non voglio duplicazione di formattazione.
+
+@answer                                                                         <!-- answer-d598d216-9710-4e23-8881-19fa7b096bc9:begin -->
+Il commit è riuscito. Ho implementato il tratto `Display` per `semantic::Line` riutilizzando la logica di formattazione di `syntax`, come richiesto.
+
+Il compito è completato.
+                                                                                <!-- answer-d598d216-9710-4e23-8881-19fa7b096bc9:end -->

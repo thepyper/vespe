@@ -4,6 +4,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::collections::HashMap;
+use std::fs;
+use std::io::ErrorKind;
 
 // Error type for semantic processing
 #[derive(Debug, thiserror::Error)]
@@ -16,6 +18,8 @@ pub enum SemanticError {
     Anyhow(#[from] anyhow::Error),
     #[error("Serde JSON error: {0}")]
     SerdeJson(#[from] serde_json::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 // Placeholder for InlineState
@@ -28,8 +32,31 @@ pub enum InlineState {
 
 impl InlineState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
-        // TODO: Implement actual loading logic from project metadata
-        Self::default()
+        let metadata_dir_result = project.resolve_metadata(&AnchorKind::Inline.to_string(), uid);
+        let metadata_dir = match metadata_dir_result {
+            Ok(dir) => dir,
+            Err(e) => {
+                eprintln!("Error resolving metadata directory for InlineState: {}", e);
+                return Self::default();
+            }
+        };
+
+        let state_file_path = metadata_dir.join("state.json");
+
+        match fs::read_to_string(&state_file_path) {
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(state) => state,
+                Err(e) => {
+                    eprintln!("Error deserializing InlineState from {}: {}", state_file_path.display(), e);
+                    Self::default()
+                }
+            },
+            Err(e) if e.kind() == ErrorKind::NotFound => Self::default(),
+            Err(e) => {
+                eprintln!("Error reading InlineState file {}: {}", state_file_path.display(), e);
+                Self::default()
+            }
+        }
     }
 }
 
@@ -43,8 +70,31 @@ pub enum SummaryState {
 
 impl SummaryState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
-        // TODO: Implement actual loading logic from project metadata
-        Self::default()
+        let metadata_dir_result = project.resolve_metadata(&AnchorKind::Summary.to_string(), uid);
+        let metadata_dir = match metadata_dir_result {
+            Ok(dir) => dir,
+            Err(e) => {
+                eprintln!("Error resolving metadata directory for SummaryState: {}", e);
+                return Self::default();
+            }
+        };
+
+        let state_file_path = metadata_dir.join("state.json");
+
+        match fs::read_to_string(&state_file_path) {
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(state) => state,
+                Err(e) => {
+                    eprintln!("Error deserializing SummaryState from {}: {}", state_file_path.display(), e);
+                    Self::default()
+                }
+            },
+            Err(e) if e.kind() == ErrorKind::NotFound => Self::default(),
+            Err(e) => {
+                eprintln!("Error reading SummaryState file {}: {}", state_file_path.display(), e);
+                Self::default()
+            }
+        }
     }
 }
 
@@ -58,8 +108,31 @@ pub enum AnswerState {
 
 impl AnswerState {
     pub fn load(project: &Project, uid: &Uuid) -> Self {
-        // TODO: Implement actual loading logic from project metadata
-        Self::default()
+        let metadata_dir_result = project.resolve_metadata(&AnchorKind::Answer.to_string(), uid);
+        let metadata_dir = match metadata_dir_result {
+            Ok(dir) => dir,
+            Err(e) => {
+                eprintln!("Error resolving metadata directory for AnswerState: {}", e);
+                return Self::default();
+            }
+        };
+
+        let state_file_path = metadata_dir.join("state.json");
+
+        match fs::read_to_string(&state_file_path) {
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(state) => state,
+                Err(e) => {
+                    eprintln!("Error deserializing AnswerState from {}: {}", state_file_path.display(), e);
+                    Self::default()
+                }
+            },
+            Err(e) if e.kind() == ErrorKind::NotFound => Self::default(),
+            Err(e) => {
+                eprintln!("Error reading AnswerState file {}: {}", state_file_path.display(), e);
+                Self::default()
+            }
+        }
     }
 }
 

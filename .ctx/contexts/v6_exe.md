@@ -378,5 +378,8 @@ Sistema i seguenti problemi:
 2) in semantic::Line, le uuid devono essere di tipo Uuid, non stringa
 3) implementa le funzioni di formattazione (Display) per semantic::Line
 
-@answer
+@answer                                                                         <!-- answer-d595e9e6-2de5-4c22-bc20-492d85b9ea85:begin -->
+Il commit è riuscito. Ho risolto gli errori di compilazione, modificato i tipi `uuid` in `semantic::Line` e implementato il tratto `Display`.
 
+Il compito è completato.
+                                                                                <!-- answer-d595e9e6-2de5-4c22-bc20-492d85b9ea85:end -->

@@ -3,7 +3,7 @@ use anyhow::{Result, Context, anyhow};
 use gix::{
     self,
     prelude::*,
-    reference::head::Kind as HeadKind,
+    head::Kind as HeadKind,
     actor::Signature,
 };
 
@@ -15,17 +15,17 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         .context("Failed to get HEAD reference")?;
 
     let (parent_ids, initial_index_state) = match head.kind {
-        HeadKind::Symbolic => {
-            let commit = head.peel_to_commit() 
+        HeadKind::Symbolic(_reference) => {
+            let commit = head.peel_to_commit_in_place() 
                 .context("Failed to peel HEAD reference to commit")?;
             (vec![commit.id], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
         },
         HeadKind::Detached { .. } => {
-            let commit = head.peel_to_commit() 
+            let commit = head.peel_to_commit_in_place() 
                 .context("Failed to peel detached HEAD to commit")?;
             (vec![commit.id], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
         },
-        HeadKind::Unborn => {
+        HeadKind::Unborn(_fullname) => {
             (vec![], gix::index::State::new(repo.object_hash()))
         },
     };
@@ -81,9 +81,8 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
 
     // 6. Update HEAD
     match head.kind {
-        HeadKind::Symbolic => {
-            let mut head_ref = repo.find_reference(head.name().ok_or_else(|| anyhow!("Failed to get HEAD name"))?)
-                .context("Failed to find symbolic HEAD reference")?;
+        HeadKind::Symbolic(_reference) => {
+            let mut head_ref = repo.find_reference(head.name())?;
             head_ref.set_target_id(commit_id, "commit")
                 .context("Failed to update symbolic HEAD reference")?;
         },
@@ -91,7 +90,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
             repo.set_head_fully_detached(commit_id)
                 .context("Failed to set detached HEAD")?;
         },
-        HeadKind::Unborn => {
+        HeadKind::Unborn(_fullname) => {
             let mut head_update = repo.head_update();
             let mut head_ref = head_update
                 .create_new_branch("main")

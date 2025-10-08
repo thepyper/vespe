@@ -10,6 +10,7 @@ use chrono::{Local, Datelike};
 use handlebars::Handlebars;
 use serde_json::json;
 
+const DIARY_CONTEXT_FORMAT: &str = "diary/%Y-%m-%d";
 const DEFAULT_CONTEXT_TEMPLATE: &str = r#"@include rules
 
 # {{context_name}} - {{title}}
@@ -179,7 +180,7 @@ fn main() -> Result<()> {
             let project = Project::find(&project_path, &cli.editor_interface)?;
             match command {
                 ContextCommands::New { name, today } => {
-                    let context_name = get_context_name(today, name, "diary/%Y-%m-%d")?;
+                    let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
 
                     let mut handlebars = Handlebars::new();
                     handlebars.register_template_string("context_template", {
@@ -202,7 +203,7 @@ fn main() -> Result<()> {
                     println!("Created new context file: {}", file_path.display());
                 }
                 ContextCommands::Execute { name, today } => {
-                    let context_name = get_context_name(today, name, "diary/%Y-%m-%d.md")?;
+                    let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
                     println!("Executing context '{}'...", context_name);
                     let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
                     execute::execute(&project, &context_name, &agent)?;

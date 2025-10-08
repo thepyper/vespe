@@ -1,107 +1,112 @@
 use std::path::PathBuf;
-use anyhow::{Result, Context, anyhow};
-use gix::{prelude::*, head::Kind as HeadKind, actor::Signature};
-use gix::worktree::IndexPersistedOrInMemory;
+use anyhow::{Context, Result, anyhow};
+use gix::{
+    prelude::*,
+    head::Kind as HeadKind,
+    worktree::IndexPersistedOrInMemory,
+};
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
-    let repo = gix::discover(".")
-        .context("Failed to discover git repository")?;
+    // Scopri il repository (cerca da cartella corrente verso sopra)
+    let repo = gix::discover(".").context("Failed to discover git repository")?;
+    let head = repo.head().context("Failed to get HEAD")?;
 
-    let head = repo.head()
-        .context("Failed to get HEAD reference")?;
+    // Apri il worktree per manipolare l’area di lavoro
+    let mut worktree = repo.open_worktree()
+        .context("Failed to open worktree")?;
 
-    let (parent_ids, initial_index_state) = match head.kind {
-        HeadKind::Symbolic(_reference) => {
-            let commit = head.peel_to_commit_in_place() 
-                .context("Failed to peel HEAD reference to commit")?;
-            (vec![commit.id()], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
-        },
-        HeadKind::Detached { .. } => {
-            let commit = head.peel_to_commit_in_place() 
-                .context("Failed to peel detached HEAD to commit")?;
-            (vec![commit.id()], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
-        },
-        HeadKind::Unborn(_fullname) => {
-            (vec![], gix::index::IndexPersistedOrInMemory::InMemory(gix::index::State::new(repo.object_hash())))
-        },
+    // Carica l’indice (potrebbe essere persistente o in memoria)
+    let mut index: IndexPersistedOrInMemory = worktree.load_index()
+        .context("Failed to load worktree index")?;
+
+    // Determina i genitori del commit (se non è un repository “unborn”)
+    let parent_ids = match head.kind {
+        HeadKind::Symbolic(_) | HeadKind::Detached { .. } => {
+            let commit = head.peel_to_commit_in_place()
+                .context("Failed to peel HEAD to commit")?;
+            vec![commit.id()]
+        }
+        HeadKind::Unborn(_) => Vec::new(),
     };
 
-    let mut index = initial_index_state;
+    // Memoriza i file già stagiati (stage == 0)
+    let initially_staged: Vec<PathBuf> = index
+        .entries()
+        .filter_map(|e| {
+            if e.stage() == 0 {
+                Some(e.path.to_owned().into())
+            } else {
+                None
+            }
+        })
+        .collect();
 
-    // 1. Identify initially staged files
-    let mut initially_staged_paths: Vec<PathBuf> = Vec::new();
-    for entry in index.entries() {
-        if entry.stage() == 0 { // Stage 0 means it's in the index
-            initially_staged_paths.push(entry.path.to_owned().into());
+    // Aggiungi i file che vogliamo includere nel commit
+    for file in files_to_commit {
+        index.add_path(file)
+            .with_context(|| format!("Failed to add path: {:?}", file))?;
+    }
+
+    // Rimuovi quelli che non vogliamo includere
+    let mut to_restage: Vec<PathBuf> = Vec::new();
+    for path in initially_staged {
+        if !files_to_commit.contains(&path) {
+            index.remove_path(&path)
+                .with_context(|| format!("Failed to remove path: {:?}", path))?;
+            to_restage.push(path);
         }
     }
 
-    // 2. Add files_to_commit
-    for file_path in files_to_commit {
-        index.add_path(file_path)
-            .context(format!("Failed to add path to index: {:?}", file_path))?;
-    }
-
-    // 3. Unstage other files that were initially staged but not in files_to_commit
-    let mut to_re_stage: Vec<PathBuf> = Vec::new();
-    for staged_path in initially_staged_paths {
-        if !files_to_commit.contains(&staged_path) {
-            index.remove_path(&staged_path)
-                .context(format!("Failed to remove path from index: {:?}", staged_path))?;
-            to_re_stage.push(staged_path);
-        }
-    }
-
-    // 4. Write the index
-    index.write(repo.index_path())
+    // Scrivi l’indice
+    index.write()
         .context("Failed to write index")?;
-    // 5. Create the commit
+
+    // Scrivi l’albero
     let tree_id = index.write_tree()
-        .context("Failed to write tree from index")?;
+        .context("Failed to write tree")?;
 
-    let committer_signature = repo.committer()
-        .context("Failed to get committer signature")?.unwrap();
-    let author_signature = repo.author()
-        .context("Failed to get author signature")?.unwrap();    let commit_message = format!("{}\n\n{}", message, comment);
+    // Ottieni autore / committer
+    let author = repo.author()?.ok_or_else(|| anyhow!("Missing author signature"))?;
+    let committer = repo.committer()?.ok_or_else(|| anyhow!("Missing committer signature"))?;
+    let commit_message = format!("{}\n\n{}", message, comment);
 
+    // Crea il commit
     let commit_id = repo.commit(
-        &author_signature, // Author
-        &committer_signature,         // Committer
-        commit_message.as_str(),    // Pass String directly
+        &author,
+        &committer,
+        commit_message.as_str(),
         tree_id,
-        parent_ids.iter(), // Pass parent_ids as an iterator
-    )
-    .context("Failed to create commit")?;
+        parent_ids.iter(),
+    ).context("Failed to create commit")?;
 
-    // 6. Update HEAD
+    // Aggiorna HEAD / reference
     match head.kind {
-        HeadKind::Symbolic(_reference) => {
-            let head_name = head.name().ok_or_else(|| anyhow!("Failed to get HEAD name"))?;
+        HeadKind::Symbolic(_) => {
+            let head_name = head.name().ok_or_else(|| anyhow!("HEAD has no name"))?;
             let mut head_ref = repo.find_reference(head_name)
-                .context(format!("Failed to find reference for HEAD name: {:?}", head_name))?;
+                .with_context(|| format!("Failed to find reference {}", head_name))?;
             head_ref.set_target_id(commit_id, "commit")
-                .context("Failed to update symbolic HEAD reference")?;
-        },
+                .context("Failed to update symbolic HEAD ref")?;
+        }
         HeadKind::Detached { .. } => {
-            repo.set_head(commit_id)
+            // Metodo per HEAD detached — in gix 0.73 dovrebbe esserci qualcosa del genere
+            repo.set_head_detached(commit_id)
                 .context("Failed to set detached HEAD")?;
-        },
-        HeadKind::Unborn(_fullname) => {
-            repo.references()
-                .context("Failed to get references")?
+        }
+        HeadKind::Unborn(_) => {
+            repo.references()?
                 .create_branch("main", commit_id, true, "initial commit")
-                .context("Failed to create initial 'main' branch for unborn repository")?;
-        },
+                .context("Failed to create initial branch")?;
+        }
     }
 
-    // 7. Re-stage previously unstaged files
-    for file_path in to_re_stage {
-        index.add_path(&file_path)
-            .context(format!("Failed to re-add path to index: {:?}", file_path))?;
+    // Ri-aggiungi i file che avevamo rimosso
+    for path in to_restage {
+        index.add_path(&path)
+            .with_context(|| format!("Failed to re-add path: {:?}", path))?;
     }
-
-    // 8. Write the index again
-    index.write(repo.index_path())
+    index.write()
         .context("Failed to write index after re-staging")?;
+
     Ok(())
 }

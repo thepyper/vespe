@@ -26,10 +26,6 @@ struct Cli {
     #[arg(long, value_name = "INTERFACE", default_value = "none")]
     editor_interface: String,
 
-    /// If specified, the context name will be automatically generated as "diary/YYYY-mm-DD.md".
-    #[arg(long)]
-    today: bool,
-
     /// Specify a Handlebars template file for new contexts.
     #[arg(long, value_name = "FILE")]
     context_template: Option<PathBuf>,
@@ -63,12 +59,18 @@ enum ContextCommands {
         /// The name of the context file (e.g., "my_feature/overview").
         #[arg(value_name = "NAME")]
         name: Option<String>,
+        /// If specified, the context name will be automatically generated as "diary/YYYY-mm-DD".
+        #[arg(long)]
+        today: bool,
     },
     /// Executes a context.
     Execute {
         /// The name of the context to execute.
         #[arg(value_name = "NAME")]
         name: Option<String>,
+        /// If specified, the context name will be automatically generated as "diary/YYYY-mm-DD".
+        #[arg(long)]
+        today: bool,
     },
     /// Lists all available contexts.
     List {},
@@ -168,8 +170,8 @@ fn main() -> Result<()> {
         Commands::Context { command } => {
             let project = Project::find(&project_path, &cli.editor_interface)?;
             match command {
-                ContextCommands::New { name } => {
-                    let context_name = if cli.today {
+                ContextCommands::New { name, today } => {
+                    let context_name = if today {
                         chrono::Local::now().format("diary/%Y-%m-%d").to_string()
                     } else {
                         name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?
@@ -195,8 +197,8 @@ fn main() -> Result<()> {
                     let file_path = project.create_context_file(&context_name, Some(rendered_content))?;
                     println!("Created new context file: {}", file_path.display());
                 }
-                ContextCommands::Execute { name } => {
-                    let context_name = if cli.today {
+                ContextCommands::Execute { name, today } => {
+                    let context_name = if today {
                         chrono::Local::now().format("diary/%Y-%m-%d.md").to_string()
                     } else {
                         name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?

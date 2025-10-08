@@ -60,9 +60,9 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
     ) -> anyhow::Result<()> {
-        for i = 1..100 {
+        for i in 1..100 {
             debug!("Starting execute_step {} loop for context: {}", i, context_name);
-            if !worker.execute_step(project, context_name, agent, visited_contexts)? {
+            if !self.execute_step(project, context_name, agent, visited_contexts)? {
                 break;
             }
         }
@@ -236,6 +236,7 @@ impl ExecuteWorker {
                                 new_state.reply = agent.call(&state.query)?;
                                 new_state.status = AnswerStatus::NeedInjection;
                                 project.save_answer_state(uuid, &new_state)?;
+                                modified = true;
                             }
                             _ => { /* Do nothing */ }
                         }
@@ -266,6 +267,7 @@ impl ExecuteWorker {
                                 ))?;
                                 new_state.status = SummaryStatus::NeedInjection;
                                 project.save_summary_state(uuid, &new_state)?;
+                                modified = true;
                             }
                             _ => { /* Do nothing */ }
                         }

@@ -6,3 +6,6 @@ Quando scrivi codice, scrivi sempre codice production-ready, usa best practices,
 Quando devi modificare un file, leggilo prima, perche' potrei averlo modificato io senza avertelo detto.
 
 Quando rispondi all'utente, fallo sempre con testo formattato markdown.
+
+Quando riassumi un processo decisionale, concentrati sulle decisioni finali piu' che sul processo, e anche sulle motivazioni che hanno portato alla decisione presa.
+

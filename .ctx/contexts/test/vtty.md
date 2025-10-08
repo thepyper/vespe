@@ -587,3 +587,18 @@ Dovresti vedere molti più messaggi `println!` che indicano lo stato di avanzame
 
 Fammi sapere l'output che ottieni.
 <!-- answer-1b75b583-6773-414f-84c2-d1295b2042db:end -->
+
+Starting vtty_test...
+PTY system initialized.
+PTY pair opened.
+CommandBuilder created for cmd.exe in H:\my\github\vespe.
+Child process (cmd.exe) spawned.
+PTY master reader and writer obtained.
+Sleeping for 2 seconds to allow shell to start...
+Attempting to read initial output for 5s
+Read 4 bytes for initial: "\u{1b}[6n"
+
+identico
+
+<!-- answer-a175f0b0-24a7-4c54-8a57-7afa66151adb:begin -->
+<!-- answer-a175f0b0-24a7-4c54-8a57-7afa66151adb:end -->

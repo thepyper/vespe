@@ -19,7 +19,9 @@ fn main() -> anyhow::Result<()> {
     println!("PTY pair opened.");
 
     // Spawn a command in the pseudo-terminal
-    let mut cmd = CommandBuilder::new("cmd.exe"); // Use "bash" or "sh" on Unix-like systems
+    let mut cmd = CommandBuilder::new("powershell.exe");
+    cmd.arg("-Command");
+    cmd.arg("echo Hello from PTY!");
     cmd.cwd("H:\\my\\github\\vespe"); // Set the working directory
     println!(r"CommandBuilder created for cmd.exe in H:\my\github\vespe.");
 

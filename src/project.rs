@@ -5,7 +5,7 @@ use crate::syntax::types::AnchorKind;
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
-use std::env;
+
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;

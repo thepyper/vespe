@@ -43,3 +43,4 @@ Initially, the suggestion was to treat `.ctx` as a separate Git repository to av
 
 This revised strategy balances the need for unified checkpoints and well-documented history with the agent's ability to perform frequent, detailed Git operations efficiently.
 <!-- summary-c051e158-f935-4db5-9a0f-f6fafc74d1fa:end -->
+

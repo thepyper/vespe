@@ -1,13 +1,13 @@
 mod context;
 pub use context::*;
 
-use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState};
 use crate::project::Project;
-use crate::syntax::types::{self, Anchor, AnchorKind, AnchorTag, TagKind};
-use std::collections::HashMap;
-use std::io::ErrorKind;
-use thiserror::Error;
-use uuid::Uuid; // New import
+use crate::semantic::states::SemanticState;
+use std::collections::HashSet;
+use std::fs;
+use std::io::{self, Write};
+use std::path::PathBuf;
+use tracing::{debug, error, info, trace, warn};
                 //use crate::execute::inject::InlineState;
 
 // Error type for semantic processing
@@ -222,7 +222,7 @@ fn enrich_syntax_tagged_line(
 }
 
 fn enrich_syntax_anchor_line(
-    project: &Project,
+    _project: &Project,
     anchor: &Anchor,
 ) -> std::result::Result<Line, SemanticError> {
     match (anchor.kind.clone(), anchor.tag.clone()) {

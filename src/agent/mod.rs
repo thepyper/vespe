@@ -2,13 +2,13 @@ use anyhow::Context;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tracing::{debug, error};
-use std::path::{Path, PathBuf};
+
 
 use crate::project::Project;
 
 pub struct ShellAgentCall<'a> {
     command_template: String,
-    project: &'a Project,
+    _project: &'a Project,
 }
 
 impl<'a> ShellAgentCall<'a> {

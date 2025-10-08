@@ -203,7 +203,9 @@ fn _execute(
         }
     }
 
+    let uid = project.request_file_modification(&context.path)?;
     context.save()?;
+    project.notify_file_modified(&context.path, uid)?;
 
     {
         // Third pass: execute long tasks like summaries or answer generation, without further context modification

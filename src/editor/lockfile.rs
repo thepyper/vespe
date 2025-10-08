@@ -52,7 +52,11 @@ pub struct FileBasedEditorCommunicator {
 }
 
 impl FileBasedEditorCommunicator {
-    pub fn new(request_file: PathBuf, response_file: PathBuf) -> anyhow::Result<Self> {
+    pub fn new(path: &Path) -> anyhow::Result<Self> {
+
+        let request_file: PathBuf = path.join("vespe_request.json");
+        let response_file: PathBuf = path.join("vespe_response.json");
+
         // Ensure the parent directories exist
         if let Some(parent) = request_file.parent() {
             fs::create_dir_all(parent)?;

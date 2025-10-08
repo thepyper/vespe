@@ -10,7 +10,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
-use crate::editor::{DummyEditorCommunicator, EditorCommunicator, FileBasedEditorCommunicator};
+use crate::editor::{DummyEditorCommunicator, EditorCommunicator, lockfile::FileBasedEditorCommunicator};
 
 /*
 #[derive(Debug)]
@@ -135,16 +135,11 @@ impl Project {
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
-            .context("Failed to write .ctx_root file")?;
-
-        let editor_communicator: Box<dyn EditorCommunicator> = match editor_interface {
-            "vscode" => Box::new(FileBasedEditorCommunicator::new(path)?),
-            _ => Box::new(DummyEditorCommunicator),
-        };
+            .context("Failed to write .ctx_root file")?;       
 
         Ok(Project {
             root_path: path.canonicalize()?,
-            editor_communicator,
+            editor_communicator: Box::new(DummyEditorCommunicator),
         })
     }
 
@@ -154,13 +149,15 @@ impl Project {
         loop {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
+                let root_path = current_path.canonicalize()?;
+                let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
                 let editor_communicator: Box<dyn EditorCommunicator> = match editor_interface {
-                    "vscode" => Box::new(FileBasedEditorCommunicator::new(&current_path)?),
+                    "vscode" => Box::new(FileBasedEditorCommunicator::new(&editor_path)?),
                     _ => Box::new(DummyEditorCommunicator),
                 };
 
                 return Ok(Project {
-                    root_path: current_path.canonicalize()?,
+                    root_path: root_path,
                     editor_communicator,
                 });
             }
@@ -489,12 +486,12 @@ impl Project {
             .map_err(|e| anyhow::Error::new(e))
     }
 
-    pub fn request_file_modification(&self, file_path: &PathBuf) -> Result<()> {
+    pub fn request_file_modification(&self, file_path: &PathBuf) -> Result<Uuid> {
         self.editor_communicator.request_file_modification(file_path)
     }
 
-    pub fn notify_file_modified(&self, file_path: &PathBuf) -> Result<()> {
-        self.editor_communicator.notify_file_modified(file_path)
+    pub fn notify_file_modified(&self, file_path: &PathBuf, uid: Uuid) -> Result<()> {
+        self.editor_communicator.notify_file_modified(file_path, uid)
     }
 }
 

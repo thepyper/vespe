@@ -1,7 +1,7 @@
 use portable_pty::{CommandBuilder, PtySize};
 use std::io::{Read, Write};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 fn main() -> anyhow::Result<()> {
     println!("Starting vtty_test...");
@@ -33,44 +33,54 @@ fn main() -> anyhow::Result<()> {
     println!("PTY master reader and writer obtained.");
 
     // Give the shell some time to start up
-    println!("Sleeping for 1 second to allow shell to start...");
-    thread::sleep(Duration::from_secs(1));
+    println!("Sleeping for 2 seconds to allow shell to start...");
+    thread::sleep(Duration::from_secs(2));
+
+    // Function to read output with a timeout
+    fn read_output_with_timeout(
+        reader: &mut dyn Read,
+        timeout: Duration,
+        label: &str,
+    ) -> anyhow::Result<String> {
+        let mut output = String::new();
+        let mut buffer = [0; 1024];
+        let start_time = Instant::now();
+
+        println!("Attempting to read {} output for {:?}", label, timeout);
+
+        while start_time.elapsed() < timeout {
+            match reader.read(&mut buffer) {
+                Ok(0) => {
+                    // No data available right now, but not necessarily EOF.
+                    // Continue waiting until timeout.
+                    thread::sleep(Duration::from_millis(50));
+                }
+                Ok(n) => {
+                    let s = String::from_utf8_lossy(&buffer[..n]);
+                    output.push_str(&s);
+                    println!("Read {} bytes for {}: {:?}", n, label, s);
+                    // Reset timer if we got data, to wait for more
+                    // start_time = Instant::now(); // This would require start_time to be mutable
+                    // For simplicity, we'll just keep reading until the initial timeout
+                    thread::sleep(Duration::from_millis(50)); // Small delay to prevent busy-waiting
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    // No data available right now, but not necessarily EOF.
+                    // Continue waiting until timeout.
+                    thread::sleep(Duration::from_millis(50));
+                }
+                Err(e) => {
+                    eprintln!("Error reading from PTY for {}: {}", label, e);
+                    return Err(e.into());
+                }
+            }
+        }
+        println!("Finished reading {} output after {:?}", label, start_time.elapsed());
+        Ok(output)
+    }
 
     // Read initial output (e.g., shell prompt)
-    let mut buffer = [0; 1024];
-    let mut initial_output = String::new();
-    println!("Attempting to read initial output...");
-    loop {
-        match reader.read(&mut buffer) {
-            Ok(0) => {
-                println!("Reader returned 0 bytes, likely EOF or no more data for now.");
-                break; // No more data or EOF
-            }
-            Ok(n) => {
-                let s = String::from_utf8_lossy(&buffer[..n]);
-                initial_output.push_str(&s);
-                println!("Read {} bytes: {:?}", n, s);
-                // Give a small moment for more data to arrive, but don't block indefinitely
-                thread::sleep(Duration::from_millis(50));
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                println!("Read would block, no more data for now.");
-                break; // No more data available immediately
-            }
-            Err(e) => {
-                eprintln!("Error reading from PTY: {}", e);
-                return Err(e.into());
-            }
-        }
-        // Add a timeout or a condition to break the loop if no data for a while
-        // For simplicity, we'll just break after a few reads if it would block
-        // or if we've read some initial data.
-        if initial_output.len() > 0 && initial_output.ends_with('>') { // Heuristic for cmd.exe prompt
-            println!("Detected cmd.exe prompt, stopping initial read.");
-            break;
-        }
-        thread::sleep(Duration::from_millis(100)); // Small delay to prevent busy-waiting
-    }
+    let initial_output = read_output_with_timeout(&mut reader, Duration::from_secs(5), "initial")?;
     println!("Initial output:\n---\n{}\n---", initial_output);
 
     // Write a command to the shell
@@ -81,39 +91,11 @@ fn main() -> anyhow::Result<()> {
     println!("Command sent.");
 
     // Give the command some time to execute
-    println!("Sleeping for 1 second to allow command to execute...");
-    thread::sleep(Duration::from_secs(1));
+    println!("Sleeping for 2 seconds to allow command to execute...");
+    thread::sleep(Duration::from_secs(2));
 
     // Read the output of the command
-    let mut command_output = String::new();
-    println!("Attempting to read command output...");
-    loop {
-        match reader.read(&mut buffer) {
-            Ok(0) => {
-                println!("Reader returned 0 bytes, likely EOF or no more data for now.");
-                break;
-            }
-            Ok(n) => {
-                let s = String::from_utf8_lossy(&buffer[..n]);
-                command_output.push_str(&s);
-                println!("Read {} bytes: {:?}", n, s);
-                thread::sleep(Duration::from_millis(50));
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                println!("Read would block, no more data for now.");
-                break;
-            }
-            Err(e) => {
-                eprintln!("Error reading from PTY: {}", e);
-                return Err(e.into());
-            }
-        }
-        if command_output.len() > 0 && command_output.ends_with('>') { // Heuristic for cmd.exe prompt
-            println!("Detected cmd.exe prompt, stopping command output read.");
-            break;
-        }
-        thread::sleep(Duration::from_millis(100)); // Small delay to prevent busy-waiting
-    }
+    let command_output = read_output_with_timeout(&mut reader, Duration::from_secs(5), "command")?;
     println!("Output after command:\n---\n{}\n---", command_output);
 
     // Send an exit command

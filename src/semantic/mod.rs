@@ -2,13 +2,13 @@ mod context;
 pub use context::*;
 
 use crate::project::Project;
-use crate::semantic::states::SemanticState;
-use std::collections::HashSet;
-use std::fs;
-use std::io::{self, Write};
-use std::path::PathBuf;
-use tracing::{debug, error, info, trace, warn};
-                //use crate::execute::inject::InlineState;
+
+use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line as SyntaxLine, TagKind};
+use std::collections::HashMap;
+
+use tracing::{error};
+use thiserror::Error;
+use uuid::Uuid;
 
 // Error type for semantic processing
 #[derive(Error, Debug)]
@@ -100,7 +100,7 @@ impl std::fmt::Display for Line {
         match self {
             Line::Text(s) => write!(f, "{}", s),
             Line::InlineTag { snippet_name } => {
-                let syntax_line = types::Line::Tagged {
+                let syntax_line = SyntaxLine::Tagged {
                     tag: TagKind::Inline,
                     parameters: HashMap::new(),
                     arguments: vec![snippet_name.clone()],
@@ -108,7 +108,7 @@ impl std::fmt::Display for Line {
                 write!(f, "{}", syntax_line)
             }
             Line::SummaryTag { context_name } => {
-                let syntax_line = types::Line::Tagged {
+                let syntax_line = SyntaxLine::Tagged {
                     tag: TagKind::Summary,
                     parameters: HashMap::new(),
                     arguments: vec![context_name.clone()],
@@ -116,7 +116,7 @@ impl std::fmt::Display for Line {
                 write!(f, "{}", syntax_line)
             }
             Line::AnswerTag => {
-                let syntax_line = types::Line::Tagged {
+                let syntax_line = SyntaxLine::Tagged {
                     tag: TagKind::Answer,
                     parameters: HashMap::new(),
                     arguments: Vec::new(),
@@ -124,7 +124,7 @@ impl std::fmt::Display for Line {
                 write!(f, "{}", syntax_line)
             }
             Line::IncludeTag { context_name } => {
-                let syntax_line = types::Line::Tagged {
+                let syntax_line = SyntaxLine::Tagged {
                     tag: TagKind::Include,
                     parameters: HashMap::new(),
                     arguments: vec![context_name.clone()],
@@ -137,7 +137,7 @@ impl std::fmt::Display for Line {
                     uid: *uuid,
                     tag: AnchorTag::Begin,
                 };
-                write!(f, "{}", types::Line::Anchor(anchor))
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
             Line::InlineEndAnchor { uuid } => {
                 let anchor = Anchor {
@@ -145,7 +145,7 @@ impl std::fmt::Display for Line {
                     uid: *uuid,
                     tag: AnchorTag::End,
                 };
-                write!(f, "{}", types::Line::Anchor(anchor))
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
             Line::SummaryBeginAnchor { uuid } => {
                 let anchor = Anchor {
@@ -153,7 +153,7 @@ impl std::fmt::Display for Line {
                     uid: *uuid,
                     tag: AnchorTag::Begin,
                 };
-                write!(f, "{}", types::Line::Anchor(anchor))
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
             Line::SummaryEndAnchor { uuid } => {
                 let anchor = Anchor {
@@ -161,7 +161,7 @@ impl std::fmt::Display for Line {
                     uid: *uuid,
                     tag: AnchorTag::End,
                 };
-                write!(f, "{}", types::Line::Anchor(anchor))
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
             Line::AnswerBeginAnchor { uuid } => {
                 let anchor = Anchor {
@@ -169,7 +169,7 @@ impl std::fmt::Display for Line {
                     uid: *uuid,
                     tag: AnchorTag::Begin,
                 };
-                write!(f, "{}", types::Line::Anchor(anchor))
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
             Line::AnswerEndAnchor { uuid } => {
                 let anchor = Anchor {
@@ -177,7 +177,7 @@ impl std::fmt::Display for Line {
                     uid: *uuid,
                     tag: AnchorTag::End,
                 };
-                write!(f, "{}", types::Line::Anchor(anchor))
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
         }
     }
@@ -239,22 +239,22 @@ fn enrich_syntax_anchor_line(
 }
 pub fn enrich_syntax_line(
     project: &Project,
-    line: &types::Line,
+    line: &SyntaxLine,
 ) -> std::result::Result<Line, SemanticError> {
     match line {
-        types::Line::Text(text) => Ok(Line::Text(text.clone())),
-        types::Line::Tagged {
+        SyntaxLine::Text(text) => Ok(Line::Text(text.clone())),
+        SyntaxLine::Tagged {
             tag,
             parameters,
             arguments,
         } => enrich_syntax_tagged_line(project, tag, parameters, arguments),
-        types::Line::Anchor(anchor) => enrich_syntax_anchor_line(project, anchor),
+        SyntaxLine::Anchor(anchor) => enrich_syntax_anchor_line(project, anchor),
     }
 }
 
 pub fn enrich_syntax_document(
     project: &Project,
-    lines: &Vec<types::Line>,
+    lines: &Vec<SyntaxLine>,
 ) -> std::result::Result<Vec<Line>, SemanticError> {
     lines
         .iter()

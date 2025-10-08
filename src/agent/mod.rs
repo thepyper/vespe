@@ -15,7 +15,7 @@ impl<'a> ShellAgentCall<'a> {
     pub fn new(command: String, project: &'a Project) -> anyhow::Result<Self> {
         Ok(Self {
             command_template: command,
-            project,
+            _project: project,
         })
     }
 

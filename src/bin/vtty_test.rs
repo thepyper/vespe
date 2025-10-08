@@ -1,9 +1,8 @@
 use anyhow::{Context, Result};
-use portable_pty::{CommandBuilder, PtySize, native_pty_system, PtySystem};
-use std::io::{self, Read, Write};
-use std::sync::mpsc::{channel, Sender};
+use portable_pty::{CommandBuilder, native_pty_system, PtySize};
+use std::sync::mpsc;
 use std::thread;
-use std::time::Duration;
+use std::io::{self, Write, Read};
 
 fn main() -> Result<()> {
     // Use the native pty implementation for the system
@@ -35,8 +34,8 @@ fn main() -> Result<()> {
     drop(pty_pair.slave);
 
     // Create channels for communication between threads
-    let (tx_input, rx_input) = channel::<Vec<u8>>(); // For sending input to the PTY
-    let (tx_output, rx_output) = channel::<Vec<u8>>(); // For receiving output from the PTY
+    let (tx_input, rx_input) = mpsc::channel(); // For sending input to the PTY
+    let (tx_output, rx_output) = mpsc::channel(); // For receiving output from the PTY
 
     // Get reader and writer for the master PTY
     let mut master_reader = pty_pair.master.try_clone_reader()
@@ -68,6 +67,7 @@ fn main() -> Result<()> {
         loop {
             match rx_input.recv() {
                 Ok(data) => {
+                    let data: Vec<u8> = data;
                     if let Err(e) = master_writer.write_all(&data) {
                         eprintln!("Error writing to PTY: {}", e);
                         break;

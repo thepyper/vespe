@@ -6,7 +6,7 @@ use vespe::project::Project;
 mod watch;
 use tracing::debug;
 use vespe::agent::ShellAgentCall;
-use chrono::{Local, Datelike};
+
 use handlebars::Handlebars;
 use serde_json::json;
 

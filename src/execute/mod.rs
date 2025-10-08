@@ -49,9 +49,7 @@ impl ExecuteWorker {
         self.hasher.update(line.as_bytes());
     }
 
-    fn get_hash(&self) -> String {
-        format!("{:x}", self.hasher.clone().finalize())
-    }
+
 
     fn execute_loop(
         &mut self,

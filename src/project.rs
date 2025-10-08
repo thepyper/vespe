@@ -207,25 +207,27 @@ impl Project {
         Ok(anchor_metadata_dir)
     }
 
-    pub fn create_context_file(&self, name: &str) -> Result<PathBuf> {
+    pub fn create_context_file(&self, name: &str, initial_content: Option<String>) -> Result<PathBuf> {
         let file_path = self.contexts_root().join(format!("{}.md", name));
         let parent_dir = file_path
             .parent()
             .context("Failed to get parent directory")?;
         std::fs::create_dir_all(parent_dir)
             .context("Failed to create parent directories for context file")?;
-        std::fs::write(&file_path, "").context("Failed to create context file")?;
+        let content = initial_content.unwrap_or_else(|| "".to_string());
+        std::fs::write(&file_path, content).context("Failed to create context file")?;
         Ok(file_path)
     }
 
-    pub fn create_snippet_file(&self, name: &str) -> Result<PathBuf> {
+    pub fn create_snippet_file(&self, name: &str, initial_content: Option<String>) -> Result<PathBuf> {
         let file_path = self.snippets_root().join(format!("{}.md", name));
         let parent_dir = file_path
             .parent()
             .context("Failed to get parent directory")?;
         std::fs::create_dir_all(parent_dir)
             .context("Failed to create parent directories for snippet file")?;
-        std::fs::write(&file_path, "").context("Failed to create snippet file")?;
+        let content = initial_content.unwrap_or_else(|| "".to_string());
+        std::fs::write(&file_path, content).context("Failed to create snippet file")?;
         Ok(file_path)
     }
 

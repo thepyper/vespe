@@ -245,23 +245,18 @@ impl Project {
             return Ok(contexts); // Return empty if directory doesn't exist
         }
 
-        // TODO: Recursively list files in subdirectories as well!!!
-        for entry in std::fs::read_dir(&contexts_root)? {
-            let entry = entry?;
-            let path = entry.path();
+        let mut md_files = Vec::new();
+        Self::collect_md_files_recursively(&contexts_root, &contexts_root, &mut md_files)?;
 
-            if path.is_file() {
-                if let Some(extension) = path.extension() {
-                    if extension == "md" {
-                        if let Some(file_stem) = path.file_stem() {
-                            if let Some(name) = file_stem.to_str() {
-                                contexts.push(ContextInfo {
-                                    name: name.to_string(),
-                                    path: path.clone(),
-                                });
-                            }
-                        }
-                    }
+        for path in md_files {
+            // Calculate the relative path from contexts_root to get the context name
+            let relative_path = path.strip_prefix(&contexts_root)?;
+            if let Some(file_stem) = relative_path.file_stem() {
+                if let Some(name) = file_stem.to_str() {
+                    contexts.push(ContextInfo {
+                        name: name.to_string(),
+                        path: path.clone(),
+                    });
                 }
             }
         }
@@ -276,23 +271,18 @@ impl Project {
             return Ok(snippets); // Return empty if directory doesn't exist
         }
 
-        // TODO : Recursively list files in subdirectories as well!!!
-        for entry in std::fs::read_dir(&snippets_root)? {
-            let entry = entry?;
-            let path = entry.path();
+        let mut md_files = Vec::new();
+        Self::collect_md_files_recursively(&snippets_root, &snippets_root, &mut md_files)?;
 
-            if path.is_file() {
-                if let Some(extension) = path.extension() {
-                    if extension == "md" {
-                        if let Some(file_stem) = path.file_stem() {
-                            if let Some(name) = file_stem.to_str() {
-                                snippets.push(SnippetInfo {
-                                    name: name.to_string(),
-                                    path: path.clone(),
-                                });
-                            }
-                        }
-                    }
+        for path in md_files {
+            // Calculate the relative path from snippets_root to get the snippet name
+            let relative_path = path.strip_prefix(&snippets_root)?;
+            if let Some(file_stem) = relative_path.file_stem() {
+                if let Some(name) = file_stem.to_str() {
+                    snippets.push(SnippetInfo {
+                        name: name.to_string(),
+                        path: path.clone(),
+                    });
                 }
             }
         }
@@ -500,6 +490,28 @@ impl Project {
 
     pub fn notify_file_modified(&self, file_path: &PathBuf, uid: Uuid) -> Result<()> {
         self.editor_communicator.notify_file_modified(file_path, uid)
+    }
+
+    fn collect_md_files_recursively(
+        root: &Path,
+        current_dir: &Path,
+        files: &mut Vec<PathBuf>,
+    ) -> Result<()> {
+        for entry in std::fs::read_dir(current_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                Self::collect_md_files_recursively(root, &path, files)?;
+            } else if path.is_file() {
+                if let Some(extension) = path.extension() {
+                    if extension == "md" {
+                        files.push(path);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 

@@ -17,6 +17,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         HeadKind::Symbolic(_) | HeadKind::Detached { .. } => {
             let commit = head.try_into_peeled_id()
                 .context("Failed to peel HEAD to commit")?
+                .unwrap() // TODO better handling!!
                 .object()?
                 .into_commit();
             let index = repo.index()
@@ -62,10 +63,12 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     let tree_id = index.write_tree()
         .context("Failed to write tree from index")?;
 
-    let author_signature = gix::actor::Signature::new_now("User", "user@example.com")
-        .context("Failed to create author signature")?;
-    let committer_signature = author_signature.clone();
+    //let author_signature = gix::actor::Signature::new_now("User", "user@example.com")
+    //    .context("Failed to create author signature")?;
+    //let committer_signature = author_signature.clone();
     
+    let committer_signature = gix::actor::Signature::default(); // TODO better?
+
     let commit_message = format!("{}\n\n{}", message, comment);
 
     if let HeadKind::Unborn(_) = head.kind {
@@ -77,8 +80,9 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         )
         .context("Failed to create initial commit")?;
 
-        repo.refs.set_symbolic_ref("HEAD", "refs/heads/main")
-            .context("Failed to set HEAD to main branch")?;
+        // TODO serve!?!?!?
+        //repo.refs.set_symbolic_ref("HEAD", "refs/heads/main")
+        //    .context("Failed to set HEAD to main branch")?;
     } else {
         repo.commit(
             "HEAD",

@@ -6,6 +6,7 @@ use vespe::project::Project;
 mod watch;
 use tracing::debug;
 use vespe::agent::ShellAgentCall;
+use vespe::git::git_commit;
 
 use handlebars::Handlebars;
 use serde_json::json;
@@ -171,6 +172,15 @@ fn main() -> Result<()> {
                 "Initialized new .ctx project at: {}",
                 project.project_home().display()
             );
+
+            let ctx_dir = project.project_home();
+            let ctx_root_file = ctx_dir.join(".ctx_root");
+
+            git_commit(
+                &[ctx_dir, ctx_root_file],
+                "feat: Initialize .ctx project",
+                "Initial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.",
+            )?;
         }
         Commands::Context { command } => {
             let project = Project::find(&project_path)?;
@@ -202,6 +212,12 @@ fn main() -> Result<()> {
                     let file_path =
                         project.create_context_file(&context_name, Some(rendered_content))?;
                     println!("Created new context file: {}", file_path.display());
+
+                    git_commit(
+                        &[file_path.clone()],
+                        &format!("feat: Create new context '{}'", context_name),
+                        &format!("Created a new context file at {}.", file_path.display()),
+                    )?;
                 }
                 ContextCommands::Execute { name, today } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
@@ -236,6 +252,12 @@ fn main() -> Result<()> {
                 SnippetCommands::New { name, content } => {
                     let file_path = project.create_snippet_file(&name, content)?;
                     println!("Created new snippet file: {}", file_path.display());
+
+                    git_commit(
+                        &[file_path.clone()],
+                        &format!("feat: Create new snippet '{}'", name),
+                        &format!("Created a new snippet file at {}.", file_path.display()),
+                    )?;
                 }
                 SnippetCommands::List {} => {
                     let snippets = project.list_snippets()?;

@@ -25,6 +25,7 @@ pub fn execute(
     debug!("Executing context: {}", context_name);
 
     let mut visited_contexts = HashSet::new();
+    
     let mut worker = ExecuteWorker::new();
     worker.execute_loop(project, context_name, agent, &mut visited_contexts)?;
 

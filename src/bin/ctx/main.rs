@@ -7,6 +7,13 @@ mod watch;
 use tracing::debug;
 use vespe::agent::ShellAgentCall;
 use chrono::{Local, Datelike};
+use handlebars::Handlebars;
+use serde_json::json;
+
+const DEFAULT_CONTEXT_TEMPLATE: &str = r#"@include rules
+
+# {{context_name}} - {{title}}
+"#;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -22,6 +29,10 @@ struct Cli {
     /// If specified, the context name will be automatically generated as "diary/YYYY-mm-DD.md".
     #[arg(long)]
     today: bool,
+
+    /// Specify a Handlebars template file for new contexts.
+    #[arg(long, value_name = "FILE")]
+    context_template: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Commands,
@@ -74,6 +85,9 @@ enum SnippetCommands {
     New {
         /// The name of the snippet file (e.g., "common/header").
         name: String,
+        /// Optional initial content for the snippet file.
+        #[arg(long, value_name = "CONTENT")]
+        content: Option<String>,
     },
     /// Lists all available snippets.
     List {},
@@ -160,7 +174,25 @@ fn main() -> Result<()> {
                     } else {
                         name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?
                     };
-                    let file_path = project.create_context_file(&context_name)?;
+
+                    let mut handlebars = Handlebars::new();
+                    handlebars.register_template_string("context_template", {
+                        if let Some(template_path) = &cli.context_template {
+                            std::fs::read_to_string(template_path)?
+                        } else {
+                            DEFAULT_CONTEXT_TEMPLATE.to_string()
+                        }
+                    })?;
+
+                    let title = context_name.split('/').last().unwrap_or(&context_name).replace('_', " ");
+                    let data = json!({
+                        "context_name": context_name,
+                        "title": title,
+                    });
+
+                    let rendered_content = handlebars.render("context_template", &data)?;
+
+                    let file_path = project.create_context_file(&context_name, Some(rendered_content))?;
                     println!("Created new context file: {}", file_path.display());
                 }
                 ContextCommands::Execute { name } => {
@@ -194,8 +226,8 @@ fn main() -> Result<()> {
         Commands::Snippet { command } => {
             let project = Project::find(&project_path, &cli.editor_interface)?;
             match command {
-                SnippetCommands::New { name } => {
-                    let file_path = project.create_snippet_file(&name)?;
+                SnippetCommands::New { name, content } => {
+                    let file_path = project.create_snippet_file(&name, content)?;
                     println!("Created new snippet file: {}", file_path.display());
                 }
                 SnippetCommands::List {} => {

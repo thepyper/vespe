@@ -16,10 +16,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         HeadKind::Symbolic(_) | HeadKind::Detached { .. } => {
             let commit = head.clone().try_into_peeled_id()
                 .context("Failed to peel HEAD to commit")?
-<<<<<<< HEAD
                 .context("Could not peel to commit on detached HEAD")?
-=======
->>>>>>> parent of 5e74933 (fix 4)
                 .object()?
                 .into_commit();
             let index = gix::index::File::at(repo.index_path(), repo.object_hash(), false, gix::index::decode::Options::default())

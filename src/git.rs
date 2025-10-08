@@ -17,6 +17,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         HeadKind::Symbolic(_) | HeadKind::Detached { .. } => {
             let commit = head.try_into_peeled_id()
                 .context("Failed to peel HEAD to commit")?
+                .unwrap() // TODO gestire meglio
                 .object()?
                 .into_commit();
             let index = repo.index()
@@ -24,16 +25,17 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
             (vec![commit.id], index)
         },
         HeadKind::Unborn(_) => {
-            let index = gix::index::File::at_or_default(repo.index_path(), repo.object_hash(), false, gix::index::decode::Options::default())
-                .context("Failed to create new index for unborn branch")?;
-            (Vec::new(), index)
+            panic!("Unborn branch handling not implemented, STICAZZI");
+            //let index = gix::index::File::at_or_default(repo.index_path(), repo.object_hash(), false, gix::index::decode::Options::default())
+            //    .context("Failed to create new index for unborn branch")?;
+            //(Vec::new(), index)
         },
     };
 
     // 1. Identify initially staged files
     let mut initially_staged_paths: Vec<PathBuf> = Vec::new();
     for entry in index.entries() {
-        if entry.stage == 0 {
+        if entry.stage() == 0 {
             initially_staged_paths.push(gix::path::from_bstr(entry.path.as_ref()).into_owned());
         }
     }
@@ -62,9 +64,9 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     let tree_id = index.write_tree()
         .context("Failed to write tree from index")?;
 
-    let author_signature = gix::actor::Signature::new_now("User", "user@example.com")
-        .context("Failed to create author signature")?;
-    let committer_signature = author_signature.clone();
+    //let author_signature = gix::actor::Signature::new_now("User", "user@example.com")
+    //    .context("Failed to create author signature")?;
+    //let committer_signature = author_signature.clone();
     
     let commit_message = format!("{}\n\n{}", message, comment);
 
@@ -77,8 +79,9 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         )
         .context("Failed to create initial commit")?;
 
-        repo.refs.set_symbolic_ref("HEAD", "refs/heads/main")
-            .context("Failed to set HEAD to main branch")?;
+        // TODO non so a cosa serva ma penso che Unborn sia raro.
+        //repo.refs.set_symbolic_ref("HEAD", "refs/heads/main")
+        //    .context("Failed to set HEAD to main branch")?;
     } else {
         repo.commit(
             "HEAD",

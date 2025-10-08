@@ -149,6 +149,14 @@ enum SnippetCommands {
 
 }*/
 
+fn get_context_name(today: bool, name: Option<String>, format_str: &str) -> Result<String> {
+    if today {
+        Ok(chrono::Local::now().format(format_str).to_string())
+    } else {
+        name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))
+    }
+}
+
 fn main() -> Result<()> {
     vespe::init_telemetry();
 
@@ -171,11 +179,7 @@ fn main() -> Result<()> {
             let project = Project::find(&project_path, &cli.editor_interface)?;
             match command {
                 ContextCommands::New { name, today } => {
-                    let context_name = if today {
-                        chrono::Local::now().format("diary/%Y-%m-%d").to_string()
-                    } else {
-                        name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?
-                    };
+                    let context_name = get_context_name(today, name, "diary/%Y-%m-%d")?;
 
                     let mut handlebars = Handlebars::new();
                     handlebars.register_template_string("context_template", {
@@ -198,11 +202,7 @@ fn main() -> Result<()> {
                     println!("Created new context file: {}", file_path.display());
                 }
                 ContextCommands::Execute { name, today } => {
-                    let context_name = if today {
-                        chrono::Local::now().format("diary/%Y-%m-%d.md").to_string()
-                    } else {
-                        name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?
-                    };
+                    let context_name = get_context_name(today, name, "diary/%Y-%m-%d.md")?;
                     println!("Executing context '{}'...", context_name);
                     let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
                     execute::execute(&project, &context_name, &agent)?;

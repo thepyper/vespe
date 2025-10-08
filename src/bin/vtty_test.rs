@@ -1,4 +1,4 @@
-use portable_pty::{CommandBuilder, PtySize, PTY};
+use portable_pty::{CommandBuilder, PtySize};
 use std::io::{Read, Write};
 use std::thread;
 use std::time::Duration;
@@ -23,7 +23,7 @@ fn main() -> anyhow::Result<()> {
     // Read and write to the PTY
     let master = pair.master;
     let mut reader = master.try_clone_reader()?;
-    let mut writer = master.try_clone_writer()?;
+    let mut writer = master.take_writer()?;
 
     // Give the shell some time to start up
     thread::sleep(Duration::from_millis(500));

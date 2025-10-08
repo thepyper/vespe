@@ -36,7 +36,7 @@ handlebars = "5.1.0"
 #tracing-appender = "0.2"
 regex = "1.10.0"
 sha2 = "0.10"
-portable-pty = "0.6.0"
+portable-pty = "0.9.0"
 
 
 [[bin]]

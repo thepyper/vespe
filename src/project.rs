@@ -10,8 +10,10 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
-use crate::config::{ProjectConfig, EditorInterface};
-use crate::editor::{DummyEditorCommunicator, EditorCommunicator, lockfile::FileBasedEditorCommunicator};
+use crate::config::{EditorInterface, ProjectConfig};
+use crate::editor::{
+    lockfile::FileBasedEditorCommunicator, DummyEditorCommunicator, EditorCommunicator,
+};
 
 /*
 #[derive(Debug)]
@@ -157,14 +159,20 @@ impl Project {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
                 let root_path = current_path.canonicalize()?;
-                let project_config_path = root_path.join(CTX_DIR_NAME).join(METADATA_DIR_NAME).join("project_config.json");
+                let project_config_path = root_path
+                    .join(CTX_DIR_NAME)
+                    .join(METADATA_DIR_NAME)
+                    .join("project_config.json");
                 let project_config = Self::load_project_config(&project_config_path)?;
 
                 let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
-                let editor_communicator: Box<dyn EditorCommunicator> = match project_config.editor_interface {
-                    EditorInterface::VSCode => Box::new(FileBasedEditorCommunicator::new(&editor_path)?),
-                    _ => Box::new(DummyEditorCommunicator),
-                };
+                let editor_communicator: Box<dyn EditorCommunicator> =
+                    match project_config.editor_interface {
+                        EditorInterface::VSCode => {
+                            Box::new(FileBasedEditorCommunicator::new(&editor_path)?)
+                        }
+                        _ => Box::new(DummyEditorCommunicator),
+                    };
 
                 return Ok(Project {
                     root_path: root_path,
@@ -222,7 +230,11 @@ impl Project {
         self.metadata_home().join("project_config.json")
     }
 
-    pub fn create_context_file(&self, name: &str, initial_content: Option<String>) -> Result<PathBuf> {
+    pub fn create_context_file(
+        &self,
+        name: &str,
+        initial_content: Option<String>,
+    ) -> Result<PathBuf> {
         let file_path = self.contexts_root().join(format!("{}.md", name));
         if file_path.exists() {
             anyhow::bail!("Context file already exists: {}", file_path.display());
@@ -237,7 +249,11 @@ impl Project {
         Ok(file_path)
     }
 
-    pub fn create_snippet_file(&self, name: &str, initial_content: Option<String>) -> Result<PathBuf> {
+    pub fn create_snippet_file(
+        &self,
+        name: &str,
+        initial_content: Option<String>,
+    ) -> Result<PathBuf> {
         let file_path = self.snippets_root().join(format!("{}.md", name));
         if file_path.exists() {
             anyhow::bail!("Snippet file already exists: {}", file_path.display());
@@ -515,11 +531,13 @@ impl Project {
     }
 
     pub fn request_file_modification(&self, file_path: &PathBuf) -> Result<Uuid> {
-        self.editor_communicator.request_file_modification(file_path)
+        self.editor_communicator
+            .request_file_modification(file_path)
     }
 
     pub fn notify_file_modified(&self, file_path: &PathBuf, uid: Uuid) -> Result<()> {
-        self.editor_communicator.notify_file_modified(file_path, uid)
+        self.editor_communicator
+            .notify_file_modified(file_path, uid)
     }
 
     fn collect_md_files_recursively(

@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use std::env;
 use std::thread::sleep;
 use std::time::Duration;
 use uuid::Uuid;
-use std::env;
 
 use super::EditorCommunicator;
 
@@ -38,10 +38,7 @@ pub enum ResponseState {
         request_id: Uuid,
     },
     /// Editor is busy or encountered an error.
-    Error {
-        message: String,
-        request_id: Uuid,
-    },
+    Error { message: String, request_id: Uuid },
     /// No active response.
     None,
 }
@@ -53,7 +50,6 @@ pub struct FileBasedEditorCommunicator {
 
 impl FileBasedEditorCommunicator {
     pub fn new(path: &Path) -> anyhow::Result<Self> {
-
         let request_file: PathBuf = path.join("vespe_request.json");
         let response_file: PathBuf = path.join("vespe_response.json");
 
@@ -70,8 +66,18 @@ impl FileBasedEditorCommunicator {
         fs::write(&response_file, serde_json::to_string(&ResponseState::None)?)?;
 
         // Set environment variables for the VSCode extension to pick up
-        env::set_var("VESPE_REQUEST_FILE_PATH", request_file.to_str().ok_or_else(|| anyhow::anyhow!("Invalid request file path"))?);
-        env::set_var("VESPE_RESPONSE_FILE_PATH", response_file.to_str().ok_or_else(|| anyhow::anyhow!("Invalid response file path"))?);
+        env::set_var(
+            "VESPE_REQUEST_FILE_PATH",
+            request_file
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("Invalid request file path"))?,
+        );
+        env::set_var(
+            "VESPE_RESPONSE_FILE_PATH",
+            response_file
+                .to_str()
+                .ok_or_else(|| anyhow::anyhow!("Invalid response file path"))?,
+        );
 
         Ok(Self {
             request_file_path: request_file,
@@ -99,15 +105,19 @@ impl FileBasedEditorCommunicator {
                 | ResponseState::Error { request_id, .. } => {
                     if *request_id == expected_request_id {
                         // Reset the response file to None after reading
-                        fs::write(&self.response_file_path, serde_json::to_string(&ResponseState::None)?)?;
+                        fs::write(
+                            &self.response_file_path,
+                            serde_json::to_string(&ResponseState::None)?,
+                        )?;
                         return Ok(response);
                     }
-                },
-                ResponseState::None => {}, // Continue waiting
+                }
+                ResponseState::None => {} // Continue waiting
             }
 
             attempts += 1;
-            if attempts > 60 { // Timeout after 5 minutes (60 * 5 seconds)
+            if attempts > 60 {
+                // Timeout after 5 minutes (60 * 5 seconds)
                 return Err(anyhow::anyhow!("Timeout waiting for editor response"));
             }
             sleep(Duration::from_secs(5));
@@ -128,8 +138,12 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         let response = self._read_response(request_id)?;
         match response {
             ResponseState::FileLocked { .. } => Ok(request_id),
-            ResponseState::Error { message, .. } => Err(anyhow::anyhow!("Editor error: {}", message)),
-            _ => Err(anyhow::anyhow!("Unexpected editor response for modification request")),
+            ResponseState::Error { message, .. } => {
+                Err(anyhow::anyhow!("Editor error: {}", message))
+            }
+            _ => Err(anyhow::anyhow!(
+                "Unexpected editor response for modification request"
+            )),
         }
     }
 
@@ -144,8 +158,12 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         let response = self._read_response(request_id)?;
         match response {
             ResponseState::FileUnlocked { .. } => Ok(()),
-            ResponseState::Error { message, .. } => Err(anyhow::anyhow!("Editor error: {}", message)),
-            _ => Err(anyhow::anyhow!("Unexpected editor response for modification complete notification")),
+            ResponseState::Error { message, .. } => {
+                Err(anyhow::anyhow!("Editor error: {}", message))
+            }
+            _ => Err(anyhow::anyhow!(
+                "Unexpected editor response for modification complete notification"
+            )),
         }
     }
 }

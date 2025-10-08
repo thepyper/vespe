@@ -6,8 +6,8 @@ use crate::project::Project;
 use crate::syntax::types::{Anchor, AnchorKind, AnchorTag, Line as SyntaxLine, TagKind};
 use std::collections::HashMap;
 
-use tracing::{error};
 use thiserror::Error;
+use tracing::error;
 use uuid::Uuid;
 
 // Error type for semantic processing

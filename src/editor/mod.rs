@@ -1,7 +1,7 @@
 //! This module defines the interface for communicating with a text editor extension.
 
-use std::path::Path;
 use anyhow::Result;
+use std::path::Path;
 use uuid::Uuid;
 
 /// Trait for communicating with a text editor extension.

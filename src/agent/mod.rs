@@ -3,7 +3,6 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 use tracing::{debug, error};
 
-
 use crate::project::Project;
 
 pub struct ShellAgentCall<'a> {

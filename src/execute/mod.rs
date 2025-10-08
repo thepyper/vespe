@@ -49,8 +49,6 @@ impl ExecuteWorker {
         self.hasher.update(line.as_bytes());
     }
 
-
-
     fn execute_loop(
         &mut self,
         project: &Project,
@@ -59,7 +57,10 @@ impl ExecuteWorker {
         visited_contexts: &mut HashSet<String>,
     ) -> anyhow::Result<()> {
         for i in 1..100 {
-            debug!("Starting execute_step {} loop for context: {}", i, context_name);
+            debug!(
+                "Starting execute_step {} loop for context: {}",
+                i, context_name
+            );
             if !self.execute_step(project, context_name, agent, visited_contexts)? {
                 break;
             }
@@ -75,7 +76,10 @@ impl ExecuteWorker {
         visited_contexts: &mut HashSet<String>,
     ) -> anyhow::Result<bool> {
         if !visited_contexts.insert(context_name.to_string()) {
-            debug!("Context '{}' already visited. Skipping further execution.", context_name);
+            debug!(
+                "Context '{}' already visited. Skipping further execution.",
+                context_name
+            );
             return Ok(false);
         }
 
@@ -134,7 +138,8 @@ impl ExecuteWorker {
                         self.add_line(x);
                     }
                     Line::IncludeTag { context_name } => {
-                        let included_modified = self.execute_step(project, &context_name, agent, visited_contexts)?;
+                        let included_modified =
+                            self.execute_step(project, &context_name, agent, visited_contexts)?;
                         if included_modified {
                             // Exit processing, included could add any kind of content that need re-execution
                             break;
@@ -164,9 +169,9 @@ impl ExecuteWorker {
                     // Inline state is handled in the first pass, no further action needed here
                     Line::AnswerBeginAnchor { uuid } => {
                         let state = project.load_answer_state(uuid)?;
-                        let j = anchor_index.get_end(uuid).ok_or_else(|| {
-                            ExecuteError::MissingEndAnchor(*uuid)
-                        })?;
+                        let j = anchor_index
+                            .get_end(uuid)
+                            .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
                         match state.status {
                             AnswerStatus::NeedAnswer => {
                                 // Do nothing, wait for answer to be provided
@@ -185,9 +190,9 @@ impl ExecuteWorker {
                     }
                     Line::SummaryBeginAnchor { uuid } => {
                         let state = project.load_summary_state(uuid)?;
-                        let j = anchor_index.get_end(uuid).ok_or_else(|| {
-                            ExecuteError::MissingEndAnchor(*uuid)
-                        })?;
+                        let j = anchor_index
+                            .get_end(uuid)
+                            .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
                         match state.status {
                             SummaryStatus::NeedContext => {
                                 // Do nothing, wait for context to be provided
@@ -244,7 +249,12 @@ impl ExecuteWorker {
                         match state.status {
                             SummaryStatus::NeedContext => {
                                 let mut summary_worker = ExecuteWorker::new();
-                                summary_worker.execute_loop(project, &state.context_name, agent, visited_contexts)?;  
+                                summary_worker.execute_loop(
+                                    project,
+                                    &state.context_name,
+                                    agent,
+                                    visited_contexts,
+                                )?;
                                 let context = Context::load(project, &state.context_name)?;
                                 let mut new_state = state.clone();
                                 new_state.context = context
@@ -279,18 +289,13 @@ impl ExecuteWorker {
     }
 }
 
-
-
 fn inject_content(
     patches: &mut Patches,
     start_index: usize,
     end_index: usize,
     content: &str,
 ) -> anyhow::Result<()> {
-    let lines = content
-        .lines()
-        .map(|s| Line::Text(s.to_string()))
-        .collect();
+    let lines = content.lines().map(|s| Line::Text(s.to_string())).collect();
     patches.insert((start_index, end_index), lines);
     Ok(())
 }

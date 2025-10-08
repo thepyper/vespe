@@ -187,7 +187,11 @@ fn main() -> Result<()> {
                         }
                     })?;
 
-                    let title = context_name.split('/').last().unwrap_or(&context_name).replace('_', " ");
+                    let title = context_name
+                        .split('/')
+                        .last()
+                        .unwrap_or(&context_name)
+                        .replace('_', " ");
                     let data = json!({
                         "context_name": context_name,
                         "title": title,
@@ -195,13 +199,17 @@ fn main() -> Result<()> {
 
                     let rendered_content = handlebars.render("context_template", &data)?;
 
-                    let file_path = project.create_context_file(&context_name, Some(rendered_content))?;
+                    let file_path =
+                        project.create_context_file(&context_name, Some(rendered_content))?;
                     println!("Created new context file: {}", file_path.display());
                 }
                 ContextCommands::Execute { name, today } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
                     println!("Executing context '{}'...", context_name);
-                    let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
+                    let agent = ShellAgentCall::new(
+                        "gemini -p -y -m gemini-2.5-flash".to_string(),
+                        &project,
+                    )?;
                     execute::execute(&project, &context_name, &agent)?;
                     println!("Context '{}' executed successfully.", context_name);
                 }
@@ -244,7 +252,8 @@ fn main() -> Result<()> {
         }
         Commands::Watch {} => {
             let project = Project::find(&project_path)?;
-            let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
+            let agent =
+                ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
             watch::watch(&project, &agent)?;
         }
     }

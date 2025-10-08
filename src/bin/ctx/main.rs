@@ -156,7 +156,7 @@ fn main() -> Result<()> {
             match command {
                 ContextCommands::New { name } => {
                     let context_name = if cli.today {
-                        chrono::Local::now().format("diary/%Y-%m-%d.md").to_string()
+                        chrono::Local::now().format("diary/%Y-%m-%d").to_string()
                     } else {
                         name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?
                     };

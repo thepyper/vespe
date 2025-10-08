@@ -18,6 +18,7 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1.0", features = ["v4", "serde"] }
+gix = "0.46"
 
 #rand = "0.8"
 #toml = "0.8"
@@ -48,10 +49,10 @@ name = "vtty_test"
 path = "src/bin/vtty_test.rs"
 
 [dev-dependencies]
-tempfile = "3.23"
+tempfile = "3.10.0"
 sha2 = "0.10"
 walkdir = "2.3"
 #oauth2 = { version = "5.0", features = ["reqwest"] }
 #tiny_http = "0.12"
 #webbrowser = "1.0"
-#url = "2.5"
+#url = "2.5" 

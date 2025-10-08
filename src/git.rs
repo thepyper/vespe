@@ -4,6 +4,7 @@ use gix::{
     self,
     prelude::*,
     head::Kind as HeadKind,
+    refs::FullNameRef,
 };
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
@@ -18,9 +19,9 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
             let commit = head.try_into_peeled_id()
                 .context("Failed to peel HEAD to id")?
                 .context("Peeled HEAD did not point to a commit")?
-                .object()? 
+                .object()?
                 .into_commit();
-            let index = gix::index::File::at(repo.index_path(), repo.object_hash(), false, gix::index::decode::Options::default())
+            let index = repo.index()
                 .context("Failed to load index")?;
             (vec![commit.id], index)
         },
@@ -63,20 +64,14 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     let tree_id = index.write_tree()
         .context("Failed to write tree from index")?;
 
-    let now = gix::date::Time::now_local_or_utc();
-    let author_signature = gix::actor::SignatureRef {
-        name: "User".into(),
-        email: "user@example.com".into(),
-        time: now,
-    };
-    let committer_signature = author_signature;
+    let author_signature = gix::actor::signature::new_now("User", "user@example.com")
+        .context("Failed to create author signature")?;
+    let committer_signature = author_signature.clone();
     
     let commit_message = format!("{}\n\n{}", message, comment);
 
     if let HeadKind::Unborn(_) = head.kind {
-        repo.commit_as(
-            author_signature,
-            committer_signature,
+        repo.commit(
             "refs/heads/main",
             &commit_message,
             tree_id,
@@ -84,12 +79,10 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         )
         .context("Failed to create initial commit")?;
 
-        repo.refs.set_symbolic_ref("HEAD", "refs/heads/main")
+        repo.set_head_symbolic(FullNameRef::try_from("refs/heads/main")?)
             .context("Failed to set HEAD to main branch")?;
     } else {
-        repo.commit_as(
-            author_signature,
-            committer_signature,
+        repo.commit(
             "HEAD",
             &commit_message,
             tree_id,

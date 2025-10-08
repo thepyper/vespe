@@ -15,7 +15,7 @@ struct Cli {
     project_root: Option<PathBuf>,
 
     /// Specify the editor interface to use (e.g., "vscode", "none"). Defaults to "vscode".
-    #[arg(long, value_name = "INTERFACE", default_value = "vscode")]
+    #[arg(long, value_name = "INTERFACE", default_value = "none")]
     editor_interface: String,
 
     #[command(subcommand)]

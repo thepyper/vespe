@@ -44,3 +44,12 @@ Initially, the suggestion was to treat `.ctx` as a separate Git repository to av
 This revised strategy balances the need for unified checkpoints and well-documented history with the agent's ability to perform frequent, detailed Git operations efficiently.
 <!-- summary-c051e158-f935-4db5-9a0f-f6fafc74d1fa:end -->
 
+<!-- summary-cdc5ea40-661d-4575-a611-ff4cf0d5880f:begin -->
+You are absolutely correct!
+
+`git add`, `git restore --staged` (for unstaging), and `git commit` are all **local operations**. They only modify your local repository's working directory, staging area, and commit history. They do not involve any communication with a remote server, and therefore, **do not require any authentication**.
+
+Authentication is only needed for operations that interact with a remote Git repository, such as `git push`, `git pull`, `git fetch`, or `git clone`.
+
+So, for the tasks you're focused on, you don't need to worry about authentication at all.
+<!-- summary-cdc5ea40-661d-4575-a611-ff4cf0d5880f:end -->

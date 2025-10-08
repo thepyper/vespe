@@ -310,3 +310,9 @@ cargo run --bin vtty_test
 
 Fammi sapere se hai altre domande o se vuoi procedere con ulteriori modifiche o test.
 <!-- answer-6a6e243e-943a-4bbb-9cf6-5240874851f5:end -->
+
+
+Metti un po di debug perche' non vedo niente, si blocca in attesa di chissa che
+
+<!-- answer-562541c9-c832-4630-92d8-c026b3e65116:begin -->
+<!-- answer-562541c9-c832-4630-92d8-c026b3e65116:end -->

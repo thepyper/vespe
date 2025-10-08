@@ -21,7 +21,9 @@ fn main() -> Result<()> {
     // On Windows, you might need to specify the full path or ensure it's in PATH.
     // For cmd.exe, it's usually in C:\Windows\System32\cmd.exe
     // For powershell.exe, it's usually in C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
-    let mut cmd = CommandBuilder::new("cmd.exe");
+    let mut cmd = CommandBuilder::new("powershell.exe");
+    cmd.arg("-Command");
+    cmd.arg("Write-Host 'Hello from PTY child process!'; exit;");
     // If you want to use PowerShell, uncomment the line below and comment out the cmd.exe line
     // let mut cmd = CommandBuilder::new("powershell.exe");
     cmd.cwd(r"H:\my\github\vespe"); // Set the working directory

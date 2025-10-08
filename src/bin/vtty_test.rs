@@ -7,8 +7,7 @@ use std::time::Duration;
 
 fn main() -> Result<()> {
     // Use the native pty implementation for the system
-    let pty_system = native_pty_system()
-        .context("Failed to get native PTY system")?;
+    let pty_system = native_pty_system();
 
     // Create a new pty
     let pty_pair = pty_system.openpty(PtySize {
@@ -25,7 +24,7 @@ fn main() -> Result<()> {
     let mut cmd = CommandBuilder::new("cmd.exe");
     // If you want to use PowerShell, uncomment the line below and comment out the cmd.exe line
     // let mut cmd = CommandBuilder::new("powershell.exe");
-    cmd.cwd("H:\my\github\vespe"); // Set the working directory
+    cmd.cwd(r"H:\my\github\vespe"); // Set the working directory
 
     let mut child = pty_pair.slave.spawn_command(cmd)
         .context("Failed to spawn command in PTY")?;

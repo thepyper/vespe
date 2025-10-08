@@ -1,115 +1,117 @@
-use portable_pty::{CommandBuilder, PtySize};
-use std::io::{Read, Write};
+use anyhow::{Context, Result};
+use portable_pty::{CommandBuilder, PtySize, native_pty_system, PtySystem};
+use std::io::{self, Read, Write};
+use std::sync::mpsc::{channel, Sender};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-fn main() -> anyhow::Result<()> {
-    println!("Starting vtty_test...");
+fn main() -> Result<()> {
+    // Use the native pty implementation for the system
+    let pty_system = native_pty_system()
+        .context("Failed to get native PTY system")?;
 
-    // Create a new pseudo-terminal
-    let pty_system = portable_pty::native_pty_system();
-    println!("PTY system initialized.");
-
-    let pair = pty_system.openpty(PtySize {
+    // Create a new pty
+    let pty_pair = pty_system.openpty(PtySize {
         rows: 24,
         cols: 80,
         pixel_width: 0,
         pixel_height: 0,
-    })?;
-    println!("PTY pair opened.");
+    }).context("Failed to open PTY")?;
 
-    // Spawn a command in the pseudo-terminal
-    let mut cmd = CommandBuilder::new("powershell.exe");
-    cmd.arg("-Command");
-    cmd.arg("echo Hello from PTY!");
-    cmd.cwd("H:\\my\\github\\vespe"); // Set the working directory
-    println!(r"CommandBuilder created for cmd.exe in H:\my\github\vespe.");
+    // Spawn a Windows shell (e.g., cmd.exe or powershell.exe) into the pty
+    // On Windows, you might need to specify the full path or ensure it's in PATH.
+    // For cmd.exe, it's usually in C:\Windows\System32\cmd.exe
+    // For powershell.exe, it's usually in C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+    let mut cmd = CommandBuilder::new("cmd.exe");
+    // If you want to use PowerShell, uncomment the line below and comment out the cmd.exe line
+    // let mut cmd = CommandBuilder::new("powershell.exe");
+    cmd.cwd("H:\my\github\vespe"); // Set the working directory
 
-    let mut child = pair.slave.spawn_command(cmd)?;
-    println!("Child process (cmd.exe) spawned.");
+    let mut child = pty_pair.slave.spawn_command(cmd)
+        .context("Failed to spawn command in PTY")?;
 
-    // Read and write to the PTY
-    let master = pair.master;
-    let mut reader = master.try_clone_reader()?;
-    let mut writer = master.take_writer()?;
-    println!("PTY master reader and writer obtained.");
+    // Drop the slave PTY handle in the main thread as it's owned by the child process
+    drop(pty_pair.slave);
 
-    // Give the shell some time to start up
-    println!("Sleeping for 2 seconds to allow shell to start...");
-    thread::sleep(Duration::from_secs(2));
+    // Create channels for communication between threads
+    let (tx_input, rx_input) = channel::<Vec<u8>>(); // For sending input to the PTY
+    let (tx_output, rx_output) = channel::<Vec<u8>>(); // For receiving output from the PTY
 
-    // Function to read output with a timeout
-    fn read_output_with_timeout(
-        reader: &mut dyn Read,
-        timeout: Duration,
-        label: &str,
-    ) -> anyhow::Result<String> {
-        let mut output = String::new();
-        let mut buffer = [0; 1024];
-        let start_time = Instant::now();
+    // Get reader and writer for the master PTY
+    let mut master_reader = pty_pair.master.try_clone_reader()
+        .context("Failed to clone PTY master reader")?;
+    let mut master_writer = pty_pair.master.take_writer()
+        .context("Failed to take PTY master writer")?;
 
-        println!("Attempting to read {} output for {:?}", label, timeout);
-
-        while start_time.elapsed() < timeout {
-            match reader.read(&mut buffer) {
-                Ok(0) => {
-                    // No data available right now, but not necessarily EOF.
-                    // Continue waiting until timeout.
-                    thread::sleep(Duration::from_millis(50));
-                }
+    // Spawn a thread to read PTY output and send it to the main thread
+    thread::spawn(move || {
+        let mut buffer = [0u8; 1024];
+        loop {
+            match master_reader.read(&mut buffer) {
+                Ok(0) => break, // EOF
                 Ok(n) => {
-                    let s = String::from_utf8_lossy(&buffer[..n]);
-                    output.push_str(&s);
-                    println!("Read {} bytes for {}: {:?}", n, label, s);
-                    // Reset timer if we got data, to wait for more
-                    // start_time = Instant::now(); // This would require start_time to be mutable
-                    // For simplicity, we'll just keep reading until the initial timeout
-                    thread::sleep(Duration::from_millis(50)); // Small delay to prevent busy-waiting
-                }
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    // No data available right now, but not necessarily EOF.
-                    // Continue waiting until timeout.
-                    thread::sleep(Duration::from_millis(50));
+                    if tx_output.send(buffer[..n].to_vec()).is_err() {
+                        break; // Receiver disconnected
+                    }
                 }
                 Err(e) => {
-                    eprintln!("Error reading from PTY for {}: {}", label, e);
-                    return Err(e.into());
+                    eprintln!("Error reading from PTY: {}", e);
+                    break;
                 }
             }
         }
-        println!("Finished reading {} output after {:?}", label, start_time.elapsed());
-        Ok(output)
+    });
+
+    // Spawn a thread to write input from the main thread to the PTY
+    thread::spawn(move || {
+        loop {
+            match rx_input.recv() {
+                Ok(data) => {
+                    if let Err(e) = master_writer.write_all(&data) {
+                        eprintln!("Error writing to PTY: {}", e);
+                        break;
+                    }
+                    if let Err(e) = master_writer.flush() {
+                        eprintln!("Error flushing PTY writer: {}", e);
+                        break;
+                    }
+                }
+                Err(_) => break, // Sender disconnected
+            }
+        }
+    });
+
+    println!("Interactive shell started. Type 'exit' to quit.");
+
+    // Main loop: read user input and send to PTY, print PTY output
+    loop {
+        // Read output from the PTY and print it
+        while let Ok(output_data) = rx_output.try_recv() {
+            io::stdout().write_all(&output_data)
+                .context("Failed to write PTY output to stdout")?;
+            io::stdout().flush()
+                .context("Failed to flush stdout")?;
+        }
+
+        // Read user input from stdin
+        let mut input_line = String::new();
+        io::stdin().read_line(&mut input_line)
+            .context("Failed to read line from stdin")?;
+
+        // Check for exit command
+        if input_line.trim().eq_ignore_ascii_case("exit") {
+            break;
+        }
+
+        // Send user input to the PTY
+        tx_input.send(input_line.as_bytes().to_vec())
+            .context("Failed to send input to PTY thread")?;
     }
 
-    // Read initial output (e.g., shell prompt)
-    let initial_output = read_output_with_timeout(&mut reader, Duration::from_secs(5), "initial")?;
-    println!("Initial output:\n---\n{}\n---", initial_output);
-
-    // Write a command to the shell
-    let command_to_send = "echo Hello from PTY!\r\n";
-    println!("Sending command: {:?}", command_to_send.trim());
-    writer.write_all(command_to_send.as_bytes())?;
-    writer.flush()?;
-    println!("Command sent.");
-
-    // Give the command some time to execute
-    println!("Sleeping for 2 seconds to allow command to execute...");
-    thread::sleep(Duration::from_secs(2));
-
-    // Read the output of the command
-    let command_output = read_output_with_timeout(&mut reader, Duration::from_secs(5), "command")?;
-    println!("Output after command:\n---\n{}\n---", command_output);
-
-    // Send an exit command
-    println!("Sending 'exit' command...");
-    writer.write_all(b"exit\r\n")?;
-    writer.flush()?;
-    println!("'exit' command sent.");
-
     // Wait for the child process to exit
-    println!("Waiting for child process to exit...");
-    let exit_status = child.wait()?;
-    println!("Child process exited with: {:?}", exit_status);
+    let exit_status = child.wait()
+        .context("Failed to wait for child process")?;
+    println!("Shell exited with status: {:?}", exit_status);
 
     Ok(())
 }

@@ -25,7 +25,8 @@ pub fn execute(
     debug!("Executing context: {}", context_name);
 
     let mut visited_contexts = HashSet::new();
-    ExecuteWorker::execute_loop(project, context_name, agent, &mut visited_contexts)?;
+    let mut worker = ExecuteWorker::new();
+    worker.execute_loop(project, context_name, agent, &mut visited_contexts)?;
 
     debug!("Context execution finished for: {}", context_name);
     Ok(())
@@ -53,17 +54,15 @@ impl ExecuteWorker {
     }
 
     fn execute_loop(
+        &mut self,
         project: &Project,
         context_name: &str,
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
     ) -> anyhow::Result<()> {
-        loop {
-            debug!("Starting execute_step loop for context: {}", context_name);
-            let mut worker = ExecuteWorker::new();
-            let modified = worker.execute_step(project, context_name, agent, visited_contexts)?;
-            debug!("execute_step returned: {:?}", modified);
-            if !modified {
+        for i = 1..100 {
+            debug!("Starting execute_step {} loop for context: {}", i, context_name);
+            if !worker.execute_step(project, context_name, agent, visited_contexts)? {
                 break;
             }
         }
@@ -245,7 +244,8 @@ impl ExecuteWorker {
                         let state = project.load_summary_state(uuid)?;
                         match state.status {
                             SummaryStatus::NeedContext => {
-                                ExecuteWorker::execute_loop(project, &state.context_name, agent, visited_contexts)?; // Ensure the context to summarize is fully executed
+                                let mut summary_worker = ExecuteWorker::new();
+                                summary_worker.execute_loop(project, &state.context_name, agent, visited_contexts)?;  
                                 let context = Context::load(project, &state.context_name)?;
                                 let mut new_state = state.clone();
                                 new_state.context = context

@@ -10,6 +10,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+use crate::config::{ProjectConfig, EditorInterface};
 use crate::editor::{DummyEditorCommunicator, EditorCommunicator, lockfile::FileBasedEditorCommunicator};
 
 /*
@@ -121,11 +122,12 @@ impl ContextManager {
 pub struct Project {
     root_path: PathBuf,
     editor_communicator: Box<dyn EditorCommunicator>,
+    project_config: ProjectConfig,
 }
 
 #[allow(dead_code)]
 impl Project {
-    pub fn init(path: &Path, editor_interface: &str) -> Result<Project> {
+    pub fn init(path: &Path) -> Result<Project> {
         let ctx_dir = path.join(CTX_DIR_NAME);
         if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
             anyhow::bail!("ctx project already initialized in this directory.");
@@ -135,30 +137,39 @@ impl Project {
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
-            .context("Failed to write .ctx_root file")?;       
+            .context("Failed to write .ctx_root file")?;
 
-        Ok(Project {
+        let project = Project {
             root_path: path.canonicalize()?,
             editor_communicator: Box::new(DummyEditorCommunicator),
-        })
+            project_config: ProjectConfig::default(),
+        };
+
+        project.save_project_config()?;
+
+        Ok(project)
     }
 
-    pub fn find(path: &Path, editor_interface: &str) -> Result<Project> {
+    pub fn find(path: &Path) -> Result<Project> {
         let mut current_path = path.to_path_buf();
 
         loop {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
                 let root_path = current_path.canonicalize()?;
+                let project_config_path = root_path.join(CTX_DIR_NAME).join(METADATA_DIR_NAME).join("project_config.json");
+                let project_config = Self::load_project_config(&project_config_path)?;
+
                 let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
-                let editor_communicator: Box<dyn EditorCommunicator> = match editor_interface {
-                    "vscode" => Box::new(FileBasedEditorCommunicator::new(&editor_path)?),
+                let editor_communicator: Box<dyn EditorCommunicator> = match project_config.editor_interface {
+                    EditorInterface::VSCode => Box::new(FileBasedEditorCommunicator::new(&editor_path)?),
                     _ => Box::new(DummyEditorCommunicator),
                 };
 
                 return Ok(Project {
                     root_path: root_path,
                     editor_communicator,
+                    project_config,
                 });
             }
 
@@ -205,6 +216,10 @@ impl Project {
             anchor_metadata_dir.display()
         ))?;
         Ok(anchor_metadata_dir)
+    }
+
+    pub fn project_config_path(&self) -> PathBuf {
+        self.metadata_home().join("project_config.json")
     }
 
     pub fn create_context_file(&self, name: &str, initial_content: Option<String>) -> Result<PathBuf> {
@@ -303,6 +318,21 @@ impl Project {
             name: name.to_string(),
             content: lines,
         })
+    }
+
+    pub fn save_project_config(&self) -> Result<()> {
+        let config_path = self.project_config_path();
+        let serialized = serde_json::to_string_pretty(&self.project_config)?;
+        std::fs::write(&config_path, serialized).context("Failed to write project config file")?;
+        Ok(())
+    }
+
+    pub fn load_project_config(project_config_path: &PathBuf) -> Result<ProjectConfig> {
+        match std::fs::read_to_string(project_config_path) {
+            Ok(content) => Ok(serde_json::from_str(&content)?),
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(ProjectConfig::default()),
+            Err(e) => Err(anyhow::Error::new(e).context("Failed to read project config file")),
+        }
     }
 
     /*

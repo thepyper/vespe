@@ -6,6 +6,7 @@ use vespe::project::Project;
 mod watch;
 use tracing::debug;
 use vespe::agent::ShellAgentCall;
+use chrono::{Local, Datelike};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -17,6 +18,10 @@ struct Cli {
     /// Specify the editor interface to use (e.g., "vscode", "none"). Defaults to "vscode".
     #[arg(long, value_name = "INTERFACE", default_value = "none")]
     editor_interface: String,
+
+    /// If specified, the context name will be automatically generated as "diary/YYYY-mm-DD.md".
+    #[arg(long)]
+    today: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -148,14 +153,24 @@ fn main() -> Result<()> {
             let project = Project::find(&project_path, &cli.editor_interface)?;
             match command {
                 ContextCommands::New { name } => {
-                    let file_path = project.create_context_file(&name)?;
+                    let context_name = if cli.today {
+                        chrono::Local::now().format("diary/%Y-%m-%d.md").to_string()
+                    } else {
+                        name
+                    };
+                    let file_path = project.create_context_file(&context_name)?;
                     println!("Created new context file: {}", file_path.display());
                 }
                 ContextCommands::Execute { name } => {
-                    println!("Executing context '{}'...", name);
+                    let context_name = if cli.today {
+                        chrono::Local::now().format("diary/%Y-%m-%d.md").to_string()
+                    } else {
+                        name
+                    };
+                    println!("Executing context '{}'...", context_name);
                     let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
-                    execute::execute(&project, &name, &agent)?;
-                    println!("Context '{}' executed successfully.", name);
+                    execute::execute(&project, &context_name, &agent)?;
+                    println!("Context '{}' executed successfully.", context_name);
                 }
                 ContextCommands::List {} => {
                     let contexts = project.list_contexts()?;

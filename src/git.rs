@@ -1,11 +1,7 @@
 use std::path::PathBuf;
 use anyhow::{Result, Context, anyhow};
-use gix::{
-    self,
-    prelude::*,
-    head::Kind as HeadKind,
-    actor::Signature,
-};
+use gix::{prelude::*, head::Kind as HeadKind, actor::Signature};
+use gix::worktree::IndexPersistedOrInMemory;
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
     let repo = gix::discover(".")
@@ -18,15 +14,15 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         HeadKind::Symbolic(_reference) => {
             let commit = head.peel_to_commit_in_place() 
                 .context("Failed to peel HEAD reference to commit")?;
-            (vec![commit.id], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
+            (vec![commit.id()], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
         },
         HeadKind::Detached { .. } => {
             let commit = head.peel_to_commit_in_place() 
                 .context("Failed to peel detached HEAD to commit")?;
-            (vec![commit.id], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
+            (vec![commit.id()], repo.index_or_load_from_head().context("Failed to get index from HEAD")?)
         },
         HeadKind::Unborn(_fullname) => {
-            (vec![], gix::index::State::new(repo.object_hash()))
+            (vec![], gix::index::IndexPersistedOrInMemory::InMemory(gix::index::State::new(repo.object_hash())))
         },
     };
 
@@ -57,23 +53,21 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     }
 
     // 4. Write the index
-    index.write(gix::index::write::Options::default())
+    index.write(repo.index_path())
         .context("Failed to write index")?;
-
     // 5. Create the commit
     let tree_id = index.write_tree()
         .context("Failed to write tree from index")?;
 
     let committer_signature = repo.committer()
-        .context("Failed to get committer signature")?;
+        .context("Failed to get committer signature")?.unwrap();
     let author_signature = repo.author()
-        .context("Failed to get author signature")?;
-    let commit_message = format!("{}\n\n{}", message, comment);
+        .context("Failed to get author signature")?.unwrap();    let commit_message = format!("{}\n\n{}", message, comment);
 
     let commit_id = repo.commit(
         &author_signature, // Author
         &committer_signature,         // Committer
-        commit_message,    // Pass String directly
+        commit_message.as_str(),    // Pass String directly
         tree_id,
         parent_ids.iter(), // Pass parent_ids as an iterator
     )
@@ -82,21 +76,21 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     // 6. Update HEAD
     match head.kind {
         HeadKind::Symbolic(_reference) => {
-            let mut head_ref = repo.find_reference(head.name())?;
+            let head_name = head.name().ok_or_else(|| anyhow!("Failed to get HEAD name"))?;
+            let mut head_ref = repo.find_reference(head_name)
+                .context(format!("Failed to find reference for HEAD name: {:?}", head_name))?;
             head_ref.set_target_id(commit_id, "commit")
                 .context("Failed to update symbolic HEAD reference")?;
         },
         HeadKind::Detached { .. } => {
-            repo.set_head_fully_detached(commit_id)
+            repo.set_head(commit_id)
                 .context("Failed to set detached HEAD")?;
         },
         HeadKind::Unborn(_fullname) => {
-            let mut head_update = repo.head_update();
-            let mut head_ref = head_update
-                .create_new_branch("main")
+            repo.references()
+                .context("Failed to get references")?
+                .create_branch("main", commit_id, true, "initial commit")
                 .context("Failed to create initial 'main' branch for unborn repository")?;
-            head_ref.set_target_id(commit_id, "initial commit")
-                .context("Failed to set HEAD to initial commit")?;
         },
     }
 
@@ -107,8 +101,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     }
 
     // 8. Write the index again
-    index.write(gix::index::write::Options::default())
+    index.write(repo.index_path())
         .context("Failed to write index after re-staging")?;
-
     Ok(())
 }

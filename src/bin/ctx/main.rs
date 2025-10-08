@@ -50,12 +50,14 @@ enum ContextCommands {
     /// Creates a new context file.
     New {
         /// The name of the context file (e.g., "my_feature/overview").
-        name: String,
+        #[arg(value_name = "NAME")]
+        name: Option<String>,
     },
     /// Executes a context.
     Execute {
         /// The name of the context to execute.
-        name: String,
+        #[arg(value_name = "NAME")]
+        name: Option<String>,
     },
     /// Lists all available contexts.
     List {},
@@ -156,7 +158,7 @@ fn main() -> Result<()> {
                     let context_name = if cli.today {
                         chrono::Local::now().format("diary/%Y-%m-%d.md").to_string()
                     } else {
-                        name
+                        name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?
                     };
                     let file_path = project.create_context_file(&context_name)?;
                     println!("Created new context file: {}", file_path.display());
@@ -165,7 +167,7 @@ fn main() -> Result<()> {
                     let context_name = if cli.today {
                         chrono::Local::now().format("diary/%Y-%m-%d.md").to_string()
                     } else {
-                        name
+                        name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))?
                     };
                     println!("Executing context '{}'...", context_name);
                     let agent = ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;

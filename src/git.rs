@@ -4,6 +4,7 @@ use gix::{
     prelude::*,
     head::Kind as HeadKind,
     worktree::IndexPersistedOrInMemory,
+    index::Entry,
 };
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
@@ -12,11 +13,11 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     let head = repo.head().context("Failed to get HEAD")?;
 
     // Apri il worktree per manipolare l’area di lavoro
-    let mut worktree = repo.open_worktree()
+    let mut worktree = repo.worktree()
         .context("Failed to open worktree")?;
 
     // Carica l’indice (potrebbe essere persistente o in memoria)
-    let mut index: IndexPersistedOrInMemory = worktree.load_index()
+    let mut index = worktree.index()
         .context("Failed to load worktree index")?;
 
     // Determina i genitori del commit (se non è un repository “unborn”)
@@ -32,8 +33,9 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     // Memoriza i file già stagiati (stage == 0)
     let initially_staged: Vec<PathBuf> = index
         .entries()
+        .into_iter()
         .filter_map(|e| {
-            if e.stage() == 0 {
+            if e.stage() == Entry::Stage::Unconflicted  {
                 Some(e.path.to_owned().into())
             } else {
                 None

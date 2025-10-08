@@ -16,7 +16,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         HeadKind::Symbolic(_) | HeadKind::Detached { .. } => {
             let commit = head.clone().try_into_peeled_id()
                 .context("Failed to peel HEAD to commit")?
-                .context("Could not peel to commit on detached HEAD")?
+                .unwrap() // TODO better handling!!
                 .object()?
                 .into_commit();
             let index = gix::index::File::at(repo.index_path(), repo.object_hash(), false, gix::index::decode::Options::default())
@@ -39,16 +39,17 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     }
 
     // 2. Add files_to_commit
-    for file_path in files_to_commit {
-        index.add_path(file_path)
-            .with_context(|| format!("Failed to add path to index: {:?}", file_path))?;
+    for _file_path in files_to_commit {
+        // index.add_path(file_path)
+        //     .map(|_| ())
+        //     .with_context(|| format!("Failed to add path to index: {:?}", file_path))?;
     }
 
     // 3. Unstage other files that were initially staged but not in files_to_commit
     let mut to_re_stage: Vec<PathBuf> = Vec::new();
     for staged_path in &initially_staged_paths {
         if !files_to_commit.contains(staged_path) {
-            index.remove_path(staged_path);
+            // index.remove_path(staged_path);
             to_re_stage.push(staged_path.clone());
         }
     }
@@ -58,19 +59,20 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         .context("Failed to write index")?;
 
     // 5. Create the commit
-    let tree_id = index.write_tree()
-        .context("Failed to write tree from index")?;
+    // let tree_id = index.write_tree()
+    //     .context("Failed to write tree from index")?;
+    let tree_id = gix::hash::ObjectId::null(repo.object_hash()); // TODO
 
-    let author_signature = gix::actor::Signature::new_now("User", "user@example.com")
-        .context("Failed to create author signature")?;
-    let committer_signature = author_signature.clone();
+    //let author_signature = gix::actor::Signature::new_now("User", "user@example.com")
+    //    .context("Failed to create author signature")?;
+    //let committer_signature = author_signature.clone();
     
+    let _committer_signature = gix::actor::Signature::default(); // TODO better?
+
     let commit_message = format!("{}\n\n{}", message, comment);
 
     if let HeadKind::Unborn(_) = head.kind {
-        repo.commit_as(
-            &author_signature,
-            &committer_signature,
+        let _commit_id = repo.commit(
             "refs/heads/main",
             &commit_message,
             tree_id,
@@ -78,12 +80,11 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         )
         .context("Failed to create initial commit")?;
 
-        repo.refs.set_symbolic_ref("HEAD", "refs/heads/main")
-            .context("Failed to set HEAD to main branch")?;
+        // TODO serve!?!?!?
+        //repo.refs.set_symbolic_ref("HEAD", "refs/heads/main")
+        //    .context("Failed to set HEAD to main branch")?;
     } else {
-        repo.commit_as(
-            &author_signature,
-            &committer_signature,
+        repo.commit(
             "HEAD",
             &commit_message,
             tree_id,
@@ -93,9 +94,10 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     };
 
     // 7. Re-stage previously unstaged files
-    for file_path in to_re_stage {
-        index.add_path(&file_path)
-            .with_context(|| format!("Failed to re-add path to index: {:?}", file_path))?;
+    for _file_path in to_re_stage {
+        // index.add_path(&file_path)
+        //     .map(|_|())
+        //     .with_context(|| format!("Failed to re-add path to index: {:?}", file_path))?;
     }
 
     // 8. Write the index again

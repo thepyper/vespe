@@ -209,6 +209,9 @@ impl Project {
 
     pub fn create_context_file(&self, name: &str, initial_content: Option<String>) -> Result<PathBuf> {
         let file_path = self.contexts_root().join(format!("{}.md", name));
+        if file_path.exists() {
+            anyhow::bail!("Context file already exists: {}", file_path.display());
+        }
         let parent_dir = file_path
             .parent()
             .context("Failed to get parent directory")?;
@@ -221,6 +224,9 @@ impl Project {
 
     pub fn create_snippet_file(&self, name: &str, initial_content: Option<String>) -> Result<PathBuf> {
         let file_path = self.snippets_root().join(format!("{}.md", name));
+        if file_path.exists() {
+            anyhow::bail!("Snippet file already exists: {}", file_path.display());
+        }
         let parent_dir = file_path
             .parent()
             .context("Failed to get parent directory")?;

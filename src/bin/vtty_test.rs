@@ -21,7 +21,7 @@ fn main() -> anyhow::Result<()> {
     // Spawn a command in the pseudo-terminal
     let mut cmd = CommandBuilder::new("cmd.exe"); // Use "bash" or "sh" on Unix-like systems
     cmd.cwd("H:\\my\\github\\vespe"); // Set the working directory
-    println!("CommandBuilder created for cmd.exe in H:\my\github\vespe.");
+    println!(r"CommandBuilder created for cmd.exe in H:\my\github\vespe.");
 
     let mut child = pair.slave.spawn_command(cmd)?;
     println!("Child process (cmd.exe) spawned.");

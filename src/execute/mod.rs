@@ -25,19 +25,7 @@ pub fn execute(
     debug!("Executing context: {}", context_name);
 
     let mut visited_contexts = HashSet::new();
-
-    let mut worker = ExecuteWorker::new();
-    let mut modified = true;
-
-    loop {
-        debug!("Starting _execute loop for context: {}", context_name);
-        let mut worker = ExecuteWorker::new();
-        let modified = worker._execute(project, context_name, agent, &mut visited_contexts)?;
-        debug!("_execute returned: {:?}", modified);
-        if !modified {
-            break;
-        }
-    }
+    ExecuteWorker::execute_loop(project, context_name, agent, &mut visited_contexts)?;
 
     debug!("Context execution finished for: {}", context_name);
     Ok(())
@@ -64,7 +52,25 @@ impl ExecuteWorker {
         format!("{:x}", self.hasher.clone().finalize())
     }
 
-    fn _execute(
+    fn execute_loop(
+        project: &Project,
+        context_name: &str,
+        agent: &ShellAgentCall,
+        visited_contexts: &mut HashSet<String>,
+    ) -> anyhow::Result<()> {
+        loop {
+            debug!("Starting execute_step loop for context: {}", context_name);
+            let mut worker = ExecuteWorker::new();
+            let modified = worker.execute_step(project, context_name, agent, visited_contexts)?;
+            debug!("execute_step returned: {:?}", modified);
+            if !modified {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    fn execute_step(
         &mut self,
         project: &Project,
         context_name: &str,
@@ -131,7 +137,7 @@ impl ExecuteWorker {
                         self.add_line(x);
                     }
                     Line::IncludeTag { context_name } => {
-                        let included_modified = self._execute(project, &context_name, agent, visited_contexts)?;
+                        let included_modified = self.execute_step(project, &context_name, agent, visited_contexts)?;
                         if included_modified {
                             // Exit processing, included could add any kind of content that need re-execution
                             break;
@@ -239,7 +245,7 @@ impl ExecuteWorker {
                         let state = project.load_summary_state(uuid)?;
                         match state.status {
                             SummaryStatus::NeedContext => {
-                                execute(project, &state.context_name, agent)?; // Ensure the context to summarize is fully executed
+                                ExecuteWorker::execute_loop(project, &state.context_name, agent, visited_contexts)?; // Ensure the context to summarize is fully executed
                                 let context = Context::load(project, &state.context_name)?;
                                 let mut new_state = state.clone();
                                 new_state.context = context

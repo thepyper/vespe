@@ -84,19 +84,22 @@ impl ExecuteWorker {
         }
 
         let mut context = Context::load(project, context_name)?;
-        // analyze orphan anchors TODO
+        
+        // Transform tags into anchors and initialize states
+        let mut need_next_step = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts)?;
 
-        let mut modified = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts)?;
+        // Execute document injection and mutate states
+        need_next_step |= self._handle_anchor_states(project, &mut context)?;
 
-        modified |= self._handle_anchor_states(project, &mut context)?;
-
-        modified |= self._execute_long_tasks(project, &mut context, agent, visited_contexts)?;
-
+        // Save document, no more document changes on this step
         let uid = project.request_file_modification(&context.path)?;
         context.save()?;
         project.notify_file_modified(&context.path, uid)?;
 
-        Ok(modified)
+        // Execute long tasks that only mutate state (and not document)
+        need_next_step |= self._execute_long_tasks(project, &context, agent, visited_contexts)?;
+
+        Ok(need_next_step)
     }
 
     fn _handle_tags_and_anchors(
@@ -250,11 +253,11 @@ impl ExecuteWorker {
     fn _execute_long_tasks(
         &mut self,
         project: &Project,
-        context: &mut Context,
+        context: &Context,
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
     ) -> anyhow::Result<bool> {
-        let mut modified = false;
+        let mut need_next_step = false;
         for line in &context.lines {
             match line {
                 Line::AnswerBeginAnchor { uuid } => {
@@ -265,7 +268,7 @@ impl ExecuteWorker {
                             new_state.reply = agent.call(&state.query)?;
                             new_state.status = AnswerStatus::NeedInjection;
                             project.save_answer_state(uuid, &new_state)?;
-                            modified = true;
+                            need_next_step = true;
                         }
                         _ => { /* Do nothing */ }
                     }
@@ -301,7 +304,7 @@ impl ExecuteWorker {
                             ))?;
                             new_state.status = SummaryStatus::NeedInjection;
                             project.save_summary_state(uuid, &new_state)?;
-                            modified = true;
+                            need_next_step = true;
                         }
                         _ => { /* Do nothing */ }
                     }
@@ -309,7 +312,7 @@ impl ExecuteWorker {
                 _ => { /* Do nothing */ }
             }
         }
-        Ok(modified)
+        Ok(need_next_step)
     }
 }
 

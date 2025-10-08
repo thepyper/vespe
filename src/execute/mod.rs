@@ -1,5 +1,7 @@
 pub mod states;
 
+use std::collections::HashSet;
+
 use crate::agent::ShellAgentCall;
 use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState, SummaryStatus};
 use crate::project::Project;
@@ -22,13 +24,19 @@ pub fn execute(
 ) -> anyhow::Result<()> {
     debug!("Executing context: {}", context_name);
 
+    let mut visited_contexts = HashSet::new();
+
     let mut worker = ExecuteWorker::new();
     let mut modified = true;
 
-    while modified {
+    loop {
         debug!("Starting _execute loop for context: {}", context_name);
-        modified = worker._execute(project, context_name, agent)?;
+        let mut worker = ExecuteWorker::new();
+        let modified = worker._execute(project, context_name, agent, &mut visited_contexts)?;
         debug!("_execute returned: {:?}", modified);
+        if !modified {
+            break;
+        }
     }
 
     debug!("Context execution finished for: {}", context_name);
@@ -61,10 +69,15 @@ impl ExecuteWorker {
         project: &Project,
         context_name: &str,
         agent: &ShellAgentCall,
+        visited_contexts: &mut HashSet<String>,
     ) -> anyhow::Result<bool> {
+        if !visited_contexts.insert(context_name.to_string()) {
+            debug!("Context '{}' already visited. Skipping further execution.", context_name);
+            return Ok(false);
+        }
+
         let mut modified = false;
         let mut context = Context::load(project, context_name)?;
-
         // analyze orphan anchors TODO
 
         {
@@ -118,7 +131,7 @@ impl ExecuteWorker {
                         self.add_line(x);
                     }
                     Line::IncludeTag { context_name } => {
-                        let included_modified = self._execute(project, &context_name, agent)?;
+                        let included_modified = self._execute(project, &context_name, agent, visited_contexts)?;
                         if included_modified {
                             // Exit processing, included could add any kind of content that need re-execution
                             break;

@@ -218,7 +218,7 @@ impl ExecuteWorker {
                                 match state.status { 
                                     AnswerStatus::Completed => {
                                         let mut new_state = state.clone();
-                                        new_state.status = AnswerStatus::NeedAnswer;
+                                        new_state.status = AnswerStatus::NeedContext;
                                         project.save_answer_state(uuid, &new_state, commit)?;
                                         modified = true;
                                     }

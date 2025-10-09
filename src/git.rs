@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use tracing::debug;
 
-pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str) -> Result<Oid> {
+pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str) -> Result<()> {
     let repo = Repository::open(".")
         .context("Failed to open repository")?;
     let workdir = repo.workdir().context("Repository has no workdir")?;
@@ -26,7 +26,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str)
     // 4. *** SAVE THE ORIGINAL INDEX STATE ***
     // Create a temporary tree object from the current index. This OID represents
     // the state of the index before our modifications.
-    let original_index_tree_oid = index.write_tree(&repo)
+    let original_index_tree_oid = index.write_tree()
         .context("Failed to save original index state")?;
 
     // 5. Update the index to match the HEAD tree.
@@ -57,7 +57,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str)
         .context("Failed to write index")?;
 
     // 8. Create a new tree based on the current state of the index.
-    let tree_oid = index.write_tree(&repo)
+    let tree_oid = index.write_tree()
         .context("Failed to write tree from index")?;
     let tree = repo.find_tree(tree_oid)
         .context("Failed to find tree")?;
@@ -91,6 +91,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str)
         .context("Failed to write restored index")?;
 
     debug!("Commit created with id {}", new_commit_oid);
-    Ok(new_commit_oid)
+
+    Ok(())
 }
 

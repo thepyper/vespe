@@ -6,7 +6,16 @@ use tracing::debug;
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
     // Apri il repository nella directory corrente
     let repo = gix::open(".")?;
-   
+
+    let progress = gix::progress::Discard;
+    let status = repo.status(progress)?.untracked_files(gix::status::UntrackedFiles::Files);
+    for entry in status.into_iter(None) {
+        let o = entry.into_outcome();
+        debug!("Status entry: {:#?}", o);
+    }
+
+
+  /* 
     // Ottieni l'index path e caricalo direttamente come File modificabile
     let index_path = repo.index_path();
     let mut index = gix::index::File::at(
@@ -31,7 +40,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         //}
     }
     debug!("Files in staging: {:?}", files_in_staging);
-
+*/
    /*
     // 2) Ottieni l'object database
     let odb = repo.objects.clone();

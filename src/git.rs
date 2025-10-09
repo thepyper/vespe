@@ -1,6 +1,7 @@
 use git2::{Repository, Signature};
 use std::path::PathBuf;
 use anyhow::{Context, Result};
+use tracing::debug;
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
     // Apri il repository corrente

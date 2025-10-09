@@ -1,0 +1,43 @@
+## Plan for Improvements and Bug Fixes (2025-09-25d)
+
+### Problems Identified:
+
+1.  **`Tasks` page not loading on startup**: The task list only appears after explicitly navigating to the `Tasks` page with F1. It should load automatically when the application starts.
+2.  **"New / Edit" functionality broken**: 
+    *   "Something green" appears, likely the `TaskEdit` page, but it's not functioning as expected.
+    *   "Objective" is visible in the F5/F6 footer, indicating a UI context mismatch.
+    *   A warning about not finding the task suggests issues with task loading or creation flow.
+
+### Proposed Improvements / Bug Fixes:
+
+1.  **Load tasks on application startup**:
+    *   Modify `vespe-tui/src/main.rs` to call `app.project.list_all_tasks()` and populate `app.tasks_page_state.tasks` immediately after `App::default()` is created.
+2.  **Correct "New / Edit" functionality**:
+    *   **Footer context**: Ensure the footer actions (F5/F6) correctly reflect the current page. When on the `Tasks` page, F5 should be "New" and F6 should be "Edit". When on the `TaskEdit` page, F5 should be "Save" and F6 should be "Cancel". This seems to be a rendering issue in `render_page_footer` or `page_footer_actions`.
+    *   **Task loading/creation**:
+        *   For "New" (F5 on `Tasks` page): The `TaskEdit` page should open with empty fields, ready for new task input. This seems to be working, but the footer is incorrect.
+        *   For "Edit" (F6 on `Tasks` page): The currently selected task from `app.tasks_page_state.tasks` should be loaded into `app.task_edit_state` before transitioning to `TaskEdit` page. The warning "Edit functionality not yet implemented. Please select a task first." indicates this part is still a placeholder.
+3.  **Implement Logging with `tracing`**:
+    *   Add `tracing` and `tracing-subscriber` as dependencies to `vespe-tui/Cargo.toml`.
+    *   Initialize `tracing` in `main.rs` to log to a file or console.
+    *   Add `info!`, `warn!`, `error!`, and `debug!` statements at key points in the application flow (e.g., task loading, task creation, task editing, event handling) to provide better insights into runtime behavior.
+
+### Detailed Plan for Improvement / Bug Fixes:
+
+1.  **Modify `vespe-tui/Cargo.toml`**:
+    *   Add `tracing = "0.1"` and `tracing-subscriber = "0.3"` as dependencies.
+2.  **Modify `vespe-tui/src/main.rs`**:
+    *   **Initialize `tracing`**: Add `tracing_subscriber::fmt::init();` at the beginning of `main()` function.
+    *   **Load tasks on startup**: Call `app.project.list_all_tasks()` and populate `app.tasks_page_state.tasks` and `app.tasks_page_state.selected_task_index` immediately after `let mut app = App::default();`.
+    *   **Fix footer rendering**: Re-examine `render_page_footer` and `page_footer_actions` to ensure the correct actions are displayed based on `app.current_page`. The current implementation of `page_footer_actions` seems correct, so the issue might be in how `render_page_footer` is using it or how `app.current_page` is being set.
+    *   **Implement "Edit" action (F6 on `Tasks` page)**:
+        *   In `handle_events` in `main.rs`, when `app.current_page == Page::Tasks` and `KeyCode::F(6)` is pressed:
+            *   Check if `app.tasks_page_state.tasks` is not empty.
+            *   If a task is selected, load it into `app.task_edit_state` (populate `current_task_uid`, `name`, `objective`, `agent_uid`).
+            *   Set `app.current_page = Page::TaskEdit;`.
+            *   Clear any existing messages.
+            *   If no task is selected, display an appropriate info message.
+3.  **Add `tracing` statements**:
+    *   Sprinkle `info!`, `warn!`, `error!`, `debug!` statements throughout `main.rs`, `pages/tasks.rs`, and `pages/task_edit.rs` to log important events and state changes.
+
+I will now write this detailed plan to `doc/plan_2025_09_25d.txt`.

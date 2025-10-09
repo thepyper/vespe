@@ -1,0 +1,29 @@
+# Piano di Correzione per Implementazione MCP
+
+## Obiettivo
+Correggere l'implementazione del formato `mcp` nello script `001_big_small_training_set_generation.py` per allinearlo alla specifica del "Model Context Protocol" fornita.
+
+## Contesto
+L'implementazione precedente di `mcp` era basata su un'interpretazione errata, risultando in un formato testuale a sezioni. La specifica chiarisce che MCP è un protocollo strutturato in JSON.
+
+## Passi di Implementazione
+
+### 1. Aggiornamento della Funzione `_build_mcp_tool_spec`
+- **Azione:** Riscrivere completamente la funzione `_build_mcp_tool_spec` nello script Python.
+- **Logica:**
+    - La funzione non genererà più un formato testuale, ma una stringa che descrive il formato JSON atteso per MCP.
+    - Includerà una descrizione chiara della struttura `tool_use`, con i campi `type`, `id`, `name`, e `input`.
+    - Fornirà un esempio concreto di blocco `tool_use` in JSON.
+    - Le istruzioni per il modello specificheranno di usare ID semplici e sequenziali (es. `call_1`).
+    - La lista dei tool disponibili (`TOOLS_DEFINITION`) sarà ancora usata per elencare i tool che il modello può chiamare.
+
+### 2. Verifica del System Prompt Normativo
+- **Azione:** Rivedere la costante `NORMATIVE_SYSTEM_PROMPT`.
+- **Dettagli:** Le regole generali (es. "Fermati immediatamente dopo aver prodotto il blocco TOOL_CODE") sono ancora valide. Il termine "TOOL_CODE" si riferirà ora al blocco JSON `tool_use`. La formulazione attuale è sufficientemente generica e non dovrebbe richiedere modifiche.
+
+### 3. Flusso di Esecuzione
+- Il resto dello script (`get_student_response`, `label_student_response`, `main`) è già modulare e dovrebbe funzionare correttamente con la nuova funzione `_build_mcp_tool_spec` senza bisogno di ulteriori modifiche. Il system prompt aggiornato verrà automaticamente passato sia allo "studente" che all'"etichettatore", garantendo coerenza.
+
+### 4. Versioning con Git
+- **Commit 1 (Pianificazione):** Verrà creato un commit per aggiungere questo file di piano (`doc/plan_2025_09_21b.txt`) al repository.
+- **Commit 2 (Implementazione):** Le modifiche al file Python (`001_big_small_training_set_generation.py`) verranno salvate in un nuovo commit con un messaggio che descrive la correzione (es. "fix: Correctly implement Model Context Protocol (MCP) format").

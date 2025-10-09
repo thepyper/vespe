@@ -1,0 +1,84 @@
+# Design Considerations for Vespe Agents (2025-09-25e)
+
+This document outlines design considerations for enhancing Vespe's agent capabilities, focusing on task assignment, chat interaction, memory management, and a hierarchical task/context structure.
+
+## 1. Task Assignment to Agents
+
+**Concept:** Agents can be assigned specific tasks (e.g., "plan this task," "execute this task"), promoting modularity and clear separation of concerns. The existing `src/agent.rs`, `src/task.rs`, and `src/tool.rs` modules provide a strong foundation.
+
+**Considerations & Best Practices:**
+*   **Role-Based Agents:** Define agents with specialized roles to handle different types of tasks. Examples include:
+    *   `PlannerAgent`: Breaks down high-level goals into actionable sub-tasks.
+    *   `ExecutorAgent`: Executes specific tasks using available tools.
+    *   `RefactorAgent`: Focuses on code quality and refactoring.
+    *   `TestAgent`: Generates and runs tests.
+*   **Rich Task Definition:** The `Task` struct should be comprehensive, including:
+    *   A clear, unambiguous description of the goal.
+    *   Input parameters required for execution.
+    *   Expected output or success criteria.
+    *   Dependencies on other tasks.
+    *   Current status (e.g., `Pending`, `InProgress`, `Completed`, `Failed`).
+*   **Orchestration:** A central component (e.g., an "Agent Manager") is needed to:
+    *   Receive user requests and translate them into initial tasks.
+    *   Delegate tasks to the most appropriate specialized agent.
+    *   Monitor task progress and handle state transitions.
+    *   Manage task dependencies and error recovery.
+*   **Tool Integration:** Agents must have access to a well-defined set of tools (as per `src/tool.rs`) to perform their operations (e.g., reading/writing files, running shell commands, performing web searches). The system should allow agents to dynamically select and utilize relevant tools.
+
+## 2. Chat Interaction with Agents
+
+**Concept:** Users interact with agents primarily through a chat interface, providing dynamic input, instructions, and clarifications using natural language.
+
+**Considerations & Best Practices:**
+*   **Context Management:** This is paramount for coherent conversations. Strategies include:
+    *   **Sliding Window:** Retaining a fixed number of recent messages.
+    *   **Summarization:** Periodically summarizing conversation history to condense context.
+    *   **Entity Extraction:** Identifying and storing key entities (e.g., file paths, function names, requirements) mentioned in the chat.
+*   **Intent Recognition:** The agent should accurately infer the user's intent from chat messages (e.g., new instruction, clarification, question, memory update).
+*   **Clarification Loop:** When instructions are ambiguous or incomplete, the agent should proactively ask clarifying questions rather than making assumptions.
+*   **Structured Input (Optional):** While natural language is primary, consider offering structured commands or input formats for specific, repetitive actions (e.g., `/add_memory "fact"`).
+
+## 3. Persistent Memory Management for Agents
+
+**Concept:** Agents need a persistent memory to store facts, preferences, project context, and learned patterns across sessions. Users should have explicit control over this memory.
+
+**Considerations & Best Practices:**
+*   **Types of Memory:** Differentiate memory based on its lifespan and scope:
+    *   **Conversational Memory:** Short-term context for the current chat session.
+    *   **Working Memory:** Information relevant to the currently active task or project.
+    *   **Long-Term Memory (Knowledge Base):** Persistent facts, user preferences, project conventions, learned patterns, and historical solutions. This is the primary focus for user-managed memory.
+*   **Memory Structure:**
+    *   **Key-Value Store:** Suitable for simple facts and preferences.
+    *   **Semantic Graph/Vector Database:** For complex, interconnected knowledge, enabling semantic search and retrieval based on meaning.
+*   **User Interface for Memory Management:** Provide clear commands or a dedicated UI for users to:
+    *   `add_memory <fact>`: Explicitly add new facts.
+    *   `list_memory [filter]`: View stored memory entries.
+    *   `delete_memory <id>`: Remove specific entries.
+    *   `update_memory <id> <new_fact>`: Modify existing entries.
+    *   `enable_memory <id>` / `disable_memory <id>`: Temporarily activate/deactivate memory items, allowing for conditional behavior or experimentation without permanent deletion.
+*   **Automatic Memory Suggestions:** The agent could suggest adding certain information to long-term memory based on successful task completion or recurring patterns.
+*   **Efficient Retrieval:** Implement mechanisms (e.g., semantic search, keyword matching) for the agent to efficiently retrieve relevant information from its memory.
+
+## 4. Hierarchical Task and Context Structure
+
+**Concept:** Tasks are organized in a hierarchy, where subtasks inherit context from their parent tasks. Chat interactions are always contextual to a specific task within this hierarchy.
+
+**Considerations & Best Practices:**
+*   **Task Relationships:**
+    *   The `Task` struct (`src/task.rs`) should include an optional `parent_id` field to establish parent-child relationships.
+    *   A root `Project` (managed by `src/project.rs`) would serve as the top-level container for tasks.
+*   **Context Aggregation:** When an agent is focused on a subtask, its "operational context" should be dynamically constructed by combining:
+    1.  The `local_context` specific to the subtask itself.
+    2.  The `local_context` of its direct parent.
+    3.  Recursively, the `local_context` of all its ancestors up to the root task/project.
+*   **Context Prioritization & Resolution:**
+    *   More specific context (from a child task) should override or take precedence over more general context (from a parent task) in case of conflicts.
+    *   Mechanisms to filter or summarize inherited context might be necessary to prevent overload, especially in deep hierarchies.
+*   **Contextual Chat Interface:**
+    *   **Explicit Task Focus:** Users should be able to explicitly set the current "chat focus" to a specific task (e.g., `/focus_task <task_id>`).
+    *   **Visual Indication:** The CLI should clearly indicate the currently active task context (e.g., `[Project/Feature/Subtask]>`).
+    *   **Task-Specific Chat History:** Each task should maintain its own chat history, ensuring that conversations remain relevant and easily reviewable within their specific scope.
+    *   **Implicit Context Inference:** While explicit focus is safer, the system could attempt to infer the intended task context from chat messages if no explicit focus is set, based on keywords and recent activity.
+*   **User Navigation:** Provide commands to navigate the task hierarchy (e.g., `/up_context`, `/list_subtasks`, `/go_to_root`).
+
+This hierarchical approach, combined with robust memory and chat management, will enable Vespe agents to tackle complex software engineering problems with greater efficiency, understanding, and user control.

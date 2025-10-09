@@ -1,0 +1,62 @@
+{
+  "debug": {
+    "config": {
+      "complexity": "low to medium",
+      "context_length": "small",
+      "hero_model": "gemma3:1b",
+      "marker_model": "gpt-oss:20b",
+      "narrator_model": "llama3.1:8b",
+      "num_examples": 100,
+      "ollama_url": "http://localhost:11434",
+      "output_dir": "buzz/training/generated_examples_rust",
+      "tool_format": "mcp",
+      "tool_name": null,
+      "use_case": null,
+      "user_style": null
+    },
+    "hero_query": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm trying to create a simple FAQ page for my website, and I need to write some basic answers to common questions. Can you help me generate a text file with the answer to this question: 'What are our business hours?' The file should be saved in the `/static/faq` directory on my server.\"\n\nThis prompt:\n\n* Matches the use case of question answering (specifically, creating an FAQ page)\n* Has low to medium complexity, as it involves writing a simple text file\n* Uses casual language style, as requested\n* Includes context for the context length parameter (a small amount of text is being written)\n* Makes tool usage feel natural and necessary, as the user needs to write a file with specific content.",
+    "hero_response": "```json\n{\n  \"parameters\": {\n    \"name\": \"write_faq_answer\",\n    \"input\": \"What are our business hours?\"\n  },\n  \"tool_name\": \"write_file\"\n}\n```",
+    "marker_query": "TRAINING DATA LABELING - TOKEN MARKING SEGMENTATION\n\nAnalyze a language model's response and mark each meaningful unit with its category to create training data for text segmentation.\nResponse should (but could not) contain a tool call of the tool specified in the next section.\n\n=== INPUT DATA ===\nAvailable tools:\n{\n  \"name\": \"read_file\",\n  \"description\": \"Reads and returns the content of a specified file.\",\n  \"parameters\": [\n    {\n      \"name\": \"absolute_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to read.\",\n      \"required\": true\n    }\n  ]\n}\n{\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\n\n=== CLASSIFICATION CATEGORIES ===\n\n**TEXT:** User-facing content\n- Direct answers, explanations, confirmations\n- Results presentation, summaries\n- Polite conversational elements\n\n**THOUGHT:** Internal reasoning about the task\n- \"I need to...\", \"Let me...\", \"The user wants...\"\n- Analysis of the situation or approach\n- Planning statements\n\n**TOOL_CALL:** Tool invocation content\n- JSON structures for any tool calling\n- Tool parameters and arguments\n- Technical tool-calling syntax (even if malformed)\n\n=== TOKEN MARKING RULES ===\n\n**Segmentation Guidelines:**\n- You MUST split on newline, even if it is internal to structured data such as JSON or any other;\n- You CAN split anywhere else if you need to begin a new segment.\n      \n=== OUTPUT FORMAT ===\n\nEach segment falls into one of the following 2 cases:\n\n1. It is result of a newline split, then output format is:\n<CATEGORY>segment\n<NL>\nNotice that the newline tag is NOT on the same line of the category and segment.\n\n2. It is result of a non-newline split, then output format is:\n<CATEGORY>segment\n\nThe WANTED result is segmented output is a perfect reconstruction of the original output.\nThen, any markup language in the original output MUST be present in the segmented output as well.\n\nYou CANNOT output anything else than the segment conversion into one of there two cases.\nYou CANNOT output any explanation of how you decided segmentation.\nYou CANNOT output any markup other than specified in the two cases.\n\nExample Input: \nI'll search for information: {\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \nThis should help!\n\nExample Output:\n<TEXT>I'll search for information: \n<TOOL_CALL>{\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \n<NL>\n<TEXT>This should help!\n\n=== TOOL-SPECIFIC RECOGNITION ===\nFor any tool, mark as TOOL_CALL:\n- Any JSON structure containing tool name\n- Parameter structures matching the tool specifications\n- Malformed attempts at using any tool\n- References to any tool functionality\n\n=== EXAMPLES ===\n\nExample 1:\nInput: \nI understand your request. \nLet me read the specified file:\n{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\nThe contents are displayed above.\n\nOutput:\n<TEXT>I understand your request. \n<NL>\n<THOUGHT>Let me read the specified file:\n<NL>\n<TOOL_CALL>{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\n<NL>\n<TEXT>The contents are displayed above.\n<NL>\n\nExample 2:\nInput: \nHmm, I need to think about this. I'll use echo: {\\\"text\\\": \\\"hello world\\\"} \nDone!\n\nOutput:\n<THOUGHT>Hmm, I need to think about this. \n<TEXT>I'll use echo: \n<TOOL_CALL>{\\\"text\\\": \\\"hello world\\\"} \n<NL>\n<TEXT>Done!\n<NL>\n\n=== PROCESSING INSTRUCTIONS ===\n\n1. Read the full model response\n2. Identify segmentation boundaries\n3. Classify each segment based on context and content\n4. Mark each unit with appropriate category\n5. Ensure complete coverage (every word/unit gets a label)\n6. Double-check that TOOL_CALL segments relate to write_file\n\n=== ORIGINAL QUERY TO THE MODEL ===\nHere is a generated user prompt that meets the specified requirements:\n\n\"I'm trying to create a simple FAQ page for my website, and I need to write some basic answers to common questions. Can you help me generate a text file with the answer to this question: 'What are our business hours?' The file should be saved in the `/static/faq` directory on my server.\"\n\nThis prompt:\n\n* Matches the use case of question answering (specifically, creating an FAQ page)\n* Has low to medium complexity, as it involves writing a simple text file\n* Uses casual language style, as requested\n* Includes context for the context length parameter (a small amount of text is being written)\n* Makes tool usage feel natural and necessary, as the user needs to write a file with specific content.\n\n=== MODEL RESPONSE TO SEGMENT ===\n```json\n{\n  \"parameters\": {\n    \"name\": \"write_faq_answer\",\n    \"input\": \"What are our business hours?\"\n  },\n  \"tool_name\": \"write_file\"\n}\n```\n",
+    "marker_response": "<TOOL_CALL>{<NL>\n<TOOL_CALL>  \"parameters\": {<NL>\n<TOOL_CALL>    \"name\": \"write_faq_answer\",<NL>\n<TOOL_CALL>    \"input\": \"What are our business hours?\"<NL>\n<TOOL_CALL>  },<NL>\n<TOOL_CALL>  \"tool_name\": \"write_file\"<NL>\n<TOOL_CALL>}<NL>",
+    "narrator_query": "TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR\n\nYour task is to generate a user prompt that will encourage a language model to use a specific tool in a particular crafted scenario.\n\n=== TARGET TOOL ===\nTool Name: write_file\nTool Specification: {\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\nTool Description: Writes content to a specified file, overwriting it if it exists.\n\n=== SCENARIO PARAMETERS ===\nUse Case: question answering\nComplexity: low to medium\nUser Style: casual\nContext Length: small\n\n=== GENERATION RULES ===\n1. Create realistic user request (not \"please use the X tool\")\n2. Match the specified use case and complexity naturally\n3. Include appropriate context for the context_length parameter\n4. Use language style matching user_style parameter\n5. Make tool usage feel natural and necessary\nGenerate exactly one user prompt that matches all parameters.\n\n=== OUTPUT ===\n",
+    "narrator_response": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm trying to create a simple FAQ page for my website, and I need to write some basic answers to common questions. Can you help me generate a text file with the answer to this question: 'What are our business hours?' The file should be saved in the `/static/faq` directory on my server.\"\n\nThis prompt:\n\n* Matches the use case of question answering (specifically, creating an FAQ page)\n* Has low to medium complexity, as it involves writing a simple text file\n* Uses casual language style, as requested\n* Includes context for the context length parameter (a small amount of text is being written)\n* Makes tool usage feel natural and necessary, as the user needs to write a file with specific content."
+  },
+  "full_text": "{\n  \"parameters\": {\n    \"name\": \"write_faq_answer\",\n    \"input\": \"What are our business hours?\"\n  },\n  \"tool_name\": \"write_file\"\n}\n",
+  "spans": [
+    {
+      "category": "TOOL_CALL",
+      "end": 1,
+      "start": 0
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 19,
+      "start": 2
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 51,
+      "start": 20
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 95,
+      "start": 52
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 100,
+      "start": 96
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 128,
+      "start": 101
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 130,
+      "start": 129
+    }
+  ]
+}

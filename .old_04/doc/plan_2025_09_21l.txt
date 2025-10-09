@@ -1,0 +1,5 @@
+Plan to translate tool specifications to English:
+
+1.  **Modify `src/bin/data_generator/tool_definitions.rs`**:
+    *   Translate the `description` field of each `Tool` in `TOOLS_DEFINITION` from Italian to English.
+    *   Translate the `description` field of each `ToolParameter` within `TOOLS_DEFINITION` from Italian to English.

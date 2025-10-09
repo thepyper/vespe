@@ -1,0 +1,21 @@
+#### 1.2. Modifica della Trait `MarkdownPolicy` (`src/llm/markdown_policy.rs`)
+
+*   **Azione**: Modificare la trait `MarkdownPolicy` per includere un metodo che restituisca il `PolicyType` associato.
+*   **Contenuto**:
+    ```rust
+    // src/llm/markdown_policy.rs (modifiche)
+    use crate::llm::policy_types::PolicyType; // Aggiungere questo use
+    use crate::llm::messages::{Message, AssistantContent, ToolCall, ToolOutput}; // Assicurarsi che ToolOutput sia importato
+    use anyhow::Result;
+    use llm::chat::{ChatMessage as LlmChatMessage}; // Assicurarsi che LlmChatMessage sia importato
+
+    pub trait MarkdownPolicy: Send + Sync {
+        fn markdown_format_instructions(&self) -> String;
+        fn parse_response(&self, response: &str) -> Result<Vec<AssistantContent>>;
+        fn format_query(&self, messages: &[Message]) -> Result<Vec<LlmChatMessage>>;
+        fn get_policy_type(&self) -> PolicyType; // Nuovo metodo
+    }
+    ```
+*   **Motivazione**: Permette a `format_tool_output` di sapere quale `PolicyType` passare ai formattatori di output dei tool.
+
+**CONTINUA NEL FILE: `doc/plan_2025_09_17n_06_phase1_update_various_format_tool_output.txt`**

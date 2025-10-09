@@ -1,0 +1,17 @@
+<tools>
+{{#each tools}}
+  <tool name="{{this.name}}" description="{{this.description}}">
+  {{#each this.parameters}}
+    <parameter name="{{this.name}}" type="{{this.param_type}}" description="{{this.description}}" />
+  {{/each}}
+  </tool>
+{{/each}}
+</tools>
+
+Output format for TOOL_CODE (XML):
+<tool_call>
+  <tool_name>tool_name</tool_name>
+  <parameters>
+    <param_name>value</param_name>
+  </parameters>
+</tool_call>

@@ -1,0 +1,92 @@
+{
+  "debug": {
+    "config": {
+      "complexity": "low to medium",
+      "context_length": "small",
+      "hero_model": "gemma3:1b",
+      "marker_model": "gpt-oss:20b",
+      "narrator_model": "llama3.1:8b",
+      "num_examples": 100,
+      "ollama_url": "http://localhost:11434",
+      "output_dir": "buzz/training/generated_examples_rust",
+      "tool_format": "mcp",
+      "tool_name": null,
+      "use_case": null,
+      "user_style": null
+    },
+    "hero_query": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm working on a small project to automate some repetitive tasks, and I need to write a script that generates a configuration file for my application. The config file should have the following content: `[database] host = localhost port = 5432`. Can you help me create this file at `/path/to/config/file.txt` using a tool that can overwrite any existing file?\"\n\nThis prompt meets all the requirements:\n\n* It's a realistic user request, not asking directly for the `write_file` tool.\n* It matches the code generation use case and has low to medium complexity.\n* The context is small and relevant to the task at hand.\n* The language style is casual and conversational.\n* The tool usage feels natural and necessary for the task.",
+    "hero_response": "Okay, got it! Let’s craft that configuration file.  I’ll use the `read_file` tool to get the content, and then overwrite it.  Here’s the JSON:\n\n```json\n{\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"read_file\",\n    \"arguments\": {\n      \"path\": \"/path/to/config/file.txt\"\n    }\n  }\n}\n```\n\nJust let me know if you want me to do anything else with it – maybe add some basic validation or formatting?",
+    "marker_query": "TRAINING DATA LABELING - TOKEN MARKING SEGMENTATION\n\nAnalyze a language model's response and mark each meaningful unit with its category to create training data for text segmentation.\nResponse should (but could not) contain a tool call of the tool specified in the next section.\n\n=== INPUT DATA ===\nAvailable tools:\n{\n  \"name\": \"read_file\",\n  \"description\": \"Reads and returns the content of a specified file.\",\n  \"parameters\": [\n    {\n      \"name\": \"absolute_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to read.\",\n      \"required\": true\n    }\n  ]\n}\n{\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\n\n=== CLASSIFICATION CATEGORIES ===\n\n**TEXT:** User-facing content\n- Direct answers, explanations, confirmations\n- Results presentation, summaries\n- Polite conversational elements\n\n**THOUGHT:** Internal reasoning about the task\n- \"I need to...\", \"Let me...\", \"The user wants...\"\n- Analysis of the situation or approach\n- Planning statements\n\n**TOOL_CALL:** Tool invocation content\n- JSON structures for any tool calling\n- Tool parameters and arguments\n- Technical tool-calling syntax (even if malformed)\n\n=== TOKEN MARKING RULES ===\n\n**Segmentation Guidelines:**\n- You MUST split on newline, even if it is internal to structured data such as JSON or any other;\n- You CAN split anywhere else if you need to begin a new segment.\n      \n=== OUTPUT FORMAT ===\n\nEach segment falls into one of the following 2 cases:\n\n1. It is result of a newline split, then output format is:\n<CATEGORY>segment\n<NL>\nNotice that the newline tag is NOT on the same line of the category and segment.\n\n2. It is result of a non-newline split, then output format is:\n<CATEGORY>segment\n\nThe WANTED result is segmented output is a perfect reconstruction of the original output.\nThen, any markup language in the original output MUST be present in the segmented output as well.\n\nYou CANNOT output anything else than the segment conversion into one of there two cases.\nYou CANNOT output any explanation of how you decided segmentation.\nYou CANNOT output any markup other than specified in the two cases.\n\nExample Input: \nI'll search for information: {\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \nThis should help!\n\nExample Output:\n<TEXT>I'll search for information: \n<TOOL_CALL>{\\\"name\\\": \\\"web_search\\\", \\\"query\\\": \\\"python\\\"} \n<NL>\n<TEXT>This should help!\n\n=== TOOL-SPECIFIC RECOGNITION ===\nFor any tool, mark as TOOL_CALL:\n- Any JSON structure containing tool name\n- Parameter structures matching the tool specifications\n- Malformed attempts at using any tool\n- References to any tool functionality\n\n=== EXAMPLES ===\n\nExample 1:\nInput: \nI understand your request. \nLet me read the specified file:\n{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\nThe contents are displayed above.\n\nOutput:\n<TEXT>I understand your request. \n<NL>\n<THOUGHT>Let me read the specified file:\n<NL>\n<TOOL_CALL>{\\\"name\\\": \\\"read_file\\\", \\\"path\\\": \\\"data.txt\\\"}\n<NL>\n<TEXT>The contents are displayed above.\n<NL>\n\nExample 2:\nInput: \nHmm, I need to think about this. I'll use echo: {\\\"text\\\": \\\"hello world\\\"} \nDone!\n\nOutput:\n<THOUGHT>Hmm, I need to think about this. \n<TEXT>I'll use echo: \n<TOOL_CALL>{\\\"text\\\": \\\"hello world\\\"} \n<NL>\n<TEXT>Done!\n<NL>\n\n=== PROCESSING INSTRUCTIONS ===\n\n1. Read the full model response\n2. Identify segmentation boundaries\n3. Classify each segment based on context and content\n4. Mark each unit with appropriate category\n5. Ensure complete coverage (every word/unit gets a label)\n6. Double-check that TOOL_CALL segments relate to write_file\n\n=== ORIGINAL QUERY TO THE MODEL ===\nHere is a generated user prompt that meets the specified requirements:\n\n\"I'm working on a small project to automate some repetitive tasks, and I need to write a script that generates a configuration file for my application. The config file should have the following content: `[database] host = localhost port = 5432`. Can you help me create this file at `/path/to/config/file.txt` using a tool that can overwrite any existing file?\"\n\nThis prompt meets all the requirements:\n\n* It's a realistic user request, not asking directly for the `write_file` tool.\n* It matches the code generation use case and has low to medium complexity.\n* The context is small and relevant to the task at hand.\n* The language style is casual and conversational.\n* The tool usage feels natural and necessary for the task.\n\n=== MODEL RESPONSE TO SEGMENT ===\nOkay, got it! Let’s craft that configuration file.  I’ll use the `read_file` tool to get the content, and then overwrite it.  Here’s the JSON:\n\n```json\n{\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"read_file\",\n    \"arguments\": {\n      \"path\": \"/path/to/config/file.txt\"\n    }\n  }\n}\n```\n\nJust let me know if you want me to do anything else with it – maybe add some basic validation or formatting?\n",
+    "marker_response": "<TEXT>Okay, got it! Let’s craft that configuration file.  I’ll use the `read_file` tool to get the content, and then overwrite it.  Here’s the JSON:<NL>\n<TEXT>```json<NL>\n<TOOL_CALL>{<NL>\n<TOOL_CALL>  \"method\": \"tools/call\",<NL>\n<TOOL_CALL>  \"params\": {<NL>\n<TOOL_CALL>    \"name\": \"read_file\",<NL>\n<TOOL_CALL>    \"arguments\": {<NL>\n<TOOL_CALL>      \"path\": \"/path/to/config/file.txt\"<NL>\n<TOOL_CALL>    }<NL>\n<TOOL_CALL>  }<NL>\n<TOOL_CALL>}<NL>\n<TEXT>```<NL>\n<TEXT>Just let me know if you want me to do anything else with it – maybe add some basic validation or formatting?<NL>",
+    "narrator_query": "TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR\n\nYour task is to generate a user prompt that will encourage a language model to use a specific tool in a particular crafted scenario.\n\n=== TARGET TOOL ===\nTool Name: write_file\nTool Specification: {\n  \"name\": \"write_file\",\n  \"description\": \"Writes content to a specified file, overwriting it if it exists.\",\n  \"parameters\": [\n    {\n      \"name\": \"file_path\",\n      \"type\": \"string\",\n      \"description\": \"The absolute path to the file to write to.\",\n      \"required\": true\n    },\n    {\n      \"name\": \"content\",\n      \"type\": \"string\",\n      \"description\": \"The content to write to the file.\",\n      \"required\": true\n    }\n  ]\n}\nTool Description: Writes content to a specified file, overwriting it if it exists.\n\n=== SCENARIO PARAMETERS ===\nUse Case: code generation\nComplexity: low to medium\nUser Style: casual\nContext Length: small\n\n=== GENERATION RULES ===\n1. Create realistic user request (not \"please use the X tool\")\n2. Match the specified use case and complexity naturally\n3. Include appropriate context for the context_length parameter\n4. Use language style matching user_style parameter\n5. Make tool usage feel natural and necessary\nGenerate exactly one user prompt that matches all parameters.\n\n=== OUTPUT ===\n",
+    "narrator_response": "Here is a generated user prompt that meets the specified requirements:\n\n\"I'm working on a small project to automate some repetitive tasks, and I need to write a script that generates a configuration file for my application. The config file should have the following content: `[database] host = localhost port = 5432`. Can you help me create this file at `/path/to/config/file.txt` using a tool that can overwrite any existing file?\"\n\nThis prompt meets all the requirements:\n\n* It's a realistic user request, not asking directly for the `write_file` tool.\n* It matches the code generation use case and has low to medium complexity.\n* The context is small and relevant to the task at hand.\n* The language style is casual and conversational.\n* The tool usage feels natural and necessary for the task."
+  },
+  "full_text": "Okay, got it! Let’s craft that configuration file.  I’ll use the `read_file` tool to get the content, and then overwrite it.  Here’s the JSON:\n```json\n{\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"read_file\",\n    \"arguments\": {\n      \"path\": \"/path/to/config/file.txt\"\n    }\n  }\n}\n```\nJust let me know if you want me to do anything else with it – maybe add some basic validation or formatting?\n",
+  "spans": [
+    {
+      "category": "TEXT",
+      "end": 142,
+      "start": 0
+    },
+    {
+      "category": "TEXT",
+      "end": 150,
+      "start": 143
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 152,
+      "start": 151
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 178,
+      "start": 153
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 192,
+      "start": 179
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 217,
+      "start": 193
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 236,
+      "start": 218
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 277,
+      "start": 237
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 283,
+      "start": 278
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 287,
+      "start": 284
+    },
+    {
+      "category": "TOOL_CALL",
+      "end": 289,
+      "start": 288
+    },
+    {
+      "category": "TEXT",
+      "end": 293,
+      "start": 290
+    },
+    {
+      "category": "TEXT",
+      "end": 402,
+      "start": 294
+    }
+  ]
+}

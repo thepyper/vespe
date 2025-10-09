@@ -1,0 +1,52 @@
+# Revised Plan for Changing Log File Location and Project Root Flag
+
+This plan outlines the steps to change the log file location to `[project_root]/.vespe/log/` and introduce a command-line flag to specify the project root.
+
+## 1. Add Command-Line Flag for Project Root
+
+- **File to modify:** `src/cli/commands.rs`
+- **Action:** Add a new optional argument `--project-root <PATH>` to the `Cli` struct using `clap`.
+- **Details:**
+    - The default value for this flag will be "sandbox".
+
+## 2. Determine Project Root in `main.rs`
+
+- **File to modify:** `src/main.rs`
+- **Action:** Get the `project_root` from the command-line arguments.
+- **Details:**
+    - If the flag is provided, use its value.
+    - If not, use the default "sandbox".
+    - Convert the string path to `PathBuf`.
+
+## 3. Modify Log File Appender Configuration
+
+- **File to modify:** `src/main.rs`
+- **Action:** Update the `RollingFileAppender` initialization.
+- **Details:**
+    - Use the determined `project_root` to construct the full path for the log directory: `project_root.join(".vespe").join("log")`.
+    - Pass this path to `RollingFileAppender::new()`.
+
+## 4. Create Log Directory
+
+- **File to modify:** `src/main.rs`
+- **Action:** Add code to ensure the log directory exists.
+- **Details:**
+    - Use `std::fs::create_dir_all()` to create the `[project_root]/.vespe/log/` directory if it doesn't already exist.
+
+## 5. Pass Project Root to `vespe::run()`
+
+- **Files to modify:** `src/lib.rs` and `src/main.rs`
+- **Action:** Modify `vespe::run()` to accept `project_root: PathBuf` as an argument.
+- **Action:** Pass the determined `project_root` from `main()` to `vespe::run()`.
+
+## 6. Update `AgentManager::new`
+
+- **File to modify:** `src/agent/agent_manager.rs`
+- **Action:** Modify `AgentManager::new` to accept `project_root: PathBuf` as an argument.
+- **Details:** Remove the internal `project_root` determination.
+
+## 7. Verification
+
+- **Action:** Build the project using `cargo build`.
+- **Action:** Run the application with and without the `--project-root` flag (e.g., `cargo run -- --project-root . -- chat my_agent "Hello"` and `cargo run -- chat my_agent "Hello"`).
+- **Verification:** Check that `vespe.log` is created in the correct location (`[specified_root]/.vespe/log/` or `sandbox/.vespe/log/`) and contains log messages.

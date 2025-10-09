@@ -1,0 +1,8 @@
+#### 2.5. Eliminazione del File `src/llm/impls/various_markdown_policy.rs`
+
+*   **Azione**: Eliminare il file `src/llm/impls/various_markdown_policy.rs`.
+*   **Motivazione**: Rimuove il file temporaneo dopo che il suo contenuto è stato migrato.
+
+---
+
+**CONTINUA NEL FILE: `doc/plan_2025_09_17n_13_phase3_update_llm_client.txt`**

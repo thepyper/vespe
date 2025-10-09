@@ -1,0 +1,75 @@
+Piano: Introduzione del Sottocomando `chat` nella CLI
+
+## Obiettivo
+Estendere la Command Line Interface (CLI) di Vespe introducendo un sottocomando `chat` per i comandi principali `task`, `project` e `tool`. Questo servirà come stub per future integrazioni con agenti conversazionali specifici per ciascun ambito, migliorando l'interattività e l'estensibilità della CLI.
+
+## Dettagli delle Proposte
+
+1.  **Modifica di `src/cli/commands.rs`:**
+    *   Definire una nuova struct `ChatCommand` che conterrà i sottocomandi specifici per la chat (inizialmente vuota o con un placeholder).
+    *   Aggiungere un nuovo `Chat` variant all'enum `TaskSubcommand`, `ProjectSubcommand` e `ToolSubcommand`. Ogni variant conterrà un'istanza di `ChatCommand`.
+
+    Esempio di modifica (concettuale):
+    ```rust
+    // In TaskSubcommand
+    Chat(ChatCommand),
+
+    // In ProjectSubcommand
+    Chat(ChatCommand),
+
+    // In ToolSubcommand
+    Chat(ChatCommand),
+
+    // Nuova struct
+    #[derive(Debug, Parser)]
+    pub struct ChatCommand {
+        #[command(subcommand)]
+        pub command: ChatSubcommand,
+    }
+
+    #[derive(Debug, Subcommand)]
+    pub enum ChatSubcommand {
+        // Placeholder per futuri sottocomandi specifici della chat
+        // Ad esempio:
+        // Start,
+        // Continue { session_id: String },
+    }
+    ```
+
+2.  **Aggiornamento di `src/main.rs`:**
+    *   Modificare il blocco `match` principale per gestire i nuovi sottocomandi `Chat` per `Task`, `Project` e `Tool`.
+    *   Per ora, l'implementazione sarà uno stub che stamperà un messaggio indicando che il comando `chat` è stato chiamato per l'ambito specifico.
+
+    Esempio di modifica (concettuale):
+    ```rust
+    match &cli.command {
+        Commands::Project(project_command) => match &project_command.command {
+            // ... altri sottocomandi Project
+            ProjectSubcommand::Chat(chat_command) => {
+                println!("Project Chat command called: {:?}", chat_command);
+            }
+        },
+        Commands::Task(task_command) => match &task_command.command {
+            // ... altri sottocomandi Task
+            TaskSubcommand::Chat(chat_command) => {
+                println!("Task Chat command called: {:?}", chat_command);
+            }
+        },
+        Commands::Tool(tool_command) => match &tool_command.command {
+            // ... altri sottocomandi Tool
+            ToolSubcommand::Chat(chat_command) => {
+                println!("Tool Chat command called: {:?}", chat_command);
+            }
+        },
+    }
+    ```
+
+## Motivazione
+*   **Estensibilità:** Prepara la CLI per l'integrazione futura di agenti conversazionali specifici per dominio (e.g., un agente per la gestione dei task, uno per la configurazione del progetto, uno per l'interazione con gli strumenti).
+*   **Modularità:** Mantiene la struttura della CLI pulita e organizzata, separando le funzionalità di chat dalle operazioni dirette.
+*   **Coerenza:** Fornisce un'interfaccia utente uniforme per l'interazione con agenti in diversi contesti.
+
+## Prossimi Passi
+1.  Creare il file `doc/plan_2025_09_23i.txt` con questo piano.
+2.  Implementare le modifiche in `src/cli/commands.rs` e `src/main.rs`.
+3.  Verificare la compilazione e il funzionamento dei nuovi comandi stub.

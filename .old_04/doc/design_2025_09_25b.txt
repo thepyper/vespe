@@ -1,0 +1,77 @@
+### Design del Ciclo di Vita di un Task (State Machine)
+
+Questo documento delinea il ciclo di vita di un task all'interno del sistema, definendo gli stati, le transizioni e le logiche associate. L'obiettivo è fornire una gestione chiara e robusta dei task, sia monolitici che suddivisi in sub-task.
+
+---
+
+#### 1. Stati del Task
+
+Di seguito sono elencati gli stati principali che un task può assumere:
+
+*   **CREATED**: Il task è stato appena creato. Ha un UID (identificatore unico) immodificabile. Il suo nome è modificabile e serve come alias per l'utente.
+*   **GOT_OBJECTIVE**: Al task è stato assegnato un obiettivo. In questo stato, l'obiettivo può essere modificato liberamente.
+*   **GOT_PLAN**: Il task è stato pianificato. In questo stato, l'obiettivo non è più modificabile. Il plan è stato definito e può essere accettato o rifiutato.
+*   **SUBDIVIDE**: (Nuovo stato) Il task è stato identificato come non monolitico e il suo plan viene utilizzato per generare uno o più sub-task. Questo è uno stato attivo in cui il sistema (o un agente) sta creando i sub-task. Il task genitore non esegue lavoro diretto dopo questa fase; il suo compito è interamente delegato ai sub-task.
+*   **WAITING_SUBTASKS**: (Nuovo stato) Il task genitore ha generato i suoi sub-task e ora attende il loro completamento. Il task genitore è inattivo in termini di esecuzione diretta del lavoro.
+*   **WORKING**: Il task è in fase di esecuzione attiva. Questo stato è riservato ai task monolitici che eseguono direttamente il proprio lavoro.
+*   **FAILURE**: Il task è fallito. Questo può accadere per un errore nell'esecuzione, il fallimento di un sub-task, o un aborto da parte dell'utente/sistema.
+*   **SUCCESS**: Il task è stato completato con successo.
+
+---
+
+#### 2. Transizioni di Stato
+
+Le transizioni tra gli stati sono definite come segue:
+
+*   **Da CREATED:**
+    *   `define_objective` -> **GOT_OBJECTIVE**
+*   **Da GOT_OBJECTIVE:**
+    *   `update_objective` (rimane in **GOT_OBJECTIVE**)
+    *   `define_plan` -> **GOT_PLAN**
+*   **Da GOT_PLAN:**
+    *   `accept_plan` (se task monolitico) -> **WORKING**
+    *   `accept_plan` (se task non monolitico) -> **SUBDIVIDE**
+    *   `reject_plan` -> **GOT_OBJECTIVE** (l'obiettivo può essere nuovamente modificato)
+*   **Da SUBDIVIDE:**
+    *   `subtasks_generated` -> **WAITING_SUBTASKS** (transizione automatica una volta che i sub-task sono stati creati con successo)
+*   **Da WAITING_SUBTASKS:**
+    *   `all_subtasks_completed_successfully` -> **SUCCESS**
+    *   `any_subtask_failed` -> **FAILURE**
+    *   `parent_aborted` -> **FAILURE**
+*   **Da WORKING:**
+    *   `work_completed_successfully` -> **SUCCESS**
+    *   `work_failed` -> **FAILURE**
+    *   `user_aborted` -> **FAILURE**
+*   **Da FAILURE:**
+    *   `replan` -> **GOT_OBJECTIVE** (o un nuovo stato `REPLANNING` per una gestione più granulare del recupero)
+    *   `retry` (se possibile, per fallimenti transitori) -> **WORKING** (se era in esecuzione)
+*   **Da SUCCESS:**
+    *   (Stato finale, nessuna transizione in uscita)
+
+---
+
+#### 3. Stato Ortogonale: PAUSED
+
+Lo stato `PAUSED` non farà parte della state machine principale, ma sarà gestito come un flag ortogonale (`is_paused: bool`) o un campo `Option<PauseReason>` all'interno della struttura del task. Questo permette a un task di essere messo in pausa indipendentemente dal suo stato primario (es. `GOT_OBJECTIVE`, `GOT_PLAN`, `WORKING`, `WAITING_SUBTASKS`).
+
+*   **Logica di Pausa/Ripresa:**
+    *   Quando un task viene messo in pausa, il suo stato primario viene mantenuto, e un flag `is_paused` viene impostato a `true`.
+    *   Quando un task viene ripreso, il flag `is_paused` viene impostato a `false`, e il task continua dal suo stato primario precedente.
+    *   Le operazioni che fanno progredire il task nella state machine principale dovrebbero verificare il flag `is_paused` e non procedere se il task è in pausa.
+
+---
+
+#### 4. Considerazioni Aggiuntive e Best Practices
+
+*   **UID Immodificabile:** L'UID del task rimane immutabile, garantendo un riferimento stabile.
+*   **Nome Modificabile:** Il nome del task è un alias per l'utente e può essere modificato in qualsiasi momento, senza influenzare l'identificazione interna del task.
+*   **Stale Task List:** Dopo un'operazione di salvataggio o modifica che influisce sulla lista dei task (es. creazione, modifica, eliminazione), la lista visualizzata dovrebbe essere ricaricata per riflettere i cambiamenti.
+*   **Gestione degli Errori:** Ogni transizione o operazione dovrebbe avere una gestione robusta degli errori, portando eventualmente allo stato `FAILURE` con dettagli sull'errore.
+*   **Audit Trail:** Ogni transizione di stato e azione significativa dovrebbe essere loggata, includendo l'autore (utente/agente) e il timestamp.
+*   **Interazione Agenti:** Definire chiaramente quali transizioni sono innescate da azioni utente e quali da agenti automatizzati.
+*   **Progress Tracking:** Per gli stati `WORKING` e `WAITING_SUBTASKS`, considerare l'implementazione di un meccanismo di tracciamento del progresso più granulare.
+*   **Recupero da FAILURE:** Dallo stato `FAILURE`, il task può essere ripianificato (tornando a `GOT_OBJECTIVE` o un nuovo stato `REPLANNING`) o, in caso di fallimenti transitori, ritentato (tornando a `WORKING`).
+
+---
+
+Questo design fornisce una base solida per la gestione del ciclo di vita dei task, offrendo chiarezza, flessibilità e robustezza. Le prossime fasi di implementazione richiederanno la definizione precisa delle API per le transizioni e l'integrazione con i componenti di UI e agenti.

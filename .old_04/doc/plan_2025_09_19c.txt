@@ -1,0 +1,31 @@
+# Piano di Lavoro: Formato Strutturato per TOOL_RESPONSE
+
+Data: 2025-09-19
+
+## 1. Obiettivo
+
+Questo documento descrive la decisione di migliorare la qualità del dataset di training per `buzz` introducendo formati strutturati e inequivocabili per i segmenti di tipo `TOOL_RESPONSE`.
+
+## 2. Decisione
+
+In seguito a una discussione, è stato notato che i segmenti `TOOL_RESPONSE` in testo semplice potrebbero essere difficilmente distinguibili da altri segmenti come `TEXT`, rendendo il training del modello meno efficace.
+
+Poiché il `TOOL_RESPONSE` è generato dal nostro sistema, abbiamo il pieno controllo sul suo formato. Si è quindi deciso di adottare formati strutturati per questo segmento.
+
+Su proposta dell'utente, per aumentare la robustezza del modello, non si userà un solo formato, ma due, applicati casualmente durante la modifica del dataset:
+
+1.  **Formato XML:**
+    ```xml
+    <tool_response status="success|error">...contenuto...</tool_response>
+    ```
+
+2.  **Formato JSON:**
+    ```json
+    {"tool_response": {"status": "success|error", "content": "...contenuto..."}}
+    ```
+
+## 3. Piano d'Azione
+
+Si procederà a modificare i 210 file di esempio esistenti nella directory `buzz/training/2025_09_19_gemini/`. Per ogni file contenente uno o più segmenti `TOOL_RESPONSE`, il contenuto di tale segmento verrà avvolto in uno dei due formati sopra, scelto casualmente.
+
+I segmenti `TEXT`, `THOUGHT`, e `TOOL_CALL` non verranno modificati.

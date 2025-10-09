@@ -1,0 +1,316 @@
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
+use std::path::Path;
+use std::sync::Arc;
+
+use genai::Client;
+use genai::chat::{ChatMessage, ChatRequest, ChatResponse, Tool, ContentPart};
+
+use crate::memory::{Memory, Message, MessageContent, MessageStatus};
+use crate::error::ProjectError;
+use crate::utils::{generate_uid, get_entity_path, read_json_file, write_json_file, write_file_content, read_file_content};
+use crate::registry::{Registry};
+use crate::tool::ToolConfig;
+use crate::project::Project;
+
+// Default protocol name for agents
+const DEFAULT_AGENT_PROTOCOL_NAME: &str = "default_protocol";
+
+fn default_protocol_name() -> String {
+    DEFAULT_AGENT_PROTOCOL_NAME.to_string()
+}
+
+// 1. METADATA COMUNI: Dati condivisi da tutti gli agenti.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AgentMetadata {
+    pub uid: String,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub parent_uid: Option<String>,
+    #[serde(default = "default_protocol_name")]
+    pub protocol_name: String,
+}
+
+// 2. DETTAGLI SPECIFICI: L'enum che modella la differenza chiave.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum AgentDetails {
+    AI(AIConfig),
+    Human(HumanConfig),
+}
+
+// 3. CONFIGURAZIONE AI: Campi specifici per l'AI.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AIConfig {
+    pub role: String,
+    pub llm_provider: LLMProviderConfig,
+    pub allowed_tools: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum LLMProviderConfig {
+    Ollama { model: String, endpoint: String },
+    OpenAI { model: String, api_key_env: String },
+    Gemini {
+        model: String,
+    },
+}
+
+// 4. CONFIGURAZIONE HUMAN: Campi specifici per l'umano.
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct HumanConfig { /* ...email, permissions, etc. */ }
+
+// 5. STATO DINAMICO DELL'AGENTE (semplificato)
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct AgentState {
+    pub last_seen_at: DateTime<Utc>,
+}
+
+// L'AGENTE COMPLETO: Oggetto costruito in memoria.
+#[derive(Debug, Clone)]
+pub struct Agent {
+    pub metadata: AgentMetadata,
+    pub details: AgentDetails,
+    pub state: AgentState,
+    pub memory: Memory,
+    pub agent_instructions: Option<String>,
+}
+
+impl Agent {
+    pub fn create_ai(
+        project_root: &Path,
+        name: String,
+        config: AIConfig,
+        agent_instructions: Option<String>,
+        protocol_name: Option<String>,
+    ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("agt")?;
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        if let Some(instructions) = agent_instructions.clone() {
+            write_file_content(&agent_path.join("agent_instructions.md"), &instructions)?;
+        }
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+            protocol_name: protocol_name.unwrap_or_else(default_protocol_name),
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::AI(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        Agent::load(project_root, &uid)
+    }
+
+    pub fn create_human(
+        project_root: &Path,
+        name: String,
+        config: HumanConfig,
+        agent_instructions: Option<String>,
+        protocol_name: Option<String>,
+    ) -> Result<Agent, ProjectError> {
+        let uid = generate_uid("usr")?;
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, &uid)?;
+
+        std::fs::create_dir_all(&agent_path).map_err(|e| ProjectError::Io(e))?;
+        std::fs::create_dir_all(agent_path.join("memory")).map_err(|e| ProjectError::Io(e))?;
+
+        if let Some(instructions) = agent_instructions.clone() {
+            write_file_content(&agent_path.join("agent_instructions.md"), &instructions)?;
+        }
+
+        let now = Utc::now();
+
+        let metadata = AgentMetadata {
+            uid: uid.clone(),
+            name: name.clone(),
+            created_at: now,
+            parent_uid: None,
+            protocol_name: protocol_name.unwrap_or_else(default_protocol_name),
+        };
+        write_json_file(&agent_path.join("metadata.json"), &metadata)?;
+
+        let details = AgentDetails::Human(config);
+        write_json_file(&agent_path.join("details.json"), &details)?;
+
+        let state = AgentState::default();
+        write_json_file(&agent_path.join("state.json"), &state)?;
+
+        Agent::load(project_root, &uid)
+    }
+
+    pub fn load(project_root: &Path, agent_uid: &str) -> Result<Self, ProjectError> {
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, agent_uid)?;
+
+        if !agent_path.exists() {
+            return Err(ProjectError::AgentNotFound(agent_uid.to_string()));
+        }
+
+        let metadata: AgentMetadata = read_json_file(&agent_path.join("metadata.json"))?;
+        let details: AgentDetails = read_json_file(&agent_path.join("details.json"))?;
+        let state: AgentState = read_json_file(&agent_path.join("state.json"))?;
+        let memory = Memory::load(&agent_path.join("memory")).map_err(|e| ProjectError::Memory(e))?;
+
+        let agent_instructions_path = agent_path.join("agent_instructions.md");
+        let agent_instructions = if agent_instructions_path.exists() {
+            Some(read_file_content(&agent_instructions_path)?)
+        } else {
+            None
+        };
+
+        Ok(Agent {
+            metadata,
+            details,
+            state,
+            memory,
+            agent_instructions,
+        })
+    }
+
+    /// Sends a request to the LLM, handles formatting, querying, and parsing.
+    pub async fn call_llm(
+        &self,
+		project: &Project,
+        project_root: &Path,
+        task_context: &[Message],
+        available_tools: &[ToolConfig],
+        system_instructions: Option<&str>,
+    ) -> Result<Vec<Message>, ProjectError> {
+
+        let ai_config = match &self.details {
+            AgentDetails::AI(config) => config,
+            AgentDetails::Human(_) => return Err(ProjectError::InvalidOperation("Cannot call LLM for a Human agent.".to_string())),
+        };
+
+        let allowed_tool_names = &ai_config.allowed_tools;
+
+        let agent_context_messages: Vec<Message> = self.memory.get_context().into_iter().cloned().collect(); // Retrieve agent_context internally
+
+        let mut final_system_instructions = self.agent_instructions.clone().unwrap_or_default();
+        if let Some(dynamic_instructions) = system_instructions {
+            if !final_system_instructions.is_empty() {
+                final_system_instructions.push_str("\n");
+            }
+            final_system_instructions.push_str(dynamic_instructions);
+        }
+
+		// Format for genai 
+		let client = Client::default(); // TODO config!!!
+		
+		// Create tools 
+		let mut genai_tools = Vec::<Tool>::new();
+		
+		for tool_name in allowed_tool_names {
+			let tool = project.resolve_tool(tool_name)?;
+			let genai_tool = Tool::new(tool.config.name)
+				.with_description(tool.config.description)
+				.with_schema(tool.config.schema);
+			genai_tools.push(genai_tool);
+		}
+		
+		// Create messages 
+		let mut genai_messages = Vec::<ChatMessage>::new();
+		
+		if let Some(agent_instructions) = self.agent_instructions.clone() {
+			genai_messages.push( 
+				ChatMessage::system(agent_instructions)
+			);
+		}
+		
+		if let Some(system_instructions) = system_instructions {
+			genai_messages.push( 
+				ChatMessage::system(system_instructions)
+			);
+		}
+				
+		genai_messages.extend(
+			agent_context_messages.into_iter().filter_map(|x| match &x.content {
+				MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
+				MessageContent::Thought(x) => None,
+				MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
+				MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
+			}
+		));
+				
+		genai_messages.extend(  // TODO metti in funzione a parte
+			task_context.into_iter().filter_map(|x| match &x.content {
+				MessageContent::Text(x) =>	Some(ChatMessage::system(x)),
+				MessageContent::Thought(x) => None,
+				MessageContent::ToolCall { tool_name: _, call_uid: _, inputs: _ } => None,
+				MessageContent::ToolResult { tool_name: _, call_uid: _, inputs: _, outputs: _ } => None, // TODO 
+			}
+		));
+		
+		// Create chat request 
+		let chat_req = ChatRequest::new(genai_messages)
+		.with_tools(genai_tools);
+		
+		// Execute request 
+		let chat_res = client.exec_chat("gpt-oss:20b", chat_req.clone(), None).await?; // TODO config!!
+
+		// TODO parse risultati genai 
+		let now = Utc::now();
+		let parsed_messages = chat_res.content.parts().into_iter().filter_map(|x| match x {
+			ContentPart::Text(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text(x.clone()),
+									status: MessageStatus::Enabled,
+								}),
+			ContentPart::Binary(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text("bin todo".into()),
+									status: MessageStatus::Enabled,
+								}),
+			ContentPart::ToolCall(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text("todo tolcall".into()),
+									status: MessageStatus::Enabled,
+								}),
+			ContentPart::ToolResponse(x) => Some(Message {
+									uid: "todo".into(),
+									timestamp: now,
+									author_agent_uid: "todo".into(),
+									content: MessageContent::Text("todo toolresp".into()),
+									status: MessageStatus::Enabled,
+								}),
+		}).collect::<Vec::<Message>>();
+		
+        // 5. Validate tool calls in parsed messages
+        for message in &parsed_messages {
+            if let MessageContent::ToolCall { tool_name, .. } = &message.content {
+                if !allowed_tool_names.contains(&tool_name) {
+                    return Err(ProjectError::InvalidToolCall(format!("Agent attempted to call disallowed tool: '{}'.", tool_name)));
+                }
+            }
+        }
+
+        Ok(parsed_messages)
+    }
+
+    pub fn save_state(&self, project_root: &Path) -> Result<(), ProjectError> {
+        let agents_base_path = project_root.join(".vespe").join("agents");
+        let agent_path = get_entity_path(&agents_base_path, &self.metadata.uid)?;
+        write_json_file(&agent_path.join("state.json"), &self.state)?;
+        Ok(())
+    }
+}

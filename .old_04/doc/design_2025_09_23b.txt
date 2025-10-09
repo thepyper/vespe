@@ -1,0 +1,147 @@
+Design: Entità Agente Unificata e Utente come Agente
+
+## Obiettivo
+Unificare il concetto di "agente" all'interno del sistema Vespe per includere sia gli agenti AI che gli utenti umani. Questo fornirà un modello di interazione coerente, migliorerà la tracciabilità e la collaborazione, e preparerà il sistema per futuri scenari ibridi uomo-AI.
+
+## Concetti Fondamentali
+
+### Agente (Unified Agent)
+Un Agente è qualsiasi entità (AI o umana) che può interagire con il sistema Vespe, creando task, utilizzando tool, o partecipando a conversazioni. Ogni Agente è identificato univocamente da un `uid`.
+
+### Tipi di Agente
+Per distinguere tra agenti AI e umani, introdurremo un `AgentType`.
+
+## Struttura Filesystem degli Agenti
+
+La struttura esistente per gli agenti AI (`.vespe/agents/agt-UID/`) sarà estesa per ospitare anche le configurazioni degli agenti umani, se necessario (es. preferenze utente). Tuttavia, per gli utenti umani, l'UID potrebbe essere derivato da un ID utente del sistema o da una configurazione globale, piuttosto che da una directory dedicata per ogni utente.
+
+**Esempio di struttura (esistente e proposta):**
+
+```
+.vespe/agents/
+├── agt-abc123def456/  // Agente AI "Generico"
+│   ├── config.json
+│   ├── system_prompt.md
+│   └── description.md
+├── agt-user-pyper/    // Agente Umano "pyper" (configurazione opzionale)
+│   ├── config.json    // Potrebbe contenere preferenze, alias, ecc.
+│   └── description.md
+└── ...
+```
+
+## File di Configurazione dell'Agente (`config.json`)
+
+Ogni Agente avrà un `config.json` (o una configurazione equivalente per gli utenti umani) con i seguenti campi:
+
+1.  **`uid`**: Stringa univoca per identificare l'agente (es. `agt-UUID` per AI, `usr-USERNAME` o `human-UUID` per umani).
+2.  **`name`**: Nome leggibile dell'agente (es. "Agente Sviluppatore", "pyper").
+3.  **`agent_type`**: Enum (`Human`, `AI`) per distinguere il tipo di agente.
+4.  **`created_at`**: Timestamp di creazione.
+5.  **`parent_agent_uid`**: (Opzionale) UID dell'agente genitore da cui questo agente specializza (principalmente per agenti AI).
+6.  **`model_id`**: (Opzionale, solo per AI) Identificativo del modello LLM da utilizzare.
+7.  **`temperature`**: (Opzionale, solo per AI) Parametro di creatività dell'LLM.
+8.  **`top_p`**: (Opzionale, solo per AI) Parametro di campionamento dell'LLM.
+9.  **`default_tools`**: (Opzionale) Array di UID dei tool a cui l'agente ha accesso di default.
+10. **`context_strategy`**: (Opzionale, solo per AI) Regole su come l'agente dovrebbe gestire il contesto.
+11. **`user_preferences`**: (Opzionale, solo per Human) Preferenze specifiche dell'utente (es. formato output preferito, alias).
+
+**Nota sul campo `created_by`:**
+Il campo `created_by` presente in `TaskConfig` e `PersistentEvent` sarà ora un riferimento diretto all'`uid` di un Agente. Questo elimina la circolarità e unifica la tracciabilità. Il campo `created_by` all'interno della `AgentConfig` stessa verrà rimosso o reinterpretato come l'agente che ha *definito* questa configurazione di agente. Per semplicità iniziale, lo rimuoveremo dalla `AgentConfig`.
+
+## Implicazioni API (Crate `vespe-project`)
+
+Il crate `vespe-project` dovrà esporre le seguenti strutture e funzioni:
+
+### 1. Struct `Agent` (in `vespe-project/src/models.rs`)
+
+```rust
+// vespe-project/src/models.rs
+
+use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum AgentType {
+    Human,
+    AI,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Agent {
+    pub uid: String, // Unique ID for the agent (e.g., "usr-pyper", "agt-manager-v1")
+    pub name: String, // Display name
+    pub agent_type: AgentType,
+    pub created_at: DateTime<Utc>,
+    // Campi specifici per AI (opzionali)
+    pub parent_agent_uid: Option<String>,
+    pub model_id: Option<String>,
+    pub temperature: Option<f32>,
+    pub top_p: Option<f32>,
+    pub default_tools: Option<Vec<String>>, // UIDs of tools
+    pub context_strategy: Option<String>,
+    // Campi specifici per Human (opzionali)
+    // pub user_preferences: Option<UserPreferences>, // Placeholder for future user-specific settings
+}
+```
+
+### 2. Aggiornamento di `TaskConfig` (in `vespe-project/src/models.rs`)
+
+Il campo `created_by: String` in `TaskConfig` verrà modificato per essere un `created_by_agent_uid: String`, che farà riferimento all'`uid` di un Agente.
+
+```rust
+// vespe-project/src/models.rs (modifica)
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskConfig {
+    pub uid: String,
+    pub name: String,
+    pub created_by_agent_uid: String, // Riferimento all'UID dell'Agente
+    pub created_at: DateTime<Utc>,
+    pub parent_uid: Option<String>,
+}
+```
+
+### 3. Aggiornamento di `PersistentEvent` (in `vespe-project/src/models.rs`)
+
+Il campo `agent_id: String` in `PersistentEvent` verrà rinominato in `acting_agent_uid: String` per chiarezza e farà riferimento all'`uid` di un Agente.
+
+```rust
+// vespe-project/src/models.rs (modifica)
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PersistentEvent {
+    pub timestamp: DateTime<Utc>,
+    pub event_type: String,
+    pub acting_agent_uid: String, // Riferimento all'UID dell'Agente che ha generato l'evento
+    pub content: String,
+}
+```
+
+### 4. Funzioni API per la Gestione degli Agenti (in `vespe-project/src/api.rs`)
+
+Il crate `vespe-project` dovrà fornire funzioni per la gestione degli agenti, simili a quelle per i task e i tool.
+
+```rust
+// vespe-project/src/api.rs
+
+/// Crea un nuovo agente (AI o umano).
+pub fn create_agent(
+    agent_type: AgentType,
+    name: String,
+    // ... altri campi per la configurazione iniziale
+) -> Result<Agent, ProjectError>;
+
+/// Carica un agente specifico dato il suo UID.
+pub fn load_agent(agent_uid: &str) -> Result<Agent, ProjectError>;
+
+/// Elenca tutti gli agenti disponibili.
+pub fn list_agents() -> Result<Vec<Agent>, ProjectError>;
+
+// TODO: Funzioni per aggiornare la configurazione di un agente.
+```
+
+## Prossimi Passi
+1.  Creare il file `doc/design_2025_09_23b.txt` con questo design.
+2.  Implementare le modifiche in `vespe-project/src/models.rs` per aggiungere la struct `Agent` e aggiornare `TaskConfig` e `PersistentEvent`.
+3.  Implementare le funzioni API per la gestione degli agenti in `vespe-project/src/api.rs`.
+4.  Eseguire `cargo build` per verificare la compilazione.

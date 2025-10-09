@@ -1,0 +1,18 @@
+#### 0.3. Aggiornamento di `src/llm/mod.rs`
+
+*   **Azione**: Aggiungere i nuovi moduli `policy_types` e `tool_types` a `src/llm/mod.rs`.
+*   **Contenuto**:
+    ```rust
+    // src/llm/mod.rs
+    pub mod llm_client;
+    pub mod markdown_policy;
+    pub mod messages;
+    pub mod policy_types; // Nuovo modulo
+    pub mod tool_types;   // Nuovo modulo
+    pub mod impls;
+    ```
+*   **Motivazione**: Rende i nuovi enum accessibili al resto del modulo `llm`.
+
+---
+
+**CONTINUA NEL FILE: `doc/plan_2025_09_17n_04_phase1_tool_output_formatters.txt`**

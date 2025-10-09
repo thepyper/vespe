@@ -1,0 +1,81 @@
+**Implementation Plan: Vespe - Enhanced Agent-Tool Interface**
+
+**Goal:** Implement a more robust and flexible communication protocol between the `BasicAgent` and the LLM, allowing for structured responses (including tool calls, text responses, and thoughts) and configurable handling of malformed JSON.
+
+**Phase 3: Enhanced Agent-Tool Interface**
+
+**Step 1: Define `AgentAction` Enum and `ToolCall` Struct**
+
+*   **Action:** Create `src/agent/actions.rs` (or modify `src/agent/models.rs` if preferred, but `actions.rs` seems more appropriate for behavior).
+    *   Define `ToolCall` struct:
+        ```rust
+        #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+        pub struct ToolCall {
+            pub name: String,
+            pub args: serde_json::Value,
+        }
+        ```
+    *   Define `AgentAction` enum using `#[serde(untagged)]`:
+        ```rust
+        #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+        #[serde(untagged)]
+        pub enum AgentAction {
+            #[serde(rename = "tool_call")] // This is for the JSON key
+            ToolCall(ToolCall),
+            #[serde(rename = "text_response")]
+            TextResponse { content: String },
+            #[serde(rename = "thought")]
+            Thought { content: String },
+            // Add other action types as needed
+        }
+        ```
+*   **Action:** Update `src/agent/mod.rs` to export `actions.rs`.
+*   **Git Action:** Commit changes: "feat: Define AgentAction enum and ToolCall struct for structured LLM responses."
+
+**Step 2: Update `LlmConfig` for Malformed JSON Handling**
+
+*   **Action:** Modify `src/config/models.rs`.
+    *   Define `MalformedJsonHandling` enum:
+        ```rust
+        #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+        pub enum MalformedJsonHandling {
+            TreatAsText,
+            Error,
+            // RetryPrompt, // Future consideration
+        }
+        ```
+    *   Add `on_malformed_json: MalformedJsonHandling` field to `LlmConfig`.
+    *   Add a `default` function for `MalformedJsonHandling` if it's used with `#[serde(default)]`.
+*   **Git Action:** Commit changes: "feat: Add configurable malformed JSON handling to LlmConfig."
+
+**Step 3: Refine Prompting for LLM**
+
+*   **Action:** Modify `src/agent/impls/basic_agent.rs`.
+    *   Update the system prompt to instruct the LLM to respond with a JSON object that can be deserialized into `AgentAction` or `Vec<AgentAction>`.
+    *   Explicitly state the types (`tool_call`, `text_response`, `thought`) and their schemas. This will be a more detailed instruction than before.
+    *   The prompt should guide the LLM to output either a single `AgentAction` object or an array of `AgentAction` objects.
+*   **Git Action:** Commit changes: "refactor: Refine LLM prompting for structured AgentAction responses."
+
+**Step 4: Implement Robust Parsing Logic in `BasicAgent`**
+
+*   **Action:** Modify `src/agent/impls/basic_agent.rs`.
+    *   In `BasicAgent::execute`, replace the current `serde_json::from_str` logic.
+    *   Attempt to parse the LLM's raw response string:
+        *   Try to parse as `Vec<AgentAction>`.
+        *   If that fails, try to parse as `AgentAction`.
+        *   If both fail, consult `self.definition.llm_config.on_malformed_json` setting:
+            *   If `TreatAsText`: Create a `TextResponse` action from the raw string.
+            *   If `Error`: Return an `anyhow::Error` indicating malformed JSON.
+    *   Process the parsed `AgentAction`s:
+        *   If `AgentAction::ToolCall`: Execute the tool via `tool_registry`.
+        *   If `AgentAction::TextResponse`: Append content to final response.
+        *   If `AgentAction::Thought`: Log the thought, potentially append to final response for debugging.
+    *   Adjust the feedback loop to handle `AgentAction`s.
+    *   The `final_response_content` logic will need to be updated to aggregate responses from multiple actions.
+*   **Git Action:** Commit changes: "feat: Implement robust parsing and execution of AgentAction responses in BasicAgent."
+
+**Step 5: Test with `EchoTool` and Malformed JSON**
+
+*   **Action:** Run `cargo run -- chat my_agent "Please use the echo tool to echo the phrase 'Hello from Vespe!'"`.
+*   **Action:** Modify `my_agent.json` to set `on_malformed_json: "Error"` and test with a prompt that might cause malformed JSON (e.g., "Just say hello, but make it JSON").
+*   **Git Action:** (No direct Git action for test execution, but ensure previous steps are committed).

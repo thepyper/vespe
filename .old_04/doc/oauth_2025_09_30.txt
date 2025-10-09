@@ -1,0 +1,42 @@
+Come ottenere Client ID e Client Secret per Google OAuth 2.0:
+
+1.  **Accedi alla Google Cloud Console:** Vai su https://console.cloud.google.com/ e accedi con il tuo account Google.
+
+2.  **Crea un nuovo progetto (se non ne hai uno):**
+    *   In alto, clicca sul selettore del progetto (di solito il nome del progetto corrente o "My First Project").
+    *   Clicca su "Nuovo progetto".
+    *   Dai un nome al progetto (es. "Vespe AI Development") e clicca "Crea".
+
+3.  **Abilita l'API Generative Language:**
+    *   Assicurati che il tuo nuovo progetto sia selezionato.
+    *   Usa la barra di ricerca in alto per cercare "Generative Language API".
+    *   Clicca sul risultato "Generative Language API".
+    *   Clicca sul pulsante "Abilita".
+
+4.  **Configura la schermata di consenso OAuth:**
+    *   Nel menu di navigazione a sinistra, vai su **API e servizi > Schermata di consenso OAuth**.
+    *   Scegli "Esterna" come tipo di utente e clicca "Crea".
+    *   Compila le informazioni richieste:
+        *   **Nome applicazione:** (es. "Vespe CLI")
+        *   **Email di assistenza utente:** La tua email.
+        *   **Informazioni di contatto dello sviluppatore:** La tua email.
+    *   Clicca "Salva e continua".
+    *   **Ambiti (Scopes):** Per ora, puoi cliccare "Aggiungi o rimuovi ambiti" e aggiungere l'ambito `.../auth/generative-language.retriever`. Clicca "Aggiorna" e poi "Salva e continua".
+    *   **Utenti di prova:** Aggiungi il tuo account Google come utente di prova. Clicca "Aggiungi utenti", inserisci la tua email e clicca "Salva e continua".
+    *   Rivedi il riepilogo e clicca "Torna alla dashboard".
+    *   **Importante:** Per uso personale o di test, lo stato "Testing" è sufficiente. Se volessi rendere l'applicazione disponibile ad altri, dovresti pubblicarla (richiede verifica da parte di Google).
+
+5.  **Crea le credenziali ID client OAuth 2.0:**
+    *   Nel menu di navigazione a sinistra, vai su **API e servizi > Credenziali**.
+    *   Clicca su "CREA CREDENZIALI" in alto e seleziona "ID client OAuth".
+    *   **Tipo di applicazione:**
+        *   Per un'applicazione CLI come Vespe, il tipo più semplice è **"Applicazione desktop"**.
+        *   Se scegli "Applicazione web", dovrai configurare gli "URI di reindirizzamento autorizzati" includendo `http://127.0.0.1:8080`.
+    *   **Nome:** Dai un nome descrittivo (es. "Vespe CLI OAuth Client").
+    *   Clicca "Crea".
+
+6.  **Annota il tuo Client ID e Client Secret:**
+    *   Apparirà una finestra di dialogo con il tuo **ID client** e il tuo **Client secret**. Copia questi valori immediatamente.
+    *   Puoi anche trovarli in seguito cliccando sul nome dell'ID client nella sezione "ID client OAuth 2.0" della pagina Credenziali.
+
+Una volta ottenuti questi due valori, li imposterai come variabili d'ambiente (es. `GEMINI_CLIENT_ID` e `GEMINI_CLIENT_SECRET`) e poi userai le opzioni `--client-id-env GEMINI_CLIENT_ID` e `--client-secret-env GEMINI_CLIENT_SECRET` quando crei il tuo agente Gemini in Vespe.

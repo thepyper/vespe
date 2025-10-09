@@ -1,0 +1,36 @@
+Query example:
+{
+    "contents": [
+      {
+        "parts": [
+          {
+            "text": "Explain how AI works in a few words"
+          }
+        ]
+      }
+    ]
+  }
+
+Response example: {
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "Based on your description, you are almost certainly looking for **XKCD: 793: Experiments**.\n\nIt perfectly matches:\n\n*   **Distinction between \"research\" and \"experimentation\":** The comic's core theme.\n*   **Animal testing example:** It uses mice and drug trials.\n*   **Knowing the outcome:** The \"research\" phase is when they already know what will happen, and \"experimentation\" is when they are *supposed* to be unsure of the outcome, even if they're just repeating the \"research.\"\n*   **Mouse on a treadmill:** While it features mice as the subject of the testing, it doesn't explicitly show a mouse on a treadmill, but the theme of animal testing is prominent.\n\n**Title:** Experiments\n**Number:** 793\n**URL:** [https://xkcd.com/793/](https://xkcd.com/793/)\n\n**Alt-text:** \"Our animal testing protocol involves a *lot* of 'research' that comes out exactly as expected and then 'experiments' where we repeat the 'research' and pretend to be surprised.\""
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0
+    }
+  ],
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "UsTbaPrFNsi0xN8PkNjnyAc",
+  "usageMetadata": {
+    "candidatesTokenCount": 244,
+    "thoughtsTokenCount": 963,
+    "totalTokenCount": 1207
+  }
+}

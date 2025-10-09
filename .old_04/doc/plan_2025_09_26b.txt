@@ -1,0 +1,137 @@
+# Piano di Refactoring: Gestione Task e Subtask (Revisione B)
+
+**Data:** 26 Settembre 2025
+**Basato su:** `doc/design_2025_09_26.txt`
+**Revisione di:** `doc/plan_2025_09_26.txt` dopo analisi del codice sorgente in `src/`.
+
+## 1. Obiettivo del Piano
+
+Questo piano delinea i passaggi necessari per implementare le modifiche al sistema di gestione dei task come descritto nel documento di design `doc/design_2025_09_26.txt`. L'obiettivo è allineare il codice esistente al nuovo design, semplificando la state machine, eliminando la distinzione `Monolithic`/`Subdivided` e integrando la gestione dei subtask tramite il flag `is_paused` e una lista di UID.
+
+## 2. Fasi del Refactoring
+
+### Fase 0: Preparazione e Pulizia Iniziale
+
+**Obiettivo:** Rimuovere gli stati e i tipi di task obsoleti per preparare la base di codice al nuovo modello.
+
+1.  **Modifica `TaskState` Enum:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Rimuovere i membri `Delegating` e `Harvesting` dall'enum `TaskState`.
+    *   **Verifica:** La compilazione fallirà. Il passo successivo è correggere questi errori.
+
+2.  **Rimuovi `TaskType` Enum:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Eliminare completamente l'enum `TaskType` (`Monolithic`, `Subdivided`).
+
+3.  **Aggiorna `TaskConfig` Struct:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Rimuovere il campo `pub task_type: Option<TaskType>` dalla struct `TaskConfig`.
+
+4.  **Aggiorna `Project::create_task`:**
+    *   **File:** `src/project.rs`
+    *   **Azione:** Rimuovere il riferimento a `task_type: None` durante l'inizializzazione di `TaskConfig`.
+
+5.  **Aggiorna `TaskState::can_transition_to`:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Rimuovere le logiche di transizione che coinvolgono `Delegating` e `Harvesting`. Aggiornare le transizioni esistenti secondo il nuovo design (es. `PlanDefined` può andare solo a `Working`).
+
+6.  **Rimuovi Logica `accept_plan` basata su `TaskType`:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Modificare il metodo `accept_plan` per transitare sempre a `TaskState::Working`, rimuovendo il `match` su `self.config.task_type`.
+
+7.  **Rimuovi `add_subtask` e `subtasks`:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Rimuovere il metodo obsoleto `add_subtask` e il campo `pub subtasks: HashMap<String, TaskState>` dalla struct `Task`.
+    *   **File:** `src/project.rs`
+    *   **Azione:** Rimuovere il metodo `add_subtask` dalla struct `Project`.
+
+8.  **Correggi `define_plan`:**
+    *   **File:** `src/task.rs` e `src/project.rs`
+    *   **Azione:** Modificare la firma dei metodi `define_plan` per rimuovere il parametro `task_type: TaskType`. La logica interna che salva il `task_type` in `config.json` deve essere rimossa.
+
+9.  **Compila e Correggi:**
+    *   **Azione:** Eseguire `cargo check` o `cargo build`. Risolvere tutti gli errori di compilazione derivanti dai passaggi precedenti. Questo garantirà che tutti i riferimenti alla vecchia logica siano stati eliminati.
+
+### Fase 1: Aggiornamento delle Strutture Dati Principali
+
+**Obiettivo:** Introdurre i nuovi campi necessari per la gestione dei subtask secondo il design.
+
+1.  **Aggiunta `subtask_uids` a `Task`:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Aggiungere il campo `pub subtask_uids: Vec<String>` alla struct `Task`.
+
+2.  **Aggiorna `Task::load`:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Modificare la funzione `Task::load` per inizializzare il nuovo campo `subtask_uids` come un `Vec::new()`. In una fase successiva, questo campo verrà persistito e caricato. Per ora, l'inizializzazione a vuoto è sufficiente per mantenere la compatibilità.
+
+3.  **Aggiorna `Project::create_task`:**
+    *   **File:** `src/project.rs`
+    *   **Azione:** Durante la creazione di una `Task`, inizializzare il nuovo campo `subtask_uids` a `Vec::new()`.
+
+### Fase 2: Implementazione della Nuova Logica di Gestione dei Subtask
+
+**Obiettivo:** Introdurre le API e la logica per la creazione e gestione dei subtask secondo il nuovo modello "ortogonale".
+
+1.  **Persistenza di `subtask_uids`:**
+    *   **Decisione:** Il campo `subtask_uids` verrà persistito nel file `task.json` (o un nuovo file, es. `subtasks.json`) per mantenere lo stato tra le sessioni. Per semplicità, modifichiamo la struct `Task` per essere serializzabile e la salviamo in un file `task.json` che conterrà `config`, `status`, `objective`, `plan`, `dependencies` e `subtask_uids`. Questo richiede un refactoring del `Task::load`.
+    *   **Azione:**
+        *   In `src/task.rs`, modificare `Task::load` per leggere un singolo `task.json` invece di file separati.
+        *   Creare una funzione `Task::save(&self)` che salva l'intera struct `Task` in `task.json`.
+        *   Aggiornare tutte le funzioni che modificano parti del task (es. `define_objective`, `update_task_status`) per chiamare `self.save()` alla fine.
+
+2.  **Implementazione `spawn_subtask`:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Creare un nuovo metodo `pub fn spawn_subtask(&mut self, subtask_uid: String) -> Result<(), ProjectError>` sulla struct `Task`. Questo metodo deve:
+        *   Aggiungere `subtask_uid` a `self.subtask_uids`.
+        *   Se `self.status.is_paused` è `false`:
+            *   Impostare `self.status.previous_state = Some(self.status.current_state)`.
+            *   Impostare `self.status.is_paused = true`.
+        *   Chiamare `self.save()` per persistere le modifiche.
+
+3.  **Implementazione Logica di Reazione a Eventi Subtask:**
+    *   **Contesto:** Questa logica verrà invocata da un gestore di eventi esterno (non implementato in questa fase) che monitora lo stato dei subtask. Per ora, implementiamo i metodi sulla struct `Task` del genitore.
+    *   **Azione 1 (Completamento):** Creare `pub fn on_subtask_completed(&mut self, subtask_uid: &str) -> Result<(), ProjectError>` in `src/task.rs`:
+        *   Rimuovere `subtask_uid` da `self.subtask_uids`.
+        *   Se `self.subtask_uids` è vuoto:
+            *   Impostare `self.status.is_paused = false`.
+            *   Ripristinare `self.status.current_state` da `self.status.previous_state`.
+            *   Impostare `self.status.previous_state = None`.
+        *   Chiamare `self.save()`.
+    *   **Azione 2 (Fallimento):** Creare `pub fn on_subtask_failed(&mut self, subtask_uid: &str, details: String) -> Result<(), ProjectError>` in `src/task.rs`:
+        *   Transitare lo stato del task genitore a `TaskState::Failed` usando il metodo `failure()`.
+        *   Aggiungere ai dettagli dell'errore l'UID del subtask fallito.
+        *   Chiamare `self.save()`.
+
+### Fase 3: Finalizzazione e Adattamento API
+
+**Obiettivo:** Rinominare e standardizzare le API per la gestione degli errori e garantire la coerenza generale.
+
+1.  **Standardizzazione API Errori:**
+    *   **File:** `src/task.rs`
+    *   **Azione:** Rinominare il metodo `error` in `failure` per coerenza con il design, che distingue tra `error` (recuperabile) e `failure` (definitivo).
+        *   Creare `pub fn failure(&mut self, details: String) -> Result<(), ProjectError>` che imposta lo stato a `Failed`.
+        *   Creare `pub fn error(&mut self, details: String) -> Result<(), ProjectError>` che imposta lo stato a `Error`.
+    *   **File:** `src/project.rs`
+    *   **Azione:** Aggiornare il metodo `error` in `Project` per riflettere i nuovi metodi `error` e `failure` su `Task`.
+
+2.  **Rimozione Metodi Obsoleti:**
+    *   **File:** `src/task.rs` e `src/project.rs`
+    *   **Azione:** Rimuovere i metodi `pause_task` e `resume_task`. La pausa è ora gestita implicitamente da `spawn_subtask` e dagli eventi di completamento.
+
+### Fase 4: Test e Validazione
+
+**Obiettivo:** Verificare che il sistema refattorizzato funzioni come previsto.
+
+1.  **Compilazione:** Eseguire `cargo build` per assicurarsi che il progetto compili senza errori.
+2.  **Test Unitari (se presenti):** Eseguire i test esistenti e crearne di nuovi per:
+    *   La logica di `spawn_subtask` (verifica di `is_paused` e `previous_state`).
+    *   La logica di `on_subtask_completed` (verifica del ripristino dello stato).
+    *   La logica di `on_subtask_failed` (verifica della transizione a `Failed`).
+3.  **Test di Integrazione Manuali:**
+    *   Creare un task.
+    *   Simulare la generazione di un subtask e verificare che il genitore sia in pausa.
+    *   Simulare il completamento del subtask e verificare che il genitore riprenda.
+    *   Simulare il fallimento di un subtask e verificare che il genitore fallisca.
+    *   Verificare il corretto funzionamento delle API `error()` e `failure()`.
+
+Questo piano aggiornato fornisce una roadmap precisa per allineare il codice al nuovo design.

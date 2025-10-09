@@ -1,0 +1,70 @@
+# Plan for Task View/Edit Refactoring
+
+This plan outlines the steps to refactor the task viewing and editing functionality in the Vespe TUI.
+
+## 1. Introduce a `TaskEditMode` Enum
+
+A new enum will be added to `vespe-tui/src/pages/task_edit.rs` to manage the state of the task edit page:
+
+```rust
+pub enum TaskEditMode {
+    ReadOnly,
+    Editing,
+}
+```
+
+The `TaskEditState` struct will be updated to include this mode:
+
+```rust
+pub struct TaskEditState {
+    // ... existing fields
+    pub mode: TaskEditMode,
+}
+```
+
+## 2. Update `tasks.rs` (Tasks Page)
+
+-   The label for F6 in `page_footer_actions` in `main.rs` for the `Tasks` page will be changed from "Edit" to "Inspect".
+-   The `handle_events` function in `tasks.rs` will be modified for the `F6` key press. It will now set the `TaskEditMode` to `ReadOnly` when transitioning to the `TaskEdit` page.
+
+## 3. Refactor `task_edit.rs` (Task Edit Page)
+
+### 3.1. Rendering based on Mode
+
+-   The `render_task_edit_page` function will be updated to visually distinguish between `ReadOnly` and `Editing` modes.
+    -   In `ReadOnly` mode, the input fields will be rendered normally, but without the yellow focus highlight.
+    -   In `Editing` mode, the currently focused input field will be highlighted in yellow as before.
+
+### 3.2. Footer Bar and Keybinding Labels
+
+-   The `page_footer_actions` function in `main.rs` for the `TaskEdit` page will be updated to dynamically show different labels based on the `TaskEditMode`.
+    -   **ReadOnly Mode:** F5: "Back", F6: "Edit", F7: (hidden or disabled)
+    -   **Editing Mode:** F5: "Cancel", F6: (hidden or disabled), F7: "Save"
+-   Two new color constants will be added to `main.rs` for the footer bar background in the `task_edit` page:
+    -   `TASK_EDIT_VIEW_COLOR`
+    -   `TASK_EDIT_EDIT_COLOR`
+-   The `render_page_footer` function in `main.rs` will be updated to use these colors when rendering the footer for the `TaskEdit` page, based on the current `TaskEditMode`.
+
+### 3.3. Event Handling (`handle_events`)
+
+The `handle_events` function will be completely refactored to handle the new modes and keybindings:
+
+-   **Input Handling:** Character input and `Backspace` will only be processed if the mode is `Editing`.
+-   **F5 ("Back"/"Cancel"):**
+    -   If in `ReadOnly` mode, it will navigate back to the `Tasks` page directly.
+    -   If in `Editing` mode, it will use `request_confirmation` to ask "Discard changes?" before navigating back.
+-   **F6 ("Edit"):**
+    -   This key will only be active in `ReadOnly` mode.
+    -   It will switch the `mode` to `Editing`.
+-   **F7 ("Save"):**
+    -   This key will only be active in `Editing` mode.
+    -   It will use `request_confirmation` to ask "Save changes?".
+    -   If confirmed, it will save the task and then switch the mode back to `ReadOnly`.
+
+## 4. Update `main.rs`
+
+-   Add the new color constants.
+-   Update `page_footer_actions` for `TaskEdit` to be dynamic.
+-   Update `render_page_footer` to handle the dynamic colors for `TaskEdit`.
+
+This plan covers all the user's requirements and provides a clear path for implementation.

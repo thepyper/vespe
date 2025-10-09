@@ -1,0 +1,23 @@
+c:\Proj\xxx\025_006.Vespe\vespe\buzz\training>python export_to_onnx.py --model_path buzz-parser-v1\final_model
+Starting ONNX export for model at: buzz-parser-v1\final_model
+
+Running command:
+C:\Users\thepy\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\python.exe -m transformers.onnx --model buzz-parser-v1\final_model --feature=token-classification onnx
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\thepy\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\transformers\onnx\__main__.py", line 242, in <module>
+    main()
+  File "C:\Users\thepy\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\transformers\onnx\__main__.py", line 234, in main
+    export_with_transformers(args)
+  File "C:\Users\thepy\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\transformers\onnx\__main__.py", line 75, in export_with_transformers
+    model = FeaturesManager.get_model_from_feature(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thepy\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\transformers\onnx\features.py", line 698, in get_model_from_feature
+    framework = FeaturesManager.determine_framework(model, framework)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\thepy\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\LocalCache\local-packages\Python312\site-packages\transformers\onnx\features.py", line 660, in determine_framework
+    raise FileNotFoundError(
+FileNotFoundError: Cannot determine framework from given checkpoint location. There should be a pytorch_model.bin for PyTorch or tf_model.h5 for TensorFlow.
+An error occurred during the export process: Command '['C:\\Users\\thepy\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\\python.exe', '-m', 'transformers.onnx', '--model', 'buzz-parser-v1\\final_model', '--feature=token-classification', 'onnx']' returned non-zero exit status 1.

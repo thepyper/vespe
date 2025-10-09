@@ -1,0 +1,69 @@
+## Plan for Task Editing/Creation UI in `vespe-tui`
+
+### Objective
+
+Create a graphical user interface within `vespe-tui` that allows users to:
+1.  **Create a new task**: This will involve calling `Project::create_task` and `Project::define_objective`.
+2.  **Edit an existing task**: This will involve loading a task using `Project::load_task`, modifying its properties (`name` and `objective` initially), and then saving those changes using `Project::define_objective` and potentially updating the `TaskConfig` (for `name`).
+
+### API Functions to Utilize
+
+*   `Project::create_task(parent_uid: Option<String>, name: String, created_by_agent_uid: String, _template_name: String)`: For initial task creation.
+*   `Project::define_objective(task_uid: &str, objective_content: String)`: For setting/updating the task's objective.
+*   `Project::load_task(uid: &str)`: For loading an existing task into the editor.
+*   `Project::list_all_tasks()`: To populate the `Tasks` page list.
+*   `Task` struct and `TaskConfig` struct: To access and display task properties.
+
+### UI Design and Workflow
+
+The UI will primarily operate around the existing `Tasks` page, with a new "Task Edit Mode" for creation and modification.
+
+#### Tasks Page (Existing)
+
+1.  **Display a list of existing tasks**: This is the current functionality of the `Tasks` page.
+2.  **Navigation**: Users will use up/down arrows to select a task from the list.
+3.  **"New" Action (F5)**: When F5 is pressed on the `Tasks` page, it will transition to "Task Edit Mode" with an empty task, indicating a new task creation.
+4.  **"Edit" Action (F6)**: When F6 is pressed on the `Tasks` page, it will load the currently selected task and transition to "Task Edit Mode" for editing.
+
+#### Task Edit Mode (New)
+
+This mode will display fields for editing a single task.
+
+1.  **Task Name (Title)**: Text input for `Task.config.name`.
+2.  **Objective**: Multi-line text input for `Task.objective`.
+3.  **Agent UID**: Text input for `Task.config.created_by_agent_uid`. (For now, this will be a required field, but later could be a dropdown of available agents).
+4.  **Save Button (F5)**:
+    *   If creating a new task (identified by an empty `current_task_uid` in `TaskEditState`):
+        *   Call `Project::create_task()` with the provided `name` and `created_by_agent_uid`.
+        *   If successful, get the `task_uid` from the returned `Task`.
+        *   Call `Project::define_objective()` with the `task_uid` and `objective_content`.
+        *   Transition back to the `Tasks` page and display a success message.
+    *   If editing an existing task (identified by a `current_task_uid` in `TaskEditState`):
+        *   Call `Project::define_objective()` with the `current_task_uid` and `objective_content`.
+        *   If `Task.config.name` was changed, update the task's `config.json` (this will require a new `Project` method, e.g., `update_task_name`, or direct file manipulation). For the initial implementation, I will focus on `define_objective`. If the user changes the name of an existing task, this change will not be persisted until a `Project::update_task_name` or similar method is implemented.
+        *   Transition back to the `Tasks` page and display a success message.
+5.  **Cancel Button (F6)**: Discard changes and return to the `Tasks` page.
+
+### Implementation Steps (High-Level)
+
+1.  **Clean and Rebuild `vespe-tui`**: Ensure all previous compilation issues are resolved.
+    *   `cargo clean && cargo build --package vespe-tui`
+2.  **Modify `vespe-tui/src/main.rs`**:
+    *   Update `Page` enum to include `TaskEdit` (replacing `CreateTask`).
+    *   Adjust `handle_events` for navigation between `Tasks` and `TaskEdit` pages, and handling F5/F6 actions.
+    *   Add state management for `TaskEdit` (e.g., `task_edit_state: TaskEditState`).
+    *   The `Tasks` page will need to manage its own selected task state.
+3.  **Create `vespe-tui/src/pages/task_edit.rs`**: (Replacing `create_task.rs`)
+    *   Define `TaskEditState` struct to hold editable task fields (`name`, `objective`, `agent_uid`, `current_task_uid: Option<String>`).
+    *   Implement `render_task_edit_page` to display input fields for `name`, `objective`, and `agent_uid`.
+    *   Implement `InputFocus` for navigation within the edit fields.
+4.  **Modify `vespe-tui/src/pages/mod.rs`**: (Replacing `create_task` with `task_edit`)
+    *   Include `task_edit` module.
+5.  **Refine `handle_events` in `main.rs` for `TaskEdit`**: Implement the Save (F5) and Cancel (F6) logic as described in the "Task Edit Mode" section above.
+6.  **Error Handling and Messages**: Continue using the message display mechanism for feedback.
+
+### Open Questions / Assumptions
+
+*   **`created_by_agent_uid`**: For now, this will be a simple text input. In the future, it should be a dropdown populated by `Project::list_agents()`.
+*   **Updating `TaskConfig.name`**: If `Project` doesn't have a direct `update_task_name` function, I'll need to implement a way to modify and save `config.json` for a given task. For the initial implementation, I will focus on `create_task` and `define_objective`. If the user changes the name of an existing task, this change will not be persisted until a `Project::update_task_name` or similar method is implemented.
+*   **Other Task Properties**: Properties like `description`, `priority`, `due_date`, and `tags` are not directly editable via `Project::create_task` or `Project::define_objective`. They will not be included in the initial UI. If the user wants them, we'll need to define how they are stored and updated (e.g., in `objective.md` content, or a new metadata file, or new `Project` methods).

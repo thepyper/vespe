@@ -1,0 +1,9 @@
+#### 3.3. Compilazione e Test
+
+*   **Azione**: Eseguire `cargo check` e `cargo build` per verificare la compilazione.
+*   **Azione (Opzionale ma Consigliata)**: Se esistono test unitari per le policy Markdown, aggiornarli. Se non esistono, considerare l'aggiunta di test di base per il parsing e la formattazione di ciascuna nuova policy.
+*   **Motivazione**: Garantisce che le modifiche non abbiano introdotto regressioni e che il codice sia funzionalmente corretto.
+
+---
+
+FINE DEL PIANO MULTI-FILE

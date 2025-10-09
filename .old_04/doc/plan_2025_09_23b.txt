@@ -1,0 +1,41 @@
+# Plan: Porting Project Root Logic to `project` Crate
+
+## Objective
+
+To centralize all project root management logic within the `project` crate, specifically moving the robust `is_project_root`, `find_project_root`, and `initialize_project_root` functions from `src/project_root.rs` to `project/src/utils.rs`. This aligns with the design principle of keeping the main application (and its CLI) as a thin layer, delegating core logic to sub-crates.
+
+## Current State Analysis
+
+*   `src/project_root.rs`: Contains `VESPE_DIR`, `VESPE_ROOT_MARKER`, `is_project_root`, `find_project_root`, and `initialize_project_root`. This implementation is comprehensive and handles marker files and checks for existing project roots.
+*   `project/src/utils.rs`: Contains a simpler `get_project_root_path` which only traverses upwards from the current directory and implicitly identifies the root by the presence of `.vespe/`.
+*   `src/main.rs`: Utilizes `project_root::find_project_root` and `is_project_root` for determining the project root, respecting the `--project-root` CLI argument.
+*   `src/lib.rs`: Calls `project_root::initialize_project_root` for the `Init` command.
+
+## Proposed Steps
+
+1.  **Move Project Root Constants and Functions to `project/src/utils.rs`:**
+    *   Copy `VESPE_DIR`, `VESPE_ROOT_MARKER`, `is_project_root`, `find_project_root`, and `initialize_project_root` from `src/project_root.rs` to `project/src/utils.rs`.
+    *   Modify the `initialize_project_root` function in its new location to use `project::error::ProjectError` for error handling instead of `anyhow::Error`.
+    *   Ensure all necessary `use` statements (e.g., `std::path::{Path, PathBuf}`, `std::fs`, `anyhow::{Result, anyhow}`) are correctly added or adjusted in `project/src/utils.rs`.
+    *   Remove the existing `get_project_root_path` from `project/src/utils.rs` as `find_project_root` will supersede it.
+
+2.  **Update `src/main.rs` to use `project::utils`:**
+    *   Change `use vespe::project_root::{self, is_project_root};` to `use project::utils::{find_project_root, is_project_root};`.
+    *   Adjust calls to `project_root::find_project_root` and `is_project_root` to directly use `find_project_root` and `is_project_root` from `project::utils`.
+
+3.  **Update `src/lib.rs` to use `project::utils`:**
+    *   Change `use vespe::project_root;` to `use project::utils;`.
+    *   Adjust the call to `project_root::initialize_project_root` to `utils::initialize_project_root`.
+
+4.  **Remove `src/project_root.rs`:**
+    *   Delete the file `h:\my\github\vespe\src\project_root.rs` as its contents will have been moved.
+
+5.  **Update `Cargo.toml`:**
+    *   Remove `project_root` from `src/lib.rs` module declarations if it's still there (it should be, as `pub mod project_root;` is present).
+
+## Verification
+
+*   Compile the project (`cargo build`).
+*   Run existing tests (`cargo test`).
+*   Manually test the `vespe init` command.
+*   Manually test running other commands from within and outside a project root to ensure correct root detection.

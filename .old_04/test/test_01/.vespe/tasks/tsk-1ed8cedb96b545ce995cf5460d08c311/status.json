@@ -1,0 +1,12 @@
+{
+  "current_state": "Created",
+  "last_updated_at": "2025-09-30T11:37:53.568356200Z",
+  "progress": null,
+  "parent_content_hashes": {},
+  "is_paused": false,
+  "error_details": null,
+  "previous_state": null,
+  "retry_count": 0,
+  "subtask_uids": [],
+  "assigned_agent_uid": "agt-cdd68128f3204b7c9174c8929927f15c"
+}

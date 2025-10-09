@@ -1,0 +1,538 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > ok. immaginiamo un po meglio il progetto ora, a livello implementativo. Intanto, uso rust e llm (crate)  │
+│    perche' voglio performance, non voglio problemi, mi piace rust, eccetera. Poi, vorrei una divisione tra  │
+│    server, e frontend; il frontend immagino una interfaccia grafica web, oppure una interfaccia grafica da  │
+│    terminale, c'e' una bella libreria ratatui che potrebbe essere utile allo scopo. Ma la vorrei            │
+│    disaccoppiata dal server. Il server quindi ha bisogno di una api per la gui, o comunque una api comandi; │
+│     la gui vorrei che avesse veramente pochissima logica, quasi zero; quindi la api dovra essere abbastanza │
+│     da permettere la gui, magari con alcuni comandi dedicati proprio a questo scopo (per autocompletamento  │
+│    di dei campi ad esempio). A livello grossolano che ti pare? idee? pareri? practices? critiche?           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+
+✦ Ottima evoluzione del design! La separazione tra server e frontend, con Rust e llm come base, è una
+  direzione molto solida e allineata alle best practice moderne.
+
+  Ecco le mie considerazioni, idee e critiche:
+
+
+  1. Scelta Tecnologica: Rust e llm Crate
+   * Parere: Eccellente scelta.
+   * Parere: Best practice assoluta.
+  3. Frontend: Web GUI vs. Terminal GUI (ratatui)
+   * Parere: Entrambe le opzioni sono valide, la scelta dipende dal pubblico target e dall'esperienza utente
+     desiderata.
+   * Parere: Approccio ideale. Mantenere il frontend "thin client" è una strategia eccellente.
+  Considerazioni Architetturali Generali:
+   * Orchestratore come Core del Server: Il "Grand-Manager" sarà il principale consumatore dell'API interna
+     del server, traducendo le richieste dell'utente in azioni degli agenti e gestendo il flusso di lavoro
+     complessivo.
+  In sintesi, la direzione che stai prendendo è molto promettente. La scelta di Rust per il backend è
+  eccellente per le tue esigenze di performance e affidabilità, e la separazione server/frontend ti darà
+  grande flessibilità. La chiave sarà una progettazione attenta dell'API backend per supportare tutte le
+  funzionalità desiderate con un frontend minimale.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > Bene. A livello di architettura, io immagino quindi ogni agent come uno stato, che poi do in pasto       │
+│    opportunamente con il prompt al llm. Tra loro gli agent li immagino gestiti come un grafo, un cui        │
+│    l'unica relazione (direzionale) e' "talks to"; nel senso, che un agent puo' iniziare una conversazione   │
+│    (interrogazione) di un altro agent, a suo piacimeto; poi in realta' tutto partira' dall'agente centrale, │
+│     il "Vespon"                                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ Ottima specificazione! Questa visione dell'architettura degli agenti è molto chiara e si allinea bene con i
+  modelli emergenti nei sistemi multi-agente.
+
+  Analizziamo i tuoi punti:
+
+
+  1. Ogni Agente come "Stato" dato in pasto all'LLM tramite Prompt
+   * Parere: Questo è il fondamento. Hai colto il meccanismo chiave per far "funzionare" gli LLM in un
+     contesto di agente.
+  2. Interazione tra Agenti come Grafo Direzionale "talks to"
+   * Parere: Modello potente e flessibile. Questo è un pattern comune e molto efficace per la collaborazione
+     tra agenti.
+   * Parere: Punto di ingresso logico e controllo centralizzato.
+  Riepilogo e Prossimi Passi:
+   1. Definizione del Protocollo di Comunicazione: Come gli agenti si scambiano messaggi.
+  La tua visione è solida e ben pensata.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > Bene. Quindi, immaginando come specificare un agente, potrebbe essere una cosa tipo: 1. nome agente      │
+│    (identificativo! quando ci si riferisce a lui si usa questo nome); 2. spefiche del                       │
+│    modello/provider/eccetera (ollama? che model? api-key,blablabla insomma come accedere effettivamente al  │
+│    llm; pensare un default per progetto, e un default generale); 3. talks to: lista di agenti cui puo' fare │
+│     delle query; questo non testuale, ma un campo che proprio limita le cose da codice, non da llm, non mi  │
+│    fido; 4. tooling: specifica che tools puo' usare, e con che capacita' (supervised by human, supervised   │
+│    by model, unsupervised)   5. personality: competenze e scopo dell'agente; 6. relazioni: talks to, e      │
+│    perche': tipo se hai un baco rust, parla con l'agente "Rugginoso"; se hai un problema di compilazione    │
+│    bevy, parla con "Graficomane"; ognuno di questi sia un agente "specializzato", che eventualmente si      │
+│    specializza anche "sul campo" accumulando informazioni (competente); 7. ti viene in mente qualcos'altro  │
+│    di importante per definire staticamente un agente? (non parlo quindi della memoria, ma della definizione │
+│     statica)                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ Ottima lista di campi! Stai definendo in modo molto preciso le capacità e i vincoli di ogni agente.
+  Analizziamo i tuoi punti e aggiungiamo qualche altro elemento cruciale per una definizione statica completa.
+
+  ### Campi Proposti e Considerazioni:
+
+
+   1. `name` (Nome Agente - Identificativo):
+   2. `llm_config` (Specifiche del Modello/Provider/ecc.):
+   3. `allowed_recipients` (Talks To - Lista di agenti cui può fare query):
+   4. `tooling` (Specifica che tools può usare, e con che capacità):
+   5. `personality` (Competenze e Scopo dell'agente):
+   6. `delegation_rules` (Relazioni - Talks to, e perché):
+   7. `description`:
+   8. `input_schema` / `output_schema`:
+   9. `max_conversation_turns` / `max_iterations`:
+   10. `cost_budget` / `cost_model`:
+   11. `memory_access_level`:
+   13. `enabled`:
+  Questa lista estesa fornisce una base molto solida per definire staticamente i tuoi agenti, bilanciando
+  flessibilità, controllo e sicurezza.
+
+---
+
+  ### 8. input_schema / output_schema
+
+
+   * Scopo Dettagliato: Questi campi definiscono la "contrattualistica" dei dati per l'agente. Specificano la
+     struttura esatta (il "formato") dei messaggi o dei dati che l'agente si aspetta di ricevere come input e
+     che produrrà come output.
+   * Scopo Dettagliato: Questi parametri servono a mettere un "tetto" al numero di passaggi o scambi che un
+     agente può compiere per raggiungere un obiettivo o completare un compito.
+   * Scopo Dettagliato: Questi campi sono dedicati alla gestione economica e all'ottimizzazione delle risorse,
+      specialmente in contesti dove l'uso degli LLM e degli strumenti esterni ha un costo monetario o
+     computazionale.
+   * Scopo Dettagliato: Questo campo definisce le regole e i permessi che un agente ha per accedere e
+     modificare i dati nella memoria del sistema. La "memoria" può essere intesa in vari modi: la propria
+     memoria a breve termine, una memoria a lungo termine condivisa, un database di conoscenza, ecc.
+  Spero che queste spiegazioni più dettagliate chiariscano il ruolo e l'importanza di questi campi nella
+  definizione di un agente per il tuo progetto "Vespe"!
+
+
+✦ Certo, riprendiamo il campo 9:
+
+  ### 9. max_conversation_turns / max_iterations
+
+
+   * Scopo Dettagliato: Questi parametri servono a mettere un "tetto" al numero di passaggi o scambi che un
+     agente può compiere per raggiungere un obiettivo o completare un compito. Sono meccanismi di sicurezza e
+     controllo per evitare che gli agenti si blocchino o consumino risorse eccessive.
+       * `max_conversation_turns` (Massimo Numero di Turni di Conversazione):
+       * `max_iterations` (Massimo Numero di Iterazioni Interne):
+   * Perché sono Cruciali in un Sistema Multi-Agente (Ripetizione e Sottolineatura):
+  In sintesi, max_conversation_turns e max_iterations sono i tuoi "timer" e "contatori" per ogni agente,
+  garantendo che lavorino in modo efficiente e non si perdano in compiti senza fine.
+  
+
+  ### 10. cost_budget / cost_model
+
+
+   * Scopo Dettagliato: Questi campi sono progettati per la gestione economica e l'ottimizzazione delle
+     risorse all'interno del sistema multi-agente. Sono particolarmente rilevanti quando l'uso degli LLM e
+     degli strumenti esterni comporta costi monetari (es. API a pagamento) o un significativo consumo di
+     risorse computazionali.
+       * `cost_budget` (Budget di Costo):
+       * `cost_model` (Modello di Costo):
+   * Perché sono Cruciali in un Sistema Multi-Agente (Ripetizione e Sottolineatura):
+  In sintesi, cost_budget e cost_model sono gli strumenti finanziari del tuo sistema multi-agente,
+  permettendoti di gestire e ottimizzare l'allocazione delle risorse in modo consapevole.
+
+
+  ### 11. memory_access_level
+
+
+   * Scopo Dettagliato: Questo campo definisce le regole e i permessi che un agente ha per accedere e,
+     eventualmente, modificare i dati all'interno della memoria del sistema. La "memoria" in un sistema
+     multi-agente può essere complessa e includere:
+      Il memory_access_level stabilisce chi può vedere cosa e chi può cambiare cosa.
+
+         Livelli di Accesso Possibili (Esempi Comuni):*
+
+
+           1. `Private` (Privato):
+           2. `SharedReadOnly` (Condiviso in Sola Lettura):
+           3. `SharedReadWrite` (Condiviso in Lettura e Scrittura):
+           4. `Restricted` (Ristretto/Granulare):
+   * Perché è Cruciale in un Sistema Multi-Agente (Ripetizione e Sottolineatura):
+  In sintesi, memory_access_level è il "sistema di permessi" per la conoscenza e lo stato del tuo sistema
+  "Vespe", garantendo che ogni agente abbia il giusto livello di accesso per svolgere il suo compito in modo
+   sicuro ed efficace.
+   
+  *******************
+  
+  
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > mi pare abbastanza buono. secondo te dove dovremmo cominciare con implementazione? consigli? io immagino │
+│     che dovremmo iniziare con la capacita' di creare un singolo agente (che poi potro' usare per istanziare │
+│     il primo agente "Vespon"); ma sono aperto a proposte, discutiamone prima di iniziare                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ Ottima domanda! Sono d'accordo con la tua intuizione: iniziare con la capacità di creare un singolo agente è
+   un punto di partenza eccellente e strategico. Ci permette di costruire le fondamenta e verificare i
+  componenti chiave in modo incrementale.
+
+
+  Ecco la mia proposta per i primi passi di implementazione, basata sulla struttura di directory che abbiamo
+   definito e focalizzata sulla creazione di un sistema agente minimo ma funzionante:
+
+  ---
+
+  Proposta per il Punto di Partenza dell'Implementazione: Agente Singolo Funzionante
+
+
+  L'obiettivo iniziale è avere un'applicazione Rust che possa caricare la definizione di un agente,
+  inizializzarlo e permettergli di interagire con un LLM tramite un semplice comando CLI. Questo agente sarà
+   il "prototipo" da cui evolveranno tutti gli altri, incluso il "Vespon".
+
+  Fasi di Implementazione Suggerite:
+
+
+   1. Setup del Progetto Base (`Cargo.toml`, `src/main.rs`, `src/lib.rs`):
+   2. Implementazione del Caricamento della Configurazione (`src/config/`):
+  `rust
+          // Esempio semplificato
+          pub struct LlmConfig {
+              pub provider: String,
+              pub model_id: String,
+              pub api_key: Option<String>,
+              // ... altri parametri LLM
+          }
+
+          pub struct AgentDefinition {
+              pub name: String,
+              pub llm_config: LlmConfig,
+              // ... altri campi che aggiungeremo in seguito
+          }
+
+          pub struct GlobalConfig {
+              pub default_llm_config: LlmConfig,
+              // ... altre impostazioni globali
+          }
+          `
+         `src/config/mod.rs`*: Implementa la logica per:
+          *   Caricare una configurazione globale di default (es. da un file config.toml in una posizione
+  standard del sistema o hardcoded inizialmente).
+          *   Cercare e caricare un file config.toml all'interno della cartella .vespe/ del progetto
+  corrente per applicare gli override.
+
+
+   3. Implementazione del Client LLM (`src/llm/`):
+   4. Definizione e Istanziazione di un Agente Base (`src/agent/`):
+  `rust
+          #[async_trait] // Richiede la crate async-trait
+          pub trait Agent {
+              fn name(&self) -> &str;
+              async fn execute(&self, input: &str) -> Result<String>;
+          }
+          `
+         `src/agent/impls/basic_agent.rs`*: Implementa una struct BasicAgent che implementa il trait Agent.
+          *   Questa BasicAgent avrà al suo interno un'istanza di GenericLlmClient.
+          *   Il metodo execute prenderà l'input, lo trasformerà in un ChatMessage (magari aggiungendo un
+  system prompt base dalla personality dell'agente), lo passerà all'LlmClient e restituirà la risposta.
+         `src/agent/agent_manager.rs`*: Implementa una struct AgentManager che possa:
+          *   Caricare una AgentDefinition (es. da un file JSON in .vespe/agents/).
+          *   Istanziare un BasicAgent basandosi su quella definizione.
+
+
+   5. Interazione CLI Base (`src/cli/`, `src/main.rs`):
+  Perché questo approccio?
+
+
+   * Flusso End-to-End Minimo: Questa sequenza ci porta rapidamente ad avere un'applicazione funzionante che
+     prende un input, lo elabora con un LLM e produce un output. È un "hello world" significativo per un
+     sistema multi-agente.
+  Una volta che abbiamo un BasicAgent funzionante che può chattare con un LLM tramite la CLI, possiamo
+  aggiungere progressivamente le altre funzionalità:
+
+
+   * Integrazione degli Strumenti (`src/tools/`): Definire il Tool trait, il ToolRegistry e implementare uno
+     strumento semplice (es. un tool "echo" o uno stub di "ricerca web").
+  Cosa ne pensi di questo approccio graduale? Si allinea con la tua visione per iniziare?
+
+*******************
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > ok. vediamo il prossimo passo da fare con le vespe. spiegami come funziona basic agent, come fa a     │
+│    distinguere un testo da una call a tool? sono messaggi diversi? unico messaggio con diverse cose?     │
+│    spiegami e vediamo se e come modificare. penso che l'interfaccia tool/agent sia critica per un buon   │
+│    funzionamento.                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ Hai assolutamente ragione, l'interfaccia tra l'agente e i suoi strumenti è fondamentale. Una chiara
+  comprensione di come BasicAgent distingua tra una normale risposta testuale e una chiamata a uno strumento è
+   essenziale per un funzionamento robusto e per futuri miglioramenti.
+
+
+  Analizziamo come BasicAgent gestisce attualmente questo aspetto e poi discutiamo i potenziali miglioramenti.
+
+  ### Come BasicAgent Distingue il Testo dalle Chiamate agli Strumenti
+
+
+  BasicAgent si basa attualmente su un'interfaccia testuale per la chiamata agli strumenti, aspettandosi che
+  l'LLM produca un oggetto JSON in un formato predefinito quando intende utilizzare uno strumento.
+
+  Ecco il flusso all'interno del metodo BasicAgent::execute:
+
+
+
+   1. Aumento del Prompt:
+  `
+          "Per usare uno strumento, rispondi con un oggetto JSON in cui la chiave è \"tool_call\" e il suo
+  valore è un oggetto con \"name\" (stringa) e \"args\" (oggetto)."
+          `
+          (Questa è la versione semplificata a cui siamo arrivati per evitare problemi di escaping).
+
+
+   2. Risposta e Parsing dell'LLM:
+  `rust
+          if let Ok(tool_call) = serde_json::from_str::<Value>(&response.content)
+              .and_then(|v| Ok(v["tool_call"].clone()))
+          {
+              // ... se la chiave "tool_call" viene trovata e il suo valore è un oggetto ...
+          }
+          `
+
+
+   3. Logica Decisionale:
+   4. Esecuzione dello Strumento e Ciclo di Feedback:
+  Vantaggi di questo Approccio:
+   * LLM Agnostico: Funziona con qualsiasi LLM, purché l'LLM possa essere istruito a produrre JSON
+     strutturato.
+  Svantaggi/Aree di Miglioramento:
+   1. Affidabilità del Parsing JSON:
+   2. Overhead del Prompt:
+   3. Mancanza di Chiamate di Funzione Native:
+   1. Implementare una Strategia di Parsing JSON Robusta:
+   2. Introdurre una Struct `ToolCall`:
+  `rust
+          #[derive(Debug, Serialize, Deserialize)]
+          pub struct ToolCall {
+              pub name: String,
+              pub args: serde_json::Value, // O una struct più specifica se gli argomenti sono noti
+          }
+          `
+      *   Questo rende il codice più type-safe e leggibile.
+
+
+   3. Astrarre il Meccanismo di Chiamata degli Strumenti:
+   4. Dare Priorità alla Chiamata di Funzioni Native (Passo Futuro):
+  Suggerisco di implementare il Punto 1 (Strategia di Parsing JSON Robusta) e il Punto 2 (Introdurre una
+  Struct `ToolCall`). Questo renderà la nostra attuale interfaccia testuale più resiliente e il codice più
+  pulito, senza saltare immediatamente nella complessità delle API native per la chiamata di funzioni.
+
+
+  Ciò comporterebbe:
+  *   Definire la struct ToolCall.
+  *   Modificare `BasicAgent` per tentare di deserializzare l'intera risposta LLM in una struct che
+  *potrebbe* contenere un campo ToolCall, o solo un campo text_response. Questo rende il parsing più
+  esplicito.
+
+
+  Cosa ne pensi di questi punti? Questo si allinea alla tua visione per rendere l'interfaccia
+  strumento/agente più robusta?
+
+************************
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > ok, un po di casino. ora non importa, mi interessa discutere di un pensiero che ho e non capisco come    │
+│    dovrebbe funzionare. Immaginiamo di dare il tool "read_file" al llm. Se llm decide di usare il tool, mi  │
+│    ritornera' una richiesta di usare il tool; poi come passo il risultato al llm? ripasso tutto il prompt   │
+│    precedente, e appendo i pensieri, le risposte date dal llm, ed il risultato del tool? oppure, altri      │
+│    modi? idee? practices? critiche?                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ Hai colto una sfida fondamentale negli agenti basati su LLM: la gestione del contesto e il passaggio degli
+  output degli strumenti all'LLM. Questo è precisamente ciò che il "ciclo di feedback" nel nostro metodo
+  BasicAgent::execute è progettato per gestire, ma vale la pena discuterne in dettaglio.
+
+  ### Come BasicAgent Attualmente Passa i Risultati degli Strumenti all'LLM
+
+  Rivediamo la parte rilevante di BasicAgent::execute:
+
+
+  `rust
+  // ... (impostazione iniziale dei messaggi) ...
+
+  // Ciclo per le chiamate agli strumenti
+  for _ in 0..5 { // Max 5 chiamate agli strumenti per prevenire cicli infiniti
+      let parsed_actions = parse_llm_response(&response.content,
+  &self.definition.llm_config.on_malformed_json)?;
+
+      let mut has_tool_call = false;
+      for action in parsed_actions {
+          match action {
+              AgentAction::ToolCall(tool_call) => {
+                  has_tool_call = true;
+                  // ... (log della chiamata allo strumento) ...
+
+                  let tool_output = self.tool_registry.execute_tool(&tool_call.name,
+  &tool_call.args).await?;
+                  let tool_output_str = serde_json::to_string_pretty(&tool_output)?;
+
+                  // --- QUESTA È LA PARTE CRUCIALE ---
+                  messages.push(ChatMessage { role: "assistant".to_string(), content:
+  response.content.clone() }); // Risposta precedente dell'LLM (la chiamata allo strumento)
+                  messages.push(ChatMessage { role: "tool".to_string(), content: tool_output_str.clone() });
+   // L'output dello strumento
+
+                  response = self.llm_client.generate_response(messages.clone()).await?; // Invia i messaggi
+   aggiornati all'LLM
+                  // ... (gestione di final_response_parts per lo strumento echo) ...
+              },
+              // ... (gestione di TextResponse e Thought) ...
+          }
+      }
+      if !has_tool_call {
+          break; // Nessuna chiamata allo strumento rilevata, o tutte le azioni elaborate
+      }
+  }
+  `
+
+  Spiegazione:
+
+
+  La strategia attuale consiste nel re-inviare l'intera cronologia della conversazione, aggiungendo la
+  risposta precedente dell'LLM (che era la chiamata allo strumento) e l'output dello strumento.
+
+
+   * messages.push(ChatMessage { role: "assistant".to_string(), content: response.content.clone() });
+  Questa è una pratica standard e ampiamente adottata nei framework di agenti LLM (come LangChain, CrewAI,
+  ecc.) ed è spesso definita "gestione della finestra di contesto" o "cronologia della conversazione".
+
+  ### Altri Modi / Idee / Pratiche / Critiche
+
+
+   1. Re-inviare l'Intera Cronologia della Conversazione (Approccio Attuale):
+   2. Riassunto/Compressione:
+   3. Memoria/Base di Conoscenza (RAG - Retrieval Augmented Generation):
+   4. Agente Stateful (Oltre il Contesto LLM):
+   5. Contesto Specifico dello Strumento:
+  Raccomandazione per "Vespe" (Prossimi Passi):
+  Tuttavia, man mano che costruiamo agenti e strumenti più complessi, inevitabilmente raggiungeremo i limiti
+   della finestra di contesto. Quando ciò accadrà, il passo logico successivo sarebbe implementare la
+  riassunto/compressione per le parti più vecchie della cronologia della conversazione. Questo è un buon
+  passo intermedio prima di immergersi in un RAG completo.
+
+  Per lo strumento read_file in particolare:
+
+
+   * Lo strumento read_file verrebbe eseguito e restituirebbe il contenuto del file.
+  Questa spiegazione dettagliata chiarisce come i risultati degli strumenti vengono ripassati e quali sono
+  le considerazioni future?
+  
+  
+ ********************************
+ 
+ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  > uhm....... capito. Mi viene in mente una cosa... quindi, quando il modello ritorna i suoi messaggi /     │
+│    richieste, io le esaudisco (chiamo i tool), e richiamo il modello; lo richiamo, immagino, passandogli io │
+│     stesso l'array in json [] che contiene il contesto, quindi la cronologia, e le risposte dei tool;       │
+│    potrei anche avere un altro tipo di oggetto, che genera llm, tipo "continuation"? ovvero, llm sapendo    │
+│    che verra' interrotto, potrebbe generare (su esplicita richiesta nel prompt) un oggetto che gli faccia   │
+│    ricordare cosa stava facendo e perche'?                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ Questa è un'intuizione brillante e un concetto molto avanzato nella progettazione degli agenti! Stai
+  pensando alla gestione dello stato dell'agente e alle azioni/token di continuazione espliciti.
+
+
+  Hai correttamente identificato il meccanismo centrale: l'agente (il nostro codice Rust) agisce come
+  orchestratore. Riceve la risposta dell'LLM, esegue gli strumenti e quindi ripassa i risultati all'LLM
+  aggiungendoli alla cronologia dei messages.
+
+  ### La Tua Idea: Oggetto/Azione "Continuazione"
+
+
+  Sì, assolutamente! La tua idea di un oggetto o azione "continuazione" generato dall'LLM è un modello
+  potente per affrontare la natura stateless degli LLM e gestire compiti complessi e multi-step.
+
+  Perché è utile:
+
+
+   1. Trasferimento Esplicito dello Stato: L'LLM dice esplicitamente a se stesso (tramite l'agente) cosa stava
+      facendo, qual è il suo prossimo sotto-obiettivo o quale contesto deve ricordare. Questo è particolarmente
+       utile quando la finestra di contesto dell'LLM è limitata o quando un compito richiede più turni e azioni
+       esterne.
+  `rust
+  #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+  #[serde(untagged)]
+  pub enum AgentAction {
+      // ... varianti esistenti ...
+      #[serde(rename = "continuation")]
+      Continuation {
+          next_step: String,
+          context_to_remember: serde_json::Value, // O una struct specifica
+          // ... altro stato rilevante ...
+      },
+      // ...
+  }
+  `
+
+  Flusso con "Continuazione":
+
+
+   1. Turno dell'LLM: L'LLM elabora la cronologia dei messages corrente. Decide che deve eseguire un compito
+      multi-step.
+  `json
+      [
+        {"type": "thought", "content": "Devo leggere il file X, poi riassumerlo, poi rispondere."},
+        {"type": "tool_call", "name": "read_file", "args": {"path": "file_x.txt"}},
+        {"type": "continuation", "next_step": "summarize_file_x", "context_to_remember": {"original_query":
+  "riassumi il file X"}}
+      ]
+      `
+  3.  L'Agente Esegue:
+      *   L'agente analizza queste azioni.
+      *   Esegue lo strumento read_file.
+      *   Memorizza l'oggetto continuation internamente (ad esempio, nello stato dell'agente stesso o in un
+  componente di memoria dedicato).
+  4.  Prossimo Prompt dell'Agente all'LLM:
+      *   L'agente costruisce il prompt successivo. Include la cronologia dei messages originale, l'output
+  dello tool da read_file e, in modo cruciale, potrebbe iniettare l'oggetto continuation nel prompt di
+  sistema o come messaggio speciale.
+      *   Esempio ChatMessage: role: "system", content: "Stavi precedentemente lavorando su:
+  {oggetto_continuazione_json}. Ecco l'output dello strumento: {output_strumento_json}. Qual è il prossimo
+  passo?"
+  5.  L'LLM Continua: L'LLM riceve questo nuovo prompt, comprende il suo stato precedente e l'output dello
+  strumento, e genera il prossimo set di azioni (ad esempio, una tool_call a uno strumento summarize, o una
+  text_response se può riassumere direttamente).
+
+  ### Pratiche e Considerazioni:
+
+
+   * Ingegneria del Prompt per la Continuazione: Ciò richiede un'ingegneria del prompt molto attenta per
+     insegnare all'LLM quando generare un'azione continuation e quali informazioni inserire in essa.
+   * Aumento della Complessità: Ciò aggiunge un significativo livello di complessità sia al ragionamento
+     dell'LLM che all'implementazione dell'agente.
+  La tua idea di un oggetto "continuazione" è un modello potente e valido per costruire agenti LLM più
+  sofisticati, multi-step e resilienti. Si sposta oltre la semplice interazione turno per turno verso un
+  approccio più stateful e orientato agli obiettivi.
+
+  La mia Raccomandazione:
+
+
+  Questa è sicuramente una funzionalità che dovremmo considerare per "Vespe" in futuro. Tuttavia, è un passo
+   significativo in termini di complessità rispetto al nostro compito attuale di analizzare in modo robusto
+  le AgentAction.
+
+
+  Per ora, concentriamoci sul consolidamento dell'attuale analisi ed esecuzione di AgentAction. Una volta
+  che sarà stabile, potremo esplorare l'aggiunta di Continuation come nuovo tipo di AgentAction e costruire
+  la gestione dello stato dell'agente attorno ad essa. Questa sarebbe una progressione naturale verso
+  compiti più autonomi e a lungo termine.
+
+
+  Questa discussione si allinea ai tuoi pensieri sul concetto di "continuazione"?
+
+
+
+****************
+
+
+  
+cargo run -- chat my_agent "please read file 'test2.txt', then summarize it, then pass the summary to echo tool"

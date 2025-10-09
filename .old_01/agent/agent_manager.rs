@@ -1,0 +1,75 @@
+use anyhow::{Context, Result};
+use std::path::PathBuf;
+use tokio::fs;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+use crate::agent::agent_trait::Agent;
+use crate::agent::impls::basic_agent::BasicAgent;
+use crate::agent::models::AgentDefinition;
+use crate::llm::llm_client::LlmClient;
+use crate::llm::parsing::parser_trait::SnippetParser;
+use crate::llm::parsing::{FencedJsonParser, RawJsonObjectParser, RawJsonArrayParser};
+use crate::llm::parsing::{FencedXmlParser, ToolCodeXmlParser};
+use crate::llm::impls::markup_policies::JsonMarkupPolicy;
+use crate::prompt_templating::PromptTemplater;
+use crate::tools::tool_registry::ToolRegistry;
+// use crate::statistics::models::UsageStatistics; // Commented out
+
+pub struct AgentManager {
+    project_root: PathBuf,
+    tool_registry: ToolRegistry,
+    prompt_templater: PromptTemplater,
+    // stats: Arc<Mutex<UsageStatistics>>, // Commented out
+}
+
+impl AgentManager {
+    pub fn new(
+        project_root: PathBuf,
+        tool_registry: ToolRegistry,
+        prompt_templater: PromptTemplater,
+        // stats: Arc<Mutex<UsageStatistics>>, // Commented out
+    ) -> Result<Self> {
+        Ok(Self {
+            project_root,
+            tool_registry,
+            prompt_templater,
+            // stats,
+        })
+    }
+
+    pub async fn load_agent_definition(&self, name: &str) -> Result<AgentDefinition> {
+        let agent_dir = self.project_root.join(".vespe").join("agents");
+        let agent_path = agent_dir.join(format!("{}.json", name)); // Assuming JSON for now
+
+        let content = fs::read_to_string(&agent_path)
+            .await
+            .with_context(|| format!("Failed to read agent definition from {:?}", agent_path))?;
+        let definition: AgentDefinition = serde_json::from_str(&content)
+            .with_context(|| format!("Failed to parse agent definition from {:?}", agent_path))?;
+
+        Ok(definition)
+    }
+
+    pub fn create_agent(&self, agent_definition: &AgentDefinition) -> Result<Box<dyn Agent>> {
+        // Create the default set of parsers
+        let mut parsers: Vec<Box<dyn SnippetParser>> = Vec::new();
+        parsers.push(Box::new(FencedJsonParser));
+        parsers.push(Box::new(RawJsonObjectParser));
+        parsers.push(Box::new(RawJsonArrayParser));
+        parsers.push(Box::new(FencedXmlParser));
+        parsers.push(Box::new(ToolCodeXmlParser));
+
+        let llm_client = LlmClient::new(agent_definition.llm_config.clone(), parsers /*, self.stats.clone()*/); // stats argument commented out
+        let default_markup_policy = JsonMarkupPolicy;
+
+        Ok(Box::new(BasicAgent::new(
+            agent_definition.name.clone(),
+            llm_client,
+            self.tool_registry.clone(),
+            self.prompt_templater.clone(),
+            Box::new(default_markup_policy),
+            // self.stats.clone(), // stats argument commented out
+        )))
+    }
+}

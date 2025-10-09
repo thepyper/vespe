@@ -1,0 +1,176 @@
+Ho letto e analizzato il documento. È un'ottima base di partenza che introduce concetti chiave come la separazione tra `Tool`, `ToolAdapter` e `Agent`. Tuttavia, è ancora a uno stadio concettuale e manca la formalizzazione necessaria per un'implementazione robusta.
+
+Ecco la mia analisi dettagliata, seguita da una proposta di API.
+
+---
+
+### Analisi del Design degli Agenti
+
+#### Punti di Forza
+
+1.  **Separazione dei Concetti**: La distinzione tra `Tool` (la logica pura), `ToolAdapter` (l'adattatore specifico per l'LLM) e `Agent` (il provider dell'LLM) è eccellente. Questa è una best practice che garantisce modularità e flessibilità. Permette di supportare nuovi LLM o nuove convenzioni di tool-calling senza dover modificare la logica dei tool o degli agenti.
+2.  **Manifesto dei Tool**: L'idea di un manifesto JSON per descrivere i tool è solida. Rende i tool auto-descrittivi e permette una validazione automatica e una generazione dinamica dei prompt.
+3.  **Contesto Strutturato**: Definire diverse fonti di contesto (`LocalTaskContext`, `InherithedTaskContext`, etc.) e fornirle in modo strutturato (`Vec<Message>`) all'agente è un approccio potente. Permette all'agente di avere una visione completa e di decidere strategicamente quali informazioni utilizzare.
+
+#### Punti Critici e Mancanze
+
+1.  **Ciclo di Vita dell'Agente**: Il documento non definisce un ciclo di vita per l'agente. Un agente è stateless o ha uno stato? Può essere "avviato", "fermato", "messo in pausa"? Come viene gestita la sua configurazione (es. chiavi API, endpoint) in modo sicuro?
+2.  **Mancanza di un "Motore" (Agent Engine)**: Il documento descrive l'agente come un "provider di LLM" che risponde a prompt. Manca il concetto di un "motore" o "runtime" dell'agente che orchestra il flusso di lavoro principale:
+    *   Riceve un obiettivo (da un task).
+    *   Entra in un ciclo di pensiero/azione (Reasoning Loop).
+    *   Usa i tool a disposizione.
+    *   Interpreta i risultati.
+    *   Decide il passo successivo (usare un altro tool, rispondere all'utente, dichiarare il lavoro finito).
+    L'agente descritto sembra passivo, mentre un agente autonomo dovrebbe essere proattivo.
+3.  **Comunicazione e Memoria**: Come comunica un agente con gli altri? Come persiste la sua "memoria" a breve e lungo termine (es. la cronologia di una conversazione o le decisioni passate)? Il documento menziona i `PersistentEvent` nel task, ma l'agente stesso potrebbe necessitare di un proprio storage per la memoria di lavoro.
+4.  **Gerarchia e Controllo**: Il design attuale in `src/agent.rs` prevede un `parent_agent_uid`, ma il documento non spiega come funziona questa gerarchia. Un agente genitore come delega un task a un figlio? Come ne monitora il progresso? Chi ha il controllo?
+
+#### Dubbi e Critiche
+
+*   **Agent = Provider di LLM?**: Definire un agente solo come un "provider di LLM" è riduttivo. Un agente è più di un wrapper per un'API. È un'entità che *usa* un LLM per ragionare e agire. Il provider LLM dovrebbe essere un *componente* dell'agente, non l'agente stesso.
+*   **Fuzzy Parsing**: L'idea di "parser fuzzy" per i `ToolAdapter` è interessante ma potenzialmente pericolosa. Aumenta la complessità e può portare a comportamenti imprevedibili. Una best practice è pretendere che l'LLM aderisca a uno schema rigido (JSON) e gestire gli errori di parsing come fallimenti del modello, magari con una logica di "retry".
+*   **System Prompt Templating**: L'uso di Handlebars è una buona idea concreta, ma il documento non specifica *quali* variabili standardizzate verranno passate al template. Definirle è cruciale. Esempi potrebbero essere: `{{objective}}`, `{{available_tools}}`, `{{context_messages}}`, `{{current_date}}`.
+
+---
+
+### Proposta per Formalizzare le API (Revisione D)
+
+Questa revisione finale formalizza il concetto di `Memory` e finalizza la struttura dei messaggi, incorporando tutte le discussioni precedenti.
+
+#### 1. Strutture Dati Fondamentali
+
+##### 1.1. `Memory` e `Message`
+
+Introduciamo `Memory` come un componente di prima classe per la gestione del contesto e della cronologia. L'autore di un messaggio (`Message`) è sempre un agente.
+
+```rust
+// --- In un nuovo file: src/memory.rs ---
+
+use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
+use std::path::{Path, PathBuf};
+
+// 1. MESSAGE: L'unità atomica di memoria.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Message {
+    pub uid: String, // "msg-..."
+    pub timestamp: DateTime<Utc>,
+    pub author_agent_uid: String, // L'autore è SEMPRE un agente
+    pub content: MessageContent,  // Il contenuto è strutturato
+    #[serde(default)]
+    pub status: MessageStatus,
+}
+
+// 2. MESSAGECONTENT: Enum per descrivere il TIPO di contenuto.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum MessageContent {
+    Text(String),    // Input utente, output finale dell'agente, messaggi di sistema
+    Thought(String), // Ragionamento interno dell'agente (non mostrato di default)
+    ToolResult {
+        tool_uid: String,
+        result: serde_json::Value,
+    },
+}
+
+// 3. MESSAGESTATUS: Lo stato di un messaggio nel contesto.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+pub enum MessageStatus {
+    #[default]
+    Enabled,
+    Disabled, // Ignorato dal contesto di default, ma conservato per la cronologia
+}
+
+// 4. MEMORY: Il gestore di una collezione di messaggi.
+#[derive(Debug)]
+pub struct Memory {
+    pub root_path: PathBuf, // Path alla directory che contiene i file msg-*.json
+    messages: Vec<Message>, // Cache in-memory
+}
+
+impl Memory {
+    pub fn load(path: &Path) -> Result<Self, MemoryError> { /* ... */ }
+    pub fn new(path: &Path) -> Result<Self, MemoryError> { /* ... */ }
+    pub fn add_message(&mut self, author_agent_uid: String, content: MessageContent) -> Result<&Message, MemoryError> { /* ... */ }
+    pub fn delete_message(&mut self, message_uid: &str) -> Result<(), MemoryError> { /* ... */ }
+    pub fn enable_message(&mut self, message_uid: &str) -> Result<(), MemoryError> { /* ... */ }
+    pub fn disable_message(&mut self, message_uid: &str) -> Result<(), MemoryError> { /* ... */ }
+    pub fn get_all_messages(&self) -> &Vec<Message> { &self.messages }
+    pub fn get_context(&self) -> Vec<&Message> { /* ... */ }
+}
+```
+
+##### 1.2. Strutture dell'Agente
+
+L'Agente ora include la sua `Memory` personale.
+
+```rust
+// --- In src/agent.rs ---
+
+// ... Metadati, Details, Configs come da Revisione C ...
+
+// STATO DINAMICO DELL'AGENTE (semplificato)
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct AgentState {
+    pub last_seen_at: DateTime<Utc>,
+    // La memoria non è più un campo qui, ma un oggetto a sé stante.
+}
+
+// L'AGENTE COMPLETO: Oggetto costruito in memoria.
+#[derive(Debug, Clone)]
+pub struct Agent {
+    pub metadata: AgentMetadata,
+    pub details: AgentDetails,
+    pub state: AgentState,
+    pub memory: Memory, // La memoria a breve termine specifica dell'agente
+}
+
+// --- In src/task.rs ---
+
+// STATO DINAMICO DEL TASK (con assegnazione agente)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TaskStatus {
+    // ... campi esistenti ...
+    pub assigned_agent_uid: Option<String>,
+    // ...
+}
+```
+
+#### 2. API per il Ciclo di Vita e le Azioni (AgentLifecycle Trait)
+
+```rust
+// --- In src/agent_api.rs ---
+
+use crate::{Agent, Task, ProjectError, Message, AIConfig, HumanConfig, MessageContent};
+
+pub trait AgentLifecycle {
+    // --- Gestione Agenti (CRUD) ---
+    fn create_ai_agent(&self, name: String, config: AIConfig) -> Result<Agent, ProjectError>;
+    fn create_human_agent(&self, name: String, config: HumanConfig) -> Result<Agent, ProjectError>;
+    fn load_agent(&self, agent_uid: &str) -> Result<Agent, ProjectError>;
+    fn save_agent_state(&self, agent: &Agent) -> Result<(), ProjectError>;
+
+    // --- Assegnazione Task ---
+    fn assign_task_to_agent(&self, task_uid: &str, agent_uid: &str) -> Result<(), ProjectError>;
+    fn unassign_agent_from_task(&self, task_uid: &str) -> Result<(), ProjectError>;
+
+    // --- Esecuzione Task ---
+    fn tick_task(&self, task_uid: &str) -> Result<AgentTickResult, ProjectError>;
+
+    // --- Comunicazione ---
+    /// Aggiunge un messaggio alla memoria di un agente.
+    fn add_message_to_agent_memory(&self, agent_uid: &str, content: MessageContent) -> Result<Message, ProjectError>;
+}
+
+// ... AgentTickResult rimane invariato ...
+```
+
+### Conclusione e Prossimi Passi
+
+Questo design più formale introduce concetti chiave mancanti (ciclo di vita, motore di esecuzione) e fornisce una base solida per l'implementazione.
+
+**Prossimi passi suggeriti:**
+1.  Discutere e rifinire le strutture dati e il trait `AgentLifecycle` proposti.
+2.  Creare un nuovo piano di implementazione (simile a `plan_2025_09_26b.txt`) per applicare queste modifiche al codice esistente in `src/agent.rs` e `src/project.rs`.
+3.  Implementare il piano passo dopo passo, con commit granulari.
+
+Attendo il tuo feedback su questa analisi e proposta.

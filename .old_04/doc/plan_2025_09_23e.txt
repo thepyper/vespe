@@ -1,0 +1,23 @@
+# Piano di Refactoring: main.rs - 2025-09-23e
+
+## Obiettivo
+Spostare l'eseguibile principale del progetto da `src/bin/vespe_cli.rs` a `src/main.rs` per allinearsi alle convenzioni di Rust, semplificare la struttura e rinominare l'eseguibile finale in `vespe`.
+
+---
+
+### Fase 1: Commit del Piano
+1.  **Aggiungere Piano a Git:** Aggiungere questo file del piano al version control.
+2.  **Commit Iniziale:** Creare un commit per registrare l'inizio del refactoring.
+
+---
+
+### Fase 2: Refactoring dei File
+1.  **Leggere `vespe_cli.rs`:** Acquisire il contenuto completo del file `src/bin/vespe_cli.rs`.
+2.  **Scrivere `main.rs`:** Scrivere il contenuto letto nel nuovo file `src/main.rs`.
+3.  **Cancellare `vespe_cli.rs`:** Rimuovere il file originale `src/bin/vespe_cli.rs` che è ora ridondante.
+
+---
+
+### Fase 3: Verifica e Commit Finale
+1.  **Verifica Build:** Eseguire `cargo build` per assicurarsi che Cargo compili correttamente il nuovo eseguibile principale (`vespe.exe` su Windows) senza errori.
+2.  **Commit Finale:** Eseguire un commit finale con un messaggio che descrive il refactoring effettuato.

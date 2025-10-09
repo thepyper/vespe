@@ -1,0 +1,25 @@
+# Design Objective: Thin CLI Layer and Logic Centralization
+
+## Principle
+
+The Command Line Interface (CLI) for the Vespe project must be designed as an extremely thin layer. Its primary responsibilities are:
+1.  **Argument Parsing:** Interpreting user input from the command line.
+2.  **Function Dispatch:** Calling the appropriate functions and APIs exposed by the core sub-crates (e.g., `project`, `agent`, `tool`).
+3.  **Result Presentation:** Formatting and displaying the output received from the sub-crates to the user.
+
+## Mandate: Zero Business Logic in CLI
+
+Crucially, the CLI **must not contain any business logic, decision-making processes, or complex data transformations**. All such logic must reside exclusively within the dedicated sub-crates.
+
+## Rationale
+
+This architectural mandate ensures:
+*   **Reusability:** The core business logic developed in the sub-crates can be seamlessly reused by any other interface (e.g., web application, Terminal User Interface (TUI), daemon, other agents) without duplication.
+*   **Maintainability:** Centralizing logic simplifies maintenance, debugging, and updates.
+*   **Testability:** Core logic can be tested independently of the presentation layer.
+*   **Consistency:** Ensures consistent behavior across all user interfaces.
+
+## Implications for Development
+
+*   When implementing CLI commands, developers must ensure that any operation requiring business logic is delegated to a function within a sub-crate.
+*   The CLI's role is purely to translate user intent into calls to the underlying API and to present the results.

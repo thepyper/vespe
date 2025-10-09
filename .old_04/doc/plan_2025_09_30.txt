@@ -1,0 +1,70 @@
+**Plan for Gemini OAuth 2.0 Implementation**
+
+This plan outlines the steps to replace the current placeholder authentication in `gemini.rs` with a full OAuth 2.0 "Installed Application" flow. This will allow users to authenticate via their Google account in a web browser and grant `vespe` the necessary permissions to use the Gemini API.
+
+**1. Add New Dependencies to `Cargo.toml`**
+
+The following crates will be added to the `[dependencies]` section of the main `Cargo.toml` file:
+
+```toml
+[dependencies]
+# ... existing dependencies
+oauth2 = "5.0"
+tiny_http = "0.12"
+webbrowser = "1.0"
+url = "2.5"
+```
+
+*   **`oauth2`**: To handle the core OAuth 2.0 logic (authorization URL generation, token exchange).
+*   **`tiny_http`**: To spin up a temporary local web server to catch the OAuth redirect from Google.
+*   **`webbrowser`**: To automatically open the authorization URL in the user's default browser.
+*   **`url`**: To easily parse the incoming request URL on the local server and extract the authorization code.
+
+**2. Refactor `src/llm_client/gemini.rs`**
+
+The existing `GeminiClient` and its related structs will be significantly refactored.
+
+**2.1. Token Storage (`.vespe/gemini_token.json`)**
+
+*   A new struct, let's call it `SerializableToken`, will be created to represent the token data that needs to be stored on disk. It will be `Serialize` and `Deserialize`.
+*   This struct will contain the `refresh_token` and any other necessary details returned by Google (like `expires_in`, `scope`, etc.).
+*   A new helper function `save_token_to_disk(token: &SerializableToken)` will be created to save the token to `.vespe/gemini_token.json`.
+*   A corresponding function `load_token_from_disk() -> Option<SerializableToken>` will load the token if the file exists.
+
+**Security Note**: The token will be stored in plain text in the project's `.vespe` directory. This is a common approach for CLI tools, but it's not the most secure. For this implementation, we will proceed with this method and can consider using the system's credential manager in a future iteration.
+
+**2.2. New Authentication Flow (`perform_oauth_flow()`)**
+
+*   A new private function, `perform_oauth_flow(client_id: &str, client_secret: &str) -> Result<SerializableToken, ProjectError>`, will be created to orchestrate the entire browser-based authentication.
+*   **Step 1: Configure OAuth2 Client**: It will use the `oauth2` crate and the provided `client_id` and `client_secret` to configure an `OAuth2` client for Google's endpoints.
+*   **Step 2: Generate Auth URL**: It will generate the authorization URL, including the required scopes for the Gemini API (e.g., `https://www.googleapis.com/auth/generative-language.retriever`). A `pkce_challenge` will be created for security.
+*   **Step 3: Start Local Server**: It will start a `tiny_http` server on a free port on `localhost` (e.g., `http://127.0.0.1:8080`). The server's address will be used as the `redirect_uri`.
+*   **Step 4: Open Browser**: It will use the `webbrowser::open()` function to send the user to the generated authorization URL.
+*   **Step 5: Handle Redirect**: The local server will listen for a single incoming request. When Google redirects the user, the server will handle the request, parse the URL to extract the `authorization_code` and `state` from the query parameters. It will validate the `state` parameter to prevent CSRF attacks.
+*   **Step 6: Exchange Code for Token**: The `authorization_code` will be exchanged for an `access_token` and a `refresh_token` using the `oauth2` client.
+*   **Step 7: Save and Return Token**: The new token (especially the `refresh_token`) will be saved to disk using `save_token_to_disk()` and returned.
+
+**2.3. Update `GeminiClient::new()`**
+
+*   The `GeminiClient::new()` constructor will be modified. It will no longer take a `refresh_token` as a direct argument.
+*   It will first attempt to `load_token_from_disk()`.
+*   If a valid token is loaded, it will be used to initialize the client.
+*   If no token is found or the token is invalid, it will call `perform_oauth_flow()` to initiate the browser-based authentication.
+*   The `GeminiTokenState` will be updated to hold the full token object from the `oauth2` crate, which includes the `access_token`, `refresh_token`, and expiry information.
+
+**2.4. Update `GeminiClient::send_query()`**
+
+*   Before making an API call, this function will check if the `access_token` is expired using the logic provided by the `oauth2` crate's token object.
+*   If the token is expired, it will use the `refresh_token` to automatically get a new `access_token` from Google in the background.
+*   If the refresh is successful, the new token will be saved to disk to update the expiry time and potentially the `access_token` itself.
+*   The rest of the function will proceed as before, using the valid `access_token` in the `Authorization` header.
+
+**3. Update `src/agent.rs`**
+
+*   The `LLMProviderConfig::Gemini` enum variant will be simplified. It will only need `model`, `client_id_env`, and `client_secret_env`. The `refresh_token_env` will no longer be needed, as the token is now managed automatically.
+
+**4. Update `vespe-cli`**
+
+*   The CLI command for creating a Gemini agent (`vespe-cli agent create-ai ... gemini ...`) will be updated to remove the `--refresh-token-env` argument, reflecting the change in `LLMProviderConfig::Gemini`.
+
+This plan ensures a user-friendly authentication experience that only requires browser interaction once, with automatic token management for all subsequent runs.

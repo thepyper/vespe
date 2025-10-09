@@ -1,0 +1,20 @@
+vorrei ora delineare bene il ciclo di un task:
+1) il task viene creato, ha un uid immodificabile; il nome e' modificabile, e' solo un alias per l'utente; stato CREATED
+2) al task viene assegnato un obiettivo; stato GOT_OBJECTIVE
+   in questo stato l'obiettivo puo' essere cambiato quante volte si vuole
+3) il task viene pianificato; stato GOT_PLAN
+   in questo stato l'obiettivo non e' piu' modificabile
+   due transizioni possibili: accept_plan -> va in stato READY
+   reject_plan -> torna in stato GOT_OBJECTIVE, si puo' ricambiare obiettivo
+4) il task e' ready per essere lavorato;
+   transizione possibile: do_work -> va in stato WORKING
+5) il task viene lavorato: puo' significare solo due cose:
+	- se e' un task monolitico, eseguirlo ed ottenere il risultato -> 
+	- se e' un task suddiviso, creare i sub-task ed attendere che essi terminino tutti con successo -> stato WAITING_SUBTASKS? oppure banalmente se un task e' working deve
+	avere tutti i sottotask finiti
+6) il task puo' essere messo in pausa -> va in stato PAUSED (diverso da READY perche' e' stato suddiviso)
+	puo' tornare in WORKING 
+7) il task puo' finire solo in due modi:
+	- FAILURE: se fallisce il task, o se fallisce un sottotask, o se utente abortisce
+	- SUCCESS: task finito con successo;
+8) da FAILURE c'e' da capire come riprendersi, dare possibilita' all'utente di ripianificare il subtask (o il task) che e' fallito;

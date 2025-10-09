@@ -1,0 +1,26 @@
+TRAINING DATA GENERATION - SINGLE TOOL PROMPT CREATOR
+
+Your task is to generate an hypotetical user prompt that will be submitted to a language model, so that the language model will need to use a specific tool in the crafted scenario.
+
+=== TARGET TOOL ===
+Tool Name: {{{tool_name}}}
+Tool Specification: {{{tool_spec}}}
+Tool Description: {{{tool_description}}}
+
+=== SCENARIO PARAMETERS ===
+Use Case: {{{use_case}}}
+Complexity: {{{complexity}}}
+User Style: {{{user_style}}}
+Context Length: {{{context_length}}}
+
+=== GENERATION RULES ===
+1. Create realistic user request (not "please use the X tool")
+2. Match the specified use case and complexity naturally
+3. Include appropriate context for the context_length parameter
+4. Use language style matching user_style parameter
+5. Make tool usage feel natural and necessary
+Generate exactly one user prompt that matches all parameters.
+DO NOT include any preamble nor explanation to the prompt.
+ALL OF YOUR OUTPUT MUST BE ONLY THE PROMPT.
+
+=== OUTPUT ===

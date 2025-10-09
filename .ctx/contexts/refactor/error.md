@@ -10,6 +10,7 @@ Si tratta di modificare in tutta la libreria src/* (non in bin/) la gestione deg
 2) Definisci in src/error.rs un errore globale, che comprenda una conversione da tutti gli errori specifici usando thiserror e la sua magica macro #from. NESSUN CAMBIO DI LOGICA DI NESSUN TIPO, SOLO CAMBIO DEL TIPO DI ERRORE;
 3) Dopo aver fatto punto 1 e 2, inizia a cambiare UN MODULO PER VOLTA (commit dopo ogni modulo) per usare Result<???, Error> con Error quello globale, che tanto si converte da ogni errore specifico. Mentre cambi i moduli, fai UNA SOSTITUZIONE PER VOLTA, altrimenti vedo che distruggi facilmente il codice. Con il tool replace, USA UN CONTESTO LARGO, almeno 5 righe, per evitare di matchare un posto errato.
 4) Dopo ogni modulo che modifichi, fai un cargo build per verificare che tutto compili ancora, e risolvi eventuali errori di compilazione che trovi.
+5) Ogni volta che vuoi eseguire una modifica su un file, PRIMA RILEGGILO per essere sicuro di non confonderti sul contenuto.
 
 Funziona secondo te?
 Hai delle critiche, best practices, dubbi?

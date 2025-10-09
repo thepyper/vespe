@@ -3,7 +3,7 @@ pub mod states;
 use std::collections::HashSet;
 
 use crate::agent::ShellAgentCall;
-use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryState, SummaryStatus};
+use crate::execute::states::{AnswerState, AnswerStatus, InlineState, InlineStatus, SummaryState, SummaryStatus};
 use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
@@ -95,6 +95,9 @@ impl ExecuteWorker {
         // Transform tags into anchors and initialize states
         let mut need_next_step = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts, commit)?;
 
+        // Handle repeat tag
+        let mut need_next_step = self._hanled_repeat_tag(project, &mut context, commit)?;
+        
         // Execute document injection and mutate states
         need_next_step |= self._handle_anchor_states(project, &mut context, commit)?;
 
@@ -122,20 +125,15 @@ impl ExecuteWorker {
     ) -> anyhow::Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
-
+      
         for (i, line) in context.lines.iter().enumerate() {
             match line {
                 Line::InlineTag { snippet_name } => {
                     let uid = uuid::Uuid::new_v4();
                     let anchors = semantic::Line::new_inline_anchors(uid);
-                    let snippet = project.load_snippet(&snippet_name)?;
-                    let mut patch = Vec::new();
-                    patch.push(anchors[0].clone());
-                    patch.extend(snippet.content);
-                    patch.push(anchors[1].clone());
                     patches.insert(
                         (i, i + 1), // Replace the current line (the tag line) with the anchor
-                        patch,
+                        anchors,
                     );
                     let state = InlineState::new(&snippet_name);
                     project.save_inline_state(&uid, &state, commit)?;                    
@@ -188,6 +186,81 @@ impl ExecuteWorker {
         Ok(modified)
     }
 
+    fn _hanled_repeat_tag(
+        &mut self,
+        project: &Project,
+        context: &mut Context,
+        commit: &mut Commit,
+    ) -> anyhow::Result<bool> {
+        let mut modified = false;
+        let mut patches = Patches::new();
+        let mut latest_anchor = None;
+
+        for (i, line) in context.lines.iter().enumerate() {
+            match line {
+                Line::RepeatTag => {
+                    if let Some(j) = latest_anchor {
+                        // Repeat inside some anchor, manage it
+                        patches.insert((i, i+1), vec![]);
+                        let anchor_begin_line = context.lines.get(j).unwrap(); // TODO gestione errore
+                        match anchor_begin_line {
+                            Line::InlineBeginAnchor { uuid } => {
+                                let state = project.load_inline_state(uuid)?;
+                                match state.status { 
+                                    InlineStatus::Completed => {
+                                        let mut new_state = state.clone();
+                                        new_state.status = InlineStatus::NeedInjection;
+                                        project.save_inline_state(uuid, &new_state, commit)?;
+                                        modified = true;
+                                    }
+                                    _ => { /* Do nothing */ }
+                                }
+                             }
+                             Line::AnswerBeginAnchor { uuid } => {
+                                let state = project.load_answer_state(uuid)?;
+                                match state.status { 
+                                    AnswerStatus::Completed => {
+                                        let mut new_state = state.clone();
+                                        new_state.status = AnswerStatus::NeedAnswer;
+                                        project.save_answer_state(uuid, &new_state, commit)?;
+                                        modified = true;
+                                    }
+                                    _ => { /* Do nothing */ }
+                                }
+                             }
+                             Line::SummaryBeginAnchor { uuid } => {
+                                let state = project.load_summary_state(uuid)?;
+                                match state.status { 
+                                    SummaryStatus::Completed => {
+                                        let mut new_state = state.clone();
+                                        new_state.status = SummaryStatus::NeedContext;
+                                        project.save_summary_state(uuid, &new_state, commit)?;
+                                        modified = true;
+                                    }
+                                    _ => { /* Do nothing */ }
+                                }
+                             }
+                             _ => { /* Do nothing */}
+                        }
+                    } else {
+                        // Repeat outside of any anchor, just remove it
+                        patches.insert((i, i+1), vec![]);
+                    }
+                }               
+                Line::AnswerBeginAnchor {..} | Line::InlineBeginAnchor { .. } | Line::SummaryBeginAnchor { .. } => {
+                    latest_anchor = Some(i);
+                }
+                _ => { /* Do nothing */ }
+            }
+        }
+
+        if context.apply_patches(patches) {
+            debug!("Pass 1.5 patches applied.");
+            modified = true;
+        }
+        Ok(modified)
+    }
+
     fn _handle_anchor_states(
         &mut self,
         project: &Project,
@@ -200,7 +273,25 @@ impl ExecuteWorker {
 
         for (i, line) in context.lines.iter().enumerate() {
             match line {
-                // Inline state is handled in the first pass, no further action needed here
+                Line::InlineBeginAnchor { uuid } => {
+                    let state = project.load_inline_state(uuid)?;
+                    let j = anchor_index
+                        .get_end(uuid)
+                        .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
+                    match state.status {
+                        InlineStatus::NeedInjection => {
+                            let snippet = project.load_snippet(&state.snippet_name)?;
+                            inject_lines(&mut patches, i + 1, j, snippet.content)?;
+                            let mut new_state = state.clone();
+                            new_state.status = InlineStatus::Completed;
+                            project.save_inline_state(uuid, &new_state, commit)?;
+                            modified = true;
+                        }
+                        InlineStatus::Completed => {
+                            // Do nothing, already completed
+                        }
+                    }
+                }
                 Line::AnswerBeginAnchor { uuid } => {
                     let state = project.load_answer_state(uuid)?;
                     let j = anchor_index
@@ -322,6 +413,16 @@ impl ExecuteWorker {
     }
 }
 
+fn inject_lines(
+    patches: &mut Patches,
+    start_index: usize,
+    end_index: usize,
+    lines: Vec<Line>,
+) -> anyhow::Result<()> {
+    patches.insert((start_index, end_index), lines);
+    Ok(())
+}
+
 fn inject_content(
     patches: &mut Patches,
     start_index: usize,
@@ -329,6 +430,5 @@ fn inject_content(
     content: &str,
 ) -> anyhow::Result<()> {
     let lines = content.lines().map(|s| Line::Text(s.to_string())).collect();
-    patches.insert((start_index, end_index), lines);
-    Ok(())
+    inject_lines(patches, start_index, end_index, lines)
 }

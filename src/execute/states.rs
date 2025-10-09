@@ -1,13 +1,22 @@
 use serde::{Deserialize, Serialize};
 
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum InlineStatus {
+    NeedInjection,
+    Completed,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InlineState {
+    pub status: InlineStatus,
     pub snippet_name: String,
 }
 
 impl InlineState {
     pub fn new(snippet_name: &str) -> Self {
         InlineState {
+            status: InlineStatus::NeedInjection,
             snippet_name: snippet_name.into(),
         }
     }

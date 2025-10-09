@@ -397,9 +397,11 @@ impl Project {
         context_name: &str,
         agent: &ShellAgentCall,
     ) -> Result<()> {
+        debug!("Project::execute_context called for: {}", context_name);
         let mut commit = Commit::new();
         execute::execute(self, context_name, agent, &mut commit)?;
         if self.project_config.git_integration_enabled {
+            debug!("Attempting to commit for context: {}", context_name);
             commit.commit(&format!("feat: Executed context '{}'", context_name))?;           
         }
         Ok(())

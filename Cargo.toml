@@ -18,7 +18,9 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1.0", features = ["v4", "serde"] }
-gix = {  version = "0.73", features = ["index", "status"] }
+git2 = "0.20"
+
+#gix = {  version = "0.73", features = ["index", "status"] }
 tempfile = "3.10.0"
 
 #rand = "0.8"

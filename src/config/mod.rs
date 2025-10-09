@@ -1,4 +1,15 @@
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+use crate::error::Result;
+
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("Failed to load configuration: {0}")]
+    LoadConfigFailed(String),
+    #[error("Failed to save configuration: {0}")]
+    SaveConfigFailed(String),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EditorInterface {

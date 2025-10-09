@@ -1,24 +1,23 @@
-use gix::{Repository, index::Entry};
+use gix::Repository;
 use std::path::PathBuf;
-use anyhow::Result;
+use anyhow::{Result, Context};
 
 fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
     // Apri il repository nella directory corrente
     let repo = gix::open(".")?;
     
     // 1) Controlla lo stato corrente con git status
-    let mut index = repo.index_or_empty()?;
+    let mut index = repo.index_mut()?;
     let head = repo.head_commit()?;
     
     // Ottieni i files attualmente in staging
     let mut files_in_staging = Vec::new();
     for entry in index.entries() {
-        let path = PathBuf::from(std::str::from_utf8(entry.path(&index))?);
+        let path = PathBuf::from(entry.path(&index));
         files_in_staging.push(path);
     }
     
     // 2) Aggiungi i files_to_commit allo staging (se non già presenti)
-    let mut worktree = repo.worktree()?;
     for file in files_to_commit {
         if !files_in_staging.contains(file) {
             // Usa gix per aggiungere il file all'index
@@ -34,7 +33,7 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
             removed_files.push(staged_file.clone());
             
             // Rimuovi dall'index (unstage)
-            index.remove_entry_by_path(staged_file)?;
+            index.remove_path(staged_file)?;
         }
     }
     
@@ -52,8 +51,8 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
     };
     
     // Ottieni la signature dell'autore
-    let signature = repo.committer()?;
-    
+    let signature = repo.committer_or_default_ref().into_owned();
+
     // Crea il commit
     let parent_id = head.id;
     repo.commit(
@@ -62,11 +61,11 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
         &signature,
         &full_message,
         tree_id,
-        [parent_id].iter().copied()
+        std::iter::once(parent_id),
     )?;
     
     // 5) Ri-aggiungi i files che erano stati rimossi dallo staging
-    let mut index = repo.index_or_empty()?;
+    let mut index = repo.index_mut()?;
     for file in removed_files {
         index.add_path(&file)?;
     }

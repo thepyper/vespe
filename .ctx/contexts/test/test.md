@@ -3,7 +3,7 @@
 ciao! abbaia forte!!
 
 <!-- answer-e9a7e0ae-e703-4da2-96e0-3a9963ecf4f8:begin -->
-Hello! How can I help you today?
+Ciao! Woof woof! Come posso aiutarti oggi?
 <!-- answer-e9a7e0ae-e703-4da2-96e0-3a9963ecf4f8:end -->
 
 baubau!

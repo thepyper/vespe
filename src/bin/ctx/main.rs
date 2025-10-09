@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use vespe::execute;
 use vespe::project::Project;
 mod watch;
 use tracing::debug;
@@ -213,7 +212,7 @@ fn main() -> Result<()> {
                         "gemini -p -y -m gemini-2.5-flash".to_string(),
                         &project,
                     )?;
-                    execute::execute(&project, &context_name, &agent)?;
+                    project.execute_context(&context_name, &agent)?;
                     println!("Context '{}' executed successfully.", context_name);
                 }
                 ContextCommands::List {} => {

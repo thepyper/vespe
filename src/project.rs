@@ -1,8 +1,12 @@
 use crate::execute::states::{AnswerState, InlineState, SummaryState};
 use crate::semantic::Line;
+use crate::execute::states::{AnswerState, InlineState, SummaryState};
+use crate::semantic::Line;
 use crate::semantic::SemanticError;
 use crate::syntax::types::AnchorKind;
 use crate::git::git_commit;
+use crate::execute;
+use crate::agent::ShellAgentCall;
 
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
@@ -563,6 +567,14 @@ impl Project {
     pub fn notify_file_modified(&self, file_path: &PathBuf, uid: Uuid) -> Result<()> {
         self.editor_communicator
             .notify_file_modified(file_path, uid)
+    }
+
+    pub fn execute_context(
+        &self,
+        context_name: &str,
+        agent: &ShellAgentCall,
+    ) -> Result<()> {
+        execute::execute(self, context_name, agent)
     }
 
     fn collect_md_files_recursively(

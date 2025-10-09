@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use tracing::debug;
 use std::collections::HashSet; // Added HashSet
-
-pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str) -> Result<()> {
+ 
+pub fn git_commit(files_to_commit: &[PathBuf], message: &str) -> Result<()> {
     let repo = Repository::open(".")
         .context("Failed to open repository")?;
     let workdir = repo.workdir().context("Repository has no workdir")?;
@@ -83,7 +83,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str)
         .context("Failed to find tree")?;
 
     // 9. Create the author and committer signature.
-    let signature = Signature::now(author_name, "vespe@example.com") // Using "vespe@example.com" as a placeholder
+    let signature = Signature::now("vespe", "vespe@example.com") // Using "vespe@example.com" as a placeholder
         .context("Failed to create signature")?;
 
     // 10. Create the new commit.

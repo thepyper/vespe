@@ -152,8 +152,7 @@ impl Project {
         if project.project_config.git_integration_enabled {
             git_commit(
                 &[ctx_dir, ctx_root_file],
-                "feat: Initialize .ctx project",
-                "Initial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.",
+                "feat: Initialize .ctx project\nInitial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.",
             )?;
         }
 
@@ -260,8 +259,7 @@ impl Project {
         if self.project_config.git_integration_enabled {
             git_commit(
                 &[file_path.clone()],
-                &format!("feat: Create new context '{}'", name),
-                "",
+                &format!("feat: Create new context '{}'", name),                
             )?;
         }
 
@@ -288,8 +286,7 @@ impl Project {
         if self.project_config.git_integration_enabled {
               git_commit(
                 &[file_path.clone()],
-                &format!("feat: Create new snippet '{}'", name),
-                "",
+                &format!("feat: Create new snippet '{}'", name),                
             )?;
         }
 

@@ -50,19 +50,12 @@ impl Line {
             Line::AnswerEndAnchor { uuid },
         ]
     }
-    pub fn new_repeat_anchors(uuid: Uuid) -> Vec<Self> {
-        vec![
-            Line::RepeatBeginAnchor { uuid: uuid.clone() },
-            Line::RepeatEndAnchor { uuid },
-        ]
-    }
     pub fn is_begin_anchor(&self) -> bool {
         matches!(
             self,
             Line::InlineBeginAnchor { .. }
                 | Line::SummaryBeginAnchor { .. }
                 | Line::AnswerBeginAnchor { .. }
-                | Line::RepeatBeginAnchor { .. }
         )
     }
     pub fn is_end_anchor(&self) -> bool {
@@ -71,7 +64,6 @@ impl Line {
             Line::InlineEndAnchor { .. }
                 | Line::SummaryEndAnchor { .. }
                 | Line::AnswerEndAnchor { .. }
-                | Line::RepeatEndAnchor { .. }
         )
     }
 
@@ -83,8 +75,6 @@ impl Line {
             Line::SummaryEndAnchor { uuid } => *uuid,
             Line::AnswerBeginAnchor { uuid } => *uuid,
             Line::AnswerEndAnchor { uuid } => *uuid,
-            Line::RepeatBeginAnchor { uuid } => *uuid,
-            Line::RepeatEndAnchor { uuid } => *uuid,
             _ => panic!("get_uid called on a non-anchor line"),
         }
     }
@@ -103,9 +93,6 @@ pub enum Line {
     SummaryEndAnchor { uuid: Uuid },
     AnswerBeginAnchor { uuid: Uuid },
     AnswerEndAnchor { uuid: Uuid },
-    RepeatTag { count: usize },
-    RepeatBeginAnchor { uuid: Uuid },
-    RepeatEndAnchor { uuid: Uuid },
 }
 
 impl std::fmt::Display for Line {
@@ -192,30 +179,6 @@ impl std::fmt::Display for Line {
                 };
                 write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
-            Line::RepeatTag { count } => {
-                let syntax_line = SyntaxLine::Tagged {
-                    tag: TagKind::Repeat,
-                    parameters: HashMap::from([("count".to_string(), count.to_string())]),
-                    arguments: Vec::new(),
-                };
-                write!(f, "{}", syntax_line)
-            }
-            Line::RepeatBeginAnchor { uuid } => {
-                let anchor = Anchor {
-                    kind: AnchorKind::Repeat,
-                    uid: *uuid,
-                    tag: AnchorTag::Begin,
-                };
-                write!(f, "{}", SyntaxLine::Anchor(anchor))
-            }
-            Line::RepeatEndAnchor { uuid } => {
-                let anchor = Anchor {
-                    kind: AnchorKind::Repeat,
-                    uid: *uuid,
-                    tag: AnchorTag::End,
-                };
-                write!(f, "{}", SyntaxLine::Anchor(anchor))
-            }
         }
     }
 }
@@ -255,18 +218,6 @@ fn enrich_syntax_tagged_line(
                 ))?;
             Ok(Line::SummaryTag { context_name })
         }
-        TagKind::Repeat => {
-            let count_str = parameters
-                .get("count")
-                .cloned()
-                .ok_or(SemanticError::MissingArgument(
-                    "Count not specified in @repeat tag.".to_string(),
-                ))?;
-            let count = count_str.parse::<usize>().map_err(|_| {
-                SemanticError::InvalidArgument("Count must be a valid integer.".to_string())
-            })?;
-            Ok(Line::RepeatTag { count })
-        }
     }
 }
 
@@ -283,8 +234,6 @@ fn enrich_syntax_anchor_line(
         (AnchorKind::Summary, AnchorTag::End) => Ok(Line::SummaryEndAnchor { uuid: anchor.uid }),
         (AnchorKind::Answer, AnchorTag::Begin) => Ok(Line::AnswerBeginAnchor { uuid: anchor.uid }),
         (AnchorKind::Answer, AnchorTag::End) => Ok(Line::AnswerEndAnchor { uuid: anchor.uid }),
-        (AnchorKind::Repeat, AnchorTag::Begin) => Ok(Line::RepeatBeginAnchor { uuid: anchor.uid }),
-        (AnchorKind::Repeat, AnchorTag::End) => Ok(Line::RepeatEndAnchor { uuid: anchor.uid }),
         _ => Err(SemanticError::InvalidAnchorFormat(anchor.to_string())),
     }
 }

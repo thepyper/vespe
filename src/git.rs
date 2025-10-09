@@ -140,6 +140,9 @@ impl Commit {
         Commit { files: HashSet::new() }
     }
     pub fn commit(&self, message: &str) -> Result<()> {
+        if self.files.is_empty() {
+            return Ok(())
+        }
         let files = self.files.iter().cloned().collect::<Vec<PathBuf>>();
         git_commit_files(&files, message)
     }

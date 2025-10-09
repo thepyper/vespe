@@ -8,25 +8,6 @@ use std::time::Duration;
 use uuid::Uuid;
 
 use super::EditorCommunicator;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("JSON serialization/deserialization error: {0}")]
-    JsonError(#[from] serde_json::Error),
-    #[error("Invalid path: {0}")]
-    InvalidPath(String),
-    #[error("Timeout waiting for editor response")]
-    Timeout,
-    #[error("Editor error: {0}")]
-    EditorError(String),
-    #[error("Unexpected editor response")]
-    UnexpectedResponse,
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum RequestState {
@@ -68,10 +49,11 @@ pub struct FileBasedEditorCommunicator {
 }
 
 impl FileBasedEditorCommunicator {
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: &Path) -> anyhow::Result<Self> {
         let request_file: PathBuf = path.join("vespe_request.json");
         let response_file: PathBuf = path.join("vespe_response.json");
 
+        // Ensure the parent directories exist
         if let Some(parent) = request_file.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -79,20 +61,22 @@ impl FileBasedEditorCommunicator {
             fs::create_dir_all(parent)?;
         }
 
+        // Initialize request and response files with None state
         fs::write(&request_file, serde_json::to_string(&RequestState::None)?)?;
         fs::write(&response_file, serde_json::to_string(&ResponseState::None)?)?;
 
+        // Set environment variables for the VSCode extension to pick up
         env::set_var(
             "VESPE_REQUEST_FILE_PATH",
             request_file
                 .to_str()
-                .ok_or_else(|| Error::InvalidPath(request_file.display().to_string()))?,
+                .ok_or_else(|| anyhow::anyhow!("Invalid request file path"))?,
         );
         env::set_var(
             "VESPE_RESPONSE_FILE_PATH",
             response_file
                 .to_str()
-                .ok_or_else(|| Error::InvalidPath(response_file.display().to_string()))?,
+                .ok_or_else(|| anyhow::anyhow!("Invalid response file path"))?,
         );
 
         Ok(Self {
@@ -101,13 +85,15 @@ impl FileBasedEditorCommunicator {
         })
     }
 
-    fn _write_request(&self, state: RequestState) -> Result<()> {
+    fn _write_request(&self, state: RequestState) -> anyhow::Result<()> {
         let json = serde_json::to_string_pretty(&state)?;
         fs::write(&self.request_file_path, json)?;
         Ok(())
     }
 
-    fn _read_response(&self, expected_request_id: Uuid) -> Result<ResponseState> {
+    fn _read_response(&self, expected_request_id: Uuid) -> anyhow::Result<ResponseState> {
+        // TODO: Implement actual filesystem event watching and polling
+        // For now, a simple polling mechanism
         let mut attempts = 0;
         loop {
             let content = fs::read_to_string(&self.response_file_path)?;
@@ -118,6 +104,7 @@ impl FileBasedEditorCommunicator {
                 | ResponseState::FileUnlocked { request_id, .. }
                 | ResponseState::Error { request_id, .. } => {
                     if *request_id == expected_request_id {
+                        // Reset the response file to None after reading
                         fs::write(
                             &self.response_file_path,
                             serde_json::to_string(&ResponseState::None)?,
@@ -130,7 +117,8 @@ impl FileBasedEditorCommunicator {
 
             attempts += 1;
             if attempts > 60 {
-                return Err(Error::Timeout);
+                // Timeout after 5 minutes (60 * 5 seconds)
+                return Err(anyhow::anyhow!("Timeout waiting for editor response"));
             }
             sleep(Duration::from_secs(5));
         }
@@ -138,7 +126,7 @@ impl FileBasedEditorCommunicator {
 }
 
 impl EditorCommunicator for FileBasedEditorCommunicator {
-    fn request_file_modification(&self, file_path: &Path) -> Result<Uuid> {
+    fn request_file_modification(&self, file_path: &Path) -> anyhow::Result<Uuid> {
         let request_id = Uuid::new_v4();
         let request = RequestState::RequestModification {
             file_path: file_path.to_path_buf(),
@@ -146,30 +134,36 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         };
         self._write_request(request)?;
 
+        // Wait for the editor's response
         let response = self._read_response(request_id)?;
         match response {
             ResponseState::FileLocked { .. } => Ok(request_id),
             ResponseState::Error { message, .. } => {
-                Err(Error::EditorError(message))
+                Err(anyhow::anyhow!("Editor error: {}", message))
             }
-            _ => Err(Error::UnexpectedResponse),
+            _ => Err(anyhow::anyhow!(
+                "Unexpected editor response for modification request"
+            )),
         }
     }
 
-    fn notify_file_modified(&self, file_path: &Path, request_id: Uuid) -> Result<()> {
+    fn notify_file_modified(&self, file_path: &Path, request_id: Uuid) -> anyhow::Result<()> {
         let request = RequestState::ModificationComplete {
             file_path: file_path.to_path_buf(),
             request_id,
         };
         self._write_request(request)?;
 
+        // Wait for the editor's response
         let response = self._read_response(request_id)?;
         match response {
             ResponseState::FileUnlocked { .. } => Ok(()),
             ResponseState::Error { message, .. } => {
-                Err(Error::EditorError(message))
+                Err(anyhow::anyhow!("Editor error: {}", message))
             }
-            _ => Err(Error::UnexpectedResponse),
+            _ => Err(anyhow::anyhow!(
+                "Unexpected editor response for modification complete notification"
+            )),
         }
     }
 }

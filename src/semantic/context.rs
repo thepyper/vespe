@@ -1,18 +1,8 @@
 use crate::project::Project;
 use crate::semantic::Line;
+use anyhow::Result;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("Semantic error: {0}")]
-    SemanticError(#[from] crate::semantic::SemanticError),
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Context {
     pub name: String,

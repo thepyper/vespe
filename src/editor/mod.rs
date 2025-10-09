@@ -1,19 +1,8 @@
 //! This module defines the interface for communicating with a text editor extension.
 
+use anyhow::Result;
 use std::path::Path;
 use uuid::Uuid;
-use thiserror::Error;
-
-pub mod lockfile;
-pub use lockfile::Error as LockfileError;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("Lockfile error: {0}")]
-    LockfileError(#[from] LockfileError),
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
 
 /// Trait for communicating with a text editor extension.
 pub trait EditorCommunicator {

@@ -1,17 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
 use uuid::Uuid;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("Unknown AnchorKind: {0}")]
-    UnknownAnchorKind(String),
-    #[error("Unknown AnchorTag: {0}")]
-    UnknownAnchorTag(String),
-    #[error("Unknown TagKind: {0}")]
-    UnknownTagKind(String),
-}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AnchorKind {
@@ -22,14 +11,14 @@ pub enum AnchorKind {
 }
 
 impl std::str::FromStr for AnchorKind {
-    type Err = Error;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "inline" => Ok(AnchorKind::Inline),
             "answer" => Ok(AnchorKind::Answer),
             "summary" => Ok(AnchorKind::Summary),
-            _ => Err(Error::UnknownAnchorKind(s.to_string())),
+            _ => Err(format!("Unknown AnchorKind: {}", s)),
         }
     }
 }
@@ -53,14 +42,14 @@ pub enum AnchorTag {
 }
 
 impl std::str::FromStr for AnchorTag {
-    type Err = Error;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "begin" => Ok(AnchorTag::Begin),
             "end" => Ok(AnchorTag::End),
-            "" => Ok(AnchorTag::None),
-            _ => Err(Error::UnknownAnchorTag(s.to_string())),
+            "" => Ok(AnchorTag::None), // Handle empty string for None
+            _ => Err(format!("Unknown AnchorTag: {}", s)),
         }
     }
 }
@@ -103,7 +92,7 @@ pub enum TagKind {
 }
 
 impl std::str::FromStr for TagKind {
-    type Err = Error;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -112,7 +101,7 @@ impl std::str::FromStr for TagKind {
             "answer" => Ok(TagKind::Answer),
             "summary" => Ok(TagKind::Summary),
             "repeat" => Ok(TagKind::Repeat),
-            _ => Err(Error::UnknownTagKind(s.to_string())),
+            _ => Err(format!("Unknown TagKind: {}", s)),
         }
     }
 }

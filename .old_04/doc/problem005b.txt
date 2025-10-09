@@ -1,8 +1,0 @@
-[2025-09-19 00:26:11] Attempting to parse MCP content:
-{"method": "thinking", "params": {"thoughts": "As a language model, I don’t have personal preferences like favorite colors. However, I can access and process information about color palettes and their associated meanings. I will respond with a statement about color, then provide a summary of the doc/diocane."}}
-{"content": "Red is often associated with energy, passion, and excitement. It’s a vibrant and attention-grabbing color that can inspire action and urgency.  However, it can also be associated with danger or aggression. The meaning of red can vary greatly depending on the culture and context."}}
-[2025-09-19 00:26:11] ERROR: Failed to parse MCP response from message content: trailing characters at line 2 column 1
-Message content: {"method": "thinking", "params": {"thoughts": "As a language model, I don’t have personal preferences like favorite colors. However, I can access and process information about color palettes and their associated meanings. I will respond with a statement about color, then provide a summary of the doc/diocane."}}
-{"content": "Red is often associated with energy, passion, and excitement. It’s a vibrant and attention-grabbing color that can inspire action and urgency.  However, it can also be associated with danger or aggression. The meaning of red can vary greatly depending on the culture and context."}}
-Error: "Failed to parse MCP response from message content: trailing characters at line 2 column 1"
-error: process didn't exit successfully: `target\debug\ollama_agent_client.exe --model gemma3:1b --query "tell me your favorite color; then read the file doc/diocane and summarize it"` (exit code: 1)

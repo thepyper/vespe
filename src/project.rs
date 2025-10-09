@@ -13,6 +13,7 @@ use anyhow::Result;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+use tracing::debug;
 
 use crate::config::{EditorInterface, ProjectConfig};
 use crate::editor::{

@@ -58,7 +58,7 @@ impl ExecuteWorker {
         project: &Project,
         context_name: &str,
         agent: &ShellAgentCall,
-        visited_contexts: &mut HashSet<String>,
+        initial_visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
     ) -> anyhow::Result<()> {
         for i in 1..100 {
@@ -66,7 +66,8 @@ impl ExecuteWorker {
                 "Starting execute_step {} loop for context: {}",
                 i, context_name
             );
-            if !self.execute_step(project, context_name, agent, visited_contexts, commit)? {
+            let mut visited_contexts = initial_visited_contexts.clone();
+            if !self.execute_step(project, context_name, agent, &mut visited_contexts, commit)? {
                 break;
             }
         }
@@ -182,10 +183,6 @@ impl ExecuteWorker {
 
         if context.apply_patches(patches) {
             debug!("Pass 1 patches applied.");
-            debug!(
-                "Modified context is now\n***\n{}\n***\n",
-                semantic::format_document(&context.lines)
-            );
             modified = true;
         }
         Ok(modified)
@@ -252,10 +249,6 @@ impl ExecuteWorker {
 
         if context.apply_patches(patches) {
             debug!("Pass 2 patches applied.");
-            debug!(
-                "Modified context is now\n***\n{}\n***\n",
-                semantic::format_document(&context.lines)
-            );
             modified = true;
         }
         Ok(modified)

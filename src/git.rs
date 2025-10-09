@@ -5,6 +5,9 @@ use tracing::debug;
 use std::collections::HashSet; // Added HashSet
  
 pub fn git_commit_files(files_to_commit: &[PathBuf], message: &str) -> Result<()> {
+
+    debug!("Running git_commit_files wth message {} on files {:?}", message, files_to_commit);
+    
     let repo = Repository::open(".")
         .context("Failed to open repository")?;
     let workdir = repo.workdir().context("Repository has no workdir")?;

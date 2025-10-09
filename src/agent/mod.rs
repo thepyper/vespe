@@ -19,7 +19,7 @@ impl<'a> ShellAgentCall<'a> {
     }
 
     pub fn call(&self, query: &str) -> anyhow::Result<String> {
-        debug!("ShellAgentCall received query: {}", query);
+        //debug!("ShellAgentCall received query: {}", query);
         let mut command_parts = self.command_template.split_whitespace();
         let program = command_parts
             .next()

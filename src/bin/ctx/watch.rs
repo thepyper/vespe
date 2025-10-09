@@ -73,16 +73,11 @@ pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
 
 fn initial_execute_all_contexts(project: &Project, agent: &ShellAgentCall) -> Result<()> {
     println!("Performing initial execution on all context files...");
-    let contexts_dir = project.contexts_root();
-    for entry in std::fs::read_dir(&contexts_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_file() && is_context_file(project, &path) {
-            let context_name = path_to_context_name(project, &path)?;
-            println!("  Executing initial context: {}", context_name);
-            if let Err(e) = project.execute_context(&context_name, agent) {
-                eprintln!("Error executing initial context {}: {}", context_name, e);
-            }
+    let contexts = project.list_contexts()?;
+    for context in contexts {
+        println!("  Executing initial context: {}", context.name);
+        if let Err(e) = project.execute_context(&context.name, agent) {
+            eprintln!("Error executing initial context {}: {}", context.name, e);
         }
     }
     Ok(())

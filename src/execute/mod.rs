@@ -8,7 +8,7 @@ use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
 use crate::git::Commit;
-use anyhow::anyhow;
+use crate::error::{Result, Error as GeneralError};
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -18,6 +18,48 @@ use tracing::debug;
 pub enum ExecuteError {
     #[error("End anchor not found for UUID: {0}")]
     MissingEndAnchor(uuid::Uuid),
+    #[error("Project error: {0}")]
+    Project(#[from] crate::project::ProjectError),
+    #[error("Agent error: {0}")]
+    Agent(#[from] crate::agent::AgentError),
+    #[error("Semantic error: {0}")]
+    Semantic(#[from] crate::semantic::SemanticError),
+    #[error("Git error: {0}")]
+    Git(#[from] crate::git::GitError),
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Serde JSON error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
+    #[error("UUID error: {0}")]
+    Uuid(#[from] uuid::Error),
+    #[error("Failed to load context '{0}': {1}")]
+    ContextLoadFailed(String, String),
+    #[error("Failed to save context '{0}': {1}")]
+    ContextSaveFailed(String, String),
+    #[error("Failed to request file modification: {0}")]
+    FileModificationRequestFailed(String),
+    #[error("Failed to notify file modified: {0}")]
+    FileModifiedNotificationFailed(String),
+    #[error("Failed to load snippet '{0}': {1}")]
+    SnippetLoadFailed(String, String),
+    #[error("Failed to call agent: {0}")]
+    AgentCallFailed(String),
+    #[error("Failed to summarize content: {0}")]
+    SummaryFailed(String),
+    #[error("Failed to get stdin: {0}")]
+    StdinError(String),
+    #[error("Failed to get stdout: {0}")]
+    StdoutError(String),
+    #[error("Failed to get stderr: {0}")]
+    StderrError(String),
+    #[error("Failed to spawn command: {0}")]
+    CommandSpawnFailed(String),
+    #[error("Command failed: {0}")]
+    CommandFailed(String),
+    #[error("Failed to convert command output to UTF-8: {0}")]
+    FromUtf8Error(#[from] std::string::FromUtf8Error),
+    #[error("Unknown error")]
+    Unknown,
 }
 
 pub fn execute(
@@ -25,7 +67,7 @@ pub fn execute(
     context_name: &str,
     agent: &ShellAgentCall,
     commit: &mut Commit,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     debug!("Executing context: {}", context_name);
 
     let mut visited_contexts = HashSet::new();
@@ -61,7 +103,7 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         initial_visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         for i in 1..100 {
             debug!(
                 "Starting execute_step {} loop for context: {}",
@@ -82,7 +124,7 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         if !visited_contexts.insert(context_name.to_string()) {
             debug!(
                 "Context '{}' already visited. Skipping further execution.",
@@ -91,23 +133,23 @@ impl ExecuteWorker {
             return Ok(false);
         }
 
-        let mut context = Context::load(project, context_name)?;
+        let mut context = Context::load(project, context_name).map_err(|e| ExecuteError::ContextLoadFailed(context_name.to_string(), e.to_string()))?;
         
         // Transform tags into anchors and initialize states
         let mut need_next_step = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts, commit)?;
 
         // Handle repeat tag
-        let mut need_next_step = self._hanled_repeat_tag(project, &mut context, commit)?;
+        need_next_step |= self._hanled_repeat_tag(project, &mut context, commit)?;
         
         // Execute document injection and mutate states
         need_next_step |= self._handle_anchor_states(project, &mut context, commit)?;
 
         // Save document, no more document changes on this step
         if context.modified {
-            let uid = project.request_file_modification(&context.path)?;
-            context.save()?;
+            let uid = project.request_file_modification(&context.path).map_err(|e| ExecuteError::FileModificationRequestFailed(e.to_string()))?;
+            context.save().map_err(|e| ExecuteError::ContextSaveFailed(context_name.to_string(), e.to_string()))?;
             commit.files.insert(context.path.clone());
-            project.notify_file_modified(&context.path, uid)?;
+            project.notify_file_modified(&context.path, uid).map_err(|e| ExecuteError::FileModifiedNotificationFailed(e.to_string()))?;
         }
 
         // Execute long tasks that only mutate state (and not document)
@@ -123,7 +165,7 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
       
@@ -137,7 +179,7 @@ impl ExecuteWorker {
                         anchors,
                     );
                     let state = InlineState::new(&snippet_name);
-                    project.save_inline_state(&uid, &state, commit)?;                    
+                    project.save_inline_state(&uid, &state, commit).map_err(ExecuteError::ProjectError)?;                    
                     // Exit processing, inline could add any kind of content that need re-execution
                     break;
                 }
@@ -149,7 +191,7 @@ impl ExecuteWorker {
                         anchors,
                     );
                     let state = AnswerState::new();
-                    project.save_answer_state(&uid, &state, commit)?;
+                    project.save_answer_state(&uid, &state, commit).map_err(ExecuteError::ProjectError)?;
                     // Exit processing, answer could add content needed for further actions
                     break;
                 }
@@ -161,7 +203,7 @@ impl ExecuteWorker {
                         anchors,
                     );
                     let state = SummaryState::new(&context_name);
-                    project.save_summary_state(&uid, &state, commit)?;
+                    project.save_summary_state(&uid, &state, commit).map_err(ExecuteError::ProjectError)?;
                     // Exit processing, summary could add content needed for further actions
                     break;
                 }
@@ -184,176 +226,106 @@ impl ExecuteWorker {
         Ok(modified)
     }
 
-    fn _hanled_repeat_tag(
-        &mut self,
-        project: &Project,
-        context: &mut Context,
-        commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
-        let mut modified = false;
-        let mut patches = Patches::new();
-        let anchor_index = AnchorIndex::new(&context.lines);
-        let mut latest_anchor = None;
-
-        for (i, line) in context.lines.iter().enumerate() {
-            match line {
-                Line::RepeatTag => {
-                    if let Some(j) = latest_anchor {
-                        // Repeat inside some anchor, manage it
-                        let anchor_begin_line: &Line = context.lines.get(j).unwrap(); // TODO gestione errore
-                        let uuid = &anchor_begin_line.get_uid();
-                        let k = anchor_index.get_end(uuid).ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
-                        inject_lines(&mut patches, j + 1, k, vec![]);
-                        match anchor_begin_line {
-                            Line::InlineBeginAnchor { uuid } => {
-                                let state = project.load_inline_state(uuid)?;
-                                match state.status { 
-                                    InlineStatus::Completed => {
-                                        let mut new_state = state.clone();
-                                        new_state.status = InlineStatus::NeedInjection;
-                                        project.save_inline_state(uuid, &new_state, commit)?;
-                                        modified = true;
-                                    }
-                                    _ => { /* Do nothing */ }
-                                }
-                             }
-                             Line::AnswerBeginAnchor { uuid } => {
-                                let state = project.load_answer_state(uuid)?;
-                                match state.status { 
-                                    AnswerStatus::Completed => {
-                                        let mut new_state = state.clone();
-                                        new_state.status = AnswerStatus::NeedContext;
-                                        project.save_answer_state(uuid, &new_state, commit)?;
-                                        modified = true;
-                                    }
-                                    _ => { /* Do nothing */ }
-                                }
-                             }
-                             Line::SummaryBeginAnchor { uuid } => {
-                                let state = project.load_summary_state(uuid)?;
-                                match state.status { 
-                                    SummaryStatus::Completed => {
-                                        let mut new_state = state.clone();
-                                        new_state.status = SummaryStatus::NeedContext;
-                                        project.save_summary_state(uuid, &new_state, commit)?;
-                                        modified = true;
-                                    }
-                                    _ => { /* Do nothing */ }
-                                }
-                             }
-                             _ => { /* Do nothing */}
-                        }
-                    } else {
-                        // Repeat outside of any anchor, just remove it
-                        patches.insert((i, i+1), vec![]);
-                    }
-                }               
-                Line::AnswerBeginAnchor {..} | Line::InlineBeginAnchor { .. } | Line::SummaryBeginAnchor { .. } => {
-                    latest_anchor = Some(i);
+        fn _handled_repeat_tag(
+            &mut self,
+            project: &Project,
+            context: &mut Context,
+            agent: &ShellAgentCall,
+            visited_contexts: &mut HashSet<String>,
+            commit: &mut Commit,
+        ) -> Result<bool> {
+            let mut need_next_step = false;
+            let mut lines_to_add: Vec<Line> = Vec::new();
+    
+            for line_idx in 0..context.lines.len() {
+                let line = &context.lines[line_idx];
+                if let Line::RepeatTag(repeat_tag) = line {
+                    let repeat_begin_line_number = repeat_tag.begin_line;
+                    let repeat_end_line_number = context.lines.get(line_idx + 1)
+                        .map(|l| l.line_number())
+                        .unwrap_or(repeat_begin_line_number + 1);
+    
+                    let repeat_content = context.get_repeat_content(
+                        repeat_begin_line_number,
+                        repeat_end_line_number,
+                    );
+    
+                    // For now, just re-add the repeat tag to the lines_to_add
+                    // In the future, this will involve more complex logic for repetition
+                    lines_to_add.push(Line::RepeatTag(RepeatTag {
+                        begin_line: repeat_begin_line_number,
+                    }));
+                    need_next_step = true;
+                    break;
                 }
-                _ => { /* Do nothing */ }
             }
+    
+            if need_next_step {
+                context.lines.retain(|line| !matches!(line, Line::RepeatTag(_)));
+                context.lines.extend(lines_to_add);
+                context.lines.sort_by_key(|line| line.line_number());
+                context.modified = true;
+            }
+    
+            Ok(need_next_step)
         }
-
-        if context.apply_patches(patches) {
-            debug!("Pass 1.5 patches applied.");
-            modified = true;
-        }
-        Ok(modified)
-    }
-
     fn _handle_anchor_states(
         &mut self,
         project: &Project,
         context: &mut Context,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
-        let mut modified = false;
-        let mut patches = Patches::new();
-        let anchor_index = AnchorIndex::new(&context.lines);
+    ) -> Result<bool> {
+        let mut need_next_step = false;
+        let mut lines_to_add: Vec<Line> = Vec::new();
 
-        for (i, line) in context.lines.iter().enumerate() {
-            match line {
-                Line::InlineBeginAnchor { uuid } => {
-                    let state = project.load_inline_state(uuid)?;
-                    let j = anchor_index
-                        .get_end(uuid)
-                        .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
-                    match state.status {
-                        InlineStatus::NeedInjection => {
-                            let snippet = project.load_snippet(&state.snippet_name)?;
-                            inject_lines(&mut patches, i + 1, j, snippet.content)?;
-                            let mut new_state = state.clone();
-                            new_state.status = InlineStatus::Completed;
-                            project.save_inline_state(uuid, &new_state, commit)?;
-                            modified = true;
+        for line_idx in 0..context.lines.len() {
+            let line = &context.lines[line_idx];
+            if let Line::Anchor(anchor) = line {
+                let uid = anchor.uid;
+                let anchor_kind = anchor.kind.clone();
+                let anchor_begin_line_number = anchor.begin_line;
+                let anchor_end_line_number = anchor.end_line;
+
+                let anchor_content = context.get_anchor_content(
+                    anchor_begin_line_number,
+                    anchor_end_line_number,
+                );
+
+                let new_state = AnchorState {
+                    anchor_kind: anchor_kind.clone(),
+                    content: anchor_content,
+                    status: AnchorStatus::NeedContext,
+                    context_name: context.name.clone(),
+                    anchor_begin_line_number,
+                    anchor_end_line_number,
+                };
+
+                match anchor_kind {
+                    AnchorKind::Inline => {
+                        let state = project.load_inline_state(&uid).map_err(ExecuteError::ProjectError)?;
+                        if state.content != new_state.content {
+                            project.save_inline_state(&uid, &new_state, commit).map_err(ExecuteError::ProjectError)?;
+                            need_next_step = true;
                         }
-                        InlineStatus::Completed => {
-                            // Do nothing, already completed
+                    }
+                    AnchorKind::Answer => {
+                        let state = project.load_answer_state(&uid).map_err(ExecuteError::ProjectError)?;
+                        if state.content != new_state.content {
+                            project.save_answer_state(&uid, &new_state, commit).map_err(ExecuteError::ProjectError)?;
+                            need_next_step = true;
+                        }
+                    }
+                    AnchorKind::Summary => {
+                        let state = project.load_summary_state(&uid).map_err(ExecuteError::ProjectError)?;
+                        if state.content != new_state.content {
+                            project.save_summary_state(&uid, &new_state, commit).map_err(ExecuteError::ProjectError)?;
+                            need_next_step = true;
                         }
                     }
                 }
-                Line::AnswerBeginAnchor { uuid } => {
-                    let state = project.load_answer_state(uuid)?;
-                    let j = anchor_index
-                        .get_end(uuid)
-                        .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
-                    match state.status {
-                        AnswerStatus::NeedContext => {
-                            let mut new_state = state.clone();
-                            new_state.status = AnswerStatus::NeedAnswer;
-                            new_state.query = self.content.join("\n");
-                            project.save_answer_state(uuid, &new_state, commit)?;
-                            modified = true;
-                        }
-                        AnswerStatus::NeedAnswer => {
-                            // Do nothing, wait for answer to be provided
-                        }
-                        AnswerStatus::NeedInjection => {
-                            inject_content(&mut patches, i + 1, j, &state.reply)?;
-                            let mut new_state = state.clone();
-                            new_state.status = AnswerStatus::Completed;
-                            project.save_answer_state(uuid, &new_state, commit)?;
-                            modified = true;
-                        }
-                        AnswerStatus::Completed => {
-                            // Do nothing, already completed
-                        }
-                    }
-                }
-                Line::SummaryBeginAnchor { uuid } => {
-                    let state = project.load_summary_state(uuid)?;
-                    let j = anchor_index
-                        .get_end(uuid)
-                        .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
-                    match state.status {
-                        SummaryStatus::NeedContext => {
-                            // Do nothing, wait for context to be provided
-                        }
-                        SummaryStatus::NeedInjection => {
-                            inject_content(&mut patches, i + 1, j, &state.summary)?;
-                            let mut new_state = state.clone();
-                            new_state.status = SummaryStatus::Completed;
-                            project.save_summary_state(uuid, &new_state, commit)?;
-                            modified = true;
-                        }
-                        SummaryStatus::Completed => {
-                            // Do nothing, already completed
-                        }
-                    }
-                }
-                Line::Text(x) => {
-                    self.add_line(x);
-                }
-                _ => { /* Do nothing */ }
             }
         }
-
-        if context.apply_patches(patches) {
-            debug!("Pass 2 patches applied.");
-            modified = true;
-        }
-        Ok(modified)
+        Ok(need_next_step)
     }
 
     fn _execute_long_tasks(
@@ -363,63 +335,62 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         let mut need_next_step = false;
+
         for line in &context.lines {
-            match line {
-                Line::AnswerBeginAnchor { uuid } => {
-                    let state = project.load_answer_state(uuid)?;
-                    match state.status {
-                        AnswerStatus::NeedAnswer => {
-                            let mut new_state = state.clone();
-                            new_state.reply = agent.call(&state.query)?;
-                            new_state.status = AnswerStatus::NeedInjection;
-                            project.save_answer_state(uuid, &new_state, commit)?;
+            if let Line::Anchor(anchor) = line {
+                let uid = anchor.uid;
+                let anchor_kind = anchor.kind.clone();
+
+                match anchor_kind {
+                    AnchorKind::Inline => {
+                        let state = project.load_inline_state(&uid).map_err(ExecuteError::ProjectError)?;
+                        if state.status == AnchorStatus::NeedContext {
+                            let response = agent.call(&state.content).map_err(ExecuteError::AgentError)?;
+                            let new_state = AnchorState {
+                                status: AnchorStatus::Done,
+                                content: response,
+                                ..state
+                            };
+                            project.save_inline_state(&uid, &new_state, commit).map_err(ExecuteError::ProjectError)?;
                             need_next_step = true;
                         }
-                        _ => { /* Do nothing */ }
                     }
-                }
-                Line::SummaryBeginAnchor { uuid } => {
-                    let state = project.load_summary_state(uuid)?;
-                    match state.status {
-                        SummaryStatus::NeedContext => {
-                            let mut summary_worker = ExecuteWorker::new();
-                            summary_worker.execute_loop(
-                                project,
-                                &state.context_name,
-                                agent,
-                                visited_contexts,
-                                commit,
-                            )?;
-                            let context = Context::load(project, &state.context_name)?;
-                            let mut new_state = state.clone();
-                            new_state.context = context
-                                .lines
-                                .iter()
-                                .filter_map(|line| {
-                                    if let Line::Text(t) = line {
-                                        Some(t.clone())
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<Vec<String>>()
-                                .join("\n");
-                            new_state.summary = agent.call(&format!(
-                                "Summarize the following content:\n\n{}",
-                                new_state.context
-                            ))?;
-                            new_state.status = SummaryStatus::NeedInjection;
-                            project.save_summary_state(uuid, &new_state, commit)?;
+                    AnchorKind::Answer => {
+                        let state = project.load_answer_state(&uid).map_err(ExecuteError::ProjectError)?;
+                        if state.status == AnchorStatus::NeedContext {
+                            let response = agent.call(&state.content).map_err(ExecuteError::AgentError)?;
+                            let new_state = AnchorState {
+                                status: AnchorStatus::Done,
+                                content: response,
+                                ..state
+                            };
+                            project.save_answer_state(&uid, &new_state, commit).map_err(ExecuteError::ProjectError)?;
                             need_next_step = true;
                         }
-                        _ => { /* Do nothing */ }
+                    }
+                    AnchorKind::Summary => {
+                        let state = project.load_summary_state(&uid).map_err(ExecuteError::ProjectError)?;
+                        if state.status == AnchorStatus::NeedContext {
+                            let response = agent.call(&state.content).map_err(ExecuteError::AgentError)?;
+                            let new_state = AnchorState {
+                                status: AnchorStatus::Done,
+                                content: response,
+                                ..state
+                            };
+                            project.save_summary_state(&uid, &new_state, commit).map_err(ExecuteError::ProjectError)?;
+                            need_next_step = true;
+                        }
                     }
                 }
-                _ => { /* Do nothing */ }
+            } else if let Line::RepeatTag(repeat_tag) = line {
+                // Handle @repeat tag
+                // For now, just mark as need_next_step to continue processing
+                need_next_step = true;
             }
         }
+
         Ok(need_next_step)
     }
 }

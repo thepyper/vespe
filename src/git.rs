@@ -6,9 +6,7 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
     // Apri il repository nella directory corrente
     let repo = gix::open(".")?;
     
-    // Ottieni l'index modificabile attraverso il worktree
-    let mut worktree = repo.worktree().ok_or_else(|| anyhow::anyhow!("Could not open worktree"))?;
-    let mut index = worktree.index_mut()?;
+    let mut index = repo.index_mut()?;
     
     // 1) Ottieni i files attualmente in staging
     let mut files_in_staging = Vec::new();
@@ -29,7 +27,7 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
             // Usa gix_worktree per aggiungere il file
             let abs_path = repo.workdir().ok_or_else(|| anyhow::anyhow!("No workdir"))?.join(file);
             if abs_path.exists() {
-                let entry = gix::index::entry::Entry::from_path(
+                let entry = gix::index::Entry::from_path(
                     &abs_path,
                     file,
                     &odb,
@@ -85,7 +83,7 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
     for file in removed_files {
         let abs_path = repo.workdir().ok_or_else(|| anyhow::anyhow!("No workdir"))?.join(&file);
         if abs_path.exists() {
-            let entry = gix::index::entry::Entry::from_path(
+            let entry = gix::index::Entry::from_path(
                 &abs_path,
                 file,
                 &odb,

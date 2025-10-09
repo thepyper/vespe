@@ -52,6 +52,7 @@ impl SummaryState {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AnswerStatus {
+    NeedContext,
     NeedAnswer,
     NeedInjection,
     Completed,
@@ -65,10 +66,10 @@ pub struct AnswerState {
 }
 
 impl AnswerState {
-    pub fn new(query: String) -> Self {
+    pub fn new() -> Self {
         AnswerState {
-            status: AnswerStatus::NeedAnswer,
-            query: query,
+            status: AnswerStatus::NeedContext,
+            query: String::new(),
             reply: String::new(),
         }
     }

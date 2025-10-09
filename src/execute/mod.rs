@@ -147,7 +147,7 @@ impl ExecuteWorker {
                         (i, i + 1), // Replace the current line (the tag line) with the anchor
                         anchors,
                     );
-                    let state = AnswerState::new(self.content.join("\n"));
+                    let state = AnswerState::new();
                     project.save_answer_state(&uid, &state, commit)?;
                     // Exit processing, answer could add content needed for further actions
                     break;
@@ -163,9 +163,6 @@ impl ExecuteWorker {
                     project.save_summary_state(&uid, &state, commit)?;
                     // Exit processing, summary could add content needed for further actions
                     break;
-                }
-                Line::Text(x) => {
-                    self.add_line(x);
                 }
                 Line::IncludeTag { context_name } => {
                     let included_modified =
@@ -298,6 +295,13 @@ impl ExecuteWorker {
                         .get_end(uuid)
                         .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
                     match state.status {
+                        AnswerStatus::NeedContext => {
+                            let mut new_state = state.clone();
+                            new_state.status = AnswerStatus::NeedAnswer;
+                            new_state.query = self.content.join("\n");
+                            project.save_answer_state(uuid, &new_state, commit)?;
+                            modified = true;
+                        }
                         AnswerStatus::NeedAnswer => {
                             // Do nothing, wait for answer to be provided
                         }
@@ -333,6 +337,9 @@ impl ExecuteWorker {
                             // Do nothing, already completed
                         }
                     }
+                }
+                Line::Text(x) => {
+                    self.add_line(x);
                 }
                 _ => { /* Do nothing */ }
             }

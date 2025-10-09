@@ -1,12 +1,16 @@
-use git2::{Repository, Signature, Index, Oid, Tree};
+use git2::{Repository, Signature, Index, Oid, Tree, StatusOptions, Status}; // Added StatusOptions, Status
 use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use tracing::debug;
+use std::collections::HashSet; // Added HashSet
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str) -> Result<()> {
     let repo = Repository::open(".")
         .context("Failed to open repository")?;
     let workdir = repo.workdir().context("Repository has no workdir")?;
+
+    // Convert files_to_commit to a HashSet for efficient lookup
+    let files_to_commit_set: HashSet<PathBuf> = files_to_commit.iter().cloned().collect();
 
     // 1. Get the current HEAD commit. This will be the parent of the new commit
     // and the base for "cleaning" the staging area.
@@ -23,16 +27,32 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str)
     let mut index = repo.index()
         .context("Failed to get repository index")?;
 
-    // 4. *** SAVE THE ORIGINAL INDEX STATE ***
-    // Create a temporary tree object from the current index. This OID represents
-    // the state of the index before our modifications.
-    let original_index_tree_oid = index.write_tree()
-        .context("Failed to save original index state")?;
+    // 4. Identify files that were staged *before* our operation,
+    //    excluding those that will be committed.
+    let mut files_to_re_stage: Vec<PathBuf> = Vec::new();
+    let mut status_options = StatusOptions::new();
+    status_options.include_ignored(false)
+                  .include_untracked(false)
+                  .recurse_untracked_dirs(false)
+                  .exclude_submodules(true);
 
-    // 5. Update the index to match the HEAD tree.
-    // This is the key operation: it simulates 'git reset --mixed HEAD' or 'git restore --staged .'.
-    // It removes all previously staged changes from the index,
-    // but *does not touch files in the working directory*.
+    let statuses = repo.statuses(Some(&mut status_options))
+        .context("Failed to get repository status")?;
+
+    for entry in statuses.iter() {
+        if let Some(path_str) = entry.path() {
+            let path = PathBuf::from(path_str);
+            let status = entry.status();
+            // Check if the file is staged (IndexNew, IndexModified, etc.)
+            // and *not* part of the files we are about to commit.
+            if (status.is_index_new() || status.is_index_modified() || status.is_index_deleted() || status.is_index_renamed() || status.is_index_typechange())
+                && !files_to_commit_set.contains(&path) {
+                files_to_re_stage.push(path);
+            }
+        }
+    }
+
+    // 5. Reset the index to the HEAD. This "unstages" everything.
     index.read_tree(&head_tree)
         .context("Failed to read HEAD tree into index")?;
 
@@ -77,16 +97,33 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, author_name: &str)
     )
     .context("Failed to create commit")?;
 
-    // 11. *** RESTORE THE ORIGINAL INDEX STATE ***
-    // Find the tree object corresponding to the saved OID.
-    let original_index_tree = repo.find_tree(original_index_tree_oid)
-        .context("Failed to find original index tree")?;
+    // 11. Reset the index to the *new* HEAD. This is crucial to avoid the "ghost" effect
+    //     for the newly committed files.
+    let new_head_commit = repo.find_commit(new_commit_oid)
+        .context("Failed to find the new commit")?;
+    let new_head_tree = new_head_commit.tree()
+        .context("Failed to get tree from the new commit")?;
 
-    // Load the original tree into the index.
-    index.read_tree(&original_index_tree)
-        .context("Failed to restore index to original state")?;
+    index.read_tree(&new_head_tree)
+        .context("Failed to restore index to new HEAD state")?;
 
-    // Write the restored index to disk.
+    // 12. Re-add the `files_to_re_stage` to the index.
+    for path in files_to_re_stage {
+        let canonical_path = path.canonicalize().with_context(|| format!("Failed to canonicalize path: {}", path.display()))?;
+        let canonical_workdir = workdir.canonicalize().with_context(|| format!("Failed to canonicalize workdir: {}", workdir.display()))?;
+
+        let relative_path = canonical_path.strip_prefix(&canonical_workdir).with_context(|| {
+            format!(
+                "File {} is outside the repository workdir at {}",
+                path.display(),
+                workdir.display()
+            )
+        })?;
+        index.add_path(relative_path)
+            .with_context(|| format!("Failed to re-add file '{}' to index", path.display()))?;
+    }
+
+    // 13. Write the restored index to disk.
     index.write()
         .context("Failed to write restored index")?;
 

@@ -128,16 +128,20 @@ pub fn git_commit_files(files_to_commit: &[PathBuf], message: &str) -> Result<()
         .context("Failed to write restored index")?;
 
     debug!("Commit created with id {}", new_commit_oid);
-
+    Ok(())
+}
 
 pub struct Commit {
-    pub files: Vec<PathBuf>,
-    pub message: String,
+    pub files: HashSet<PathBuf>,
 }
 
 impl Commit {
-    pub fn commit(&self) -> Result<()> {
-        git_commit_files(&self.files, &self.message)
+    pub fn new() -> Self {
+        Commit { files: HashSet::new() }
+    }
+    pub fn commit(&self, message: &str) -> Result<()> {
+        let files = self.files.iter().cloned().collect::<Vec<PathBuf>>();
+        git_commit_files(&files, message)
     }
 }
 

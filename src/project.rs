@@ -1,10 +1,8 @@
 use crate::execute::states::{AnswerState, InlineState, SummaryState};
 use crate::semantic::Line;
-use crate::execute::states::{AnswerState, InlineState, SummaryState};
-use crate::semantic::Line;
 use crate::semantic::SemanticError;
 use crate::syntax::types::AnchorKind;
-use crate::git::git_commit;
+use crate::git::{Commit};
 use crate::execute;
 use crate::agent::ShellAgentCall;
 
@@ -59,74 +57,6 @@ pub struct SnippetInfo {
     pub path: PathBuf,
 }
 
-/*
-pub struct ContextManager {
-    contexts: HashMap<String, Vec<Line>>,
-    modified_contexts: HashSet<String>,
-    modified_contexts: HashSet<String>,
-}
-
-impl ContextManager {
-    pub fn new() -> Self {
-        ContextManager {
-            contexts: HashMap::new(),
-            modified_contexts: HashSet::new(),
-        }
-    }
-
-    pub fn insert_context(&mut self, name: String, lines: Vec<Line>) {
-        self.contexts.insert(name, lines);
-    }
-
-    pub fn get_context_mut(&mut self, name: &str) -> Option<&mut Vec<Line>> {
-        self.contexts.get_mut(name)
-    }
-
-    pub fn remove_context(&mut self, name: &str) -> Option<Vec<Line>> {
-        self.contexts.remove(name)
-    }
-
-    pub fn contains_context(&self, name: &str) -> bool {
-        self.contexts.contains_key(name)
-    }
-
-    pub fn load_context(
-        &mut self,
-        project: &Project,
-        context_name: &str,
-    ) -> anyhow::Result<&mut Vec<Line>> {
-        if !self.contains_context(context_name) {
-            let lines = project.read_and_parse_context_file(context_name)?;
-            self.insert_context(context_name.to_string(), lines);
-        }
-        self.get_context_mut(context_name).context(format!(
-            "Context '{}' not found in ContextManager after loading",
-            context_name
-        ))
-    }
-
-    pub fn get_context(&mut self, context_name: &str) -> anyhow::Result<&mut Vec<Line>> {
-        self.get_context_mut(context_name).context(format!(
-            "Context '{}' not found in ContextManager",
-            context_name
-        ))
-    }
-
-    pub fn mark_as_modified(&mut self, context_name: &str) {
-        self.modified_contexts.insert(context_name.to_string());
-    }
-
-    pub fn save_modified_contexts(&self, project: &Project) -> anyhow::Result<()> {
-        for context_name in &self.modified_contexts {
-            if let Some(lines) = self.contexts.get(context_name) {
-                project.update_context_lines(context_name, lines.clone())?;
-            }
-        }
-        Ok(())
-    }
-}
-*/
-
 pub struct Project {
     root_path: PathBuf,
     editor_communicator: Box<dyn EditorCommunicator>,
@@ -154,10 +84,10 @@ impl Project {
         };
 
         if project.project_config.git_integration_enabled {
-            git_commit(
-                &[ctx_dir, ctx_root_file],
-                "feat: Initialize .ctx project\nInitial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.",
-            )?;
+            let mut commit = Commit::new();
+            commit.files.insert(ctx_dir);
+            commit.files.insert(ctx_root_file);
+            commit.commit("feat: Initialize .ctx project\nInitial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.")?;
         }
 
         project.save_project_config()?;
@@ -261,10 +191,9 @@ impl Project {
         std::fs::write(&file_path, content).context("Failed to create context file")?;
 
         if self.project_config.git_integration_enabled {
-            git_commit(
-                &[file_path.clone()],
-                &format!("feat: Create new context '{}'", name),                
-            )?;
+            let mut commit = Commit::new();
+            commit.files.insert(file_path.clone());
+            commit.commit(&format!("feat: Create new context '{}'", name))?;            
         }
 
         Ok(file_path)
@@ -288,11 +217,10 @@ impl Project {
         std::fs::write(&file_path, content).context("Failed to create snippet file")?;
 
         if self.project_config.git_integration_enabled {
-              git_commit(
-                &[file_path.clone()],
-                &format!("feat: Create new snippet '{}'", name),                
-            )?;
-        }
+            let mut commit = Commit::new();
+            commit.files.insert(file_path.clone());
+            commit.commit(&format!("feat: Create new snippet '{}'", name))?;            
+         }
 
         Ok(file_path)
     }
@@ -380,118 +308,12 @@ impl Project {
         }
     }
 
-    /*
-    pub fn load_context(
-        &self,
-        name: &str,
-        loading_contexts: &mut HashSet<String>,
-    ) -> Result<Context> {
-        if loading_contexts.contains(name) {
-            anyhow::bail!("Circular dependency detected for context: {}", name);
-        }
-        loading_contexts.insert(name.to_string());
-
-        let file_path = self.resolve_context(name);
-        let content = std::fs::read_to_string(&file_path).context(format!(
-            "Failed to read context file: {}",
-            file_path.display()
-        ))?;
-        let lines = parse_document(&content)
-            .map_err(|e| anyhow::Error::new(e))
-            .context("Failed to parse document")?;
-
-        let mut includes = BTreeMap::new();
-        let mut inlines = BTreeMap::new();
-        let mut summaries = BTreeMap::new();
-        let mut answers = BTreeSet::new();
-
-            for (line_index, line) in lines.iter().enumerate() {
-                if let Line::Tagged { tag, arguments, .. } = line {                if let Some(arg_name) = arguments.first() {
-                    match tag {
-                        TagKind::Include => {
-                            let included_context = self.load_context(arg_name, loading_contexts)?;
-                            includes.insert(line_index, included_context);
-                        }
-                        TagKind::Summary => {
-                            let summarized_context =
-                                self.load_context(arg_name, loading_contexts)?;
-                            summaries.insert(line_index, summarized_context);
-                        }
-                        TagKind::Inline => {
-                            let inlined_snippet = self.load_snippet(arg_name)?;
-                            inlines.insert(line_index, inlined_snippet);
-                        }
-                        TagKind::Answer => {
-                            answers.insert(line_index);
-                        }
-                    }
-                }
-            }
-        }
-
-        loading_contexts.remove(name);
-
-        Ok(Context {
-            name: name.to_string(),
-            content: lines,
-            includes,
-            inlines,
-            summaries,
-            answers,
-        })
-    }
-
-    pub fn get_context_tree(&self, context_name: &str) -> Result<Context> {
-        let mut loading_contexts = HashSet::new();
-        self.load_context(context_name, &mut loading_contexts)
-    }
-
-    pub fn read_and_parse_context_file(&self, name: &str) -> Result<Vec<Line>> {
-        let file_path = self.resolve_context(name);
-        let content = std::fs::read_to_string(&file_path).context(format!(
-            "Failed to read context file: {}",
-            file_path.display()
-        ))?;
-        parse_document(&content)
-            .map_err(|e| anyhow::Error::new(e))
-            .context("Failed to parse document")
-    }
-
-    pub fn load_context_lines(&self, name: &str) -> Result<Vec<Line>> {
-        self.read_and_parse_context_file(name)
-    }
-
-    pub fn load_snippet_lines(&self, name: &str) -> Result<Vec<Line>> {
-        let snippet = self.load_snippet(name)?;
-        Ok(snippet.content)
-    }
-
-    pub fn update_context_lines(&self, name: &str, lines: Vec<Line>) -> Result<()> {
-        let file_path = self.resolve_context(name);
-        let content = format_lines_to_string(&lines);
-        std::fs::write(&file_path, content).context(format!(
-            "Failed to write context file: {}",
-            file_path.display()
-        ))?;
-        Ok(())
-    }
-
-    pub fn update_snippet_lines(&self, name: &str, lines: Vec<Line>) -> Result<()> {
-        let file_path = self.resolve_snippet(name);
-        let content = format_lines_to_string(&lines);
-        std::fs::write(&file_path, content).context(format!(
-            "Failed to write snippet file: {}",
-            file_path.display()
-        ))?;
-        Ok(())
-    }
-    */
-
     fn save_state_to_metadata<T>(
         &self,
         anchor_kind: AnchorKind,
         uuid: &Uuid,
         state: &T,
+        commit: &mut Commit,
     ) -> std::result::Result<(), SemanticError>
     where
         T: serde::Serialize,
@@ -503,6 +325,7 @@ impl Project {
         let state_path = metadata_dir.join("state.json");
         let serialized = serde_json::to_string_pretty(state)?;
         std::fs::write(&state_path, serialized)?;
+        commit.files.insert(state_path);
         Ok(())
     }
 
@@ -529,7 +352,7 @@ impl Project {
         }
     }
 
-    pub fn save_inline_state(&self, uid: &Uuid, state: &InlineState) -> Result<()> {
+    pub fn save_inline_state(&self, uid: &Uuid, state: &InlineState, commit: &mut Commit) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Inline, uid, state)
             .map_err(|e| anyhow::Error::new(e))
     }
@@ -539,7 +362,7 @@ impl Project {
             .map_err(|e| anyhow::Error::new(e))
     }
 
-    pub fn save_summary_state(&self, uid: &Uuid, state: &SummaryState) -> Result<()> {
+    pub fn save_summary_state(&self, uid: &Uuid, state: &SummaryState, commit: &mut Commit) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Summary, uid, state)
             .map_err(|e| anyhow::Error::new(e))
     }
@@ -549,7 +372,7 @@ impl Project {
             .map_err(|e| anyhow::Error::new(e))
     }
 
-    pub fn save_answer_state(&self, uid: &Uuid, state: &AnswerState) -> Result<()> {
+    pub fn save_answer_state(&self, uid: &Uuid, state: &AnswerState, commit: &mut Commit) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Answer, uid, state)
             .map_err(|e| anyhow::Error::new(e))
     }
@@ -574,7 +397,12 @@ impl Project {
         context_name: &str,
         agent: &ShellAgentCall,
     ) -> Result<()> {
-        execute::execute(self, context_name, agent)
+        let mut commit = Commit::new();
+        execute::execute(self, context_name, agent, commit)?;
+        if self.project_config.git_integration_enabled {
+            commit.commit(&format!("feat: Executed context '{}'", context_name))?;           
+        }
+        Ok(())
     }
 
     fn collect_md_files_recursively(

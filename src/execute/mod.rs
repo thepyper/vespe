@@ -7,6 +7,8 @@ use crate::execute::states::{AnswerState, AnswerStatus, InlineState, SummaryStat
 use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
+use crate::git::Commit;
+
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 use tracing::debug;
@@ -21,13 +23,14 @@ pub fn execute(
     project: &Project,
     context_name: &str,
     agent: &ShellAgentCall,
+    commit: &mut Commit,
 ) -> anyhow::Result<()> {
     debug!("Executing context: {}", context_name);
 
     let mut visited_contexts = HashSet::new();
     
     let mut worker = ExecuteWorker::new();
-    worker.execute_loop(project, context_name, agent, &mut visited_contexts)?;
+    worker.execute_loop(project, context_name, agent, &mut visited_contexts, &mut commit)?;
 
     debug!("Context execution finished for: {}", context_name);
     Ok(())
@@ -56,13 +59,14 @@ impl ExecuteWorker {
         context_name: &str,
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
+        commit: &mut Commit,
     ) -> anyhow::Result<()> {
         for i in 1..100 {
             debug!(
                 "Starting execute_step {} loop for context: {}",
                 i, context_name
             );
-            if !self.execute_step(project, context_name, agent, visited_contexts)? {
+            if !self.execute_step(project, context_name, agent, visited_contexts, commit)? {
                 break;
             }
         }
@@ -75,6 +79,7 @@ impl ExecuteWorker {
         context_name: &str,
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
+        commit: &mut Commit,
     ) -> anyhow::Result<bool> {
         if !visited_contexts.insert(context_name.to_string()) {
             debug!(
@@ -87,18 +92,21 @@ impl ExecuteWorker {
         let mut context = Context::load(project, context_name)?;
         
         // Transform tags into anchors and initialize states
-        let mut need_next_step = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts)?;
+        let mut need_next_step = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts, commit)?;
 
         // Execute document injection and mutate states
-        need_next_step |= self._handle_anchor_states(project, &mut context)?;
+        need_next_step |= self._handle_anchor_states(project, &mut context, commit)?;
 
         // Save document, no more document changes on this step
-        let uid = project.request_file_modification(&context.path)?;
-        context.save()?;
-        project.notify_file_modified(&context.path, uid)?;
+        if context.modified {
+            let uid = project.request_file_modification(&context.path)?;
+            context.save()?;
+            commit.files.insert(context.path.clone());
+            project.notify_file_modified(&context.path, uid)?;
+        }
 
         // Execute long tasks that only mutate state (and not document)
-        need_next_step |= self._execute_long_tasks(project, &context, agent, visited_contexts)?;
+        need_next_step |= self._execute_long_tasks(project, &context, agent, visited_contexts, commit)?;
 
         Ok(need_next_step)
     }
@@ -109,6 +117,7 @@ impl ExecuteWorker {
         context: &mut Context,
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
+        commit: &mut Commit,
     ) -> anyhow::Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
@@ -128,7 +137,7 @@ impl ExecuteWorker {
                         patch,
                     );
                     let state = InlineState::new(&snippet_name);
-                    project.save_inline_state(&uid, &state)?;
+                    project.save_inline_state(&uid, &state, commit)?;                    
                     // Exit processing, inline could add any kind of content that need re-execution
                     break;
                 }
@@ -140,7 +149,7 @@ impl ExecuteWorker {
                         anchors,
                     );
                     let state = AnswerState::new(self.content.join("\n"));
-                    project.save_answer_state(&uid, &state)?;
+                    project.save_answer_state(&uid, &state, commit)?;
                     // Exit processing, answer could add content needed for further actions
                     break;
                 }
@@ -152,7 +161,7 @@ impl ExecuteWorker {
                         anchors,
                     );
                     let state = SummaryState::new(&context_name);
-                    project.save_summary_state(&uid, &state)?;
+                    project.save_summary_state(&uid, &state, commit)?;
                     // Exit processing, summary could add content needed for further actions
                     break;
                 }
@@ -186,6 +195,7 @@ impl ExecuteWorker {
         &mut self,
         project: &Project,
         context: &mut Context,
+        commit: &mut Commit,
     ) -> anyhow::Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
@@ -257,6 +267,7 @@ impl ExecuteWorker {
         context: &Context,
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
+        commit: &mut Commit,
     ) -> anyhow::Result<bool> {
         let mut need_next_step = false;
         for line in &context.lines {

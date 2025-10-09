@@ -5,7 +5,6 @@ use std::path::Path;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
-use crate::execute;
 use vespe::agent::ShellAgentCall;
 use vespe::project::Project;
 
@@ -51,7 +50,7 @@ pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
                                 "Change detected in context file: {}. Re-executing...",
                                 context_name
                             );
-                            if let Err(e) = execute::execute(project, &context_name, agent) {
+                            if let Err(e) = project.execute_context(&context_name, agent) {
                                 eprintln!("Error executing context {}: {}", context_name, e);
                             }
                         }
@@ -81,7 +80,7 @@ fn initial_execute_all_contexts(project: &Project, agent: &ShellAgentCall) -> Re
         if path.is_file() && is_context_file(project, &path) {
             let context_name = path_to_context_name(project, &path)?;
             println!("  Executing initial context: {}", context_name);
-            if let Err(e) = execute::execute(project, &context_name, agent) {
+            if let Err(e) = project.execute_context(&context_name, agent) {
                 eprintln!("Error executing initial context {}: {}", context_name, e);
             }
         }

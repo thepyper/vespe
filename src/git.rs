@@ -1,11 +1,12 @@
 use git2::{Repository, Signature};
 use std::path::PathBuf;
 use anyhow::{Context, Result};
+use std::fs;
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
     // Apri il repository corrente
     let repo = Repository::open(".").context("Failed to open repository")?;
-    let workdir = repo.workdir().context("Repository has no workdir")?;
+    let workdir = repo.workdir().context("Repository has no workdir")?.canonicalize()?;
 
     // Ottieni l'index (staging area)
     let mut index = repo.index()?;
@@ -15,7 +16,8 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
 
     // Aggiungi solo i file specificati
     for path in files_to_commit {
-        let relative_path = path.strip_prefix(workdir).with_context(|| {
+        let canonical_path = path.canonicalize()?;
+        let relative_path = canonical_path.strip_prefix(&workdir).with_context(|| {
             format!(
                 "File {} is outside the repository workdir at {}",
                 path.display(),

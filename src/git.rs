@@ -12,7 +12,10 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
     
     // Aggiungi solo i file specificati
     for path in files_to_commit {
-        let relative_path = path.strip_prefix(workdir).with_context(|| {
+        let canonical_path = path.canonicalize().with_context(|| format!("Failed to canonicalize path: {}", path.display()))?;
+        let canonical_workdir = workdir.canonicalize().with_context(|| format!("Failed to canonicalize workdir: {}", workdir.display()))?;
+
+        let relative_path = canonical_path.strip_prefix(&canonical_workdir).with_context(|| {
             format!(
                 "File {} is outside the repository workdir at {}",
                 path.display(),

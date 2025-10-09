@@ -2,6 +2,8 @@ use crate::execute::states::{AnswerState, InlineState, SummaryState};
 use crate::semantic::Line;
 use crate::semantic::SemanticError;
 use crate::syntax::types::AnchorKind;
+use crate::git::git_commit;
+
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
@@ -147,6 +149,14 @@ impl Project {
             project_config: ProjectConfig::default(),
         };
 
+        if project.project_config.git_integration_enabled {
+            git_commit(
+                &[ctx_dir, ctx_root_file],
+                "feat: Initialize .ctx project",
+                "Initial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.",
+            )?;
+        }
+
         project.save_project_config()?;
 
         Ok(project)
@@ -246,6 +256,15 @@ impl Project {
             .context("Failed to create parent directories for context file")?;
         let content = initial_content.unwrap_or_else(|| "".to_string());
         std::fs::write(&file_path, content).context("Failed to create context file")?;
+
+        if self.project_config.git_integration_enabled {
+            git_commit(
+                &[file_path.clone()],
+                &format!("feat: Create new context '{}'", name),
+                "",
+            )?;
+        }
+
         Ok(file_path)
     }
 
@@ -265,6 +284,15 @@ impl Project {
             .context("Failed to create parent directories for snippet file")?;
         let content = initial_content.unwrap_or_else(|| "".to_string());
         std::fs::write(&file_path, content).context("Failed to create snippet file")?;
+
+        if self.project_config.git_integration_enabled {
+              git_commit(
+                &[file_path.clone()],
+                &format!("feat: Create new snippet '{}'", name),
+                "",
+            )?;
+        }
+
         Ok(file_path)
     }
 

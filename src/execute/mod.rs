@@ -139,7 +139,7 @@ impl ExecuteWorker {
         let mut need_next_step = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts, commit)?;
 
         // Handle repeat tag
-        need_next_step |= self._hanled_repeat_tag(project, &mut context, commit)?;
+        need_next_step |= self._handle_repeat_tag(project, &mut context, commit)?;
         
         // Execute document injection and mutate states
         need_next_step |= self._handle_anchor_states(project, &mut context, commit)?;
@@ -226,49 +226,83 @@ impl ExecuteWorker {
         Ok(modified)
     }
 
-        fn _handled_repeat_tag(
-            &mut self,
-            project: &Project,
-            context: &mut Context,
-            agent: &ShellAgentCall,
-            visited_contexts: &mut HashSet<String>,
-            commit: &mut Commit,
-        ) -> Result<bool> {
-            let mut need_next_step = false;
-            let mut lines_to_add: Vec<Line> = Vec::new();
-    
-            for line_idx in 0..context.lines.len() {
-                let line = &context.lines[line_idx];
-                if let Line::RepeatTag(repeat_tag) = line {
-                    let repeat_begin_line_number = repeat_tag.begin_line;
-                    let repeat_end_line_number = context.lines.get(line_idx + 1)
-                        .map(|l| l.line_number())
-                        .unwrap_or(repeat_begin_line_number + 1);
-    
-                    let repeat_content = context.get_repeat_content(
-                        repeat_begin_line_number,
-                        repeat_end_line_number,
-                    );
-    
-                    // For now, just re-add the repeat tag to the lines_to_add
-                    // In the future, this will involve more complex logic for repetition
-                    lines_to_add.push(Line::RepeatTag(RepeatTag {
-                        begin_line: repeat_begin_line_number,
-                    }));
-                    need_next_step = true;
-                    break;
+       
+
+    fn _handle_repeat_tag(
+        &mut self,
+        project: &Project,
+        context: &mut Context,
+        commit: &mut Commit,
+    ) -> anyhow::Result<bool> {
+        let mut modified = false;
+        let mut patches = Patches::new();
+        let mut latest_anchor = None;
+
+        for (i, line) in context.lines.iter().enumerate() {
+            match line {
+                Line::RepeatTag => {
+                    if let Some(j) = latest_anchor {
+                        // Repeat inside some anchor, manage it
+                        patches.insert((i, i+1), vec![]);
+                        let anchor_begin_line = context.lines.get(j).unwrap(); // TODO gestione errore
+                        match anchor_begin_line {
+                            Line::InlineBeginAnchor { uuid } => {
+                                let state = project.load_inline_state(uuid)?;
+                                match state.status { 
+                                    InlineStatus::Completed => {
+                                        let mut new_state = state.clone();
+                                        new_state.status = InlineStatus::NeedInjection;
+                                        project.save_inline_state(uuid, &new_state, commit)?;
+                                        modified = true;
+                                    }
+                                    _ => { /* Do nothing */ }
+                                }
+                             }
+                             Line::AnswerBeginAnchor { uuid } => {
+                                let state = project.load_answer_state(uuid)?;
+                                match state.status { 
+                                    AnswerStatus::Completed => {
+                                        let mut new_state = state.clone();
+                                        new_state.status = AnswerStatus::NeedContext;
+                                        project.save_answer_state(uuid, &new_state, commit)?;
+                                        modified = true;
+                                    }
+                                    _ => { /* Do nothing */ }
+                                }
+                             }
+                             Line::SummaryBeginAnchor { uuid } => {
+                                let state = project.load_summary_state(uuid)?;
+                                match state.status { 
+                                    SummaryStatus::Completed => {
+                                        let mut new_state = state.clone();
+                                        new_state.status = SummaryStatus::NeedContext;
+                                        project.save_summary_state(uuid, &new_state, commit)?;
+                                        modified = true;
+                                    }
+                                    _ => { /* Do nothing */ }
+                                }
+                             }
+                             _ => { /* Do nothing */}
+                        }
+                    } else {
+                        // Repeat outside of any anchor, just remove it
+                        patches.insert((i, i+1), vec![]);
+                    }
+                }               
+                Line::AnswerBeginAnchor {..} | Line::InlineBeginAnchor { .. } | Line::SummaryBeginAnchor { .. } => {
+                    latest_anchor = Some(i);
                 }
+                _ => { /* Do nothing */ }
             }
-    
-            if need_next_step {
-                context.lines.retain(|line| !matches!(line, Line::RepeatTag(_)));
-                context.lines.extend(lines_to_add);
-                context.lines.sort_by_key(|line| line.line_number());
-                context.modified = true;
-            }
-    
-            Ok(need_next_step)
         }
+
+        if context.apply_patches(patches) {
+            debug!("Pass 1.5 patches applied.");
+            modified = true;
+        }
+        Ok(modified)
+    }
+
     fn _handle_anchor_states(
         &mut self,
         project: &Project,

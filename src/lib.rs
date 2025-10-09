@@ -2,11 +2,11 @@ pub mod agent;
 pub mod config;
 pub mod editor;
 pub mod execute;
+pub mod git;
 pub mod project;
 pub mod semantic;
 pub mod syntax;
 pub mod utils;
-pub mod git;
 
 pub fn init_telemetry() {
     tracing_subscriber::fmt()

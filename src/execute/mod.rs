@@ -3,11 +3,13 @@ pub mod states;
 use std::collections::HashSet;
 
 use crate::agent::ShellAgentCall;
-use crate::execute::states::{AnswerState, AnswerStatus, InlineState, InlineStatus, SummaryState, SummaryStatus};
+use crate::execute::states::{
+    AnswerState, AnswerStatus, InlineState, InlineStatus, SummaryState, SummaryStatus,
+};
+use crate::git::Commit;
 use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
-use crate::git::Commit;
 use anyhow::anyhow;
 
 use sha2::{Digest, Sha256};
@@ -29,7 +31,7 @@ pub fn execute(
     debug!("Executing context: {}", context_name);
 
     let mut visited_contexts = HashSet::new();
-    
+
     let mut worker = ExecuteWorker::new();
     worker.execute_loop(project, context_name, agent, &mut visited_contexts, commit)?;
 
@@ -92,13 +94,14 @@ impl ExecuteWorker {
         }
 
         let mut context = Context::load(project, context_name)?;
-        
+
         // Transform tags into anchors and initialize states
-        let mut need_next_step = self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts, commit)?;
+        let mut need_next_step =
+            self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts, commit)?;
 
         // Handle repeat tag
         let mut need_next_step = self._hanled_repeat_tag(project, &mut context, commit)?;
-        
+
         // Execute document injection and mutate states
         need_next_step |= self._handle_anchor_states(project, &mut context, commit)?;
 
@@ -111,7 +114,8 @@ impl ExecuteWorker {
         }
 
         // Execute long tasks that only mutate state (and not document)
-        need_next_step |= self._execute_long_tasks(project, &context, agent, visited_contexts, commit)?;
+        need_next_step |=
+            self._execute_long_tasks(project, &context, agent, visited_contexts, commit)?;
 
         Ok(need_next_step)
     }
@@ -126,7 +130,7 @@ impl ExecuteWorker {
     ) -> anyhow::Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
-      
+
         for (i, line) in context.lines.iter().enumerate() {
             match line {
                 Line::InlineTag { snippet_name } => {
@@ -137,7 +141,7 @@ impl ExecuteWorker {
                         anchors,
                     );
                     let state = InlineState::new(&snippet_name);
-                    project.save_inline_state(&uid, &state, commit)?;                    
+                    project.save_inline_state(&uid, &state, commit)?;
                     // Exit processing, inline could add any kind of content that need re-execution
                     break;
                 }
@@ -202,12 +206,14 @@ impl ExecuteWorker {
                         // Repeat inside some anchor, manage it
                         let anchor_begin_line: &Line = context.lines.get(j).unwrap(); // TODO gestione errore
                         let uuid = &anchor_begin_line.get_uid();
-                        let k = anchor_index.get_end(uuid).ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
+                        let k = anchor_index
+                            .get_end(uuid)
+                            .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
                         inject_lines(&mut patches, j + 1, k, vec![]);
                         match anchor_begin_line {
                             Line::InlineBeginAnchor { uuid } => {
                                 let state = project.load_inline_state(uuid)?;
-                                match state.status { 
+                                match state.status {
                                     InlineStatus::Completed => {
                                         let mut new_state = state.clone();
                                         new_state.status = InlineStatus::NeedInjection;
@@ -216,10 +222,10 @@ impl ExecuteWorker {
                                     }
                                     _ => { /* Do nothing */ }
                                 }
-                             }
-                             Line::AnswerBeginAnchor { uuid } => {
+                            }
+                            Line::AnswerBeginAnchor { uuid } => {
                                 let state = project.load_answer_state(uuid)?;
-                                match state.status { 
+                                match state.status {
                                     AnswerStatus::Completed => {
                                         let mut new_state = state.clone();
                                         new_state.status = AnswerStatus::NeedContext;
@@ -228,10 +234,10 @@ impl ExecuteWorker {
                                     }
                                     _ => { /* Do nothing */ }
                                 }
-                             }
-                             Line::SummaryBeginAnchor { uuid } => {
+                            }
+                            Line::SummaryBeginAnchor { uuid } => {
                                 let state = project.load_summary_state(uuid)?;
-                                match state.status { 
+                                match state.status {
                                     SummaryStatus::Completed => {
                                         let mut new_state = state.clone();
                                         new_state.status = SummaryStatus::NeedContext;
@@ -240,15 +246,17 @@ impl ExecuteWorker {
                                     }
                                     _ => { /* Do nothing */ }
                                 }
-                             }
-                             _ => { /* Do nothing */}
+                            }
+                            _ => { /* Do nothing */ }
                         }
                     } else {
                         // Repeat outside of any anchor, just remove it
-                        patches.insert((i, i+1), vec![]);
+                        patches.insert((i, i + 1), vec![]);
                     }
-                }               
-                Line::AnswerBeginAnchor {..} | Line::InlineBeginAnchor { .. } | Line::SummaryBeginAnchor { .. } => {
+                }
+                Line::AnswerBeginAnchor { .. }
+                | Line::InlineBeginAnchor { .. }
+                | Line::SummaryBeginAnchor { .. } => {
                     latest_anchor = Some(i);
                 }
                 _ => { /* Do nothing */ }

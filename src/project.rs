@@ -1,10 +1,10 @@
+use crate::agent::ShellAgentCall;
+use crate::execute;
 use crate::execute::states::{AnswerState, InlineState, SummaryState};
+use crate::git::Commit;
 use crate::semantic::Line;
 use crate::semantic::SemanticError;
 use crate::syntax::types::AnchorKind;
-use crate::git::{Commit};
-use crate::execute;
-use crate::agent::ShellAgentCall;
 
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
@@ -12,8 +12,8 @@ use anyhow::Result;
 
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use uuid::Uuid;
 use tracing::debug;
+use uuid::Uuid;
 
 use crate::config::{EditorInterface, ProjectConfig};
 use crate::editor::{
@@ -86,7 +86,6 @@ impl Project {
 
         if project.project_config.git_integration_enabled {
             let mut commit = Commit::new();
-            commit.files.insert(ctx_dir);
             commit.files.insert(ctx_root_file);
             commit.commit("feat: Initialize .ctx project\nInitial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.")?;
         }
@@ -194,7 +193,7 @@ impl Project {
         if self.project_config.git_integration_enabled {
             let mut commit = Commit::new();
             commit.files.insert(file_path.clone());
-            commit.commit(&format!("feat: Create new context '{}'", name))?;            
+            commit.commit(&format!("feat: Create new context '{}'", name))?;
         }
 
         Ok(file_path)
@@ -220,8 +219,8 @@ impl Project {
         if self.project_config.git_integration_enabled {
             let mut commit = Commit::new();
             commit.files.insert(file_path.clone());
-            commit.commit(&format!("feat: Create new snippet '{}'", name))?;            
-         }
+            commit.commit(&format!("feat: Create new snippet '{}'", name))?;
+        }
 
         Ok(file_path)
     }
@@ -296,6 +295,10 @@ impl Project {
 
     pub fn save_project_config(&self) -> Result<()> {
         let config_path = self.project_config_path();
+        std::fs::create_dir_all(
+            config_path.parent().unwrap(), // TODO brutto!!
+        )
+        .context(format!("Failed to create metadata directory",))?;
         let serialized = serde_json::to_string_pretty(&self.project_config)?;
         std::fs::write(&config_path, serialized).context("Failed to write project config file")?;
         Ok(())
@@ -353,7 +356,12 @@ impl Project {
         }
     }
 
-    pub fn save_inline_state(&self, uid: &Uuid, state: &InlineState, commit: &mut Commit) -> Result<()> {
+    pub fn save_inline_state(
+        &self,
+        uid: &Uuid,
+        state: &InlineState,
+        commit: &mut Commit,
+    ) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Inline, uid, state, commit)
             .map_err(|e| anyhow::Error::new(e))
     }
@@ -363,7 +371,12 @@ impl Project {
             .map_err(|e| anyhow::Error::new(e))
     }
 
-    pub fn save_summary_state(&self, uid: &Uuid, state: &SummaryState, commit: &mut Commit) -> Result<()> {
+    pub fn save_summary_state(
+        &self,
+        uid: &Uuid,
+        state: &SummaryState,
+        commit: &mut Commit,
+    ) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Summary, uid, state, commit)
             .map_err(|e| anyhow::Error::new(e))
     }
@@ -373,7 +386,12 @@ impl Project {
             .map_err(|e| anyhow::Error::new(e))
     }
 
-    pub fn save_answer_state(&self, uid: &Uuid, state: &AnswerState, commit: &mut Commit) -> Result<()> {
+    pub fn save_answer_state(
+        &self,
+        uid: &Uuid,
+        state: &AnswerState,
+        commit: &mut Commit,
+    ) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Answer, uid, state, commit)
             .map_err(|e| anyhow::Error::new(e))
     }
@@ -393,17 +411,13 @@ impl Project {
             .notify_file_modified(file_path, uid)
     }
 
-    pub fn execute_context(
-        &self,
-        context_name: &str,
-        agent: &ShellAgentCall,
-    ) -> Result<()> {
+    pub fn execute_context(&self, context_name: &str, agent: &ShellAgentCall) -> Result<()> {
         debug!("Project::execute_context called for: {}", context_name);
         let mut commit = Commit::new();
         execute::execute(self, context_name, agent, &mut commit)?;
         if self.project_config.git_integration_enabled {
             debug!("Attempting to commit for context: {}", context_name);
-            commit.commit(&format!("feat: Executed context '{}'", context_name))?;           
+            commit.commit(&format!("feat: Executed context '{}'", context_name))?;
         }
         Ok(())
     }

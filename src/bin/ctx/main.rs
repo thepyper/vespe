@@ -203,7 +203,7 @@ fn main() -> Result<()> {
 
                     let file_path =
                         project.create_context_file(&context_name, Some(rendered_content))?;
-                    println!("Created new context file: {}", file_path.display());                    
+                    println!("Created new context file: {}", file_path.display());
                 }
                 ContextCommands::Execute { name, today } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
@@ -237,7 +237,7 @@ fn main() -> Result<()> {
             match command {
                 SnippetCommands::New { name, content } => {
                     let file_path = project.create_snippet_file(&name, content)?;
-                    println!("Created new snippet file: {}", file_path.display());                  
+                    println!("Created new snippet file: {}", file_path.display());
                 }
                 SnippetCommands::List {} => {
                     let snippets = project.list_snippets()?;

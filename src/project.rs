@@ -2,23 +2,67 @@ use crate::execute::states::{AnswerState, InlineState, SummaryState};
 use crate::semantic::Line;
 use crate::semantic::SemanticError;
 use crate::syntax::types::AnchorKind;
-use crate::git::{Commit};
+use crate::git::{Commit, Error as GitError};
 use crate::execute;
 use crate::agent::ShellAgentCall;
 
-use anyhow::anyhow;
-use anyhow::Context as AnyhowContext;
-use anyhow::Result;
-
 use std::io::ErrorKind;
-use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf, StripPrefixError};
 use uuid::Uuid;
 use tracing::debug;
 
-use crate::config::{EditorInterface, ProjectConfig};
-use crate::editor::{
-    lockfile::FileBasedEditorCommunicator, DummyEditorCommunicator, EditorCommunicator,
-};
+use crate::config::{EditorInterface, ProjectConfig, Error as ConfigError};
+use crate::editor::{lockfile::Error as EditorError, DummyEditorCommunicator, EditorCommunicator};
+
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Project already initialized")]
+    AlreadyInitialized,
+    #[error("No .ctx project found")]
+    NotFound,
+    #[error("Context file already exists: {0}")]
+    ContextFileExists(PathBuf),
+    #[error("Snippet file already exists: {0}")]
+    SnippetFileExists(PathBuf),
+    #[error("Failed to get parent directory")]
+    ParentDirectoryNotFound,
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("JSON serialization/deserialization error: {0}")]
+    JsonError(#[from] serde_json::Error),
+    #[error("Semantic error: {0}")]
+    SemanticError(#[from] crate::semantic::SemanticError),
+    #[error("Config error: {0}")]
+    ConfigError(#[from] ConfigError),
+    #[error("Editor error: {0}")]
+    EditorError(#[from] EditorError),
+    #[error("Git error: {0}")]
+    GitError(#[from] GitError),
+    #[error("Path prefix error: {0}")]
+    StripPrefixError(#[from] StripPrefixError),
+    #[error("Failed to parse document: {0}")]
+    DocumentParsingError(String),
+    #[error("Failed to read snippet file: {0}")]
+    SnippetReadError(PathBuf),
+    #[error("Failed to create metadata directory for anchor {0}-{1}: {2}")]
+    MetadataDirCreationError(String, Uuid, PathBuf),
+    #[error("Failed to create context file: {0}")]
+    ContextFileCreationError(PathBuf),
+    #[error("Failed to create snippet file: {0}")]
+    SnippetFileCreationError(PathBuf),
+    #[error("Failed to write project config file")]
+    ProjectConfigWriteError,
+    #[error("Failed to read project config file")]
+    ProjectConfigReadError,
+    #[error("Failed to create parent directories for context file")]
+    ContextParentDirCreationError,
+    #[error("Failed to create parent directories for snippet file")]
+    SnippetParentDirCreationError,
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 /*
 #[derive(Debug)]
@@ -69,17 +113,17 @@ impl Project {
     pub fn init(path: &Path) -> Result<Project> {
         let ctx_dir = path.join(CTX_DIR_NAME);
         if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
-            anyhow::bail!("ctx project already initialized in this directory.");
+            return Err(Error::AlreadyInitialized);
         }
 
-        std::fs::create_dir_all(&ctx_dir).context("Failed to create .ctx directory")?;
+        std::fs::create_dir_all(&ctx_dir).map_err(Error::IoError)?;
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
-            .context("Failed to write .ctx_root file")?;
+            .map_err(Error::IoError)?;
 
         let project = Project {
-            root_path: path.canonicalize()?,
+            root_path: path.canonicalize().map_err(Error::IoError)?,
             editor_communicator: Box::new(DummyEditorCommunicator),
             project_config: ProjectConfig::default(),
         };
@@ -102,7 +146,7 @@ impl Project {
         loop {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
-                let root_path = current_path.canonicalize()?;
+                let root_path = current_path.canonicalize().map_err(Error::IoError)?;
                 let project_config_path = root_path
                     .join(CTX_DIR_NAME)
                     .join(METADATA_DIR_NAME)
@@ -130,7 +174,7 @@ impl Project {
             }
         }
 
-        anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
+        Err(Error::NotFound)
     }
 
     pub fn project_home(&self) -> PathBuf {
@@ -161,11 +205,10 @@ impl Project {
         let anchor_metadata_dir =
             self.metadata_home()
                 .join(format!("{}-{}", anchor_kind, uid.to_string()));
-        std::fs::create_dir_all(&anchor_metadata_dir).context(format!(
-            "Failed to create metadata directory for anchor {}-{}: {}",
-            anchor_kind,
-            uid,
-            anchor_metadata_dir.display()
+        std::fs::create_dir_all(&anchor_metadata_dir).map_err(|e| Error::MetadataDirCreationError(
+            anchor_kind.to_string(),
+            *uid,
+            anchor_metadata_dir.clone(),
         ))?;
         Ok(anchor_metadata_dir)
     }
@@ -181,20 +224,20 @@ impl Project {
     ) -> Result<PathBuf> {
         let file_path = self.contexts_root().join(format!("{}.md", name));
         if file_path.exists() {
-            anyhow::bail!("Context file already exists: {}", file_path.display());
+            return Err(Error::ContextFileExists(file_path));
         }
         let parent_dir = file_path
             .parent()
-            .context("Failed to get parent directory")?;
+            .ok_or(Error::ParentDirectoryNotFound)?;
         std::fs::create_dir_all(parent_dir)
-            .context("Failed to create parent directories for context file")?;
+            .map_err(|_| Error::ContextParentDirCreationError)?;
         let content = initial_content.unwrap_or_else(|| "".to_string());
-        std::fs::write(&file_path, content).context("Failed to create context file")?;
+        std::fs::write(&file_path, content).map_err(|_| Error::ContextFileCreationError(file_path.clone()))?;
 
         if self.project_config.git_integration_enabled {
             let mut commit = Commit::new();
             commit.files.insert(file_path.clone());
-            commit.commit(&format!("feat: Create new context '{}'", name))?;            
+            commit.commit(&format!("feat: Create new context '{}'", name))?;
         }
 
         Ok(file_path)
@@ -207,20 +250,20 @@ impl Project {
     ) -> Result<PathBuf> {
         let file_path = self.snippets_root().join(format!("{}.md", name));
         if file_path.exists() {
-            anyhow::bail!("Snippet file already exists: {}", file_path.display());
+            return Err(Error::SnippetFileExists(file_path));
         }
         let parent_dir = file_path
             .parent()
-            .context("Failed to get parent directory")?;
+            .ok_or(Error::ParentDirectoryNotFound)?;
         std::fs::create_dir_all(parent_dir)
-            .context("Failed to create parent directories for snippet file")?;
+            .map_err(|_| Error::SnippetParentDirCreationError)?;
         let content = initial_content.unwrap_or_else(|| "".to_string());
-        std::fs::write(&file_path, content).context("Failed to create snippet file")?;
+        std::fs::write(&file_path, content).map_err(|_| Error::SnippetFileCreationError(file_path.clone()))?;
 
         if self.project_config.git_integration_enabled {
             let mut commit = Commit::new();
             commit.files.insert(file_path.clone());
-            commit.commit(&format!("feat: Create new snippet '{}'", name))?;            
+            commit.commit(&format!("feat: Create new snippet '{}'", name))?;
          }
 
         Ok(file_path)
@@ -231,14 +274,13 @@ impl Project {
         let contexts_root = self.contexts_root();
 
         if !contexts_root.exists() {
-            return Ok(contexts); // Return empty if directory doesn't exist
+            return Ok(contexts);
         }
 
         let mut md_files = Vec::new();
         Self::collect_md_files_recursively(&contexts_root, &contexts_root, &mut md_files)?;
 
         for path in md_files {
-            // Calculate the relative path from contexts_root to get the context name
             let relative_path = path.strip_prefix(&contexts_root)?;
             if let Some(file_stem) = relative_path.file_stem() {
                 if let Some(name) = file_stem.to_str() {
@@ -257,14 +299,13 @@ impl Project {
         let snippets_root = self.snippets_root();
 
         if !snippets_root.exists() {
-            return Ok(snippets); // Return empty if directory doesn't exist
+            return Ok(snippets);
         }
 
         let mut md_files = Vec::new();
         Self::collect_md_files_recursively(&snippets_root, &snippets_root, &mut md_files)?;
 
         for path in md_files {
-            // Calculate the relative path from snippets_root to get the snippet name
             let relative_path = path.strip_prefix(&snippets_root)?;
             if let Some(file_stem) = relative_path.file_stem() {
                 if let Some(name) = file_stem.to_str() {
@@ -280,13 +321,9 @@ impl Project {
 
     pub fn load_snippet(&self, name: &str) -> Result<Snippet> {
         let file_path = self.resolve_snippet(name);
-        let content = std::fs::read_to_string(&file_path).context(format!(
-            "Failed to read snippet file: {}",
-            file_path.display()
-        ))?;
+        let content = std::fs::read_to_string(&file_path).map_err(|_| Error::SnippetReadError(file_path.clone()))?;
         let lines = crate::semantic::parse_document(self, &content)
-            .map_err(|e| anyhow!("Failed to parse snippet document: {}", e))
-            .context("Failed to parse document")?;
+            .map_err(|e| Error::DocumentParsingError(e.to_string()))?;
 
         Ok(Snippet {
             name: name.to_string(),
@@ -297,7 +334,7 @@ impl Project {
     pub fn save_project_config(&self) -> Result<()> {
         let config_path = self.project_config_path();
         let serialized = serde_json::to_string_pretty(&self.project_config)?;
-        std::fs::write(&config_path, serialized).context("Failed to write project config file")?;
+        std::fs::write(&config_path, serialized).map_err(|_| Error::ProjectConfigWriteError)?;
         Ok(())
     }
 
@@ -305,23 +342,21 @@ impl Project {
         match std::fs::read_to_string(project_config_path) {
             Ok(content) => Ok(serde_json::from_str(&content)?),
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(ProjectConfig::default()),
-            Err(e) => Err(anyhow::Error::new(e).context("Failed to read project config file")),
+            Err(e) => Err(Error::ProjectConfigReadError.into()),
         }
     }
 
-    fn save_state_to_metadata<T>(
+    fn save_state_to_metadata<
+        T: serde::Serialize,
+    >(
         &self,
         anchor_kind: AnchorKind,
         uuid: &Uuid,
         state: &T,
         commit: &mut Commit,
-    ) -> std::result::Result<(), SemanticError>
-    where
-        T: serde::Serialize,
-    {
+    ) -> Result<()> {
         let metadata_dir = self
-            .resolve_metadata(anchor_kind.to_string().as_str(), uuid)
-            .map_err(SemanticError::AnyhowError)?;
+            .resolve_metadata(anchor_kind.to_string().as_str(), uuid)?;
         std::fs::create_dir_all(&metadata_dir)?;
         let state_path = metadata_dir.join("state.json");
         let serialized = serde_json::to_string_pretty(state)?;
@@ -330,57 +365,46 @@ impl Project {
         Ok(())
     }
 
-    fn load_state_from_metadata<T>(
+    fn load_state_from_metadata<
+        T: for<'de> serde::Deserialize<'de>,
+    >(
         &self,
         anchor_kind: &AnchorKind,
         uid: &Uuid,
-    ) -> std::result::Result<T, SemanticError>
-    where
-        T: for<'de> serde::Deserialize<'de>,
-    {
+    ) -> Result<T> {
         let metadata_dir = self
-            .resolve_metadata(anchor_kind.to_string().as_str(), uid)
-            .map_err(SemanticError::AnyhowError)?;
+            .resolve_metadata(anchor_kind.to_string().as_str(), uid)?;
         let state_path = metadata_dir.join("state.json");
 
         match std::fs::read_to_string(&state_path) {
             Ok(content) => Ok(serde_json::from_str(&content)?),
-            Err(e) if e.kind() == ErrorKind::NotFound => Err(SemanticError::Generic(format!(
-                "State file not found for anchor {}-{}",
-                anchor_kind, uid
-            ))),
-            Err(e) => Err(SemanticError::IoError(e)),
+            Err(e) if e.kind() == ErrorKind::NotFound => Err(Error::IoError(e)), // Consider a more specific error if needed
+            Err(e) => Err(Error::IoError(e)),
         }
     }
 
     pub fn save_inline_state(&self, uid: &Uuid, state: &InlineState, commit: &mut Commit) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Inline, uid, state, commit)
-            .map_err(|e| anyhow::Error::new(e))
     }
 
     pub fn load_inline_state(&self, uid: &Uuid) -> Result<InlineState> {
         self.load_state_from_metadata(&AnchorKind::Inline, uid)
-            .map_err(|e| anyhow::Error::new(e))
     }
 
     pub fn save_summary_state(&self, uid: &Uuid, state: &SummaryState, commit: &mut Commit) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Summary, uid, state, commit)
-            .map_err(|e| anyhow::Error::new(e))
     }
 
     pub fn load_summary_state(&self, uid: &Uuid) -> Result<SummaryState> {
         self.load_state_from_metadata(&AnchorKind::Summary, uid)
-            .map_err(|e| anyhow::Error::new(e))
     }
 
     pub fn save_answer_state(&self, uid: &Uuid, state: &AnswerState, commit: &mut Commit) -> Result<()> {
         self.save_state_to_metadata(AnchorKind::Answer, uid, state, commit)
-            .map_err(|e| anyhow::Error::new(e))
     }
 
     pub fn load_answer_state(&self, uid: &Uuid) -> Result<AnswerState> {
         self.load_state_from_metadata(&AnchorKind::Answer, uid)
-            .map_err(|e| anyhow::Error::new(e))
     }
 
     pub fn request_file_modification(&self, file_path: &PathBuf) -> Result<Uuid> {
@@ -403,7 +427,7 @@ impl Project {
         execute::execute(self, context_name, agent, &mut commit)?;
         if self.project_config.git_integration_enabled {
             debug!("Attempting to commit for context: {}", context_name);
-            commit.commit(&format!("feat: Executed context '{}'", context_name))?;           
+            commit.commit(&format!("feat: Executed context '{}'", context_name))?;
         }
         Ok(())
     }

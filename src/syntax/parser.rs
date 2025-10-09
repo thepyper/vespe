@@ -2,8 +2,29 @@ use super::types::*;
 use std::collections::HashMap;
 use std::str::FromStr;
 use uuid::Uuid;
+use thiserror::Error;
 
-pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Error on line {0}: {1}")]
+    LineParseError(usize, Box<Error>),
+    #[error("Missing closing ']' for parameters")]
+    MissingClosingBracket,
+    #[error("Invalid parameter format: {0}")]
+    InvalidParameterFormat(String),
+    #[error("Invalid parameter key format: {0}")]
+    InvalidParameterKeyFormat(String),
+    #[error("Invalid parameter value format: {0}")]
+    InvalidParameterValueFormat(String),
+    #[error("Unclosed quote in arguments")]
+    UnclosedQuoteInArguments,
+    #[error(transparent)]
+    UuidParseError(#[from] uuid::Error),
+    #[error(transparent)]
+    SyntaxTypesError(#[from] super::types::Error),
+}
+
+pub fn parse_document(input: &str) -> Result<Vec<Line>, Error> {
     input
         .lines()
         .enumerate()
@@ -11,13 +32,13 @@ pub fn parse_document(input: &str) -> Result<Vec<Line>, String> {
             if line_str.trim().is_empty() {
                 Ok(Line::Text(line_str.to_string()))
             } else {
-                parse_line(line_str).map_err(|e| format!("Error on line {}: {}", line_num + 1, e))
+                parse_line(line_str).map_err(|e| Error::LineParseError(line_num + 1, Box::new(e)))
             }
         })
-        .collect::<Result<Vec<Line>, String>>()
+        .collect::<Result<Vec<Line>, Error>>()
 }
 
-pub fn parse_line(input: &str) -> Result<Line, String> {
+pub fn parse_line(input: &str) -> Result<Line, Error> {
     let (content_str, anchor_opt) = parse_anchor(input)?;
 
     if let Some(anchor) = anchor_opt {
@@ -48,7 +69,7 @@ pub fn parse_line(input: &str) -> Result<Line, String> {
     Ok(Line::Text(content_str.to_string()))
 }
 
-fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
+fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), Error> {
     let anchor_start = input.rfind("<!--");
     if let Some(start_idx) = anchor_start {
         let anchor_str = &input[start_idx..];
@@ -78,7 +99,7 @@ fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
                 Ok(t) => t,
                 Err(_) => return Ok((input.to_string(), None)), // Unknown tag, treat as no anchor
             };
-            let uid = Uuid::parse_str(uuid_str).map_err(|e| e.to_string())?;
+            let uid = Uuid::parse_str(uuid_str)?;
 
             let content_before_anchor = input[..start_idx].trim_end().to_string();
             return Ok((content_before_anchor, Some(Anchor { kind, uid, tag })));
@@ -87,10 +108,13 @@ fn parse_anchor(input: &str) -> Result<(String, Option<Anchor>), String> {
     Ok((input.to_string(), None))
 }
 
-fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
+fn parse_tagged_line(input: &str) -> Result<LineKind, Error> {
     let trimmed_input = input.trim_start();
     if !trimmed_input.starts_with('@') {
-        return Err("Tagged line must start with '@'\n".to_string());
+        // This case should ideally not happen if called correctly after parse_line
+        // but for robustness, we can return an error or treat as text.
+        // For now, let's treat it as text as per original logic.
+        return Ok(LineKind::Text(input.to_string()));
     }
 
     let mut chars = trimmed_input.chars().skip(1).peekable();
@@ -127,9 +151,7 @@ fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
     // No whitespace allowed between @tag and [parameters]
     if remaining_after_tag.starts_with("[") {
         let param_end = remaining_after_tag.find("]").ok_or(
-            "Missing closing ']'
- for parameters"
-                .to_string(),
+            Error::MissingClosingBracket,
         )?;
         let param_str = &remaining_after_tag[1..param_end];
         parameters = parse_parameters(param_str)?;
@@ -148,7 +170,7 @@ fn parse_tagged_line(input: &str) -> Result<LineKind, String> {
     })
 }
 
-fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
+fn parse_parameters(input: &str) -> Result<HashMap<String, String>, Error> {
     let mut params = HashMap::new();
     if input.is_empty() {
         return Ok(params);
@@ -161,7 +183,7 @@ fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
         }
         let parts: Vec<&str> = trimmed_pair.splitn(2, '=').collect();
         if parts.len() != 2 {
-            return Err(format!("Invalid parameter format: {}", trimmed_pair));
+            return Err(Error::InvalidParameterFormat(trimmed_pair.to_string()));
         }
         let key = parts[0].trim().to_string();
         let value = parts[1].trim().to_string();
@@ -173,14 +195,14 @@ fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
             .map_or(false, |c| c.is_alphabetic() || c == '_')
             || !key.chars().all(|c| c.is_alphanumeric() || c == '_')
         {
-            return Err(format!("Invalid parameter key format: {}", key));
+            return Err(Error::InvalidParameterKeyFormat(key));
         }
 
         // Validate value format: [a-zA-Z0-9_+\-./]* (single token, no spaces)
         if !value.chars().all(|c| {
             c.is_alphanumeric() || c == '_' || c == '+' || c == '-' || c == '.' || c == '/'
         }) {
-            return Err(format!("Invalid parameter value format: {}", value));
+            return Err(Error::InvalidParameterValueFormat(value));
         }
 
         params.insert(key, value);
@@ -188,7 +210,7 @@ fn parse_parameters(input: &str) -> Result<HashMap<String, String>, String> {
     Ok(params)
 }
 
-fn parse_arguments(input: &str) -> Result<Vec<String>, String> {
+fn parse_arguments(input: &str) -> Result<Vec<String>, Error> {
     let mut args = Vec::new();
     let mut in_quote = false;
     let mut current_arg = String::new();
@@ -234,7 +256,7 @@ fn parse_arguments(input: &str) -> Result<Vec<String>, String> {
     }
 
     if in_quote {
-        return Err("Unclosed quote in arguments".to_string());
+        return Err(Error::UnclosedQuoteInArguments);
     }
 
     Ok(args)

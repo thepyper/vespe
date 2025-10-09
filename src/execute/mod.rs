@@ -8,6 +8,7 @@ use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
 use crate::git::Commit;
+use anyhow::anyhow;
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -191,6 +192,7 @@ impl ExecuteWorker {
     ) -> anyhow::Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
+        let anchor_index = AnchorIndex::new(&context.lines);
         let mut latest_anchor = None;
 
         for (i, line) in context.lines.iter().enumerate() {
@@ -198,8 +200,10 @@ impl ExecuteWorker {
                 Line::RepeatTag => {
                     if let Some(j) = latest_anchor {
                         // Repeat inside some anchor, manage it
-                        patches.insert((i, i+1), vec![]);
-                        let anchor_begin_line = context.lines.get(j).unwrap(); // TODO gestione errore
+                        let anchor_begin_line: &Line = context.lines.get(j).unwrap(); // TODO gestione errore
+                        let uuid = &anchor_begin_line.get_uid();
+                        let k = anchor_index.get_end(uuid).ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
+                        inject_lines(&mut patches, j + 1, k, vec![]);
                         match anchor_begin_line {
                             Line::InlineBeginAnchor { uuid } => {
                                 let state = project.load_inline_state(uuid)?;

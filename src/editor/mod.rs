@@ -1,8 +1,36 @@
 //! This module defines the interface for communicating with a text editor extension.
 
-use anyhow::Result;
 use std::path::Path;
 use uuid::Uuid;
+use thiserror::Error;
+
+use crate::error::Result;
+
+#[derive(Error, Debug)]
+pub enum EditorError {
+    #[error("Failed to request file modification: {0}")]
+    FileModificationRequestFailed(String),
+    #[error("Failed to notify file modified: {0}")]
+    FileModifiedNotificationFailed(String),
+    #[error("Failed to create directory: {0}")]
+    CreateDirFailed(#[from] std::io::Error),
+    #[error("Failed to serialize JSON: {0}")]
+    SerializeJsonFailed(#[from] serde_json::Error),
+    #[error("Invalid file path: {0}")]
+    InvalidFilePath(String),
+    #[error("Failed to write file: {0}")]
+    WriteFileFailed(#[from] std::io::Error),
+    #[error("Failed to read file: {0}")]
+    ReadFileFailed(#[from] std::io::Error),
+    #[error("Failed to deserialize JSON: {0}")]
+    DeserializeJsonFailed(#[from] serde_json::Error),
+    #[error("Timeout waiting for editor response")]
+    Timeout,
+    #[error("Editor error: {0}")]
+    EditorResponseError(String),
+    #[error("Unexpected editor response")]
+    UnexpectedEditorResponse,
+}
 
 /// Trait for communicating with a text editor extension.
 pub trait EditorCommunicator {

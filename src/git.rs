@@ -9,10 +9,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
 
     // Ottieni l'index (staging area)
     let mut index = repo.index()?;
-
-    // Svuota lo stage per sicurezza
-    index.clear()?;
-
+    
     // Aggiungi solo i file specificati
     for path in files_to_commit {
         let relative_path = path.strip_prefix(workdir).with_context(|| {
@@ -37,7 +34,7 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
         .and_then(|oid| repo.find_commit(oid).ok());
 
     // Crea la firma (autore + committer)
-    let sig = Signature::now(comment, "example@example.com")?;
+    let sig = Signature::now(comment, "vespe")?;
 
     // Crea il commit
     let commit_id = match parent_commit {

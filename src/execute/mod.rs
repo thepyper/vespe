@@ -14,18 +14,33 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 use tracing::debug;
 
+use crate::project::Error as ProjectError;
+use crate::semantic::SemanticError;
+use crate::semantic::context::Error as SemanticContextError;
+use crate::agent::Error as AgentError;
+
 #[derive(Error, Debug)]
-pub enum ExecuteError {
+pub enum Error {
     #[error("End anchor not found for UUID: {0}")]
     MissingEndAnchor(uuid::Uuid),
+    #[error("Project error: {0}")]
+    ProjectError(#[from] ProjectError),
+    #[error("Semantic error: {0}")]
+    SemanticError(#[from] SemanticError),
+    #[error("Semantic context error: {0}")]
+    SemanticContextError(#[from] SemanticContextError),
+    #[error("Agent error: {0}")]
+    AgentError(#[from] AgentError),
 }
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn execute(
     project: &Project,
     context_name: &str,
     agent: &ShellAgentCall,
     commit: &mut Commit,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     debug!("Executing context: {}", context_name);
 
     let mut visited_contexts = HashSet::new();
@@ -61,7 +76,7 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         initial_visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         for i in 1..100 {
             debug!(
                 "Starting execute_step {} loop for context: {}",
@@ -82,7 +97,7 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         if !visited_contexts.insert(context_name.to_string()) {
             debug!(
                 "Context '{}' already visited. Skipping further execution.",
@@ -123,7 +138,7 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
       
@@ -189,7 +204,7 @@ impl ExecuteWorker {
         project: &Project,
         context: &mut Context,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
         let anchor_index = AnchorIndex::new(&context.lines);
@@ -267,7 +282,7 @@ impl ExecuteWorker {
         project: &Project,
         context: &mut Context,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         let mut modified = false;
         let mut patches = Patches::new();
         let anchor_index = AnchorIndex::new(&context.lines);
@@ -363,7 +378,7 @@ impl ExecuteWorker {
         agent: &ShellAgentCall,
         visited_contexts: &mut HashSet<String>,
         commit: &mut Commit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool> {
         let mut need_next_step = false;
         for line in &context.lines {
             match line {
@@ -429,7 +444,7 @@ fn inject_lines(
     start_index: usize,
     end_index: usize,
     lines: Vec<Line>,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     patches.insert((start_index, end_index), lines);
     Ok(())
 }
@@ -439,7 +454,7 @@ fn inject_content(
     start_index: usize,
     end_index: usize,
     content: &str,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let lines = content.lines().map(|s| Line::Text(s.to_string())).collect();
     inject_lines(patches, start_index, end_index, lines)
 }

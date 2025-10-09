@@ -1,10 +1,11 @@
-use git2::{IndexAddOption, Repository, Signature};
+use git2::{Repository, Signature};
 use std::path::PathBuf;
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
     // Apri il repository corrente
-    let repo = Repository::open(".")?;
+    let repo = Repository::open(".").context("Failed to open repository")?;
+    let workdir = repo.workdir().context("Repository has no workdir")?;
 
     // Ottieni l'index (staging area)
     let mut index = repo.index()?;
@@ -14,7 +15,14 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> 
 
     // Aggiungi solo i file specificati
     for path in files_to_commit {
-        index.add_path(path)?;
+        let relative_path = path.strip_prefix(workdir).with_context(|| {
+            format!(
+                "File {} is outside the repository workdir at {}",
+                path.display(),
+                workdir.display()
+            )
+        })?;
+        index.add_path(relative_path)?;
     }
 
     // Scrivi l'index su disco e ottieni l'albero

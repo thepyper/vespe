@@ -30,7 +30,7 @@ pub fn execute(
     let mut visited_contexts = HashSet::new();
     
     let mut worker = ExecuteWorker::new();
-    worker.execute_loop(project, context_name, agent, &mut visited_contexts, &mut commit)?;
+    worker.execute_loop(project, context_name, agent, &mut visited_contexts, commit)?;
 
     debug!("Context execution finished for: {}", context_name);
     Ok(())
@@ -170,7 +170,7 @@ impl ExecuteWorker {
                 }
                 Line::IncludeTag { context_name } => {
                     let included_modified =
-                        self.execute_step(project, &context_name, agent, visited_contexts)?;
+                        self.execute_step(project, &context_name, agent, visited_contexts, commit)?;
                     if included_modified {
                         // Exit processing, included could add any kind of content that need re-execution
                         break;
@@ -217,7 +217,7 @@ impl ExecuteWorker {
                             inject_content(&mut patches, i + 1, j, &state.reply)?;
                             let mut new_state = state.clone();
                             new_state.status = AnswerStatus::Completed;
-                            project.save_answer_state(uuid, &new_state)?;
+                            project.save_answer_state(uuid, &new_state, commit)?;
                             modified = true;
                         }
                         AnswerStatus::Completed => {
@@ -238,7 +238,7 @@ impl ExecuteWorker {
                             inject_content(&mut patches, i + 1, j, &state.summary)?;
                             let mut new_state = state.clone();
                             new_state.status = SummaryStatus::Completed;
-                            project.save_summary_state(uuid, &new_state)?;
+                            project.save_summary_state(uuid, &new_state, commit)?;
                             modified = true;
                         }
                         SummaryStatus::Completed => {
@@ -279,7 +279,7 @@ impl ExecuteWorker {
                             let mut new_state = state.clone();
                             new_state.reply = agent.call(&state.query)?;
                             new_state.status = AnswerStatus::NeedInjection;
-                            project.save_answer_state(uuid, &new_state)?;
+                            project.save_answer_state(uuid, &new_state, commit)?;
                             need_next_step = true;
                         }
                         _ => { /* Do nothing */ }
@@ -295,6 +295,7 @@ impl ExecuteWorker {
                                 &state.context_name,
                                 agent,
                                 visited_contexts,
+                                commit,
                             )?;
                             let context = Context::load(project, &state.context_name)?;
                             let mut new_state = state.clone();
@@ -315,7 +316,7 @@ impl ExecuteWorker {
                                 new_state.context
                             ))?;
                             new_state.status = SummaryStatus::NeedInjection;
-                            project.save_summary_state(uuid, &new_state)?;
+                            project.save_summary_state(uuid, &new_state, commit)?;
                             need_next_step = true;
                         }
                         _ => { /* Do nothing */ }

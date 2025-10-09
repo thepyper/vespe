@@ -353,7 +353,7 @@ impl Project {
     }
 
     pub fn save_inline_state(&self, uid: &Uuid, state: &InlineState, commit: &mut Commit) -> Result<()> {
-        self.save_state_to_metadata(AnchorKind::Inline, uid, state)
+        self.save_state_to_metadata(AnchorKind::Inline, uid, state, commit)
             .map_err(|e| anyhow::Error::new(e))
     }
 
@@ -363,7 +363,7 @@ impl Project {
     }
 
     pub fn save_summary_state(&self, uid: &Uuid, state: &SummaryState, commit: &mut Commit) -> Result<()> {
-        self.save_state_to_metadata(AnchorKind::Summary, uid, state)
+        self.save_state_to_metadata(AnchorKind::Summary, uid, state, commit)
             .map_err(|e| anyhow::Error::new(e))
     }
 
@@ -373,7 +373,7 @@ impl Project {
     }
 
     pub fn save_answer_state(&self, uid: &Uuid, state: &AnswerState, commit: &mut Commit) -> Result<()> {
-        self.save_state_to_metadata(AnchorKind::Answer, uid, state)
+        self.save_state_to_metadata(AnchorKind::Answer, uid, state, commit)
             .map_err(|e| anyhow::Error::new(e))
     }
 
@@ -398,7 +398,7 @@ impl Project {
         agent: &ShellAgentCall,
     ) -> Result<()> {
         let mut commit = Commit::new();
-        execute::execute(self, context_name, agent, commit)?;
+        execute::execute(self, context_name, agent, &mut commit)?;
         if self.project_config.git_integration_enabled {
             commit.commit(&format!("feat: Executed context '{}'", context_name))?;           
         }

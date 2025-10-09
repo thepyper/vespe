@@ -87,6 +87,7 @@ pub enum TagKind {
     Inline,
     Answer,
     Summary,
+    Repeat,
     // Add other well-defined tag kinds here
 }
 
@@ -99,6 +100,7 @@ impl std::str::FromStr for TagKind {
             "inline" => Ok(TagKind::Inline),
             "answer" => Ok(TagKind::Answer),
             "summary" => Ok(TagKind::Summary),
+            "repeat" => Ok(TagKind::Repeat),
             _ => Err(format!("Unknown TagKind: {}", s)),
         }
     }
@@ -111,6 +113,7 @@ impl fmt::Display for TagKind {
             TagKind::Inline => write!(f, "inline"),
             TagKind::Answer => write!(f, "answer"),
             TagKind::Summary => write!(f, "summary"),
+            TagKind::Repeat => write!(f, "repeat"),
         }
     }
 }

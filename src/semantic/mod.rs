@@ -87,6 +87,7 @@ pub enum Line {
     SummaryTag { context_name: String },
     AnswerTag,
     IncludeTag { context_name: String },
+    RepeatTag,
     InlineBeginAnchor { uuid: Uuid },
     InlineEndAnchor { uuid: Uuid },
     SummaryBeginAnchor { uuid: Uuid },
@@ -128,6 +129,14 @@ impl std::fmt::Display for Line {
                     tag: TagKind::Include,
                     parameters: HashMap::new(),
                     arguments: vec![context_name.clone()],
+                };
+                write!(f, "{}", syntax_line)
+            }
+            Line::RepeatTag => {
+                let syntax_line = SyntaxLine::Tagged {
+                    tag: TagKind::Repeat,
+                    parameters: HashMap::new(),
+                    arguments: Vec::new(),
                 };
                 write!(f, "{}", syntax_line)
             }
@@ -218,6 +227,7 @@ fn enrich_syntax_tagged_line(
                 ))?;
             Ok(Line::SummaryTag { context_name })
         }
+        TagKind::Repeat => Ok(Line::RepeatTag),
     }
 }
 

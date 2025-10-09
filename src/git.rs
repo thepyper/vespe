@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use tracing::debug;
 use std::collections::HashSet; // Added HashSet
  
-pub fn git_commit(files_to_commit: &[PathBuf], message: &str) -> Result<()> {
+pub fn git_commit_files(files_to_commit: &[PathBuf], message: &str) -> Result<()> {
     let repo = Repository::open(".")
         .context("Failed to open repository")?;
     let workdir = repo.workdir().context("Repository has no workdir")?;
@@ -129,6 +129,15 @@ pub fn git_commit(files_to_commit: &[PathBuf], message: &str) -> Result<()> {
 
     debug!("Commit created with id {}", new_commit_oid);
 
-    Ok(())
+
+pub struct Commit {
+    pub files: Vec<PathBuf>,
+    pub message: String,
+}
+
+impl Commit {
+    pub fn commit(&self) -> Result<()> {
+        git_commit_files(&self.files, &self.message)
+    }
 }
 

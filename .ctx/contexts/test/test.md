@@ -1,9 +1,9 @@
 
 
-ciao!
+ciao! abbaia forte!!
 
 <!-- answer-e9a7e0ae-e703-4da2-96e0-3a9963ecf4f8:begin -->
-Ciao! Come posso aiutarti oggi?
+Hello! How can I help you today?
 <!-- answer-e9a7e0ae-e703-4da2-96e0-3a9963ecf4f8:end -->
 
 baubau!

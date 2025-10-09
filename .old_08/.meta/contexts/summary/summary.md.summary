@@ -1,4 +1,0 @@
-{
-  "original_hash": "73d073e34f41a14494e044b79c123cbf10838c3635e9ff397b259cd4426fe08c",
-  "summary_content": "The `ctx` binary in the `vespe` project now includes a `@summary` tag feature. This feature composes included content, summarizes it using an LLM via a shell command, and memoizes the results in `.summary` files with content hashes for change detection. The implementation involved modifying `Cargo.toml` for `sha2`, `handlebars`, and `serde_json`, updating `context.rs` to parse `@summary` tags, and refactoring `project.rs` to handle summarization, caching, and LLM interaction through a dedicated `AgentCall` trait. The LLM placeholder has been replaced with a functional `AgentCall` mechanism.\n"
-}

@@ -1,4 +1,0 @@
-Finire refactoring con nuovo oggetto Project
-
-Spostare logica ricerca root in Project (builder pattern o costruttore new)
-

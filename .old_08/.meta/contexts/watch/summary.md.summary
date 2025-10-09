@@ -1,4 +1,0 @@
-{
-  "original_hash": "ac88976c7a671bc6a627333d9175119ce46da87ba1119d7050da1cf95d531f78",
-  "summary_content": "The project is an LLM context composer focusing on fine-grained control, versioning, and dependency management. The current task is to implement a `ctx watch` command. This command will monitor the `.ctx/contexts` directory for changes to `.md` files, executing them via `execute_context`. It will also detect new contexts every second using `list_context`. The `watch` process should run continuously until Ctrl-C, and exit immediately if any `execute_context` call fails. The user's rules emphasize using git with fine-grained commits, waiting for approval, and providing critical feedback.\n"
-}

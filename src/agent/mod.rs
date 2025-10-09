@@ -2,8 +2,21 @@ use anyhow::Context;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tracing::{debug, error};
+use thiserror::Error;
 
 use crate::project::Project;
+
+#[derive(Error, Debug)]
+pub enum AgentError {
+    #[error("Command template cannot be empty")]
+    CommandTemplateEmpty,
+    #[error("Failed to spawn command: '{0}'. Is it in your PATH? {1}")]
+    CommandSpawnFailed(String, #[source] std::io::Error),
+    #[error("Failed to write to stdin: {0}")]
+    StdinWriteFailed(#[from] std::io::Error),
+    #[error("Command '{0}' failed: {1}")]
+    CommandFailed(String, String),
+}
 
 pub struct ShellAgentCall<'a> {
     command_template: String,
@@ -11,19 +24,19 @@ pub struct ShellAgentCall<'a> {
 }
 
 impl<'a> ShellAgentCall<'a> {
-    pub fn new(command: String, project: &'a Project) -> anyhow::Result<Self> {
+    pub fn new(command: String, project: &'a Project) -> Result<Self, AgentError> {
         Ok(Self {
             command_template: command,
             _project: project,
         })
     }
 
-    pub fn call(&self, query: &str) -> anyhow::Result<String> {
+    pub fn call(&self, query: &str) -> Result<String, AgentError> {
         //debug!("ShellAgentCall received query: {}", query);
         let mut command_parts = self.command_template.split_whitespace();
         let program = command_parts
             .next()
-            .context("Command template cannot be empty")?;
+            .ok_or(AgentError::CommandTemplateEmpty)?;
         let args: Vec<&str> = command_parts.collect();
 
         let mut command = {
@@ -40,17 +53,12 @@ impl<'a> ShellAgentCall<'a> {
         };
 
         debug!("Executing command: {:?} with args: {:?}", program, args);
-        command
+        let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-
-        let mut child = command.spawn().with_context(|| {
-            format!(
-                "Failed to spawn command: '{}'. Is it in your PATH?",
-                self.command_template
-            )
-        })?;
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| AgentError::CommandSpawnFailed(self.command_template.clone(), e))?;
 
         debug!("Writing query to stdin.");
         child.stdin.as_mut().unwrap().write_all(query.as_bytes())?;
@@ -63,11 +71,10 @@ impl<'a> ShellAgentCall<'a> {
                 self.command_template,
                 String::from_utf8_lossy(&output.stderr)
             );
-            anyhow::bail!(
-                "Command '{}' failed: {:?}",
-                self.command_template,
-                String::from_utf8_lossy(&output.stderr)
-            );
+            return Err(AgentError::CommandFailed(
+                self.command_template.clone(),
+                String::from_utf8_lossy(&output.stderr).to_string(),
+            ));
         }
 
         debug!(

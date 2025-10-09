@@ -25,8 +25,8 @@ pub enum SemanticError {
     IoError(#[from] std::io::Error),
     #[error("JSON serialization/deserialization error: {0}")]
     JsonError(#[from] serde_json::Error),
-    #[error(transparent)]
-    AnyhowError(#[from] anyhow::Error),
+    #[error("Syntax error: {0}")]
+    SyntaxError(#[from] crate::syntax::SyntaxError),
     #[error("Invalid anchor format: {0}")]
     InvalidAnchorFormat(String),
 }
@@ -277,7 +277,7 @@ pub fn parse_document(
     content: &str,
 ) -> std::result::Result<Vec<Line>, SemanticError> {
     let syntax_lines = crate::syntax::parser::parse_document(content)
-        .map_err(|e| SemanticError::Generic(e.to_string()))?;
+        .map_err(SemanticError::from)?;
     enrich_syntax_document(project, &syntax_lines)
 }
 

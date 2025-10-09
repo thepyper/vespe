@@ -1,6 +1,6 @@
 use crate::project::Project;
-use crate::semantic::Line;
-use anyhow::Result;
+use crate::semantic::{Line, SemanticError};
+use crate::error::Result;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -18,7 +18,7 @@ pub type Patches = BTreeMap<(usize, usize), Vec<Line>>; // (start, end) -> repla
 impl Context {
     pub fn load(project: &Project, name: &str) -> Result<Self> {
         let path = project.resolve_context(name);
-        let content = std::fs::read_to_string(&path)?;
+        let content = std::fs::read_to_string(&path).map_err(SemanticError::IoError)?;
         let lines = crate::semantic::parse_document(project, &content)?;
         Ok(Context {
             name: name.into(),
@@ -52,7 +52,7 @@ impl Context {
             return Ok(());
         }
         let formatted = crate::semantic::format_document(&self.lines);
-        std::fs::write(&self.path, formatted)?;
+        std::fs::write(&self.path, formatted).map_err(SemanticError::IoError)?;
         Ok(())
     }
 }

@@ -1,14 +1,14 @@
 use std::path::PathBuf;
 use anyhow::Result;
-use gix::bstr::BString;
+use gix::bstr::{BString, ByteSlice};
 
 fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Result<()> {
     // Apri il repository nella directory corrente
     let repo = gix::open(".")?;
     
     // Ottieni l'index modificabile attraverso il worktree
-    let mut worktree = repo.worktree()?;
-    let index = worktree.index()?;
+    let mut worktree = repo.worktree().ok_or_else(|| anyhow::anyhow!("Could not open worktree"))?;
+    let mut index = worktree.index_mut()?;
     
     // 1) Ottieni i files attualmente in staging
     let mut files_in_staging = Vec::new();
@@ -22,20 +22,19 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
     
     // 2) Crea una nuova versione dell'index con le modifiche necessarie
     let odb = repo.objects.clone();
-    let mut index = worktree.index()?.clone();
     
     // Aggiungi i files_to_commit allo staging (se non già presenti)
     for file in files_to_commit {
         if !files_in_staging.contains(file) {
             // Usa gix_worktree per aggiungere il file
-            let abs_path = repo.work_dir().unwrap().join(file);
+            let abs_path = repo.workdir().ok_or_else(|| anyhow::anyhow!("No workdir"))?.join(file);
             if abs_path.exists() {
                 let entry = gix::index::entry::Entry::from_path(
                     &abs_path,
                     file,
                     &odb,
                 )?;
-                index.add(entry);
+                index.add_entry(entry)?;
             }
         }
     }
@@ -48,8 +47,8 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
             
             // Rimuovi dall'index
             let path_bstr = BString::from(staged_file.to_string_lossy().as_bytes());
-            if let Some(idx) = index.entry_index_by_path(&path_bstr) {
-                index.remove_entry(idx);
+            if let Ok(idx) = index.entry_index_by_path(path_bstr.as_bstr()) {
+                index.remove_entry_at_index(idx);
             }
         }
     }
@@ -60,7 +59,7 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
     index.write_to(&mut file, gix::index::write::Options::default())?;
     
     // 4) Crea il tree dall'index
-    let tree_id = index.write_tree_to(&odb)?;
+    let tree_id = index.write_tree()?;
     
     // Costruisci il messaggio di commit completo
     let full_message = if comment.is_empty() {
@@ -68,15 +67,6 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
     } else {
         format!("{}\n\n{}", message, comment)
     };
-    
-    // Ottieni la signature
-    let signature = repo.committer().unwrap_or_else(|| {
-        gix::actor::Signature {
-            name: "Default User".into(),
-            email: "user@example.com".into(),
-            time: gix::date::Time::now_local_or_utc(),
-        }
-    });
     
     // Ottieni il commit HEAD corrente
     let head = repo.head_commit()?;
@@ -90,29 +80,21 @@ fn git_commit(files_to_commit: &[PathBuf], message: &str, comment: &str) -> Resu
         tree_id,
         [parent_id],
     )?;
-    
+
     // 5) Ri-aggiungi i files rimossi
-    let mut index = gix::index::File::at(
-        index_path.clone(),
-        repo.object_hash(),
-        false,
-        gix::index::decode::Options::default()
-    )?;
-    
     for file in removed_files {
-        let abs_path = repo.work_dir().unwrap().join(&file);
+        let abs_path = repo.workdir().ok_or_else(|| anyhow::anyhow!("No workdir"))?.join(&file);
         if abs_path.exists() {
             let entry = gix::index::entry::Entry::from_path(
                 &abs_path,
-                &file,
+                file,
                 &odb,
             )?;
-            index.add(entry);
+            index.add_entry(entry)?;
         }
     }
     
-    let mut file = std::fs::File::create(&index_path)?;
-    index.write_to(&mut file, gix::index::write::Options::default())?;
+    index.write(gix::index::write::Options::default())?;
     
     Ok(())
 }

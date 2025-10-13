@@ -50,12 +50,19 @@ impl Line {
             Line::AnswerEndAnchor { uuid },
         ]
     }
+    pub fn new_derive_anchors(uuid: Uuid) -> Vec<Self> {
+        vec![
+            Line::DeriveBeginAnchor { uuid: uuid.clone() },
+            Line::DeriveEndAnchor { uuid },
+        ]
+    }
     pub fn is_begin_anchor(&self) -> bool {
         matches!(
             self,
             Line::InlineBeginAnchor { .. }
                 | Line::SummaryBeginAnchor { .. }
                 | Line::AnswerBeginAnchor { .. }
+                | Line::DeriveBeginAnchor { .. }
         )
     }
     pub fn is_end_anchor(&self) -> bool {
@@ -64,6 +71,7 @@ impl Line {
             Line::InlineEndAnchor { .. }
                 | Line::SummaryEndAnchor { .. }
                 | Line::AnswerEndAnchor { .. }
+                | Line::DeriveEndAnchor { .. }
         )
     }
 
@@ -75,6 +83,8 @@ impl Line {
             Line::SummaryEndAnchor { uuid } => *uuid,
             Line::AnswerBeginAnchor { uuid } => *uuid,
             Line::AnswerEndAnchor { uuid } => *uuid,
+            Line::DeriveBeginAnchor { uuid } => *uuid,
+            Line::DeriveEndAnchor { uuid } => *uuid,
             _ => panic!("get_uid called on a non-anchor line"),
         }
     }

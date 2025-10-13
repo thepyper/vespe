@@ -1,6 +1,6 @@
 use crate::agent::ShellAgentCall;
 use crate::execute;
-use crate::execute::states::{AnswerState, InlineState, SummaryState};
+use crate::execute::states::{AnswerState, InlineState, SummaryState, DeriveState};
 use crate::git::Commit;
 use crate::semantic::Line;
 use crate::semantic::SemanticError;
@@ -400,6 +400,23 @@ impl Project {
         self.load_state_from_metadata(&AnchorKind::Answer, uid)
             .map_err(|e| anyhow::Error::new(e))
     }
+    
+
+    pub fn save_derive_state(
+        &self,
+        uid: &Uuid,
+        state: &DeriveState,
+        commit: &mut Commit,
+    ) -> Result<()> {
+        self.save_state_to_metadata(AnchorKind::Derive, uid, state, commit)
+            .map_err(|e| anyhow::Error::new(e))
+    }
+
+    pub fn load_derive_state(&self, uid: &Uuid) -> Result<DeriveState> {
+        self.load_state_from_metadata(&AnchorKind::Derive, uid)
+            .map_err(|e| anyhow::Error::new(e))
+    }
+    
 
     pub fn request_file_modification(&self, file_path: &PathBuf) -> Result<Uuid> {
         self.editor_communicator

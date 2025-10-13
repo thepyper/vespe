@@ -88,12 +88,15 @@ pub enum Line {
     AnswerTag,
     IncludeTag { context_name: String },
     RepeatTag,
+    DeriveTag { snippet_name: String, context_name: String },
     InlineBeginAnchor { uuid: Uuid },
     InlineEndAnchor { uuid: Uuid },
     SummaryBeginAnchor { uuid: Uuid },
     SummaryEndAnchor { uuid: Uuid },
     AnswerBeginAnchor { uuid: Uuid },
     AnswerEndAnchor { uuid: Uuid },
+    DeriveBeginAnchor { uuid: Uuid },
+    DeriveEndAnchor { uuid: Uuid },
 }
 
 impl std::fmt::Display for Line {
@@ -138,6 +141,10 @@ impl std::fmt::Display for Line {
                     parameters: HashMap::new(),
                     arguments: Vec::new(),
                 };
+                write!(f, "{}", syntax_line)
+            }
+            Line::DeriveTag { snippet_name, context_name } => {
+                let syntax_line = SyntaxLine::Tagged { tag: TagKind::Derive, parameters: HashMap::new(), arguments: vec![snippet_name.clone(), context_name.clone()] };
                 write!(f, "{}", syntax_line)
             }
             Line::InlineBeginAnchor { uuid } => {
@@ -188,6 +195,22 @@ impl std::fmt::Display for Line {
                 };
                 write!(f, "{}", SyntaxLine::Anchor(anchor))
             }
+            Line::DeriveBeginAnchor { uuid } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Derive,
+                    uid: *uuid,
+                    tag: AnchorTag::Begin,
+                };
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
+            }
+            Line::DeriveEndAnchor { uuid } => {
+                let anchor = Anchor {
+                    kind: AnchorKind::Derive,
+                    uid: *uuid,
+                    tag: AnchorTag::End,
+                };
+                write!(f, "{}", SyntaxLine::Anchor(anchor))
+            }
         }
     }
 }
@@ -228,6 +251,21 @@ fn enrich_syntax_tagged_line(
             Ok(Line::SummaryTag { context_name })
         }
         TagKind::Repeat => Ok(Line::RepeatTag),
+        TagKind::Derive => {
+            let snippet_name = arguments
+                .get(0)
+                .cloned()
+                .ok_or(SemanticError::MissingArgument(
+                    "Snippet not specified in @derive tag.".to_string(),
+                ))?;
+            let context_name = arguments
+                .get(1)
+                .cloned()
+                .ok_or(SemanticError::MissingArgument(
+                    "Context not specified in @derive tag.".to_string(),
+                ))?;
+            Ok(Line::DeriveTag { snippet_name, context_name })            
+        }
     }
 }
 
@@ -244,6 +282,8 @@ fn enrich_syntax_anchor_line(
         (AnchorKind::Summary, AnchorTag::End) => Ok(Line::SummaryEndAnchor { uuid: anchor.uid }),
         (AnchorKind::Answer, AnchorTag::Begin) => Ok(Line::AnswerBeginAnchor { uuid: anchor.uid }),
         (AnchorKind::Answer, AnchorTag::End) => Ok(Line::AnswerEndAnchor { uuid: anchor.uid }),
+        (AnchorKind::Derive, AnchorTag::Begin) => Ok(Line::DeriveBeginAnchor { uuid: anchor.uid }),
+        (AnchorKind::Derive, AnchorTag::End) => Ok(Line::DeriveEndAnchor { uuid: anchor.uid }),
         _ => Err(SemanticError::InvalidAnchorFormat(anchor.to_string())),
     }
 }

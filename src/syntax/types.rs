@@ -7,6 +7,7 @@ pub enum AnchorKind {
     Inline,
     Answer,
     Summary,
+    Derive,
     // Add other well-defined anchor kinds here
 }
 
@@ -18,6 +19,7 @@ impl std::str::FromStr for AnchorKind {
             "inline" => Ok(AnchorKind::Inline),
             "answer" => Ok(AnchorKind::Answer),
             "summary" => Ok(AnchorKind::Summary),
+            "derive" => Ok(AnchorKind::Derive),
             _ => Err(format!("Unknown AnchorKind: {}", s)),
         }
     }
@@ -29,6 +31,7 @@ impl fmt::Display for AnchorKind {
             AnchorKind::Inline => write!(f, "inline"),
             AnchorKind::Answer => write!(f, "answer"),
             AnchorKind::Summary => write!(f, "summary"),
+            AnchorKind::Derive => write!(f, "derive"),
         }
     }
 }
@@ -88,6 +91,7 @@ pub enum TagKind {
     Answer,
     Summary,
     Repeat,
+    Derive,
     // Add other well-defined tag kinds here
 }
 
@@ -101,6 +105,7 @@ impl std::str::FromStr for TagKind {
             "answer" => Ok(TagKind::Answer),
             "summary" => Ok(TagKind::Summary),
             "repeat" => Ok(TagKind::Repeat),
+            "derive" => Ok(TagKind::Derive),
             _ => Err(format!("Unknown TagKind: {}", s)),
         }
     }
@@ -114,6 +119,7 @@ impl fmt::Display for TagKind {
             TagKind::Answer => write!(f, "answer"),
             TagKind::Summary => write!(f, "summary"),
             TagKind::Repeat => write!(f, "repeat"),
+            TagKind::Derive => write!(f, "derive"),
         }
     }
 }

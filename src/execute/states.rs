@@ -73,3 +73,33 @@ impl AnswerState {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum DeriveStatus {
+    NeedContext,
+    NeedInjection,
+    Completed,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DeriveState {
+    pub status: DeriveStatus,
+    pub snippet_name: String,
+    pub snippet: String,
+    pub context_name: String,
+    pub context: String,
+    pub derived: String,
+}
+
+impl DeriveState {
+    pub fn new(snippet_name: &str, context_name: &str) -> Self {
+        DeriveState {
+            status: DeriveStatus::NeedContext,
+            snippet_name: snippet_name.into(),
+            snippet: String::new(),
+            context_name: context_name.into(),
+            context: String::new(),
+            derived: String::new(),
+        }
+    }
+}

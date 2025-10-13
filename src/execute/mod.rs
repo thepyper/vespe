@@ -5,9 +5,10 @@ use std::collections::HashSet;
 use crate::agent::ShellAgentCall;
 use crate::execute::states::{
     AnswerState, AnswerStatus, InlineState, InlineStatus, SummaryState, SummaryStatus,
+    DeriveState, DeriveStatus
 };
 use crate::git::Commit;
-use crate::project::Project;
+use crate::project::{Project, Snippet};
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
 use anyhow::anyhow;
@@ -169,6 +170,18 @@ impl ExecuteWorker {
                     // Exit processing, summary could add content needed for further actions
                     break;
                 }
+                Line::DeriveTag { snippet_name, context_name } => {
+                    let uid = uuid::Uuid::new_v4();
+                    let anchors = semantic::Line::new_derive_anchors(uid);
+                    patches.insert(
+                        (i, i + 1), // Replace the current line (the tag line) with the anchor
+                        anchors,
+                    );
+                    let state = DeriveState::new(&snippet_name, &context_name);
+                    project.save_derive_state(&uid, &state, commit)?;
+                    // Exit processing, derive could add content needed for further actions
+                    break;
+                }
                 Line::IncludeTag { context_name } => {
                     let included_modified =
                         self.execute_step(project, &context_name, agent, visited_contexts, commit)?;
@@ -247,6 +260,18 @@ impl ExecuteWorker {
                                     _ => { /* Do nothing */ }
                                 }
                             }
+                             Line::DeriveBeginAnchor { uuid } => {
+                                let state = project.load_derive_state(uuid)?;
+                                match state.status {
+                                    DeriveStatus::Completed => {
+                                        let mut new_state = state.clone();
+                                        new_state.status = DeriveStatus::NeedContext;
+                                        project.save_derive_state(uuid, &new_state, commit)?;
+                                        modified = true;
+                                    }
+                                    _ => { /* Do nothing */ }
+                                }
+                            }
                             _ => { /* Do nothing */ }
                         }
                     } else {
@@ -256,7 +281,8 @@ impl ExecuteWorker {
                 }
                 Line::AnswerBeginAnchor { .. }
                 | Line::InlineBeginAnchor { .. }
-                | Line::SummaryBeginAnchor { .. } => {
+                | Line::SummaryBeginAnchor { .. }
+                | Line::DeriveBeginAnchor { .. } => { // TODO anchors annidate non funzionano bene cosi!!!
                     latest_anchor = Some(i);
                 }
                 _ => { /* Do nothing */ }
@@ -350,6 +376,27 @@ impl ExecuteWorker {
                         }
                     }
                 }
+                Line::DeriveBeginAnchor { uuid } => {
+                    let state = project.load_derive_state(uuid)?;
+                    let j = anchor_index
+                        .get_end(uuid)
+                        .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
+                    match state.status {
+                        DeriveStatus::NeedContext => {
+                            // Do nothing, wait for context to be provided
+                        }
+                        DeriveStatus::NeedInjection => {
+                            inject_content(&mut patches, i + 1, j, &state.derived)?;
+                            let mut new_state = state.clone();
+                            new_state.status = DeriveStatus::Completed;
+                            project.save_derive_state(uuid, &new_state, commit)?;
+                            modified = true;
+                        }
+                        DeriveStatus::Completed => {
+                            // Do nothing, already completed
+                        }
+                    }
+                }
                 Line::Text(x) => {
                     self.add_line(x);
                 }
@@ -423,6 +470,58 @@ impl ExecuteWorker {
                             need_next_step = true;
                         }
                         _ => { /* Do nothing */ }
+                    }
+                    Line::DeriveBeginAnchor { uuid } => {
+                        let state = project.load_derive_state(uuid)?;
+                        match state.status {
+                            DeriveStatus::NeedContext => {
+                                let mut derive_worker = ExecuteWorker::new();
+                                derive_worker.execute_loop(
+                                    project,
+                                    &state.context_name,
+                                    agent,
+                                    visited_contexts,
+                                    commit,
+                                )?;
+                                let snippet = project.load_snippet(&state.snippet_name)?;
+                                let snippet_text =  snippet.content
+                                    .iter()
+                                    .filter_map(|line| {
+                                        if let Line::Text(t) = line {
+                                            Some(t.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .collect::<Vec<String>>()
+                                    .join("\n");
+                                let context = Context::load(project, &state.context_name)?;
+                                let context_text = context
+                                    .lines
+                                    .iter()
+                                    .filter_map(|line| {
+                                        if let Line::Text(t) = line {
+                                            Some(t.clone())
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .collect::<Vec<String>>()
+                                    .join("\n");
+                                let mut new_state = state.clone();
+                                new_state.context = context_text;
+                                new_state.snippet = snippet_text;
+                                new_state.derived = agent.call(&format!(                               
+                                    "{}\n{}",
+                                    new_state.snippet,
+                                    new_state.context
+                                ))?;
+                                new_state.status = DeriveStatus::NeedInjection;
+                                project.save_derive_state(uuid, &new_state, commit)?;
+                                need_next_step = true;
+                            }
+                            _ => { /* Do nothing */ }
+                        }
                     }
                 }
                 _ => { /* Do nothing */ }

@@ -210,21 +210,21 @@ impl ExecuteWorker {
         let mut modified = false;
         let mut patches = Patches::new();
         let anchor_index = AnchorIndex::new(&context.lines);
+        let mut latest_anchor = None;
 
         for (i, line) in context.lines.iter().enumerate() {
             match line {
                 Line::RepeatTag => {
-                    if let Some(active_anchor_uuid) = self.get_active_anchor_uuid(&context.lines, i) {
+                    if let Some(j) = latest_anchor {
                         // Repeat inside some anchor, manage it
-                        let j = anchor_index
-                            .get_begin(&active_anchor_uuid)
-                            .ok_or_else(|| anyhow::anyhow!("Begin anchor not found for UUID: {}", active_anchor_uuid))?;
+                        let anchor_begin_line: &Line = context.lines.get(j).unwrap(); // TODO gestione errore
+                        let uuid = &anchor_begin_line.get_uid();
                         let k = anchor_index
-                            .get_end(&active_anchor_uuid)
-                            .ok_or_else(|| ExecuteError::MissingEndAnchor(active_anchor_uuid))?;
+                            .get_end(uuid)
+                            .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
                         inject_lines(&mut patches, j + 1, k, vec![]);
-                        match anchor_index.get_line(&active_anchor_uuid) {
-                            Some(Line::InlineBeginAnchor { uuid }) => {
+                        match anchor_begin_line {
+                            Line::InlineBeginAnchor { uuid } => {
                                 let state = project.load_inline_state(uuid)?;
                                 match state.status {
                                     InlineStatus::Completed => {
@@ -236,7 +236,7 @@ impl ExecuteWorker {
                                     _ => { /* Do nothing */ }
                                 }
                             }
-                            Some(Line::AnswerBeginAnchor { uuid }) => {
+                            Line::AnswerBeginAnchor { uuid } => {
                                 let state = project.load_answer_state(uuid)?;
                                 match state.status {
                                     AnswerStatus::Completed => {
@@ -248,7 +248,7 @@ impl ExecuteWorker {
                                     _ => { /* Do nothing */ }
                                 }
                             }
-                            Some(Line::SummaryBeginAnchor { uuid }) => {
+                            Line::SummaryBeginAnchor { uuid } => {
                                 let state = project.load_summary_state(uuid)?;
                                 match state.status {
                                     SummaryStatus::Completed => {
@@ -260,7 +260,7 @@ impl ExecuteWorker {
                                     _ => { /* Do nothing */ }
                                 }
                             }
-                            Some(Line::DeriveBeginAnchor { uuid }) => {
+                             Line::DeriveBeginAnchor { uuid } => {
                                 let state = project.load_derive_state(uuid)?;
                                 match state.status {
                                     DeriveStatus::Completed => {
@@ -278,6 +278,12 @@ impl ExecuteWorker {
                         // Repeat outside of any anchor, just remove it
                         patches.insert((i, i + 1), vec![]);
                     }
+                }
+                Line::AnswerBeginAnchor { .. }
+                | Line::InlineBeginAnchor { .. }
+                | Line::SummaryBeginAnchor { .. }
+                | Line::DeriveBeginAnchor { .. } => { // TODO anchors annidate non funzionano bene cosi!!!
+                    latest_anchor = Some(i);
                 }
                 _ => { /* Do nothing */ }
             }
@@ -522,36 +528,6 @@ impl ExecuteWorker {
             }
         }
         Ok(need_next_step)
-    }
-
-    fn get_active_anchor_uuid(lines: &[Line], current_line_index: usize) -> Option<uuid::Uuid> {
-        let mut open_anchors: Vec<uuid::Uuid> = Vec::new();
-
-        for (i, line) in lines.iter().enumerate() {
-            if i >= current_line_index {
-                break;
-            }
-
-            match line {
-                Line::InlineBeginAnchor { uuid }
-                | Line::AnswerBeginAnchor { uuid }
-                | Line::SummaryBeginAnchor { uuid }
-                | Line::DeriveBeginAnchor { uuid } => {
-                    open_anchors.push(*uuid);
-                }
-                Line::InlineEndAnchor { uuid }
-                | Line::AnswerEndAnchor { uuid }
-                | Line::SummaryEndAnchor { uuid }
-                | Line::DeriveEndAnchor { uuid } => {
-                    if let Some(pos) = open_anchors.iter().position(|x| x == uuid) {
-                        open_anchors.remove(pos);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        open_anchors.last().copied()
     }
 }
 

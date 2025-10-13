@@ -44,6 +44,21 @@ Come posso aiutarti oggi con un compito o una domanda specifica?
 s1
 <!-- inline-af848a55-55ce-4936-8910-ae24a2f3b6c1:end -->
 
-<!-- derive-bee1d057-d11f-411c-a2b9-d0c90af16c5d:begin -->
-<!-- derive-bee1d057-d11f-411c-a2b9-d0c90af16c5d:end -->
-
+<!-- derive-4a43bf37-868f-4d10-91ec-00ead2202c24:begin -->
+Starting vtty_test...
+PTY system initialized.
+PTY pair opened.
+CommandBuilder created for powershell.exe -Command "Write-Host 'Hello from PTY child process!'; exit;" in H:\my\github\vespe.
+Child process (powershell.exe -Command "Write-Host 'Hello from PTY child process!'; exit;") spawned.
+PTY master reader and writer obtained.
+Sleeping for 2 seconds to allow shell to start...
+Attempting to read initial output for 5s
+Read 4 bytes for initial: "\u{1b}[6n"
+Read 1 bytes for initial: " "
+Read 1 bytes for initial: " "
+Read 1 bytes for initial: " "
+Read 1 bytes for initial: " "
+Read 1 bytes for initial: " "
+Read 1 bytes for initial: " "
+Read 1 bytes for initial: " "
+<!-- derive-4a43bf37-868f-4d10-91ec-00ead2202c24:end -->

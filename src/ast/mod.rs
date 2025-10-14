@@ -260,18 +260,19 @@ impl<'a> Parser<'a> {
         loop {
             match self.consume() {
                 Some(c) if escaped => {
-                    match c {
-                        'n' => value.push('\n'),
-                        'r' => value.push('\r'),
-                        't' => value.push('\t'),
-                        '\'' => value.push('\''),
-                        '"' => value.push('"'),
-                        '\\' => value.push('\\'),
+                    let escaped_char = match c {
+                        'n' => '\n',
+                        'r' => '\r',
+                        't' => '\t',
+                        '\'' => '\'',
+                        '"' => '"',
+                        '\\' => '\\',
                         _ => return Err(ParsingError::InvalidSyntax {
                             message: format!("Invalid escape sequence: {}", c),
                             range: Range { start: start_pos, end: self.current_pos },
                         }),
-                    }
+                    };
+                    value.push(escaped_char);
                     escaped = false;
                 },
                 Some('\\') => {
@@ -357,14 +358,11 @@ impl<'a> Parser<'a> {
             match parse_node(&mut parser) {
                 Ok(Some(node)) => nodes.push(node),
                 Ok(None) => {
-                    // This should ideally not happen if skip_whitespace and is_eof are correct
-                    // but as a safeguard, advance by one char to prevent infinite loops
-                    // Use consume() to advance and get the char
-                    if let Some(_) = parser.consume() {
-                        // Optionally, you could do something with 'c' here if needed
-                    } else {
-                        // If consume() returns None, we're at EOF, so break
-                        break;
+                    if !parser.is_eof() {
+                        return Err(ParsingError::Custom {
+                            message: "Unexpected content after parsing node".to_string(),
+                            range: Range { start: parser.current_pos, end: parser.current_pos },
+                        });
                     }
                 }
                 Err(e) => return Err(e),
@@ -567,30 +565,26 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
         return Ok(None);
     }
 
-    let line_start_offset = parser.document[..start_pos.offset].rfind('\n').map_or(0, |i| i + 1);
-    let line_slice = &parser.document[line_start_offset..];
+    // Consume '@'
+    parser.consume();
 
-            let tag_regex = regex::Regex::new(r"^@((?:answer|summary|inline|derive|set|repeat|include|tag))").unwrap();
-    if let Some(captures) = tag_regex.captures(line_slice) {
-        let full_match = captures.get(0).unwrap().as_str();
-        let command_str = captures.get(1).unwrap().as_str();
-        let command = match command_str {
-            "include" => Command::Include,
-            "inline" => Command::Inline,
-            "answer" => Command::Answer,
-            "derive" => Command::Derive,
-            "summarize" => Command::Summarize,
-            "set" => Command::Set,
-            "repeat" => Command::Repeat,
-            "tag" => Command::Tag,
-            _ => return Err(ParsingError::InvalidSyntax {
-                message: format!("Unknown command: {}", command_str),
-                range: Range { start: start_pos, end: parser.current_pos },
-            }),
-        };
+    let command_start_pos = parser.current_pos;
+    let command_str = parser.take_while(|c| c.is_alphanumeric() || c == '_');
 
-        // Advance parser past the command
-        parser.advance_position_by_str(captures.get(0).unwrap().as_str());
+    let command = match command_str {
+        "include" => Command::Include,
+        "inline" => Command::Inline,
+        "answer" => Command::Answer,
+        "derive" => Command::Derive,
+        "summarize" => Command::Summarize,
+        "set" => Command::Set,
+        "repeat" => Command::Repeat,
+        "tag" => Command::Tag,
+        _ => return Err(ParsingError::InvalidSyntax {
+            message: format!("Unknown command: {}", command_str),
+            range: Range { start: command_start_pos, end: parser.current_pos },
+        }),
+    };
 
         let (parameters, _) = parse_parameters(parser)?;
         let (arguments, _) = parse_arguments(parser)?;
@@ -602,9 +596,6 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
             arguments,
             range: Range { start: start_pos, end: end_pos },
         }))
-    } else {
-        Ok(None)
-    }
 }
 
 pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError> {

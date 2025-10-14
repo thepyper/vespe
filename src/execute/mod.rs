@@ -8,7 +8,7 @@ use crate::execute::states::{
     DeriveState, DeriveStatus
 };
 use crate::git::Commit;
-use crate::project::{Project, Snippet};
+use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
 use anyhow::anyhow;

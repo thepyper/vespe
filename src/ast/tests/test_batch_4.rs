@@ -1,5 +1,4 @@
 use crate::ast::*;
-use uuid::Uuid;
 
 fn create_pos(offset: usize, line: usize, column: usize) -> Position {
     Position { offset, line, column }

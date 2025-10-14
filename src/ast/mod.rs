@@ -176,11 +176,43 @@ fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingE
 
 fn parse_parameters(document: &str, begin: usize) -> Result<Parameters, ParsingError>
 {
-    // TODO: parse dei parametri, fatto da:
-    // 1) se non c'e' un { allora parameters ritorna json!({}) e range "nullo"
-    // 2) se c'e' { allora parameters fa parse di json fino al } corrispondente
-    // ritornare struttura Parameters, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
-    Err(ParsingError::UnexpectedToken("parse_parameters not implemented".to_string())) // Placeholder
+    let s = &document[begin..];
+    if !s.starts_with('{') {
+        return Ok(Parameters {
+            parameters: serde_json::Value::Object(serde_json::Map::new()),
+            range: Range { begin, end: begin },
+        });
+    }
+
+    let mut brace_count = 0;
+    let mut end = begin;
+    let mut found_closing_brace = false;
+
+    for (i, c) in s.char_indices() {
+        if c == '{' {
+            brace_count += 1;
+        } else if c == '}' {
+            brace_count -= 1;
+        }
+
+        if brace_count == 0 && c == '}' {
+            end = begin + i + 1;
+            found_closing_brace = true;
+            break;
+        }
+    }
+
+    if !found_closing_brace {
+        return Err(ParsingError::UnexpectedToken("Unmatched opening brace for parameters".to_string()));
+    }
+
+    let json_str = &document[begin..end];
+    let parameters: serde_json::Value = serde_json::from_str(json_str)?;
+
+    Ok(Parameters {
+        parameters,
+        range: Range { begin, end },
+    })
 }
 
 fn parse_arguments(document: &str, begin: usize) -> Result<Arguments, ParsingError>

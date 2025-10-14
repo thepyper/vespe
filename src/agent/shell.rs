@@ -59,11 +59,13 @@ impl<'a> ShellAgentCall<'a> {
         let stdout = child.stdout.take().context("Failed to take stdout")?;
         let stderr = child.stderr.take().context("Failed to take stderr")?;
 
-        let mut stdout_reader = BufReader::new(stdout);
-        let mut stderr_reader = BufReader::new(stderr);
-
+#[allow(unused_assignments)]
         let mut full_stdout = Vec::new();
+#[allow(unused_assignments)]
         let mut full_stderr = Vec::new();
+
+        let stdout_reader = BufReader::new(stdout);
+        let stderr_reader = BufReader::new(stderr);
 
         let stdout_handle = thread::spawn(move || {
             let mut line = String::new();

@@ -466,6 +466,24 @@ fn parse_argument(document: &str, begin: usize) -> Result<Argument, ParsingError
 
 fn parse_text(document: &str, begin: usize) -> Result<Option<Text>, ParsingError>
 {
-    // TODO: Implement parse_text
-    Ok(None) // Placeholder
+    let mut end = begin;
+    let mut found_content = false;
+
+    for (i, c) in document[begin..].char_indices() {
+        let current_pos = begin + i;
+        // Check if the current position starts a tag or an anchor
+        if document[current_pos..].starts_with("@") || document[current_pos..].starts_with("<!-- ") {
+            break;
+        }
+        end = current_pos + c.len_utf8();
+        found_content = true;
+    }
+
+    if found_content {
+        Ok(Some(Text {
+            range: Range { begin, end },
+        }))
+    } else {
+        Ok(None)
+    }
 }

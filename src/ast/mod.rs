@@ -214,15 +214,122 @@ fn parse_tag(document: &str, begin: usize) -> Result<Option<Tag>, ParsingError>
 
 fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingError>
 {
-    // ASSERT: begin.column == 1 altrimenti errore, partenza anchor e' SEMPRE ad inizio linea
+    let s = &document[begin..];
 
-    // TODO: parse di una anchor, fatto da:
-    // 1) parse di <!-- <nome-tag>-<uuid>:<kind> 
-    // 2) call di parse_parameters, come in parse_tag 
-    // 3) call di parse_arguments, come in parse_tag
-    // 4) parse di -->
-    // ritornare struttura Anchor, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
-    Ok(None) // Placeholder
+    // Check for begin.column == 1
+    let line_start = document[..begin].rfind('\n').map_or(0, |i| i + 1);
+    if begin != line_start {
+        return Ok(None); // Anchor must start at the beginning of a line
+    }
+
+    if !s.starts_with("<!-- ") {
+        return Ok(None);
+    }
+
+    let mut chars = s.char_indices().peekable();
+    let mut current_pos = begin;
+
+    // Consume "<!-- "
+    for _ in 0.."<!-- ".len() {
+        chars.next();
+        current_pos += 1;
+    }
+
+    // Parse command
+    let command_start = current_pos;
+    let mut command_end = command_start;
+    while let Some((i, c)) = chars.peek() {
+        if c.is_alphanumeric() || *c == '-' || *c == '_' {
+            command_end = begin + i + c.len_utf8();
+            chars.next();
+        } else {
+            break;
+        }
+    }
+    let command_str = &document[command_start..command_end];
+    let command = match command_str {
+        "include" => Command::Include,
+        "inline" => Command::Inline,
+        "answer" => Command::Answer,
+        "derive" => Command::Derive,
+        "summarize" => Command::Summarize,
+        "set" => Command::Set,
+        "repeat" => Command::Repeat,
+        _ => return Ok(None), // Unknown command
+    };
+
+    // Consume '-'
+    if chars.next().map(|(_, c)| c) != Some('-') {
+        return Ok(None);
+    }
+    current_pos = command_end + 1;
+
+    // Parse UUID
+    let uuid_start = current_pos;
+    let mut uuid_end = uuid_start;
+    while let Some((i, c)) = chars.peek() {
+        if c.is_alphanumeric() || *c == '-' {
+            uuid_end = begin + i + c.len_utf8();
+            chars.next();
+        } else {
+            break;
+        }
+    }
+    let uuid_str = &document[uuid_start..uuid_end];
+    let uuid = Uuid::parse_str(uuid_str)?;
+    current_pos = uuid_end;
+
+    // Consume ':'
+    if chars.next().map(|(_, c)| c) != Some(':') {
+        return Ok(None);
+    }
+    current_pos += 1;
+
+    // Parse Kind
+    let kind_start = current_pos;
+    let mut kind_end = kind_start;
+    while let Some((i, c)) = chars.peek() {
+        if c.is_alphanumeric() {
+            kind_end = begin + i + c.len_utf8();
+            chars.next();
+        } else {
+            break;
+        }
+    }
+    let kind_str = &document[kind_start..kind_end];
+    let kind = match kind_str {
+        "Begin" => Kind::Begin,
+        "End" => Kind::End,
+        _ => return Ok(None), // Unknown kind
+    };
+    current_pos = kind_end;
+
+    let opening = AnchorOpening {
+        command,
+        uuid,
+        kind,
+        range: Range { begin, end: current_pos },
+    };
+
+    let parameters = parse_parameters(document, current_pos)?;
+    let arguments = parse_arguments(document, parameters.range.end)?;
+
+    let mut end = arguments.range.end;
+
+    // Consume " -->"
+    let closing_sequence = " -->";
+    if document[end..].starts_with(closing_sequence) {
+        end += closing_sequence.len();
+    } else {
+        return Err(ParsingError::UnexpectedToken("Expected ' -->'".to_string()));
+    }
+
+    Ok(Some(Anchor {
+        opening,
+        parameters,
+        arguments,
+        range: Range { begin, end },
+    }))
 }
 
 fn parse_parameters(document: &str, begin: usize) -> Result<Parameters, ParsingError>

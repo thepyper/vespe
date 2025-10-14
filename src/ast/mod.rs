@@ -333,12 +333,104 @@ pub fn parse(document: &str) -> Result<Root, ParsingError> {
     })
 }
 
-// Placeholder for parse_parameters
 fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingError> {
-    // For now, return empty parameters and advance position by 0
-    let empty_params = HashMap::new();
-    let range = Range { start: parser.current_pos, end: parser.current_pos };
-    Ok((empty_params, range))
+    let start_pos = parser.current_pos;
+    parser.skip_whitespace();
+
+    if parser.peek() != Some('{') {
+        let end_pos = parser.current_pos;
+        return Ok((HashMap::new(), Range { start: start_pos, end: end_pos }));
+    }
+
+    parser.consume(); // Consume '{'
+    let mut params = HashMap::new();
+
+    loop {
+        parser.skip_whitespace();
+        let key_start_pos = parser.current_pos;
+
+        let key = match parser.peek() {
+            Some('\'') | Some('\"') => {
+                let (k, _) = parser.parse_quoted_string(parser.peek().unwrap())?;
+                k
+            },
+            Some(c) if c.is_alphanumeric() || c == '_' => {
+                let (k, _) = parser.parse_unquoted_identifier().ok_or_else(|| ParsingError::InvalidSyntax {
+                    message: "Expected parameter key".to_string(),
+                    range: Range { start: key_start_pos, end: parser.current_pos },
+                })?;
+                k
+            },
+            Some('}') => break, // End of parameters
+            _ => return Err(ParsingError::InvalidSyntax {
+                message: "Expected parameter key or '}'".to_string(),
+                range: Range { start: key_start_pos, end: parser.current_pos },
+            }),
+        };
+
+        parser.skip_whitespace();
+        if parser.consume() != Some(':') {
+            return Err(ParsingError::UnexpectedToken {
+                expected: ":".to_string(),
+                found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+                range: Range { start: parser.current_pos, end: parser.current_pos },
+            });
+        }
+
+        parser.skip_whitespace();
+        let value_start_pos = parser.current_pos;
+        let value_and_range = match parser.peek() {
+            Some('\'') | Some('\"') => {
+                let (s, r) = parser.parse_quoted_string(parser.peek().unwrap())?;
+                (ParameterValue::String(s), r)
+            },
+            Some(c) if c.is_ascii_digit() || c == '-' => {
+                let (v, r) = parser.parse_number()?.ok_or_else(|| ParsingError::InvalidSyntax {
+                    message: "Expected number value".to_string(),
+                    range: Range { start: value_start_pos, end: parser.current_pos },
+                })?;
+                (v, r)
+            },
+            Some(c) if c.is_alphabetic() => {
+                let current_slice = parser.current_slice();
+                if current_slice.starts_with("true") || current_slice.starts_with("false") {
+                    let (v, r) = parser.parse_boolean().ok_or_else(|| ParsingError::InvalidSyntax {
+                        message: "Expected boolean value".to_string(),
+                        range: Range { start: value_start_pos, end: parser.current_pos },
+                    })?;
+                    (v, r)
+                } else {
+                    let (s, r) = parser.parse_unquoted_identifier().ok_or_else(|| ParsingError::InvalidSyntax {
+                        message: "Expected string value".to_string(),
+                        range: Range { start: value_start_pos, end: parser.current_pos },
+                    })?;
+                    (ParameterValue::String(s), r)
+                }
+            },
+            _ => return Err(ParsingError::InvalidSyntax {
+                message: "Expected parameter value".to_string(),
+                range: Range { start: value_start_pos, end: parser.current_pos },
+            }),
+        };
+        params.insert(key, value_and_range.0);
+
+        parser.skip_whitespace();
+        match parser.peek() {
+            Some(',') => {
+                parser.consume();
+            },
+            Some('}') => break,
+            _ => return Err(ParsingError::UnexpectedToken {
+                expected: "," .to_string(),
+                found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+                range: Range { start: parser.current_pos, end: parser.current_pos },
+            }),
+        }
+    }
+
+    parser.consume(); // Consume '}'
+    let end_pos = parser.current_pos;
+    Ok((params, Range { start: start_pos, end: end_pos }))
 }
 
 // Placeholder for parse_argument

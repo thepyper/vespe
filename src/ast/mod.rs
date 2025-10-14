@@ -103,10 +103,133 @@ pub struct Root {
     pub range: Range,
 }
 
+pub struct Parser<'a> {
+    document: &'a str,
+    pub current_pos: Position,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(document: &'a str) -> Self {
+        Self {
+            document,
+            current_pos: Position { offset: 0, line: 1, column: 1 },
+        }
+    }
+
+    pub fn peek(&self) -> Option<char> {
+        self.document[self.current_pos.offset..].chars().next()
+    }
+
+    pub fn consume(&mut self) -> Option<char> {
+        let mut chars = self.document[self.current_pos.offset..].chars();
+        if let Some(c) = chars.next() {
+            self.advance_position_by_char(c);
+            Some(c)
+        } else {
+            None
+        }
+    }
+
+    pub fn advance_position_by_char(&mut self, c: char) {
+        self.current_pos.offset += c.len_utf8();
+        if c == '\n' {
+            self.current_pos.line += 1;
+            self.current_pos.column = 1;
+        } else {
+            self.current_pos.column += 1;
+        }
+    }
+
+    pub fn advance_position_by_str(&mut self, s: &str) {
+        for c in s.chars() {
+            self.advance_position_by_char(c);
+        }
+    }
+
+    pub fn take_while<F>(&mut self, predicate: F) -> &'a str
+    where
+        F: Fn(char) -> bool,
+    {
+        let start_offset = self.current_pos.offset;
+        while let Some(c) = self.peek() {
+            if predicate(c) {
+                self.consume();
+            } else {
+                break;
+            }
+        }
+        &self.document[start_offset..self.current_pos.offset]
+    }
+
+    pub fn take_until<F>(&mut self, predicate: F) -> &'a str
+    where
+        F: Fn(char) -> bool,
+    {
+        let start_offset = self.current_pos.offset;
+        while let Some(c) = self.peek() {
+            if !predicate(c) {
+                self.consume();
+            } else {
+                break;
+            }
+        }
+        &self.document[start_offset..self.current_pos.offset]
+    }
+
+    pub fn take_until_and_consume<F>(&mut self, predicate: F) -> &'a str
+    where
+        F: Fn(char) -> bool,
+    {
+        let start_offset = self.current_pos.offset;
+        while let Some(c) = self.peek() {
+            if !predicate(c) {
+                self.consume();
+            } else {
+                self.consume(); // Consume the character that satisfies the predicate
+                break;
+            }
+        }
+        &self.document[start_offset..self.current_pos.offset]
+    }
+
+    pub fn take_exact(&self, length: usize) -> Option<&'a str> {
+        if self.current_pos.offset + length <= self.document.len() {
+            Some(&self.document[self.current_pos.offset..self.current_pos.offset + length])
+        } else {
+            None
+        }
+    }
+
+    pub fn take_exact_and_consume(&mut self, length: usize) -> Option<&'a str> {
+        if self.current_pos.offset + length <= self.document.len() {
+            let s = &self.document[self.current_pos.offset..self.current_pos.offset + length];
+            self.advance_position_by_str(s);
+            Some(s)
+        } else {
+            None
+        }
+    }
+
+    pub fn skip_whitespace(&mut self) {
+        self.take_while(|c| c.is_whitespace());
+    }
+
+    pub fn current_slice(&self) -> &'a str {
+        &self.document[self.current_pos.offset..]
+    }
+
+    pub fn remaining_slice(&self) -> &'a str {
+        &self.document[self.current_pos.offset..]
+    }
+}
+
 // Placeholder functions
 pub fn parse(document: &str) -> Result<Root, ParsingError> {
+    let mut parser = Parser::new(document);
+    let start_position = parser.current_pos;
+
     // TODO: Implement the main parsing logic
-    let start_position = Position { offset: 0, line: 1, column: 1 };
+
     let end_position = Position { offset: document.len(), line: 1, column: document.len() + 1 }; // Placeholder
     let root_range = Range { start: start_position, end: end_position };
 
@@ -116,52 +239,37 @@ pub fn parse(document: &str) -> Result<Root, ParsingError> {
     })
 }
 
-// Helper to advance position
-fn advance_position(current_pos: Position, text: &str) -> Position {
-    let mut new_pos = current_pos;
-    for char_code in text.chars() {
-        new_pos.offset += char_code.len_utf8();
-        if char_code == '\n' {
-            new_pos.line += 1;
-            new_pos.column = 1;
-        } else {
-            new_pos.column += 1;
-        }
-    }
-    new_pos
-}
-
 // Placeholder for parse_parameters
-fn parse_parameters(document: &str, current_pos: Position) -> Result<(Parameters, Range, Position), ParsingError> {
+fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingError> {
     // For now, return empty parameters and advance position by 0
     let empty_params = HashMap::new();
-    let range = Range { start: current_pos, end: current_pos };
-    Ok((empty_params, range, current_pos))
+    let range = Range { start: parser.current_pos, end: parser.current_pos };
+    Ok((empty_params, range))
 }
 
 // Placeholder for parse_argument
-fn parse_argument(document: &str, current_pos: Position) -> Result<Option<(String, Range, Position)>, ParsingError> {
+fn parse_argument(parser: &mut Parser) -> Result<Option<(String, Range)>, ParsingError> {
     Ok(None)
 }
 
 // Placeholder for parse_arguments
-fn parse_arguments(document: &str, current_pos: Position) -> Result<(Vec<String>, Range, Position), ParsingError> {
+fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), ParsingError> {
     let empty_args = vec![];
-    let range = Range { start: current_pos, end: current_pos };
-    Ok((empty_args, range, current_pos))
+    let range = Range { start: parser.current_pos, end: parser.current_pos };
+    Ok((empty_args, range))
 }
 
 // Placeholder for parse_tag
-fn parse_tag(document: &str, current_pos: Position) -> Result<Option<(Tag, Position)>, ParsingError> {
+fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
     Ok(None)
 }
 
 // Placeholder for parse_anchor
-fn parse_anchor(document: &str, current_pos: Position) -> Result<Option<(Anchor, Position)>, ParsingError> {
+fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError> {
     Ok(None)
 }
 
 // Placeholder for parse_text
-fn parse_text(document: &str, current_pos: Position) -> Result<Option<(Text, Position)>, ParsingError> {
+fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
     Ok(None)
 }

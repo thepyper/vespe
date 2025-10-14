@@ -11,7 +11,7 @@ use crate::git::Commit;
 use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
-use anyhow::anyhow;
+
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;

@@ -435,14 +435,58 @@ fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingE
 
 // Placeholder for parse_argument
 fn parse_argument(parser: &mut Parser) -> Result<Option<(String, Range)>, ParsingError> {
-    Ok(None)
+    parser.skip_whitespace();
+    let start_pos = parser.current_pos;
+
+    let arg_value = match parser.peek() {
+        Some('\'') | Some('\"') => {
+            let (s, r) = parser.parse_quoted_string(parser.peek().unwrap())?;
+            Some((s, r))
+        },
+        Some(c) if !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<' => {
+            let word_start_pos = parser.current_pos;
+            let word = parser.take_while(|c| !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<');
+            if word.is_empty() {
+                None
+            } else {
+                let end_pos = parser.current_pos;
+                Some((word.to_string(), Range { start: word_start_pos, end: end_pos }))
+            }
+        },
+        _ => None,
+    };
+
+    Ok(arg_value)
 }
 
-// Placeholder for parse_arguments
-fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), ParsingError> {
-    let empty_args = vec![];
-    let range = Range { start: parser.current_pos, end: parser.current_pos };
-    Ok((empty_args, range))
+pub fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), ParsingError> {
+    let start_pos = parser.current_pos;
+    let mut args = Vec::new();
+
+    loop {
+        parser.skip_whitespace();
+        let current_line_start_offset = parser.document[..parser.current_pos.offset].rfind('\n').map_or(0, |i| i + 1);
+        let current_line_slice = &parser.document[current_line_start_offset..];
+
+        // Check for start of a new tag or anchor, or end of line/file
+        if current_line_slice.starts_with("@") || current_line_slice.starts_with("<!--") || parser.peek().is_none() {
+            break;
+        }
+
+        match parser.parse_argument() {
+            Ok(Some((arg, _))) => {
+                args.push(arg);
+            },
+            Ok(None) => {
+                // No more arguments found, or an empty string was parsed (which shouldn't happen with current parse_argument logic)
+                break;
+            },
+            Err(e) => return Err(e),
+        }
+    }
+
+    let end_pos = parser.current_pos;
+    Ok((args, Range { start: start_pos, end: end_pos }))
 }
 
 // Placeholder for parse_tag

@@ -12,7 +12,7 @@ use serde_json::json;
 const DIARY_CONTEXT_FORMAT: &str = "diary/%Y-%m-%d";
 const DEFAULT_CONTEXT_TEMPLATE: &str = r#"@include rules
 
-# {{context_name}} - {{title}}
+# {{title}}
 "#;
 
 #[derive(Parser)]
@@ -189,11 +189,7 @@ fn main() -> Result<()> {
                         }
                     })?;
 
-                    let title = context_name
-                        .split('/')
-                        .last()
-                        .unwrap_or(&context_name)
-                        .replace('_', " ");
+                    let title = String::new();
                     let data = json!({
                         "context_name": context_name,
                         "title": title,

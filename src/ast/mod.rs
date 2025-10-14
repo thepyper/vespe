@@ -695,3 +695,7 @@ pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "debug_printer.rs"]
+mod debug_printer;

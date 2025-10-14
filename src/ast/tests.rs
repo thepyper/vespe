@@ -78,11 +78,10 @@ fn test_parser_parse_quoted_string_single_quotes() {
 
 #[test]
 fn test_parser_parse_quoted_string_with_escapes() {
-    let mut parser = Parser::new("\"hello\nworld\"");
-    let (s, r) = parser.parse_quoted_string('"').unwrap();
-    assert_eq!(s, "hello\nworld");
-    assert_eq!(r, create_range(0, 1, 1, 14, 1, 15));
-}
+            let mut parser = Parser::new("\"Hello\\nWorld\"");
+            let (s, r) = parser.parse_quoted_string('"').unwrap();
+            assert_eq!(s, "Hello\nWorld");
+            assert_eq!(r, create_range(0, 1, 1, 15, 1, 16));}
 
 #[test]
 fn test_parser_parse_quoted_string_unterminated() {

@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+#[allow(unused_imports)]
 use git2::{Index, Oid, Repository, Signature, Status, StatusOptions, Tree}; // Added StatusOptions, Status
 use std::collections::HashSet;
 use std::path::PathBuf;

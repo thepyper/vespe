@@ -1,7 +1,3 @@
-use sha2::digest::typenum::Double;
-
-
-
 struct Range
 {
     begin: usize,  // 0-based offset
@@ -83,11 +79,6 @@ struct Anchor
     range: Range,
 }
 
-struct Text
-{
-    range: Range,
-}
-
 enum Node
 {
     Root(Root),
@@ -96,10 +87,23 @@ enum Node
     Text(Text),
 }
 
-struct ParsingError
-{
-    // TODO definisci opportunamente
+use uuid::Uuid;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum ParsingError {
+    #[error("Unexpected token: {0}")]
+    UnexpectedToken(String),
+    #[error("Invalid UUID: {0}")]
+    InvalidUuid(#[from] uuid::Error),
+    #[error("JSON parsing error: {0}")]
+    JsonError(#[from] serde_json::Error),
+    #[error("Parsing not advanced at position {0}")]
+    ParsingNotAdvanced(usize),
+    #[error("End of document reached unexpectedly")]
+    EndOfDocument,
 }
+
 
 pub fn parse(document: &str) -> Result<Root, ParsingError> 
 {
@@ -140,9 +144,9 @@ fn parse_node(document: &str, begin: usize) -> Result<Node, ParsingError>
         Ok(Node::Anchor(anchor))
     } else if let Some(text) = parse_text(document, begin)? {
         Ok(Node::Text(text))
+    } else {
+        Err(ParsingError::ParsingNotAdvanced(begin))
     }
-
-    // TODO errore: parsing not advanced!!
 }
 
 fn parse_tag(document: &str, begin: usize) -> Result<Option<Tag>, ParsingError>
@@ -154,6 +158,7 @@ fn parse_tag(document: &str, begin: usize) -> Result<Option<Tag>, ParsingError>
     // 2) call di parse_parameters che fa parsing di {} oggetto JSON (possibile che non ci sia, allora parameters e' un oggetto vuoto {})
     // 3) call di parse_arguments che fa il parsing del resto della linea dove e' finito il JSON con }, e separa le words in diversi argument; gestire ', e " per accorpare
     // ritornare struttura Tag, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
+    Ok(None) // Placeholder
 }
 
 fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingError>
@@ -166,6 +171,7 @@ fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingE
     // 3) call di parse_arguments, come in parse_tag
     // 4) parse di -->
     // ritornare struttura Anchor, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
+    Ok(None) // Placeholder
 }
 
 fn parse_parameters(document: &str, begin: usize) -> Result<Parameters, ParsingError>
@@ -174,13 +180,14 @@ fn parse_parameters(document: &str, begin: usize) -> Result<Parameters, ParsingE
     // 1) se non c'e' un { allora parameters ritorna json!({}) e range "nullo"
     // 2) se c'e' { allora parameters fa parse di json fino al } corrispondente
     // ritornare struttura Parameters, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
+    Err(ParsingError::UnexpectedToken("parse_parameters not implemented".to_string())) // Placeholder
 }
 
-fn parse_anchor(document: &str, begin: usize) -> Result<Arguments, ParsingError>
+fn parse_arguments(document: &str, begin: usize) -> Result<Arguments, ParsingError>
 {
     let mut arguments = Vec::new();
 
-    let end_offset = ; // TODO cerca fine linea a partire da begin
+    let end_offset = document.len(); // TODO cerca fine linea a partire da begin
     let mut position = begin;
 
     while position < end_offset {
@@ -191,12 +198,20 @@ fn parse_anchor(document: &str, begin: usize) -> Result<Arguments, ParsingError>
         position = range.end;
     }
 
-    Ok(arguments)
+    Ok(Arguments{
+        children: arguments,
+        range: Range{begin, end: position},
+    })
 }
 
 fn parse_argument(document: &str, begin: usize) -> Result<Argument, ParsingError>
 {
-    // TODO parsing di una word, gestendo anche virgolette ' e " e tutto escaping standard (\" \' \n \r almeno)
+    // TODO parsing di una word, gestendo anche virgolette ' e " e tutto escaping standard (" \' \n \r almeno)
+    Err(ParsingError::UnexpectedToken("parse_argument not implemented".to_string())) // Placeholder
 }
 
-
+fn parse_text(document: &str, begin: usize) -> Result<Option<Text>, ParsingError>
+{
+    // TODO: Implement parse_text
+    Ok(None) // Placeholder
+}

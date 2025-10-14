@@ -238,8 +238,60 @@ fn parse_arguments(document: &str, begin: usize) -> Result<Arguments, ParsingErr
 
 fn parse_argument(document: &str, begin: usize) -> Result<Argument, ParsingError>
 {
-    // TODO parsing di una word, gestendo anche virgolette ' e " e tutto escaping standard (" \' \n \r almeno)
-    Err(ParsingError::UnexpectedToken("parse_argument not implemented".to_string())) // Placeholder
+    let s = &document[begin..];
+    let mut end = begin;
+
+    if s.is_empty() {
+        return Err(ParsingError::EndOfDocument);
+    }
+
+    let first_char = s.chars().next().unwrap();
+
+    if first_char == '\'' || first_char == '"' {
+        // Quoted string
+        let quote_char = first_char;
+        let mut chars = s.char_indices().peekable();
+        chars.next(); // Consume the opening quote
+
+        end = begin + 1; // Start after the opening quote
+
+        while let Some((i, c)) = chars.next() {
+            if c == '\\' {
+                // Handle escape sequence
+                chars.next(); // Consume the escaped character
+                end = begin + i + 2;
+            } else if c == quote_char {
+                // Closing quote
+                end = begin + i + 1;
+                break;
+            } else {
+                end = begin + i + 1;
+            }
+        }
+
+        if document.chars().nth(end - 1) != Some(quote_char) {
+            return Err(ParsingError::UnexpectedToken(format!("Unclosed string literal starting at position {}", begin)));
+        }
+
+    } else {
+        // Single word or token
+        for (i, c) in s.char_indices() {
+            if c.is_whitespace() || c == '}' || c == ',' {
+                end = begin + i;
+                break;
+            } else {
+                end = begin + i + 1;
+            }
+        }
+    }
+
+    if end == begin {
+        return Err(ParsingError::ParsingNotAdvanced(begin));
+    }
+
+    Ok(Argument {
+        range: Range { begin, end },
+    })
 }
 
 fn parse_text(document: &str, begin: usize) -> Result<Option<Text>, ParsingError>

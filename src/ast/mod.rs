@@ -255,7 +255,7 @@ impl<'a> Parser<'a> {
                         '"' => value.push('"'),
                         '\\' => value.push('\\'),
                         _ => return Err(ParsingError::InvalidSyntax {
-                            message: format!("Invalid escape sequence: \\{{}}", c),
+                            message: format!("Invalid escape sequence: {}", c),
                             range: Range { start: current_char_pos, end: self.current_pos },
                         }),
                     }
@@ -563,7 +563,7 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
             "set" => Command::Set,
             "repeat" => Command::Repeat,
             _ => return Err(ParsingError::InvalidSyntax {
-                message: format!("Unknown command: {{}}", command_str),
+                message: format!("Unknown command: {}", command_str),
                 range: Range { start: start_pos, end: parser.current_pos },
             }),
         };
@@ -614,13 +614,13 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
             "set" => Command::Set,
             "repeat" => Command::Repeat,
             _ => return Err(ParsingError::InvalidSyntax {
-                message: format!("Unknown command in anchor: {{}}", command_str),
+                message: format!("Unknown command in anchor: {}", command_str),
                 range: Range { start: start_pos, end: parser.current_pos },
             }),
         };
 
         let uuid = Uuid::parse_str(uuid_str).map_err(|e| ParsingError::InvalidSyntax {
-            message: format!("Invalid UUID in anchor: {{}}", e),
+            message: format!("Invalid UUID in anchor: {}", e),
             range: Range { start: start_pos, end: parser.current_pos },
         })?;
 

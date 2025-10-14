@@ -130,6 +130,18 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn is_eof(&self) -> bool {
+        self.current_pos.offset >= self.document.len()
+    }
+
+    pub fn current_position(&self) -> Position {
+        self.current_pos
+    }
+
+    pub fn set_position(&mut self, position: Position) {
+        self.current_pos = position;
+    }
+
     pub fn peek(&self) -> Option<char> {
         self.document[self.current_pos.offset..].chars().next()
     }
@@ -331,59 +343,63 @@ impl<'a> Parser<'a> {
     }
 }
 
-pub fn parse(document: &str) -> Result<Root, ParsingError> {
-    let mut parser = Parser::new(document);
-    let start_position = parser.current_pos;
-    let mut children = Vec::new();
+    pub fn parse(document: &str) -> Result<Root, ParsingError> {
+        let mut parser = Parser::new(document);
+        let start_position = parser.current_position(); // Define start_position
+        let mut nodes = Vec::new();
 
-    while parser.peek().is_some() {
-        let current_offset = parser.current_pos.offset;
-        if let Some(node) = parse_node(&mut parser)? {
-            children.push(node);
-        } else {
-            // If no node was parsed, and we haven't advanced, it's an infinite loop or unexpected content
-            if parser.current_pos.offset == current_offset {
-                return Err(ParsingError::Custom {
-                    message: "Parser stuck: unable to parse content at current position".to_string(),
-                    range: Range { start: parser.current_pos, end: parser.current_pos },
-                });
+        while !parser.is_eof() {
+            parser.skip_whitespace();
+            if parser.is_eof() {
+                break;
+            }
+            match parse_node(&mut parser) {
+                Ok(Some(node)) => nodes.push(node),
+                Ok(None) => {
+                    // This should ideally not happen if skip_whitespace and is_eof are correct
+                    // but as a safeguard, advance by one char to prevent infinite loops
+                    // Use consume() to advance and get the char
+                    if let Some(_) = parser.consume() {
+                        // Optionally, you could do something with 'c' here if needed
+                    } else {
+                        // If consume() returns None, we're at EOF, so break
+                        break;
+                    }
+                }
+                Err(e) => return Err(e),
             }
         }
+
+        let end_position = parser.current_pos;
+        let root_range = Range { start: start_position, end: end_position };
+
+        Ok(Root {
+            children: nodes, // Use 'nodes' for 'children'
+            range: root_range,
+        })
     }
 
-    let end_position = parser.current_pos;
-    let root_range = Range { start: start_position, end: end_position };
+    pub fn parse_node(parser: &mut Parser) -> Result<Option<Node>, ParsingError> {
+        let start_pos = parser.current_pos;
 
-    Ok(Root {
-        children,
-        range: root_range,
-    })
-}
+        if let Ok(Some(tag)) = parse_tag(parser) {
+            return Ok(Some(Node::Tag(tag)));
+        }
 
-fn parse_node(parser: &mut Parser) -> Result<Option<Node>, ParsingError> {
-    parser.skip_whitespace();
-    let start_pos = parser.current_pos;
+        // Reset parser position if tag parsing failed to try anchor parsing from the same start
+        parser.set_position(start_pos);
+        if let Ok(Some(anchor)) = parse_anchor(parser) {
+            return Ok(Some(Node::Anchor(anchor)));
+        }
 
-    if let Some(tag) = parse_tag(parser)? {
-        return Ok(Some(Node::Tag(tag)));
+        // Reset parser position if anchor parsing failed to try text parsing from the same start
+        parser.set_position(start_pos);
+        if let Ok(Some(text)) = parse_text(parser) {
+            return Ok(Some(Node::Text(text)));
+        }
+
+        Ok(None)
     }
-
-    // Reset position if tag parsing failed without consuming anything
-    parser.current_pos = start_pos;
-
-    if let Some(anchor) = parse_anchor(parser)? {
-        return Ok(Some(Node::Anchor(anchor)));
-    }
-
-    // Reset position if anchor parsing failed without consuming anything
-    parser.current_pos = start_pos;
-
-    if let Some(text) = parse_text(parser)? {
-        return Ok(Some(Node::Text(text)));
-    }
-
-    Ok(None)
-}
 
 fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingError> {
     let start_pos = parser.current_pos;
@@ -496,7 +512,7 @@ fn parse_argument(parser: &mut Parser) -> Result<Option<(String, Range)>, Parsin
         },
         Some(c) if !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<' => {
             let word_start_pos = parser.current_pos;
-            let word = parser.take_while(|c| !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<');
+            let word = parser.take_while(|c| !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<' && c != '\n');
             if word.is_empty() {
                 None
             } else {
@@ -515,12 +531,15 @@ pub fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), Pars
     let mut args = Vec::new();
 
     loop {
-        parser.skip_whitespace();
+        // Check for end of line or file before attempting to parse an argument
+        if parser.peek() == Some('\n') || parser.is_eof() {
+            break;
+        }
+
+        // Original check for start of a new tag or anchor (might be redundant if we break on newline)
         let current_line_start_offset = parser.document[..parser.current_pos.offset].rfind('\n').map_or(0, |i| i + 1);
         let current_line_slice = &parser.document[current_line_start_offset..];
-
-        // Check for start of a new tag or anchor, or end of line/file
-        if (current_line_slice.starts_with("@") && parser.current_pos.column == 1) || (current_line_slice.starts_with("<!--") && parser.current_pos.column == 1) || parser.peek().is_none() {
+        if (current_line_slice.starts_with("@") && parser.current_pos.column == 1) || (current_line_slice.starts_with("<!--") && parser.current_pos.column == 1) {
             break;
         }
 
@@ -553,6 +572,7 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
     let tag_regex = regex::Regex::new(r"^@([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
 
     if let Some(captures) = tag_regex.captures(line_slice) {
+        let full_match = captures.get(0).unwrap().as_str();
         let command_str = captures.get(1).unwrap().as_str();
         let command = match command_str {
             "include" => Command::Include,
@@ -615,13 +635,13 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
             "repeat" => Command::Repeat,
             _ => return Err(ParsingError::InvalidSyntax {
                 message: format!("Unknown command in anchor: {}", command_str),
-                range: Range { start: start_pos, end: parser.current_pos },
+                range: Range { start: start_pos, end: parser.current_position() },
             }),
         };
 
         let uuid = Uuid::parse_str(uuid_str).map_err(|e| ParsingError::InvalidSyntax {
             message: format!("Invalid UUID in anchor: {}", e),
-            range: Range { start: start_pos, end: parser.current_pos },
+            range: Range { start: start_pos, end: parser.current_position() },
         })?;
 
         let kind = match kind_str {
@@ -630,21 +650,36 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
             _ => unreachable!(), // Regex ensures this won't happen
         };
 
-        // Advance parser past the initial anchor part
+        // Advance parser past the initial anchor part (e.g., "<!-- include-{uuid}:begin")
         parser.advance_position_by_str(full_match);
 
-        let (parameters, _) = parse_parameters(parser)?;
-        let (arguments, _) = parse_arguments(parser)?;
+        // Now, parser.current_pos is at the start of " --> arg1"
 
-        parser.skip_whitespace();
+        parser.skip_whitespace(); // <--- Added this line
 
-        if !parser.remaining_slice().starts_with("-->") {
+        // Find and consume the "-->" marker
+        let remaining_after_match = parser.remaining_slice();
+        if !remaining_after_match.starts_with("-->") {
             return Err(ParsingError::UnterminatedString {
-                range: Range { start: start_pos, end: parser.current_pos },
+                range: Range { start: parser.current_position(), end: parser.current_position() },
             });
         }
         parser.advance_position_by_str("-->");
 
+        // Now, parser.current_pos is at the start of " arg1" or "\nMore text here."
+
+        let mut parameters = HashMap::new();
+        let mut arguments = Vec::new();
+
+        // Check if there's a newline immediately after "-->". If so, no arguments or parameters.
+        if parser.peek() != Some('\n') && !parser.is_eof() {
+            // Parse parameters and arguments using the main parser
+            let (p, _) = parse_parameters(parser)?;
+            parameters = p;
+
+            let (a, _) = parse_arguments(parser)?;
+            arguments = a;
+        }
         let end_pos = parser.current_pos;
         Ok(Some(Anchor {
             command,
@@ -691,7 +726,6 @@ pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
         }))
     }
 }
-
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;

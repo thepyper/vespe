@@ -170,7 +170,7 @@ fn test_parse_parameters_multiple_quoted() {
     assert_eq!(params["key1"], ParameterValue::String("value1".to_string()));
     assert_eq!(params["key2"], ParameterValue::Integer(123));
     assert_eq!(params["key3"], ParameterValue::Boolean(true));
-    assert_eq!(r, create_range(0, 1, 1, 44, 1, 45));
+    assert_eq!(r, create_range(0, 1, 1, 43, 1, 44));
 }
 
 #[test]
@@ -203,7 +203,7 @@ fn test_parse_arguments_multiple() {
     let mut parser = Parser::new("arg1 \"arg2 with spaces\" arg3");
     let (args, r) = parse_arguments(&mut parser).unwrap();
     assert_eq!(args, vec!["arg1", "arg2 with spaces", "arg3"]);
-    assert_eq!(r, create_range(0, 1, 1, 29, 1, 30));
+    assert_eq!(r, create_range(0, 1, 1, 28, 1, 29));
 }
 
 #[test]
@@ -232,7 +232,7 @@ fn test_parse_tag_with_parameters() {
     assert_eq!(tag.parameters.len(), 1);
     assert_eq!(tag.parameters["key"], ParameterValue::String("value".to_string()));
     assert_eq!(tag.arguments, vec!["arg1"]);
-    assert_eq!(tag.range, create_range(0, 1, 1, 28, 1, 29));
+    assert_eq!(tag.range, create_range(0, 1, 1, 27, 1, 28));
 }
 
 #[test]
@@ -293,7 +293,7 @@ fn test_parse_text_until_tag() {
     let mut parser = Parser::new("Text before tag.\n@include arg");
     let text = parse_text(&mut parser).unwrap().unwrap();
     assert_eq!(text.content, "Text before tag.\n");
-    assert_eq!(text.range, create_range(0, 1, 1, 18, 2, 1));
+    assert_eq!(text.range, create_range(0, 1, 1, 17, 2, 1));
     assert_eq!(parser.remaining_slice(), "@include arg");
 }
 
@@ -304,7 +304,7 @@ fn test_parse_text_until_anchor() {
     let mut parser = Parser::new(&document);
     let text = parse_text(&mut parser).unwrap().unwrap();
     assert_eq!(text.content, "Text before anchor.\n");
-    assert_eq!(text.range, create_range(0, 1, 1, 21, 2, 1));
+    assert_eq!(text.range, create_range(0, 1, 1, 20, 2, 1));
     assert!(parser.remaining_slice().starts_with("<!--"));
 }
 
@@ -338,7 +338,7 @@ fn test_parse_mixed_content() {
     let document = format!("Some initial text.\n@include file.md arg1\n<!-- derive-{}:begin -->\nMore text here.\n<!-- derive-{}:end -->\nFinal text.", uuid1, uuid2);
 
     let root = parse(&document).unwrap();
-    assert_eq!(root.children.len(), 5);
+    assert_eq!(root.children.len(), 6);
 
     // Node 1: Text
     if let Node::Text(text) = &root.children[0] {

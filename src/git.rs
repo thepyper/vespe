@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use git2::{Index, Oid, Repository, Signature, Status, StatusOptions, Tree}; // Added StatusOptions, Status
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tracing::debug; // Added HashSet
 
 pub fn git_commit_files(files_to_commit: &[PathBuf], message: &str) -> Result<()> {

@@ -609,7 +609,38 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
     }
 }
 
-// Placeholder for parse_text
-fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
-    Ok(None)
+pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
+    let start_pos = parser.current_pos;
+    let mut content = String::new();
+
+    loop {
+        let remaining = parser.remaining_slice();
+        if remaining.is_empty() {
+            break;
+        }
+
+        // Check for start of a new tag or anchor
+        if remaining.starts_with("@") && parser.current_pos.column == 1 {
+            break;
+        }
+        if remaining.starts_with("<!--") && parser.current_pos.column == 1 {
+            break;
+        }
+
+        if let Some(c) = parser.consume() {
+            content.push(c);
+        } else {
+            break;
+        }
+    }
+
+    if content.is_empty() {
+        Ok(None)
+    } else {
+        let end_pos = parser.current_pos;
+        Ok(Some(Text {
+            content,
+            range: Range { start: start_pos, end: end_pos },
+        }))
+    }
 }

@@ -321,16 +321,55 @@ impl<'a> Parser<'a> {
 pub fn parse(document: &str) -> Result<Root, ParsingError> {
     let mut parser = Parser::new(document);
     let start_position = parser.current_pos;
+    let mut children = Vec::new();
 
-    // TODO: Implement the main parsing logic
+    while parser.peek().is_some() {
+        let current_offset = parser.current_pos.offset;
+        if let Some(node) = parse_node(&mut parser)? {
+            children.push(node);
+        } else {
+            // If no node was parsed, and we haven't advanced, it's an infinite loop or unexpected content
+            if parser.current_pos.offset == current_offset {
+                return Err(ParsingError::Custom {
+                    message: "Parser stuck: unable to parse content at current position".to_string(),
+                    range: Range { start: parser.current_pos, end: parser.current_pos },
+                });
+            }
+        }
+    }
 
-    let end_position = Position { offset: document.len(), line: 1, column: document.len() + 1 }; // Placeholder
+    let end_position = parser.current_pos;
     let root_range = Range { start: start_position, end: end_position };
 
     Ok(Root {
-        children: vec![],
+        children,
         range: root_range,
     })
+}
+
+fn parse_node(parser: &mut Parser) -> Result<Option<Node>, ParsingError> {
+    parser.skip_whitespace();
+    let start_pos = parser.current_pos;
+
+    if let Some(tag) = parse_tag(parser)? {
+        return Ok(Some(Node::Tag(tag)));
+    }
+
+    // Reset position if tag parsing failed without consuming anything
+    parser.current_pos = start_pos;
+
+    if let Some(anchor) = parse_anchor(parser)? {
+        return Ok(Some(Node::Anchor(anchor)));
+    }
+
+    // Reset position if anchor parsing failed without consuming anything
+    parser.current_pos = start_pos;
+
+    if let Some(text) = parse_text(parser)? {
+        return Ok(Some(Node::Text(text)));
+    }
+
+    Ok(None)
 }
 
 fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingError> {

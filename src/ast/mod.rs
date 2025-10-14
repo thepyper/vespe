@@ -277,6 +277,44 @@ impl<'a> Parser<'a> {
             Some((identifier_str.to_string(), Range { start: start_pos, end: end_pos }))
         }
     }
+
+    pub fn parse_number(&mut self) -> Result<Option<(ParameterValue, Range)>, ParsingError> {
+        let start_pos = self.current_pos;
+        let num_str = self.take_while(|c| c.is_ascii_digit() || c == '.' || c == '-');
+
+        if num_str.is_empty() {
+            return Ok(None);
+        }
+
+        let end_pos = self.current_pos;
+        let range = Range { start: start_pos, end: end_pos };
+
+        if num_str.contains('.') {
+            match num_str.parse::<f64>() {
+                Ok(f) => Ok(Some((ParameterValue::Float(f), range))),
+                Err(_) => Err(ParsingError::InvalidNumberFormat { value: num_str.to_string(), range }),
+            }
+        } else {
+            match num_str.parse::<i64>() {
+                Ok(i) => Ok(Some((ParameterValue::Integer(i), range))),
+                Err(_) => Err(ParsingError::InvalidNumberFormat { value: num_str.to_string(), range }),
+            }
+        }
+    }
+
+    pub fn parse_boolean(&mut self) -> Option<(ParameterValue, Range)> {
+        let start_pos = self.current_pos;
+        let bool_str = self.take_while(|c| c.is_alphabetic());
+
+        let end_pos = self.current_pos;
+        let range = Range { start: start_pos, end: end_pos };
+
+        match bool_str {
+            "true" => Some((ParameterValue::Boolean(true), range)),
+            "false" => Some((ParameterValue::Boolean(false), range)),
+            _ => None,
+        }
+    }
 }
 
 // Placeholder functions

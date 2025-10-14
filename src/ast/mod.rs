@@ -165,7 +165,7 @@ impl<'a> Parser<'a> {
         } else {
             self.current_pos.column += 1;
         }
-        dbg!("After advancing by char:", c, &self.current_pos);
+
     }
 
     pub fn advance_position_by_str(&mut self, s: &str) {
@@ -258,11 +258,8 @@ impl<'a> Parser<'a> {
         let mut escaped = false;
 
         loop {
-            let current_char_pos = self.current_pos;
-            dbg!("Before consume in loop:", &current_char_pos, escaped);
             match self.consume() {
                 Some(c) if escaped => {
-                    dbg!("Consumed escaped char:", c, &self.current_pos);
                     match c {
                         'n' => value.push('\n'),
                         'r' => value.push('\r'),
@@ -278,21 +275,16 @@ impl<'a> Parser<'a> {
                     escaped = false;
                 },
                 Some('\\') => {
-                    dbg!("Consumed backslash:", &self.current_pos);
                     escaped = true;
                 },
                 Some(c) if c == quote_char => {
-                    dbg!("Consumed closing quote:", c, &self.current_pos);
                     let end_pos = self.current_pos;
-                    dbg!("Returning from parse_quoted_string:", &end_pos);
                     return Ok((value, Range { start: start_pos, end: end_pos }));
                 },
                 Some(c) => {
-                    dbg!("Consumed regular char:", c, &self.current_pos);
                     value.push(c);
                 },
                 None => {
-                    dbg!("EOF in quoted string:", &self.current_pos);
                     return Err(ParsingError::UnterminatedString {
                         range: Range { start: start_pos, end: self.current_pos },
                     });

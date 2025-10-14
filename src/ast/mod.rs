@@ -221,6 +221,50 @@ impl<'a> Parser<'a> {
     pub fn remaining_slice(&self) -> &'a str {
         &self.document[self.current_pos.offset..]
     }
+
+    pub fn parse_quoted_string(&mut self, quote_char: char) -> Result<(String, Range), ParsingError> {
+        let start_pos = self.current_pos;
+        self.consume(); // Consume the opening quote
+
+        let mut value = String::new();
+        let mut escaped = false;
+
+        loop {
+            let current_char_pos = self.current_pos;
+            match self.consume() {
+                Some(c) if escaped => {
+                    match c {
+                        'n' => value.push('\n'),
+                        'r' => value.push('\r'),
+                        't' => value.push('\t'),
+                        '\'' => value.push('\''),
+                        '"' => value.push('\"'),
+                        '\\' => value.push('\\'),
+                        _ => return Err(ParsingError::InvalidSyntax {
+                            message: format!("Invalid escape sequence: \\{}", c),
+                            range: Range { start: current_char_pos, end: self.current_pos },
+                        }),
+                    }
+                    escaped = false;
+                },
+                Some('\\') => {
+                    escaped = true;
+                },
+                Some(c) if c == quote_char => {
+                    let end_pos = self.current_pos;
+                    return Ok((value, Range { start: start_pos, end: end_pos }));
+                },
+                Some(c) => {
+                    value.push(c);
+                },
+                None => {
+                    return Err(ParsingError::UnterminatedString {
+                        range: Range { start: start_pos, end: self.current_pos },
+                    });
+                },
+            }
+        }
+    }
 }
 
 // Placeholder functions

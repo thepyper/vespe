@@ -83,11 +83,6 @@ struct Anchor
     range: Range,
 }
 
-struct Text
-{
-    range: Range,
-}
-
 enum Node
 {
     Root(Root),
@@ -150,7 +145,7 @@ fn parse_tag(document: &str, begin: usize) -> Result<Option<Tag>, ParsingError>
     // ASSERT: begin.column == 1 altrimenti errore, partenza tag e' SEMPRE ad inizio linea
 
     // TODO: parse di un tag, fatto da:
-    // 1) parse di    @<nome-tag> 
+    // 1) parse di @<nome-tag><spaces?> 
     // 2) call di parse_parameters che fa parsing di {} oggetto JSON (possibile che non ci sia, allora parameters e' un oggetto vuoto {})
     // 3) call di parse_arguments che fa il parsing del resto della linea dove e' finito il JSON con }, e separa le words in diversi argument; gestire ', e " per accorpare
     // ritornare struttura Tag, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
@@ -161,10 +156,10 @@ fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingE
     // ASSERT: begin.column == 1 altrimenti errore, partenza anchor e' SEMPRE ad inizio linea
 
     // TODO: parse di una anchor, fatto da:
-    // 1) parse di <!-- <nome-tag>-<uuid>:<kind> 
+    // 1) parse di <!--<spaces?><nome-tag>-<uuid>:<kind><spaces?> 
     // 2) call di parse_parameters, come in parse_tag 
     // 3) call di parse_arguments, come in parse_tag
-    // 4) parse di -->
+    // 4) parse di <spaces?>-->
     // ritornare struttura Anchor, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
 }
 
@@ -176,7 +171,7 @@ fn parse_parameters(document: &str, begin: usize) -> Result<Parameters, ParsingE
     // ritornare struttura Parameters, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
 }
 
-fn parse_anchor(document: &str, begin: usize) -> Result<Arguments, ParsingError>
+fn parse_arguments(document: &str, begin: usize) -> Result<Arguments, ParsingError>
 {
     let mut arguments = Vec::new();
 

@@ -332,31 +332,21 @@ impl<'a> Parser<'a> {
 }
 
 pub fn parse(document: &str) -> Result<Root, ParsingError> {
-    dbg!("Entering parse function");
     let mut parser = Parser::new(document);
     let start_position = parser.current_pos;
     let mut children = Vec::new();
 
     while parser.peek().is_some() {
-        dbg!("Parse loop iteration", &parser.current_pos);
         let current_offset = parser.current_pos.offset;
-        parser.skip_whitespace(); // Skip whitespace between nodes
-        if parser.current_pos.offset == document.len() {
-            // Reached end of document after skipping whitespace
-            break;
-        }
-
-        match parse_node(&mut parser)? {
-            Some(node) => {
-                dbg!("Node parsed successfully", &node);
-                children.push(node);
-            },
-            None => {
-                // If no node was parsed, and we haven't advanced, it's an infinite loop or unexpected content
-                if parser.current_pos.offset == current_offset {
-                    dbg!("Parser stuck or no node parsed, breaking loop");
-                    break; // Break to avoid infinite loop if no progress is made
-                }
+        if let Some(node) = parse_node(&mut parser)? {
+            children.push(node);
+        } else {
+            // If no node was parsed, and we haven't advanced, it's an infinite loop or unexpected content
+            if parser.current_pos.offset == current_offset {
+                return Err(ParsingError::Custom {
+                    message: "Parser stuck: unable to parse content at current position".to_string(),
+                    range: Range { start: parser.current_pos, end: parser.current_pos },
+                });
             }
         }
     }
@@ -364,7 +354,6 @@ pub fn parse(document: &str) -> Result<Root, ParsingError> {
     let end_position = parser.current_pos;
     let root_range = Range { start: start_position, end: end_position };
 
-    dbg!("Exiting parse function");
     Ok(Root {
         children,
         range: root_range,
@@ -372,32 +361,27 @@ pub fn parse(document: &str) -> Result<Root, ParsingError> {
 }
 
 fn parse_node(parser: &mut Parser) -> Result<Option<Node>, ParsingError> {
-    dbg!("Entering parse_node", &parser.current_pos);
+    parser.skip_whitespace();
     let start_pos = parser.current_pos;
 
-    dbg!("Attempting to parse tag");
     if let Some(tag) = parse_tag(parser)? {
-        dbg!("Tag parsed successfully");
         return Ok(Some(Node::Tag(tag)));
     }
 
     // Reset position if tag parsing failed without consuming anything
     parser.current_pos = start_pos;
-    dbg!("Attempting to parse anchor");
+
     if let Some(anchor) = parse_anchor(parser)? {
-        dbg!("Anchor parsed successfully");
         return Ok(Some(Node::Anchor(anchor)));
     }
 
     // Reset position if anchor parsing failed without consuming anything
     parser.current_pos = start_pos;
-    dbg!("Attempting to parse text");
+
     if let Some(text) = parse_text(parser)? {
-        dbg!("Text parsed successfully");
         return Ok(Some(Node::Text(text)));
     }
 
-    dbg!("No node parsed, returning None");
     Ok(None)
 }
 
@@ -556,12 +540,10 @@ pub fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), Pars
 }
 
 pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
-    dbg!("Entering parse_tag", &parser.current_pos);
     let start_pos = parser.current_pos;
 
     // Tags must start at the beginning of a line and begin with '@'
     if start_pos.column != 1 || parser.peek() != Some('@') {
-        dbg!("parse_tag: Not a tag or not at column 1");
         return Ok(None);
     }
 
@@ -571,7 +553,6 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
     let tag_regex = regex::Regex::new(r"^@([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
 
     if let Some(captures) = tag_regex.captures(line_slice) {
-        dbg!("parse_tag: Tag regex matched");
         let command_str = captures.get(1).unwrap().as_str();
         let command = match command_str {
             "include" => Command::Include,
@@ -594,7 +575,6 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
         let (arguments, _) = parse_arguments(parser)?;
 
         let end_pos = parser.current_pos;
-        dbg!("parse_tag: Successfully parsed tag");
         Ok(Some(Tag {
             command,
             parameters,
@@ -602,18 +582,15 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
             range: Range { start: start_pos, end: end_pos },
         }))
     } else {
-        dbg!("parse_tag: Tag regex did not match");
         Ok(None)
     }
 }
 
 pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError> {
-    dbg!("Entering parse_anchor", &parser.current_pos);
     let start_pos = parser.current_pos;
 
     // Anchors must start at the beginning of a line and begin with "<!--"
     if start_pos.column != 1 || !parser.remaining_slice().starts_with("<!--") {
-        dbg!("parse_anchor: Not an anchor or not at column 1");
         return Ok(None);
     }
 
@@ -623,7 +600,6 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
     let anchor_regex = regex::Regex::new(r"^<!--\s*([a-zA-Z_][a-zA-Z0-9_]*)-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}):(begin|end)").unwrap();
 
     if let Some(captures) = anchor_regex.captures(line_slice) {
-        dbg!("parse_anchor: Anchor regex matched");
         let full_match = captures.get(0).unwrap().as_str();
         let command_str = captures.get(1).unwrap().as_str();
         let uuid_str = captures.get(2).unwrap().as_str();
@@ -663,7 +639,6 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
         parser.skip_whitespace();
 
         if !parser.remaining_slice().starts_with("-->") {
-            dbg!("parse_anchor: Missing closing '-->'");
             return Err(ParsingError::UnterminatedString {
                 range: Range { start: start_pos, end: parser.current_pos },
             });
@@ -671,7 +646,6 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
         parser.advance_position_by_str("-->");
 
         let end_pos = parser.current_pos;
-        dbg!("parse_anchor: Successfully parsed anchor");
         Ok(Some(Anchor {
             command,
             uuid,
@@ -681,43 +655,36 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
             range: Range { start: start_pos, end: end_pos },
         }))
     } else {
-        dbg!("parse_anchor: Anchor regex did not match");
         Ok(None)
     }
 }
 
 pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
-    dbg!("Entering parse_text", &parser.current_pos);
     let start_pos = parser.current_pos;
     let mut content = String::new();
 
     loop {
         let remaining = parser.remaining_slice();
         if remaining.is_empty() {
-            dbg!("parse_text: Remaining slice is empty, breaking loop");
             break;
         }
 
         // Check for start of a new tag or anchor
         if (remaining.starts_with("@") && parser.current_pos.column == 1) || (remaining.starts_with("<!--") && parser.current_pos.column == 1) {
-            dbg!("parse_text: Found start of tag or anchor, breaking loop");
             break;
         }
 
         if let Some(c) = parser.consume() {
             content.push(c);
         } else {
-            dbg!("parse_text: No more characters to consume, breaking loop");
             break;
         }
     }
 
     if content.trim().is_empty() {
-        dbg!("parse_text: Content is whitespace only, returning None");
         Ok(None)
     } else {
         let end_pos = parser.current_pos;
-        dbg!("parse_text: Successfully parsed text", &content);
         Ok(Some(Text {
             content,
             range: Range { start: start_pos, end: end_pos },

@@ -269,7 +269,7 @@ impl<'a> Parser<'a> {
                         '\\' => value.push('\\'),
                         _ => return Err(ParsingError::InvalidSyntax {
                             message: format!("Invalid escape sequence: {}", c),
-                            range: Range { start: current_char_pos, end: self.current_pos },
+                            range: Range { start: start_pos, end: self.current_pos },
                         }),
                     }
                     escaped = false;

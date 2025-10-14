@@ -78,7 +78,7 @@ fn test_parser_parse_quoted_string_single_quotes() {
 
 #[test]
 fn test_parser_parse_quoted_string_with_escapes() {
-    let mut parser = Parser::new("\"hello\\nworld\"");
+    let mut parser = Parser::new("\"hello\nworld\"");
     let (s, r) = parser.parse_quoted_string('"').unwrap();
     assert_eq!(s, "hello\nworld");
     assert_eq!(r, create_range(0, 1, 1, 14, 1, 15));
@@ -335,7 +335,7 @@ fn test_parse_node_text() {
 fn test_parse_mixed_content() {
     let uuid1 = Uuid::new_v4();
     let uuid2 = Uuid::new_v4();
-    let document = format!("Some initial text.\n@include file.md arg1\n<!-- derive-{}:begin -->\nMore text here.\n<!-- derive-{}:end -->\nFinal text.", uuid1, uuid2);
+    let document = format!("Some initial text.\n@include file.md arg1\n<!-- derive-{}:begin -->\nMore text here.\n<!-- derive-{}:end -->\nFinal text.\n", uuid1, uuid2);
 
     let root = parse(&document).unwrap();
     assert_eq!(root.children.len(), 6);
@@ -379,6 +379,13 @@ fn test_parse_mixed_content() {
     } else {
         panic!("Expected Anchor node");
     }
+
+    // Node 6: Text
+    if let Node::Text(text) = &root.children[5] {
+        assert_eq!(text.content, "Final text.\n");
+    } else {
+        panic!("Expected Text node");
+    }
 }
 
 #[test]
@@ -393,4 +400,481 @@ fn test_parse_empty_document() {
 fn test_parse_only_whitespace() {
     let document = "   \n\n";
     let root = parse(document).unwrap();
-    assert!(root.children.is_empty());}
+    assert!(root.children.is_empty());
+}
+
+// New tests for @tag snippets
+
+#[test]
+fn test_parse_tag_simple_args() {
+    let document = "Some text before.\n@tag arg1 arg2 arg3\nSome text after.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Some text before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert!(tag.parameters.is_empty());
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(19, 2, 1, 35, 2, 17));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "Some text after.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_empty_params() {
+    let document = "Before.\n@tag {{}}\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert!(tag.parameters.is_empty());
+        assert!(tag.arguments.is_empty());
+        assert_eq!(tag.range, create_range(9, 2, 1, 15, 2, 7));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_empty_params_args() {
+    let document = "Before.\n@tag{} arg1 arg2 arg3\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert!(tag.parameters.is_empty());
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(9, 2, 1, 29, 2, 21));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_empty_params_multiline_args() {
+    let document = "Before.\n@tag{\n} arg1 arg2 arg3\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert!(tag.parameters.is_empty());
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(9, 2, 1, 31, 3, 15));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_with_params_args() {
+    let document = "Before.\n@tag{x=1,b=2,c=3,d=haha,e='hoho',f=\"huhu\"} arg1 arg2 arg3\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert_eq!(tag.parameters.len(), 6);
+        assert_eq!(tag.parameters["x"], ParameterValue::Integer(1));
+        assert_eq!(tag.parameters["b"], ParameterValue::Integer(2));
+        assert_eq!(tag.parameters["c"], ParameterValue::Integer(3));
+        assert_eq!(tag.parameters["d"], ParameterValue::String("haha".to_string()));
+        assert_eq!(tag.parameters["e"], ParameterValue::String("hoho".to_string()));
+        assert_eq!(tag.parameters["f"], ParameterValue::String("huhu".to_string()));
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(9, 2, 1, 76, 2, 68));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_with_params_spaced_args() {
+    let document = "Before.\n@tag {x=1,b=2, c = 3, d   =     haha,   e=  'hoho',f  = \"huhu\"    }      arg1 arg2 arg3\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert_eq!(tag.parameters.len(), 6);
+        assert_eq!(tag.parameters["x"], ParameterValue::Integer(1));
+        assert_eq!(tag.parameters["b"], ParameterValue::Integer(2));
+        assert_eq!(tag.parameters["c"], ParameterValue::Integer(3));
+        assert_eq!(tag.parameters["d"], ParameterValue::String("haha".to_string()));
+        assert_eq!(tag.parameters["e"], ParameterValue::String("hoho".to_string()));
+        assert_eq!(tag.parameters["f"], ParameterValue::String("huhu".to_string()));
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(9, 2, 1, 109, 2, 101));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_with_params_multiline_args() {
+    let document = "Before.\n@tag{\n    x=1,b=2,c=3,d=haha,e='hoho',f=\"huhu\"\n} arg1 arg2 arg3\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert_eq!(tag.parameters.len(), 6);
+        assert_eq!(tag.parameters["x"], ParameterValue::Integer(1));
+        assert_eq!(tag.parameters["b"], ParameterValue::Integer(2));
+        assert_eq!(tag.parameters["c"], ParameterValue::Integer(3));
+        assert_eq!(tag.parameters["d"], ParameterValue::String("haha".to_string()));
+        assert_eq!(tag.parameters["e"], ParameterValue::String("hoho".to_string()));
+        assert_eq!(tag.parameters["f"], ParameterValue::String("huhu".to_string()));
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(9, 2, 1, 80, 4, 15));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_with_params_newline_before_params_args() {
+    let document = "Before.\n@tag\n{x=1,b=2,c=3,d=haha,e='hoho',f=\"huhu\"}\n arg1 arg2 arg3\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert_eq!(tag.parameters.len(), 6);
+        assert_eq!(tag.parameters["x"], ParameterValue::Integer(1));
+        assert_eq!(tag.parameters["b"], ParameterValue::Integer(2));
+        assert_eq!(tag.parameters["c"], ParameterValue::Integer(3));
+        assert_eq!(tag.parameters["d"], ParameterValue::String("haha".to_string()));
+        assert_eq!(tag.parameters["e"], ParameterValue::String("hoho".to_string()));
+        assert_eq!(tag.parameters["f"], ParameterValue::String("huhu".to_string()));
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(9, 2, 1, 80, 4, 15));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_tag_with_params_multiline_spaced_args() {
+    let document = "Before.\n@tag{\n    x=1,\n    b=2,\n    c=3,\n    d=haha,\n    e='hoho',\n    f=\"huhu\"\n} arg1 arg2 arg3\nAfter.";
+    let root = parse(document).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Tag(tag) = &root.children[1] {
+        assert_eq!(tag.command, Command::Tag);
+        assert_eq!(tag.parameters.len(), 6);
+        assert_eq!(tag.parameters["x"], ParameterValue::Integer(1));
+        assert_eq!(tag.parameters["b"], ParameterValue::Integer(2));
+        assert_eq!(tag.parameters["c"], ParameterValue::Integer(3));
+        assert_eq!(tag.parameters["d"], ParameterValue::String("haha".to_string()));
+        assert_eq!(tag.parameters["e"], ParameterValue::String("hoho".to_string()));
+        assert_eq!(tag.parameters["f"], ParameterValue::String("huhu".to_string()));
+        assert_eq!(tag.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(tag.range, create_range(9, 2, 1, 109, 9, 15));
+    } else {
+        panic!("Expected Tag node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+// New tests for Anchor snippets
+
+#[test]
+fn test_parse_anchor_simple_new() {
+    let uuid = Uuid::parse_str("12341234-1234-1234-1234-123412341234").unwrap();
+    let document = format!("Before.\n<!-- tag-{}:begin -->\nAfter.", uuid);
+    let root = parse(document.as_str()).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Anchor(anchor) = &root.children[1] {
+        assert_eq!(anchor.command, Command::Tag);
+        assert_eq!(anchor.uuid, uuid);
+        assert_eq!(anchor.kind, Kind::Begin);
+        assert!(anchor.parameters.is_empty());
+        assert!(anchor.arguments.is_empty());
+        assert_eq!(anchor.range, create_range(9, 2, 1, 54, 2, 46));
+    } else {
+        panic!("Expected Anchor node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_anchor_empty_params_new() {
+    let uuid = Uuid::parse_str("12341234-1234-1234-1234-123412341234").unwrap();
+    let document = format!("Before.\n<!-- tag-{}:begin {{ }} -->\nAfter.", uuid);
+    let root = parse(document.as_str()).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Anchor(anchor) = &root.children[1] {
+        assert_eq!(anchor.command, Command::Tag);
+        assert_eq!(anchor.uuid, uuid);
+        assert_eq!(anchor.kind, Kind::Begin);
+        assert!(anchor.parameters.is_empty());
+        assert!(anchor.arguments.is_empty());
+        assert_eq!(anchor.range, create_range(9, 2, 1, 57, 2, 49));
+    } else {
+        panic!("Expected Anchor node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_anchor_empty_params_multiline_new() {
+    let uuid = Uuid::parse_str("12341234-1234-1234-1234-123412341234").unwrap();
+    let document = format!("Before.\n<!-- tag-{}:begin {{\n }} -->\nAfter.", uuid);
+    let root = parse(document.as_str()).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Anchor(anchor) = &root.children[1] {
+        assert_eq!(anchor.command, Command::Tag);
+        assert_eq!(anchor.uuid, uuid);
+        assert_eq!(anchor.kind, Kind::Begin);
+        assert!(anchor.parameters.is_empty());
+        assert!(anchor.arguments.is_empty());
+        assert_eq!(anchor.range, create_range(9, 2, 1, 60, 3, 5));
+    } else {
+        panic!("Expected Anchor node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_anchor_empty_params_multiline_args_new() {
+    let uuid = Uuid::parse_str("12341234-1234-1234-1234-123412341234").unwrap();
+    let document = format!("Before.\n<!-- tag-{}:begin {{\n }} arg1 arg2 arg3 -->\nAfter.", uuid);
+    let root = parse(document.as_str()).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Anchor(anchor) = &root.children[1] {
+        assert_eq!(anchor.command, Command::Tag);
+        assert_eq!(anchor.uuid, uuid);
+        assert_eq!(anchor.kind, Kind::Begin);
+        assert!(anchor.parameters.is_empty());
+        assert_eq!(anchor.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(anchor.range, create_range(9, 2, 1, 76, 3, 21));
+    } else {
+        panic!("Expected Anchor node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_anchor_empty_params_multiline_args_spaced_new() {
+    let uuid = Uuid::parse_str("12341234-1234-1234-1234-123412341234").unwrap();
+    let document = format!("Before.\n<!-- tag-{}:begin \n{{\n }} arg1 arg2 arg3 \n-->\nAfter.", uuid);
+    let root = parse(document.as_str()).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Anchor(anchor) = &root.children[1] {
+        assert_eq!(anchor.command, Command::Tag);
+        assert_eq!(anchor.uuid, uuid);
+        assert_eq!(anchor.kind, Kind::Begin);
+        assert!(anchor.parameters.is_empty());
+        assert_eq!(anchor.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(anchor.range, create_range(9, 2, 1, 80, 5, 5));
+    } else {
+        panic!("Expected Anchor node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}
+
+#[test]
+fn test_parse_anchor_with_params_multiline_args_new() {
+    let uuid = Uuid::parse_str("12341234-1234-1234-1234-123412341234").unwrap();
+    let document = format!("Before.\n<!-- tag-{}:begin {{\n    x=1, 
+    y=2,\n    z=3,\n}} arg1 arg2 arg3 -->\nAfter.", uuid);
+    let root = parse(document.as_str()).unwrap();
+    assert_eq!(root.children.len(), 3);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "Before.\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    if let Node::Anchor(anchor) = &root.children[1] {
+        assert_eq!(anchor.command, Command::Tag);
+        assert_eq!(anchor.uuid, uuid);
+        assert_eq!(anchor.kind, Kind::Begin);
+        assert_eq!(anchor.parameters.len(), 3);
+        assert_eq!(anchor.parameters["x"], ParameterValue::Integer(1));
+        assert_eq!(anchor.parameters["y"], ParameterValue::Integer(2));
+        assert_eq!(anchor.parameters["z"], ParameterValue::Integer(3));
+        assert_eq!(anchor.arguments, vec!["arg1", "arg2", "arg3"]);
+        assert_eq!(anchor.range, create_range(9, 2, 1, 106, 6, 21));
+    } else {
+        panic!("Expected Anchor node");
+    }
+
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "After.");
+    } else {
+        panic!("Expected Text node");
+    }
+}

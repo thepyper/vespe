@@ -73,6 +73,7 @@ pub enum Command {
     Summarize,
     Set,
     Repeat,
+    Tag,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -569,8 +570,7 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
     let line_start_offset = parser.document[..start_pos.offset].rfind('\n').map_or(0, |i| i + 1);
     let line_slice = &parser.document[line_start_offset..];
 
-    let tag_regex = regex::Regex::new(r"^@([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
-
+            let tag_regex = regex::Regex::new(r"^@((?:answer|summary|inline|derive|set|repeat|include|tag))").unwrap();
     if let Some(captures) = tag_regex.captures(line_slice) {
         let full_match = captures.get(0).unwrap().as_str();
         let command_str = captures.get(1).unwrap().as_str();
@@ -582,6 +582,7 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
             "summarize" => Command::Summarize,
             "set" => Command::Set,
             "repeat" => Command::Repeat,
+            "tag" => Command::Tag,
             _ => return Err(ParsingError::InvalidSyntax {
                 message: format!("Unknown command: {}", command_str),
                 range: Range { start: start_pos, end: parser.current_pos },

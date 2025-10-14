@@ -1,26 +1,57 @@
-use sha2::digest::typenum::Double;
+use std::collections::HashMap;
+use thiserror::Error;
+use uuid::Uuid;
 
+// 2. Definizione delle Strutture Dati Core
 
-
-struct Range
-{
-    begin: usize,  // 0-based offset
-    end: usize,  // 0-based offset
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Position {
+    pub offset: usize, // 0-based byte offset from the start of the document
+    pub line: usize,   // 1-based line number
+    pub column: usize, // 1-based column number (character index on the line)
 }
 
-struct Root
-{
-    children: Vec<Node>,
-    range: Range,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Range {
+    pub start: Position,
+    pub end: Position,
 }
 
-struct Text
-{
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParameterValue {
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool),
 }
 
-enum Command
-{
+pub type Parameters = HashMap<String, ParameterValue>;
+
+// 3. Implementazione della Gestione degli Errori (`ParsingError`)
+
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum ParsingError {
+    #[error("Unexpected token: expected '{expected}', found '{found}' at {range:?}")]
+    UnexpectedToken {
+        expected: String,
+        found: String,
+        range: Range,
+    },
+    #[error("Invalid syntax: {message} at {range:?}")]
+    InvalidSyntax { message: String, range: Range },
+    #[error("Unexpected end of file: expected '{expected}' at {range:?}")]
+    EndOfFileUnexpected { expected: String, range: Range },
+    #[error("Invalid number format: '{value}' at {range:?}")]
+    InvalidNumberFormat { value: String, range: Range },
+    #[error("Unterminated string at {range:?}")]
+    UnterminatedString { range: Range },
+    #[error("Custom parsing error: {message} at {range:?}")]
+    Custom { message: String, range: Range },
+}
+
+// Placeholder for other structs that will be defined later
+#[derive(Debug, Clone, PartialEq)]
+pub enum Command {
     Include,
     Inline,
     Answer,
@@ -30,168 +61,107 @@ enum Command
     Repeat,
 }
 
-struct TagOpening
-{
-    command: Command,
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tag {
+    pub command: Command,
+    pub parameters: Parameters,
+    pub arguments: Vec<String>, // Simplified for now, will be `Argument` structs later
+    pub range: Range,
 }
 
-struct Parameters
-{
-    parameters: serde_json::Value,
-    range: Range,
-}
-
-struct Argument
-{
-    range: Range,
-}
-
-struct Arguments
-{
-    children: Vec<Argument>,
-    range: Range,
-}
-
-struct Tag
-{
-    opening: TagOpening,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
-}
-
-enum Kind
-{
+#[derive(Debug, Clone, PartialEq)]
+pub enum Kind {
     Begin,
     End,
 }
 
-struct AnchorOpening
-{
-    command: Command,
-    uuid: Uuid,
-    kind: Kind,
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Anchor {
+    pub command: Command,
+    pub uuid: Uuid,
+    pub kind: Kind,
+    pub parameters: Parameters,
+    pub arguments: Vec<String>, // Simplified for now, will be `Argument` structs later
+    pub range: Range,
 }
 
-struct Anchor
-{
-    opening: AnchorOpening,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Text {
+    pub content: String,
+    pub range: Range,
 }
 
-enum Node
-{
-    Root(Root),
+#[derive(Debug, Clone, PartialEq)]
+pub enum Node {
     Tag(Tag),
     Anchor(Anchor),
     Text(Text),
 }
 
-struct ParsingError
-{
-    // TODO definisci opportunamente
+pub struct Root {
+    pub children: Vec<Node>,
+    pub range: Range,
 }
 
-pub fn parse(document: &str) -> Result<Root, ParsingError> 
-{
-    let begin = 0usize;
+// Placeholder functions
+pub fn parse(document: &str) -> Result<Root, ParsingError> {
+    // TODO: Implement the main parsing logic
+    let start_position = Position { offset: 0, line: 1, column: 1 };
+    let end_position = Position { offset: document.len(), line: 1, column: document.len() + 1 }; // Placeholder
+    let root_range = Range { start: start_position, end: end_position };
 
-    let (children, range) = parse_many_nodes(document, begin)?;
-
-    Ok(Root{
-        children,
-        range,
+    Ok(Root {
+        children: vec![],
+        range: root_range,
     })
-
 }
 
-fn parse_many_nodes(document: &str, begin: usize) -> Result<Vec<Node>, ParsingError>
-{
-    let mut nodes = Vec::new();
-
-    let end_offset = document.len();
-    let mut position = begin;
-
-    while position < end_offset {
-
-        let (node, range) = parse_node(document, position)?;
-        nodes.push(node);
-
-        position = range.end;
+// Helper to advance position
+fn advance_position(current_pos: Position, text: &str) -> Position {
+    let mut new_pos = current_pos;
+    for char_code in text.chars() {
+        new_pos.offset += char_code.len_utf8();
+        if char_code == '\n' {
+            new_pos.line += 1;
+            new_pos.column = 1;
+        } else {
+            new_pos.column += 1;
+        }
     }
-
-    Ok(nodes)
+    new_pos
 }
 
-fn parse_node(document: &str, begin: usize) -> Result<Node, ParsingError>
-{
-    if let Some(tag) = parse_tag(document, begin)? {
-        Ok(Node::Tag(tag))
-    } else if let Some(anchor) = parse_anchor(document, begin)? {
-        Ok(Node::Anchor(anchor))
-    } else if let Some(text) = parse_text(document, begin)? {
-        Ok(Node::Text(text))
-    }
-
-    // TODO errore: parsing not advanced!!
+// Placeholder for parse_parameters
+fn parse_parameters(document: &str, current_pos: Position) -> Result<(Parameters, Range, Position), ParsingError> {
+    // For now, return empty parameters and advance position by 0
+    let empty_params = HashMap::new();
+    let range = Range { start: current_pos, end: current_pos };
+    Ok((empty_params, range, current_pos))
 }
 
-fn parse_tag(document: &str, begin: usize) -> Result<Option<Tag>, ParsingError>
-{
-    // ASSERT: begin.column == 1 altrimenti errore, partenza tag e' SEMPRE ad inizio linea
-
-    // TODO: parse di un tag, fatto da:
-    // 1) parse di @<nome-tag><spaces?> 
-    // 2) call di parse_parameters che fa parsing di {} oggetto JSON (possibile che non ci sia, allora parameters e' un oggetto vuoto {})
-    // 3) call di parse_arguments che fa il parsing del resto della linea dove e' finito il JSON con }, e separa le words in diversi argument; gestire ', e " per accorpare
-    // ritornare struttura Tag, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
+// Placeholder for parse_argument
+fn parse_argument(document: &str, current_pos: Position) -> Result<Option<(String, Range, Position)>, ParsingError> {
+    Ok(None)
 }
 
-fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingError>
-{
-    // ASSERT: begin.column == 1 altrimenti errore, partenza anchor e' SEMPRE ad inizio linea
-
-    // TODO: parse di una anchor, fatto da:
-    // 1) parse di <!--<spaces?><nome-tag>-<uuid>:<kind><spaces?> 
-    // 2) call di parse_parameters, come in parse_tag 
-    // 3) call di parse_arguments, come in parse_tag
-    // 4) parse di <spaces?>-->
-    // ritornare struttura Anchor, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
+// Placeholder for parse_arguments
+fn parse_arguments(document: &str, current_pos: Position) -> Result<(Vec<String>, Range, Position), ParsingError> {
+    let empty_args = vec![];
+    let range = Range { start: current_pos, end: current_pos };
+    Ok((empty_args, range, current_pos))
 }
 
-fn parse_parameters(document: &str, begin: usize) -> Result<Parameters, ParsingError>
-{
-    // TODO: parse dei parametri, fatto da:
-    // 1) se non c'e' un { allora parameters ritorna json!({}) e range "nullo"
-    // 2) se c'e' { allora parameters fa parse di json fino al } corrispondente
-    // ritornare struttura Parameters, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
+// Placeholder for parse_tag
+fn parse_tag(document: &str, current_pos: Position) -> Result<Option<(Tag, Position)>, ParsingError> {
+    Ok(None)
 }
 
-fn parse_arguments(document: &str, begin: usize) -> Result<Arguments, ParsingError>
-{
-    let mut arguments = Vec::new();
-
-    let end_offset = ; // TODO cerca fine linea a partire da begin
-    let mut position = begin;
-
-    while position < end_offset {
-
-        let (argument, range) = parse_argument(document, position)?;
-        arguments.push(argument);
-
-        position = range.end;
-    }
-
-    Ok(arguments)
+// Placeholder for parse_anchor
+fn parse_anchor(document: &str, current_pos: Position) -> Result<Option<(Anchor, Position)>, ParsingError> {
+    Ok(None)
 }
 
-fn parse_argument(document: &str, begin: usize) -> Result<Argument, ParsingError>
-{
-    // TODO parsing di una word, gestendo anche virgolette ' e " e tutto escaping standard (\" \' \n \r almeno)
+// Placeholder for parse_text
+fn parse_text(document: &str, current_pos: Position) -> Result<Option<(Text, Position)>, ParsingError> {
+    Ok(None)
 }
-
-

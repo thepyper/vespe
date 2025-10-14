@@ -681,7 +681,7 @@ pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
         }
     }
 
-    if content.is_empty() {
+    if content.trim().is_empty() {
         Ok(None)
     } else {
         let end_pos = parser.current_pos;

@@ -536,9 +536,77 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
     }
 }
 
-// Placeholder for parse_anchor
-fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError> {
-    Ok(None)
+pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError> {
+    let start_pos = parser.current_pos;
+
+    // Anchors must start at the beginning of a line and begin with "<!--"
+    if start_pos.column != 1 || !parser.remaining_slice().starts_with("<!--") {
+        return Ok(None);
+    }
+
+    let line_start_offset = parser.document[..start_pos.offset].rfind('\n').map_or(0, |i| i + 1);
+    let line_slice = &parser.document[line_start_offset..];
+
+    let anchor_regex = regex::Regex::new(r"^<!--\s*([a-zA-Z_][a-zA-Z0-9_]*)-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}):(begin|end)").unwrap();
+
+    if let Some(captures) = anchor_regex.captures(line_slice) {
+        let full_match = captures.get(0).unwrap().as_str();
+        let command_str = captures.get(1).unwrap().as_str();
+        let uuid_str = captures.get(2).unwrap().as_str();
+        let kind_str = captures.get(3).unwrap().as_str();
+
+        let command = match command_str {
+            "include" => Command::Include,
+            "inline" => Command::Inline,
+            "answer" => Command::Answer,
+            "derive" => Command::Derive,
+            "summarize" => Command::Summarize,
+            "set" => Command::Set,
+            "repeat" => Command::Repeat,
+            _ => return Err(ParsingError::InvalidSyntax {
+                message: format!("Unknown command in anchor: {}", command_str),
+                range: Range { start: start_pos, end: parser.current_pos },
+            }),
+        };
+
+        let uuid = Uuid::parse_str(uuid_str).map_err(|e| ParsingError::InvalidSyntax {
+            message: format!("Invalid UUID in anchor: {}", e),
+            range: Range { start: start_pos, end: parser.current_pos },
+        })?;
+
+        let kind = match kind_str {
+            "begin" => Kind::Begin,
+            "end" => Kind::End,
+            _ => unreachable!(), // Regex ensures this won't happen
+        };
+
+        // Advance parser past the initial anchor part
+        parser.advance_position_by_str(full_match);
+
+        let (parameters, _) = parse_parameters(parser)?;
+        let (arguments, _) = parse_arguments(parser)?;
+
+        parser.skip_whitespace();
+
+        if !parser.remaining_slice().starts_with("-->") {
+            return Err(ParsingError::UnterminatedString {
+                range: Range { start: start_pos, end: parser.current_pos },
+            });
+        }
+        parser.advance_position_by_str("-->");
+
+        let end_pos = parser.current_pos;
+        Ok(Some(Anchor {
+            command,
+            uuid,
+            kind,
+            parameters,
+            arguments,
+            range: Range { start: start_pos, end: end_pos },
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 // Placeholder for parse_text

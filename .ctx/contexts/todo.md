@@ -18,3 +18,10 @@ tutta roba che... serve?
 
 da vedere se tool sopravvive mio use-case
 
+
+
+
+
+se un context si chiama   blablbala.17.md, credo non funzioni (estensione .md mascherata da .17.md?)
+sanitize context inputs,  . -> -? o simile
+

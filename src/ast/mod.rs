@@ -265,6 +265,18 @@ impl<'a> Parser<'a> {
             }
         }
     }
+
+    pub fn parse_unquoted_identifier(&mut self) -> Option<(String, Range)> {
+        let start_pos = self.current_pos;
+        let identifier_str = self.take_while(|c| c.is_alphanumeric() || c == '_');
+
+        if identifier_str.is_empty() {
+            None
+        } else {
+            let end_pos = self.current_pos;
+            Some((identifier_str.to_string(), Range { start: start_pos, end: end_pos }))
+        }
+    }
 }
 
 // Placeholder functions

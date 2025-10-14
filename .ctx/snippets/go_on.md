@@ -1,2 +1,2 @@
-Just continue with the plan, you interrupted with no reason.
+You interrupted with no reason and plan seem not finished, resume.
 @answer

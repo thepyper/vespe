@@ -219,15 +219,27 @@ fn parse_arguments(document: &str, begin: usize) -> Result<Arguments, ParsingErr
 {
     let mut arguments = Vec::new();
 
-    let end_offset = document.len(); // TODO cerca fine linea a partire da begin
+    let end_of_line = document[begin..].find('\n').map_or(document.len(), |i| begin + i);
     let mut position = begin;
 
-    while position < end_offset {
+    while position < end_of_line {
+        // Skip whitespace
+        let remaining = &document[position..];
+        if let Some(first_char) = remaining.chars().next() {
+            if first_char.is_whitespace() {
+                position += first_char.len_utf8();
+                continue;
+            }
+        }
 
-        let (argument, range) = parse_argument(document, position)?;
+        // Check for end of arguments (e.g., closing brace of parameters)
+        if document[position..].starts_with("}") {
+            break;
+        }
+
+        let argument = parse_argument(document, position)?;
+        position = argument.range.end;
         arguments.push(argument);
-
-        position = range.end;
     }
 
     Ok(Arguments{

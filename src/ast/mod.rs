@@ -151,14 +151,65 @@ fn parse_node(document: &str, begin: usize) -> Result<Node, ParsingError>
 
 fn parse_tag(document: &str, begin: usize) -> Result<Option<Tag>, ParsingError>
 {
-    // ASSERT: begin.column == 1 altrimenti errore, partenza tag e' SEMPRE ad inizio linea
+    let s = &document[begin..];
 
-    // TODO: parse di un tag, fatto da:
-    // 1) parse di    @<nome-tag> 
-    // 2) call di parse_parameters che fa parsing di {} oggetto JSON (possibile che non ci sia, allora parameters e' un oggetto vuoto {})
-    // 3) call di parse_arguments che fa il parsing del resto della linea dove e' finito il JSON con }, e separa le words in diversi argument; gestire ', e " per accorpare
-    // ritornare struttura Tag, completa di calcolo del Range che comprende tutto il Tag compreso fine-linea
-    Ok(None) // Placeholder
+    // Check for begin.column == 1
+    let line_start = document[..begin].rfind('\n').map_or(0, |i| i + 1);
+    if begin != line_start {
+        return Ok(None); // Tag must start at the beginning of a line
+    }
+
+    if !s.starts_with("@") {
+        return Ok(None);
+    }
+
+    let mut chars = s.char_indices().peekable();
+    chars.next(); // Consume '@'
+
+    let command_start = begin + 1;
+    let mut command_end = command_start;
+
+    while let Some((i, c)) = chars.peek() {
+        if c.is_alphanumeric() || *c == '-' || *c == '_' {
+            command_end = begin + i + c.len_utf8();
+            chars.next();
+        } else {
+            break;
+        }
+    }
+
+    if command_start == command_end {
+        return Err(ParsingError::UnexpectedToken("Expected command name after '@'".to_string()));
+    }
+
+    let command_str = &document[command_start..command_end];
+    let command = match command_str {
+        "include" => Command::Include,
+        "inline" => Command::Inline,
+        "answer" => Command::Answer,
+        "derive" => Command::Derive,
+        "summarize" => Command::Summarize,
+        "set" => Command::Set,
+        "repeat" => Command::Repeat,
+        _ => return Ok(None), // Unknown command
+    };
+
+    let opening = TagOpening {
+        command,
+        range: Range { begin, end: command_end },
+    };
+
+    let parameters = parse_parameters(document, command_end)?;
+    let arguments = parse_arguments(document, parameters.range.end)?;
+
+    let end = arguments.range.end;
+
+    Ok(Some(Tag {
+        opening,
+        parameters,
+        arguments,
+        range: Range { begin, end },
+    }))
 }
 
 fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingError>

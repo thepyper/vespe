@@ -489,9 +489,51 @@ pub fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), Pars
     Ok((args, Range { start: start_pos, end: end_pos }))
 }
 
-// Placeholder for parse_tag
-fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
-    Ok(None)
+pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
+    let start_pos = parser.current_pos;
+
+    // Tags must start at the beginning of a line and begin with '@'
+    if start_pos.column != 1 || parser.peek() != Some('@') {
+        return Ok(None);
+    }
+
+    let line_start_offset = parser.document[..start_pos.offset].rfind('\n').map_or(0, |i| i + 1);
+    let line_slice = &parser.document[line_start_offset..];
+
+    let tag_regex = regex::Regex::new(r"^@([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
+
+    if let Some(captures) = tag_regex.captures(line_slice) {
+        let command_str = captures.get(1).unwrap().as_str();
+        let command = match command_str {
+            "include" => Command::Include,
+            "inline" => Command::Inline,
+            "answer" => Command::Answer,
+            "derive" => Command::Derive,
+            "summarize" => Command::Summarize,
+            "set" => Command::Set,
+            "repeat" => Command::Repeat,
+            _ => return Err(ParsingError::InvalidSyntax {
+                message: format!("Unknown command: {}", command_str),
+                range: Range { start: start_pos, end: parser.current_pos },
+            }),
+        };
+
+        // Advance parser past the command
+        parser.advance_position_by_str(captures.get(0).unwrap().as_str());
+
+        let (parameters, _) = parse_parameters(parser)?;
+        let (arguments, _) = parse_arguments(parser)?;
+
+        let end_pos = parser.current_pos;
+        Ok(Some(Tag {
+            command,
+            parameters,
+            arguments,
+            range: Range { start: start_pos, end: end_pos },
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 // Placeholder for parse_anchor

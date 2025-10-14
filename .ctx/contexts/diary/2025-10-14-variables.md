@@ -12,64 +12,37 @@ Il tag @set va aggiunto alla gestione correttamente in src/syntax e in src/seman
 Pianifica questo cambiamento, senza eseguirlo.
 
 <!-- answer-6213b6ce-76eb-452a-9f6e-06dccbdbafc4:begin -->
-Okay, I understand. You want to introduce a new feature that allows dynamic variable assignment within context files using an `@set[variable=value]` tag. This will require modifications to the `ExecuteWorker` struct, and the `syntax` and `semantic` modules to correctly parse and process this new tag.
+Comprendo la tua richiesta. Aggiungerò un campo `variables: HashMap<String, String>` all'oggetto `ExecuteWorker` in `src/execute/mod.rs` e implementerò la gestione del nuovo tag `@set[variable=value]` in `src/syntax` e `src/semantic`.
 
-Here's a detailed plan to implement this change:
+Ecco il piano dettagliato:
 
-### Plan: Implement `@set` Tag for Dynamic Variables
+1.  **Analisi del codice esistente:**
+    *   Leggerò `src/execute/mod.rs` per identificare la posizione e la struttura dell'oggetto `ExecuteWorker`.
+    *   Esaminerò `src/syntax/mod.rs`, `src/syntax/parser.rs` e `src/syntax/types.rs` per capire come vengono definiti e parsificati i tag esistenti.
+    *   Controllerò `src/semantic/mod.rs` e `src/semantic/context.rs` per comprendere come i tag vengono elaborati semanticamente.
 
-1.  **Understand Existing Codebase:**
-    *   **Read `src/execute/mod.rs`:** Analyze the `ExecuteWorker` struct, its initialization, and how it processes context content. Identify the appropriate place to add and manage the `variables` `HashMap`.
-    *   **Read `src/syntax/mod.rs`, `src/syntax/parser.rs`, `src/syntax/types.rs`:** Understand how existing tags are defined (e.g., `Tag` enum, `TagKind`), parsed (`parse_tag` function), and represented in the Abstract Syntax Tree (AST).
-    *   **Read `src/semantic/mod.rs`, `src/semantic/context.rs`:** Examine how parsed tags are semantically analyzed and how their information is propagated for execution.
+2.  **Modifica di `src/execute/mod.rs`:**
+    *   Aggiungerò il campo `variables: HashMap<String, String>` all'oggetto `ExecuteWorker`.
+    *   Inizializzerò questa `HashMap` come vuota durante la creazione di `ExecuteWorker`.
 
-2.  **Modify `src/execute/mod.rs`:**
-    *   **Add `variables` field to `ExecuteWorker`:** Introduce `variables: HashMap<String, String>` to the `ExecuteWorker` struct.
-    *   **Initialize `variables`:** Ensure the `variables` `HashMap` is properly initialized (e.g., as an empty map) when a new `ExecuteWorker` instance is created.
-    *   **Implement variable update logic:** Add a method or logic within `ExecuteWorker` that, upon encountering a `SetTag` (to be defined later), updates the `self.variables` `HashMap` with the extracted `variable` and `value`.
+3.  **Modifica di `src/syntax`:**
+    *   In `src/syntax/types.rs`, aggiungerò una nuova variante `Set { variable: String, value: String }` all'enum `Tag` (o struttura equivalente che definisce i tag).
+    *   In `src/syntax/parser.rs`, modificherò la logica di parsing per riconoscere il pattern `@set[variable=value]`. Questo richiederà l'estrazione della chiave (`variable`) e del valore (`value`) all'interno delle parentesi quadre.
 
-3.  **Modify `src/syntax/types.rs`:**
-    *   **Define `SetTag` struct:** Create a new struct to represent the `@set` tag's data:
-        ```rust
-        pub struct SetTag {
-            pub variable: String,
-            pub value: String,
-        }
-        ```
-    *   **Update `Tag` enum:** Add a new variant to the `Tag` enum to include the `SetTag`:
-        ```rust
-        pub enum Tag {
-            // ... existing variants
-            Set(SetTag),
-        }
-        ```
+4.  **Modifica di `src/semantic`:**
+    *   In `src/semantic/context.rs` (o file correlato che gestisce l'elaborazione dei tag), aggiornerò la logica per gestire il nuovo tag `Set`.
+    *   Quando viene incontrato un tag `Set`, la logica dovrà estrarre la variabile e il valore e propagarli in modo che `ExecuteWorker` possa utilizzarli.
 
-4.  **Modify `src/syntax/parser.rs`:**
-    *   **Update `parse_tag` function:**
-        *   Add a new `match` arm or `if let` condition to detect the "set" keyword after the `@` symbol.
-        *   Parse the content within the square brackets `[variable=value]`. This will involve extracting the `variable` name and its `value`.
-        *   Construct a `SetTag` instance with the parsed data.
-        *   Return `Ok(Tag::Set(set_tag_instance))`.
-        *   Ensure robust error handling for malformed `@set` tags (e.g., missing `=` or invalid format).
+5.  **Implementazione della logica di `@set` in `ExecuteWorker`:**
+    *   Nel metodo di esecuzione di `ExecuteWorker` (o funzione correlata), aggiungerò la logica per iterare sui tag parsificati.
+    *   Quando viene rilevato un tag `Set`, aggiornerò la `HashMap` `variables` con la chiave e il valore estratti.
 
-5.  **Modify `src/semantic/context.rs` (and potentially `src/semantic/mod.rs`):**
-    *   **Integrate `SetTag` processing:** Update the semantic analysis logic to recognize and process the `Tag::Set` variant.
-    *   **Propagate variable updates:** The semantic analysis phase should extract the `variable` and `value` from the `SetTag` and ensure this information is passed to the `ExecuteWorker` during the execution phase. This might involve:
-        *   Modifying the `SemanticContext` to temporarily hold these variable assignments.
-        *   Or, more likely, modifying the `execute_context` function (or similar) in `src/project.rs` to iterate through the semantically analyzed tags and apply the `SetTag` updates to the `ExecuteWorker`'s `variables` `HashMap`.
+6.  **Test e verifica:**
+    *   Scriverò nuovi unit test per `src/syntax/parser.rs` per assicurare che il tag `@set` venga parsificato correttamente.
+    *   Aggiungerò unit test per `src/semantic/context.rs` per verificare che il tag `Set` venga elaborato semanticamente in modo appropriato.
+    *   Creerò test di integrazione per `ExecuteWorker` per confermare che la `HashMap` `variables` venga aggiornata correttamente quando un file di contesto contiene tag `@set`.
+    *   Eseguirò tutti i test esistenti per garantire che le modifiche non abbiano introdotto regressioni.
+    *   Eseguirò il linter e il formatter del progetto per mantenere la coerenza dello stile del codice.
 
-6.  **Testing:**
-    *   **Create a new test case:** Add a new integration test (e.g., in `src/bin/ctx/main.rs`'s test module or a dedicated test file) that:
-        *   Creates a temporary context file containing one or more `@set` tags.
-        *   Executes this context file using the `ctx` CLI (or directly calls the `execute_context` function).
-        *   Asserts that the `ExecuteWorker`'s `variables` `HashMap` contains the expected key-value pairs after execution.
-    *   **Run existing tests:** Execute all existing tests to ensure that the changes haven't introduced any regressions.
-
-7.  **Code Quality and Documentation:**
-    *   **Run `cargo fmt`:** Ensure all new and modified code adheres to Rust formatting standards.
-    *   **Run `cargo clippy`:** Address any linter warnings.
-    *   **Add comments:** Provide clear and concise comments for the new structs, enum variants, and complex logic.
-    *   **Update documentation (if applicable):** If there's user-facing documentation for tags, update it to include the new `@set` tag.
-
-This plan ensures a systematic approach to integrating the new `@set` tag, covering parsing, semantic analysis, execution, and verification.
+Procederò con l'analisi del codice esistente.
 <!-- answer-6213b6ce-76eb-452a-9f6e-06dccbdbafc4:end -->

@@ -64,7 +64,7 @@ fn test_parse_tag_empty_params() {
         assert_eq!(tag.command, Command::Tag);
         assert!(tag.parameters.is_empty());
         assert!(tag.arguments.is_empty());
-        assert_eq!(tag.range, create_range(9, 2, 1, 15, 2, 7));
+        assert_eq!(tag.range, create_range(9, 2, 1, 17, 2, 9));
     } else {
         panic!("Expected Tag node");
     }

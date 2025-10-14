@@ -1,494 +1,146 @@
-struct Range
-{
-    begin: usize,  // 0-based offset
-    end: usize,  // 0-based offset
-}
-
-struct Root
-{
-    children: Vec<Node>,
-    range: Range,
-}
-
-struct Text
-{
-    range: Range,
-}
-
-enum Command
-{
-    Include,
-    Inline,
-    Answer,
-    Derive,
-    Summarize,
-    Set,
-    Repeat,
-}
-
-struct TagOpening
-{
-    command: Command,
-    range: Range,
-}
-
-struct Parameters
-{
-    parameters: serde_json::Value,
-    range: Range,
-}
-
-struct Argument
-{
-    range: Range,
-}
-
-struct Arguments
-{
-    children: Vec<Argument>,
-    range: Range,
-}
-
-struct Tag
-{
-    opening: TagOpening,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
-}
-
-enum Kind
-{
-    Begin,
-    End,
-}
-
-struct AnchorOpening
-{
-    command: Command,
-    uuid: Uuid,
-    kind: Kind,
-    range: Range,
-}
-
-struct Anchor
-{
-    opening: AnchorOpening,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
-}
-
-enum Node
-{
-    Root(Root),
-    Tag(Tag),
-    Anchor(Anchor),
-    Text(Text),
-}
-
-use uuid::Uuid;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum ParsingError {
-    #[error("Unexpected token: {0}")]
-    UnexpectedToken(String),
-    #[error("Invalid UUID: {0}")]
-    InvalidUuid(#[from] uuid::Error),
-    #[error("JSON parsing error: {0}")]
-    JsonError(#[from] serde_json::Error),
-    #[error("Parsing not advanced at position {0}")]
-    ParsingNotAdvanced(usize),
-    #[error("End of document reached unexpectedly")]
-    EndOfDocument,
-}
 
 
-pub fn parse(document: &str) -> Result<Root, ParsingError> 
-{
-    let begin = 0usize;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
 
-    let (children, range) = parse_many_nodes(document, begin)?;
-
-    Ok(Root{
-        children,
-        range,
-    })
-
-}
-
-fn parse_many_nodes(document: &str, begin: usize) -> Result<Vec<Node>, ParsingError>
-{
-    let mut nodes = Vec::new();
-
-    let end_offset = document.len();
-    let mut position = begin;
-
-    while position < end_offset {
-        let node = parse_node(document, position)?;
-        let range = match &node {
-            Node::Root(r) => &r.range,
-            Node::Tag(t) => &t.range,
-            Node::Anchor(a) => &a.range,
-            Node::Text(t) => &t.range,
-        };
-        nodes.push(node);
-
-        position = range.end;
+    #[test]
+    fn test_parse_parameters_empty() {
+        let document = "some text";
+        let parameters = parse_parameters(document, 0).unwrap();
+        assert_eq!(parameters.parameters, json!({}));
+        assert_eq!(parameters.range.begin, 0);
+        assert_eq!(parameters.range.end, 0);
     }
 
-    Ok(nodes)
-}
-
-fn parse_node(document: &str, begin: usize) -> Result<Node, ParsingError>
-{
-    if let Some(tag) = parse_tag(document, begin)? {
-        Ok(Node::Tag(tag))
-    } else if let Some(anchor) = parse_anchor(document, begin)? {
-        Ok(Node::Anchor(anchor))
-    } else if let Some(text) = parse_text(document, begin)? {
-        Ok(Node::Text(text))
-    } else {
-        Err(ParsingError::ParsingNotAdvanced(begin))
-    }
-}
-
-fn parse_tag(document: &str, begin: usize) -> Result<Option<Tag>, ParsingError>
-{
-    let s = &document[begin..];
-
-    // Check for begin.column == 1
-    let line_start = document[..begin].rfind('\n').map_or(0, |i| i + 1);
-    if begin != line_start {
-        return Ok(None); // Tag must start at the beginning of a line
+    #[test]
+    fn test_parse_parameters_simple() {
+        let document = "{\"key\":\"value\"} some text";
+        let parameters = parse_parameters(document, 0).unwrap();
+        assert_eq!(parameters.parameters, json!({"key":"value"}));
+        assert_eq!(parameters.range.begin, 0);
+        assert_eq!(parameters.range.end, "{\"key\":\"value\"}".len());
     }
 
-    if !s.starts_with("@") {
-        return Ok(None);
+    #[test]
+    fn test_parse_parameters_nested() {
+        let document = "{\"key\":{\"nested_key\":123}} some text";
+        let parameters = parse_parameters(document, 0).unwrap();
+        assert_eq!(parameters.parameters, json!({"key":{"nested_key":123}}));
+        assert_eq!(parameters.range.begin, 0);
+        assert_eq!(parameters.range.end, "{\"key\":{\"nested_key\":123}}".len());
     }
 
-    let mut chars = s.char_indices().peekable();
-    chars.next(); // Consume '@'
+    #[test]
+    fn test_parse_parameters_unmatched_brace() {
+        let document = "{\"key\":\"value\" some text";
+        let err = parse_parameters(document, 0).unwrap_err();
+        assert!(matches!(err, ParsingError::UnexpectedToken(_)));
+    }
 
-    let command_start = begin + 1;
-    let mut command_end = command_start;
+    #[test]
+    fn test_parse_argument_word() {
+        let document = "word next";
+        let argument = parse_argument(document, 0).unwrap();
+        assert_eq!(document[argument.range.begin..argument.range.end], "word");
+    }
 
-    while let Some((i, c)) = chars.peek() {
-        if c.is_alphanumeric() || *c == '-' || *c == '_' {
-            command_end = begin + i + c.len_utf8();
-            chars.next();
-        } else {
-            break;
+    #[test]
+    fn test_parse_argument_single_quoted() {
+        let document = "'single quoted' next";
+        let argument = parse_argument(document, 0).unwrap();
+        assert_eq!(document[argument.range.begin..argument.range.end], "'single quoted'");
+    }
+
+    #[test]
+    fn test_parse_argument_double_quoted() {
+        let document = \"\"double quoted\" next\";
+        let argument = parse_argument(document, 0).unwrap();
+        assert_eq!(document[argument.range.begin..argument.range.end], "\"double quoted\"");
+    }
+
+    #[test]
+    fn test_parse_argument_quoted_with_escape() {
+        let document = "\"escaped \\"quote\\"\" next";
+        let argument = parse_argument(document, 0).unwrap();
+        assert_eq!(document[argument.range.begin..argument.range.end], "\"escaped \\"quote\\"\"");
+    }
+
+    #[test]
+    fn test_parse_argument_unclosed_quote() {
+        let document = "\"unclosed quote next";
+        let err = parse_argument(document, 0).unwrap_err();
+        assert!(matches!(err, ParsingError::UnexpectedToken(_)));
+    }
+
+    #[test]
+    fn test_parse_arguments_multiple() {
+        let document = "arg1 'arg 2' \"arg 3\" {json}";
+        let arguments = parse_arguments(document, 0).unwrap();
+        assert_eq!(arguments.children.len(), 3);
+        assert_eq!(document[arguments.children[0].range.begin..arguments.children[0].range.end], "arg1");
+        assert_eq!(document[arguments.children[1].range.begin..arguments.children[1].range.end], "'arg 2'");
+        assert_eq!(document[arguments.children[2].range.begin..arguments.children[2].range.end], "\"arg 3\"");
+    }
+
+    #[test]
+    fn test_parse_tag_simple() {
+        let document = "@include arg1 arg2\n";
+        let tag = parse_tag(document, 0).unwrap().unwrap();
+        assert_eq!(tag.opening.command, Command::Include);
+        assert_eq!(tag.arguments.children.len(), 2);
+        assert_eq!(document[tag.arguments.children[0].range.begin..tag.arguments.children[0].range.end], "arg1");
+    }
+
+    #[test]
+    fn test_parse_tag_with_parameters() {
+        let document = "@inline {\"file\":\"test.md\"} arg1\n";
+        let tag = parse_tag(document, 0).unwrap().unwrap();
+        assert_eq!(tag.opening.command, Command::Inline);
+        assert_eq!(tag.parameters.parameters, json!({"file":"test.md"}));
+        assert_eq!(tag.arguments.children.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_anchor_simple() {
+        let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
+        let document = format!("<!-- include-{}:Begin -->\n", uuid_str);
+        let anchor = parse_anchor(&document, 0).unwrap().unwrap();
+        assert_eq!(anchor.opening.command, Command::Include);
+        assert_eq!(anchor.opening.kind, Kind::Begin);
+        assert_eq!(anchor.opening.uuid.to_string(), uuid_str);
+    }
+
+    #[test]
+    fn test_parse_text_simple() {
+        let document = "This is some plain text.\n@include tag";
+        let text = parse_text(document, 0).unwrap().unwrap();
+        assert_eq!(document[text.range.begin..text.range.end], "This is some plain text.\n");
+    }
+
+    #[test]
+    fn test_parse_many_nodes_mixed() {
+        let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
+        let document = format!("Text 1\n@include arg1\n<!-- include-{}:End -->\nText 2", uuid_str);
+        let nodes = parse_many_nodes(&document, 0).unwrap();
+        assert_eq!(nodes.len(), 4);
+
+        match &nodes[0] {
+            Node::Text(text) => assert_eq!(document[text.range.begin..text.range.end], "Text 1\n"),
+            _ => panic!("Expected Text node"),
         }
-    }
-
-    if command_start == command_end {
-        return Err(ParsingError::UnexpectedToken("Expected command name after '@'".to_string()));
-    }
-
-    let command_str = &document[command_start..command_end];
-    let command = match command_str {
-        "include" => Command::Include,
-        "inline" => Command::Inline,
-        "answer" => Command::Answer,
-        "derive" => Command::Derive,
-        "summarize" => Command::Summarize,
-        "set" => Command::Set,
-        "repeat" => Command::Repeat,
-        _ => return Ok(None), // Unknown command
-    };
-
-    let opening = TagOpening {
-        command,
-        range: Range { begin, end: command_end },
-    };
-
-    let parameters = parse_parameters(document, command_end)?;
-    let arguments = parse_arguments(document, parameters.range.end)?;
-
-    let end = arguments.range.end;
-
-    Ok(Some(Tag {
-        opening,
-        parameters,
-        arguments,
-        range: Range { begin, end },
-    }))
-}
-
-fn parse_anchor(document: &str, begin: usize) -> Result<Option<Anchor>, ParsingError>
-{
-    let s = &document[begin..];
-
-    // Check for begin.column == 1
-    let line_start = document[..begin].rfind('\n').map_or(0, |i| i + 1);
-    if begin != line_start {
-        return Ok(None); // Anchor must start at the beginning of a line
-    }
-
-    if !s.starts_with("<!-- ") {
-        return Ok(None);
-    }
-
-    let mut chars = s.char_indices().peekable();
-    let mut current_pos = begin;
-
-    // Consume "<!-- "
-    for _ in 0.."<!-- ".len() {
-        chars.next();
-        current_pos += 1;
-    }
-
-    // Parse command
-    let command_start = current_pos;
-    let mut command_end = command_start;
-    while let Some((i, c)) = chars.peek() {
-        if c.is_alphanumeric() || *c == '-' || *c == '_' {
-            command_end = begin + i + c.len_utf8();
-            chars.next();
-        } else {
-            break;
+        match &nodes[1] {
+            Node::Tag(tag) => assert_eq!(tag.opening.command, Command::Include),
+            _ => panic!("Expected Tag node"),
         }
-    }
-    let command_str = &document[command_start..command_end];
-    let command = match command_str {
-        "include" => Command::Include,
-        "inline" => Command::Inline,
-        "answer" => Command::Answer,
-        "derive" => Command::Derive,
-        "summarize" => Command::Summarize,
-        "set" => Command::Set,
-        "repeat" => Command::Repeat,
-        _ => return Ok(None), // Unknown command
-    };
-
-    // Consume '-'
-    if chars.next().map(|(_, c)| c) != Some('-') {
-        return Ok(None);
-    }
-    current_pos = command_end + 1;
-
-    // Parse UUID
-    let uuid_start = current_pos;
-    let mut uuid_end = uuid_start;
-    while let Some((i, c)) = chars.peek() {
-        if c.is_alphanumeric() || *c == '-' {
-            uuid_end = begin + i + c.len_utf8();
-            chars.next();
-        } else {
-            break;
+        match &nodes[2] {
+            Node::Anchor(anchor) => assert_eq!(anchor.opening.kind, Kind::End),
+            _ => panic!("Expected Anchor node"),
         }
-    }
-    let uuid_str = &document[uuid_start..uuid_end];
-    let uuid = Uuid::parse_str(uuid_str)?;
-    current_pos = uuid_end;
-
-    // Consume ':'
-    if chars.next().map(|(_, c)| c) != Some(':') {
-        return Ok(None);
-    }
-    current_pos += 1;
-
-    // Parse Kind
-    let kind_start = current_pos;
-    let mut kind_end = kind_start;
-    while let Some((i, c)) = chars.peek() {
-        if c.is_alphanumeric() {
-            kind_end = begin + i + c.len_utf8();
-            chars.next();
-        } else {
-            break;
+        match &nodes[3] {
+            Node::Text(text) => assert_eq!(document[text.range.begin..text.range.end], "Text 2"),
+            _ => panic!("Expected Text node"),
         }
-    }
-    let kind_str = &document[kind_start..kind_end];
-    let kind = match kind_str {
-        "Begin" => Kind::Begin,
-        "End" => Kind::End,
-        _ => return Ok(None), // Unknown kind
-    };
-    current_pos = kind_end;
-
-    let opening = AnchorOpening {
-        command,
-        uuid,
-        kind,
-        range: Range { begin, end: current_pos },
-    };
-
-    let parameters = parse_parameters(document, current_pos)?;
-    let arguments = parse_arguments(document, parameters.range.end)?;
-
-    let mut end = arguments.range.end;
-
-    // Consume " -->"
-    let closing_sequence = " -->";
-    if document[end..].starts_with(closing_sequence) {
-        end += closing_sequence.len();
-    } else {
-        return Err(ParsingError::UnexpectedToken("Expected ' -->'".to_string()));
-    }
-
-    Ok(Some(Anchor {
-        opening,
-        parameters,
-        arguments,
-        range: Range { begin, end },
-    }))
-}
-
-fn parse_parameters(document: &str, begin: usize) -> Result<Parameters, ParsingError>
-{
-    let s = &document[begin..];
-    if !s.starts_with('{') {
-        return Ok(Parameters {
-            parameters: serde_json::Value::Object(serde_json::Map::new()),
-            range: Range { begin, end: begin },
-        });
-    }
-
-    let mut brace_count = 0;
-    let mut end = begin;
-    let mut found_closing_brace = false;
-
-    for (i, c) in s.char_indices() {
-        if c == '{' {
-            brace_count += 1;
-        } else if c == '}' {
-            brace_count -= 1;
-        }
-
-        if brace_count == 0 && c == '}' {
-            end = begin + i + 1;
-            found_closing_brace = true;
-            break;
-        }
-    }
-
-    if !found_closing_brace {
-        return Err(ParsingError::UnexpectedToken("Unmatched opening brace for parameters".to_string()));
-    }
-
-    let json_str = &document[begin..end];
-    let parameters: serde_json::Value = serde_json::from_str(json_str)?;
-
-    Ok(Parameters {
-        parameters,
-        range: Range { begin, end },
-    })
-}
-
-fn parse_arguments(document: &str, begin: usize) -> Result<Arguments, ParsingError>
-{
-    let mut arguments = Vec::new();
-
-    let end_of_line = document[begin..].find('\n').map_or(document.len(), |i| begin + i);
-    let mut position = begin;
-
-    while position < end_of_line {
-        // Skip whitespace
-        let remaining = &document[position..];
-        if let Some(first_char) = remaining.chars().next() {
-            if first_char.is_whitespace() {
-                position += first_char.len_utf8();
-                continue;
-            }
-        }
-
-        // Check for end of arguments (e.g., closing brace of parameters)
-        if document[position..].starts_with("}") {
-            break;
-        }
-
-        let argument = parse_argument(document, position)?;
-        position = argument.range.end;
-        arguments.push(argument);
-    }
-
-    Ok(Arguments{
-        children: arguments,
-        range: Range{begin, end: position},
-    })
-}
-
-fn parse_argument(document: &str, begin: usize) -> Result<Argument, ParsingError>
-{
-    let s = &document[begin..];
-    let mut end = begin;
-
-    if s.is_empty() {
-        return Err(ParsingError::EndOfDocument);
-    }
-
-    let first_char = s.chars().next().unwrap();
-
-    if first_char == '\'' || first_char == '"' {
-        // Quoted string
-        let quote_char = first_char;
-        let mut chars = s.char_indices().peekable();
-        chars.next(); // Consume the opening quote
-
-        end = begin + 1; // Start after the opening quote
-
-        while let Some((i, c)) = chars.next() {
-            if c == '\\' {
-                // Handle escape sequence
-                chars.next(); // Consume the escaped character
-                end = begin + i + 2;
-            } else if c == quote_char {
-                // Closing quote
-                end = begin + i + 1;
-                break;
-            } else {
-                end = begin + i + 1;
-            }
-        }
-
-        if document.chars().nth(end - 1) != Some(quote_char) {
-            return Err(ParsingError::UnexpectedToken(format!("Unclosed string literal starting at position {}", begin)));
-        }
-
-    } else {
-        // Single word or token
-        for (i, c) in s.char_indices() {
-            if c.is_whitespace() || c == '}' || c == ',' {
-                end = begin + i;
-                break;
-            } else {
-                end = begin + i + 1;
-            }
-        }
-    }
-
-    if end == begin {
-        return Err(ParsingError::ParsingNotAdvanced(begin));
-    }
-
-    Ok(Argument {
-        range: Range { begin, end },
-    })
-}
-
-fn parse_text(document: &str, begin: usize) -> Result<Option<Text>, ParsingError>
-{
-    let mut end = begin;
-    let mut found_content = false;
-
-    for (i, c) in document[begin..].char_indices() {
-        let current_pos = begin + i;
-        // Check if the current position starts a tag or an anchor
-        if document[current_pos..].starts_with("@") || document[current_pos..].starts_with("<!-- ") {
-            break;
-        }
-        end = current_pos + c.len_utf8();
-        found_content = true;
-    }
-
-    if found_content {
-        Ok(Some(Text {
-            range: Range { begin, end },
-        }))
-    } else {
-        Ok(None)
     }
 }

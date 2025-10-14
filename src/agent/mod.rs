@@ -1,6 +1,7 @@
 use anyhow::Context;
-use std::io::Write;
+use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
+use std::thread;
 use tracing::{debug, error};
 
 use crate::project::Project;
@@ -54,26 +55,81 @@ impl<'a> ShellAgentCall<'a> {
 
         debug!("Writing query to stdin.");
         child.stdin.as_mut().unwrap().write_all(query.as_bytes())?;
-        let output = child.wait_with_output()?;
 
-        debug!("Command finished with status: {:?}", output.status);
-        if !output.status.success() {
+        let stdout = child.stdout.take().context("Failed to take stdout")?;
+        let stderr = child.stderr.take().context("Failed to take stderr")?;
+
+        let mut stdout_reader = BufReader::new(stdout);
+        let mut stderr_reader = BufReader::new(stderr);
+
+        let mut full_stdout = Vec::new();
+        let mut full_stderr = Vec::new();
+
+        let stdout_handle = thread::spawn(move || {
+            let mut line = String::new();
+            let mut reader = stdout_reader;
+            let mut buffer = Vec::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        debug!("Child stdout: {}", line.trim_end());
+                        buffer.extend_from_slice(line.as_bytes());
+                    }
+                    Err(e) => {
+                        error!("Error reading child stdout: {:?}", e);
+                        break;
+                    }
+                }
+            }
+            buffer
+        });
+
+        let stderr_handle = thread::spawn(move || {
+            let mut line = String::new();
+            let mut reader = stderr_reader;
+            let mut buffer = Vec::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        debug!("Child stderr: {}", line.trim_end());
+                        buffer.extend_from_slice(line.as_bytes());
+                    }
+                    Err(e) => {
+                        error!("Error reading child stderr: {:?}", e);
+                        break;
+                    }
+                }
+            }
+            buffer
+        });
+
+        let status = child.wait()?;
+
+        full_stdout = stdout_handle.join().expect("Failed to join stdout thread");
+        full_stderr = stderr_handle.join().expect("Failed to join stderr thread");
+
+        debug!("Command finished with status: {:?}", status);
+        if !status.success() {
             error!(
                 "Command '{}' failed: {:?}",
                 self.command_template,
-                String::from_utf8_lossy(&output.stderr)
+                String::from_utf8_lossy(&full_stderr)
             );
             anyhow::bail!(
                 "Command '{}' failed: {:?}",
                 self.command_template,
-                String::from_utf8_lossy(&output.stderr)
+                String::from_utf8_lossy(&full_stderr)
             );
         }
 
         debug!(
             "Command executed successfully. Output length: {}",
-            output.stdout.len()
+            full_stdout.len()
         );
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        Ok(String::from_utf8_lossy(&full_stdout).to_string())
     }
 }

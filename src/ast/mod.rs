@@ -126,8 +126,13 @@ fn parse_many_nodes(document: &str, begin: usize) -> Result<Vec<Node>, ParsingEr
     let mut position = begin;
 
     while position < end_offset {
-
-        let (node, range) = parse_node(document, position)?;
+        let node = parse_node(document, position)?;
+        let range = match &node {
+            Node::Root(r) => &r.range,
+            Node::Tag(t) => &t.range,
+            Node::Anchor(a) => &a.range,
+            Node::Text(t) => &t.range,
+        };
         nodes.push(node);
 
         position = range.end;

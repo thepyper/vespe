@@ -1,10 +1,58 @@
 
+//! This module defines the Abstract Syntax Tree (AST) for the context files.
+//! It includes structures for representing various elements like positions, ranges,
+//! tags, anchors, parameters, and arguments, along with a parser to
+//! construct the AST from source text.
+
+use serde_json;
+use uuid::Uuid;
+use std::str::Chars;
+use thiserror::Error;
+
+pub type Result<T> = std::result::Result<T, ParsingError>;
+
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum ParsingError {
+    #[error("Unexpected token: expected '{expected}', found '{found}' at {range:?}")]
+    UnexpectedToken {
+        expected: String,
+        found: String,
+        range: Range,
+    },
+    #[error("Invalid syntax: {message} at {range:?}")]
+    InvalidSyntax {
+        message: String,
+        range: Range,
+    },
+    #[error("Unexpected end of file: expected '{expected}' at {range:?}")]
+    EndOfFileUnexpected {
+        expected: String,
+        range: Range,
+    },
+    #[error("Invalid number format: '{value}' at {range:?}")]
+    InvalidNumberFormat {
+        value: String,
+        range: Range,
+    },
+    #[error("Unterminated string at {range:?}")]
+    UnterminatedString {
+        range: Range,
+    },
+    #[error("Custom error: {message} at {range:?}")]
+    Custom {
+        message: String,
+        range: Range,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Position {
     offset: usize,      /// 0-based character offset
     line: usize,        /// 1-based line
     column: usize,      /// 1-based column
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Range {
     begin: Position,
     end: Position,

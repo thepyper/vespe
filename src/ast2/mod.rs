@@ -106,19 +106,13 @@ impl <'a> Parser<'a> {
         self.position.column == 1
     }
     pub fn consume(&mut self, xs: &str) -> bool {
-        for x in xs.chars() {
-            match self.advance() {
-                None => {
-                    return false;
-                }
-                Some(y) if y != x {
-                    return false;
-                }
-                Some(y) {
-                    continue;
-                }
-            }
+        if !self.remain().starts_with(xs) {
+            return false;
         }
+        for x in xs.chars() {
+            self.advance();
+        }
+        true
     }    
     pub fn skip_one_of(&mut self, xs: &str) -> bool {
         let status = self.store();

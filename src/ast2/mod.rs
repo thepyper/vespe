@@ -24,11 +24,6 @@ enum CommandKind {
     Repeat,
 }
 
-struct Command {
-    kind: CommandKind,
-    range: Range,
-}
-
 struct Parameters {
     parameters: serde_json::Value,
     range: Range,
@@ -44,7 +39,7 @@ struct Arguments {
 }
 
 struct Tag {
-    command: Command,
+    command: CommandKind,
     parameters: Parameters,
     arguments: Arguments,
     range: Range,   
@@ -57,7 +52,7 @@ enum AnchorKind
 }
 
 struct Anchor {
-    command: Command,
+    command: CommandKind,
     uuid: Uuid,
     kind: AnchorKind,
     parameters: Parameters,
@@ -149,6 +144,9 @@ impl <'a> Parser<'a> {
     pub fn skip_many_whitespaces(&mut self) {
         self.skip_many_of(" \t\r");
     }
+    pub fn skip_many_whitespaces_or_eol(&mut self) {
+        self.skip_many_of(" \t\r\n");
+    }
     pub fn advance(&mut self) -> Option<char> {
         match self.iterator.next() {
             None => None,
@@ -228,7 +226,11 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     let begin = parser.get_position();
 
-    let command = _try_parse_command(document, parser)?;
+    if !parser.consume("@") {
+        return Ok(None);
+    }
+
+    let command = _try_parse_command_kind(document, parser)?;
     if command.is_none() {
         return Ok(None);
     }
@@ -241,13 +243,13 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     let arguments = _try_parse_arguments(document, parser)?;
 
-    let end = parser.get_position();
-
     parser.skip_many_whitespaces();
 
     if !parser.consume("\n") {
         // TODO errore, text dopo arguments e prima di fine linea!?
     }
+
+    let end = parser.get_position();
 
     Ok(Some(Tag {
         command,
@@ -259,13 +261,84 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
     }))
 }
 
-fn _try_parse_command(document: &str, parser: &mut Parser) -> Result<Option<Command>> {
+fn try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+
+    let status = parser.store();
+
+    match _try_parse_anchor(document, parser)? {
+        None => {
+            parser.load(status);
+            None           
+        }
+        Some(x) => Some(x)
+    }    
+}
+
+fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
 
     let begin = parser.get_position();
 
-    if !parser.consume("@") {
+    if !parser.consume("<!--") {
         return Ok(None);
     }
+
+    parser.skip_many_whitespaces();
+
+    let command = _try_parse_command_kind(document, parser)?;
+    if command.is_none() {
+        return Ok(None);
+    }
+
+    if !parser.consume("-") {
+        // TODO parsing error anchor, manca trattino prima di uuid
+    }
+
+    let uuid = _try_parse_uuid(document, parser)?;
+    if uuid.is_none() {
+        // TODO parsing error anchor, manca uuid
+    }
+
+    if !parser.consume(":") {
+        // TODO parsing error anchor, manca :
+    }
+
+    let kind = _try_parse_anchor_kind(document, parser)?;
+
+    parser.skip_many_whitespaces();
+
+    let parameters = _try_parse_parameters(document, parser)?;
+    
+    parser.skip_many_whitespaces();
+
+    let arguments = _try_parse_arguments(document, parser)?;
+
+    parser.skip_many_whitespaces_or_eol();
+
+    if !parser.consume("-->") {
+        // TODO errore, ancora non chiusa
+    }
+
+    parser.skip_many_whitespaces();
+
+    if !parser.consume("\n") {
+        // TODO errore, text dopo arguments e prima di fine linea!?
+    }
+
+    let end = parser.get_position();
+
+    Ok(Some(Anchor {
+        command,
+        uuid,
+        kind,
+        parameters,
+        arguments,
+        range: Range {
+            begin, end 
+        }
+    }))
+}
+
+fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option<CommandKind>> {
 
     let tags_list = vec![
         ("tag", CommandKind::Tag),
@@ -277,29 +350,34 @@ fn _try_parse_command(document: &str, parser: &mut Parser) -> Result<Option<Comm
         ("repeat", CommandKind::Repeat),
     ];
 
-    let mut kind = None;
-
     let status = parser.store();
-    for (try_name, try_kind) in tags_list {
-        if !parser.consume(try_name) {
+    for (name, kind) in tags_list {
+        if !parser.consume(name) {
             parser.load(status);
         } else {
-            kind = try_kind;
-            break;
+            return Some(kind);
         }
     }
 
-    if kind.is_none() {
-        return Ok(None); // unknown tag, treat as normal text
-    }
-
-    let end = parser.get_position();
-
-    Ok(Some(Command {
-        kind, 
-        range: Range {
-            begin,
-            end,
-        }
-    }))
+    kind
 }
+
+fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {
+
+    let tags_list = vec![
+        ("begin", AnchorKind::Begin),
+        ("end", AnchorKind::End),
+    ];
+
+    let status = parser.store();
+    for (name, kind) in tags_list {
+        if !parser.consume(name) {
+            parser.load(status);
+        } else {
+            return Some(kind);
+        }
+    }
+
+    None
+}
+

@@ -1,5 +1,6 @@
 pub mod agent;
 pub mod ast;
+pub mod ast2;
 pub mod config;
 pub mod editor;
 pub mod execute;

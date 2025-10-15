@@ -15,7 +15,14 @@ fn create_range(start_offset: usize, start_line: usize, start_column: usize, end
 fn test_parse_only_whitespace() {
     let document = "   \n\n";
     let root = parse(document).unwrap();
-    assert!(root.children.is_empty());
+    assert_eq!(root.children.len(), 1);
+
+    if let Node::Text(text) = &root.children[0] {
+        assert_eq!(text.content, "   \n\n");
+        assert_eq!(text.range, create_range(0, 1, 1, 5, 3, 1));
+    } else {
+        panic!("Expected Text node");
+    }
 }
 
 // New tests for @tag snippets

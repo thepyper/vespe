@@ -42,7 +42,7 @@ fn test_parse_mixed_content() {
     let document = format!("Some initial text.\n@include file.md arg1\n<!-- derive-{}:begin -->\nMore text here.\n<!-- derive-{}:end -->\nFinal text.\n", uuid1, uuid2);
 
     let root = parse(&document).unwrap();
-    assert_eq!(root.children.len(), 6);
+    assert_eq!(root.children.len(), 7);
 
     // Node 1: Text
     if let Node::Text(text) = &root.children[0] {
@@ -59,8 +59,15 @@ fn test_parse_mixed_content() {
         panic!("Expected Tag node");
     }
 
-    // Node 3: Anchor (begin)
-    if let Node::Anchor(anchor) = &root.children[2] {
+    // Node 3: Text (newline after tag)
+    if let Node::Text(text) = &root.children[2] {
+        assert_eq!(text.content, "\n");
+    } else {
+        panic!("Expected Text node");
+    }
+
+    // Node 4: Anchor (begin)
+    if let Node::Anchor(anchor) = &root.children[3] {
         assert_eq!(anchor.command, Command::Derive);
         assert_eq!(anchor.uuid, uuid1);
         assert_eq!(anchor.kind, Kind::Begin);
@@ -68,15 +75,15 @@ fn test_parse_mixed_content() {
         panic!("Expected Anchor node");
     }
 
-    // Node 4: Text
-    if let Node::Text(text) = &root.children[3] {
-        assert_eq!(text.content, "More text here.\n");
+    // Node 5: Text
+    if let Node::Text(text) = &root.children[4] {
+        assert_eq!(text.content, "\nMore text here.\n");
     } else {
         panic!("Expected Text node");
     }
 
-    // Node 5: Anchor (end)
-    if let Node::Anchor(anchor) = &root.children[4] {
+    // Node 6: Anchor (end)
+    if let Node::Anchor(anchor) = &root.children[5] {
         assert_eq!(anchor.command, Command::Derive);
         assert_eq!(anchor.uuid, uuid2);
         assert_eq!(anchor.kind, Kind::End);
@@ -84,9 +91,9 @@ fn test_parse_mixed_content() {
         panic!("Expected Anchor node");
     }
 
-    // Node 6: Text
-    if let Node::Text(text) = &root.children[5] {
-        assert_eq!(text.content, "Final text.\n");
+    // Node 7: Text
+    if let Node::Text(text) = &root.children[6] {
+        assert_eq!(text.content, "\nFinal text.\n");
     } else {
         panic!("Expected Text node");
     }

@@ -351,7 +351,6 @@ impl<'a> Parser<'a> {
         let mut nodes = Vec::new();
 
         while !parser.is_eof() {
-            parser.skip_whitespace();
             if parser.is_eof() {
                 break;
             }
@@ -391,13 +390,25 @@ impl<'a> Parser<'a> {
             return Ok(Some(Node::Anchor(anchor)));
         }
 
-        // Reset parser position if anchor parsing failed to try text parsing from the same start
-        parser.set_position(start_pos);
-        if let Ok(Some(text)) = parse_text(parser) {
-            return Ok(Some(Node::Text(text)));
+        parser.set_position(start_pos); // Reset if anchor failed
+        // If tag and anchor parsing failed, it must be text (or EOF)
+        match parse_text(parser) {
+            Ok(Some(text)) => Ok(Some(Node::Text(text))),
+            Ok(None) => {
+                // If parse_text returns None, it means it consumed no characters.
+                // This should only happen if we are truly at EOF.
+                if parser.is_eof() {
+                    Ok(None)
+                } else {
+                    // If not at EOF, but parse_text found nothing, it's an error.
+                    Err(ParsingError::Custom {
+                        message: "Unparseable content found".to_string(),
+                        range: Range { start: parser.current_pos, end: parser.current_pos },
+                    })
+                }
+            },
+            Err(e) => Err(e),
         }
-
-        Ok(None)
     }
 
 fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingError> {
@@ -536,9 +547,7 @@ pub fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), Pars
         }
 
         // Original check for start of a new tag or anchor (might be redundant if we break on newline)
-        let current_line_start_offset = parser.document[..parser.current_pos.offset].rfind('\n').map_or(0, |i| i + 1);
-        let current_line_slice = &parser.document[current_line_start_offset..];
-        if (current_line_slice.starts_with("@") && parser.current_pos.column == 1) || (current_line_slice.starts_with("<!--") && parser.current_pos.column == 1) {
+        if (parser.remaining_slice().starts_with("@") && parser.current_pos.column == 1) || (parser.remaining_slice().starts_with("<!--") && parser.current_pos.column == 1) {
             break;
         }
 
@@ -657,21 +666,17 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
             });
         }
         parser.advance_position_by_str("-->");
-
-        // Now, parser.current_pos is at the start of " arg1" or "\nMore text here."
+        parser.skip_whitespace();
 
         let mut parameters = HashMap::new();
         let mut arguments = Vec::new();
 
-        // Check if there's a newline immediately after "-->". If so, no arguments or parameters.
-        if parser.peek() != Some('\n') && !parser.is_eof() {
-            // Parse parameters and arguments using the main parser
-            let (p, _) = parse_parameters(parser)?;
-            parameters = p;
+        // Parse parameters and arguments using the main parser
+        let (p, _) = parse_parameters(parser)?;
+        parameters = p;
 
-            let (a, _) = parse_arguments(parser)?;
-            arguments = a;
-        }
+        let (a, _) = parse_arguments(parser)?;
+        arguments = a;
         let end_pos = parser.current_pos;
         Ok(Some(Anchor {
             command,
@@ -708,7 +713,7 @@ pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
         }
     }
 
-    if content.trim().is_empty() {
+    if content.is_empty() {
         Ok(None)
     } else {
         let end_pos = parser.current_pos;

@@ -679,10 +679,10 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
     if parser.peek() == Some('"') { // Check peek instead of consume to get the char
         parser.advance(); // Consume the opening quote
-        Ok(_try_parse_enclosed_value(parser, '"')?.map(json!)) // Convert String to serde_json::Value
+        Ok(_try_parse_enclosed_value(parser, '"')?.map(|s| serde_json::Value::String(s)))
     } else if parser.peek() == Some('\'') { // Check peek instead of consume to get the char
         parser.advance(); // Consume the opening quote
-        Ok(_try_parse_enclosed_value(parser, '\'')?.map(json!)) // Convert String to serde_json::Value
+        Ok(_try_parse_enclosed_value(parser, '\'')?.map(|s| serde_json::Value::String(s)))
     } else {
         _try_parse_nude_value(parser)
     }
@@ -878,10 +878,10 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
 
     let value_json_result = if parser.peek() == Some('"') {
         parser.advance(); // Consume the opening quote
-        _try_parse_enclosed_value(parser, '"')?.map(json!)
+        Ok(_try_parse_enclosed_value(parser, '"')?.map(|s| serde_json::Value::String(s)))
     } else if parser.peek() == Some('\'') {
         parser.advance(); // Consume the opening quote
-        _try_parse_enclosed_value(parser, '\'')?.map(json!)
+        Ok(_try_parse_enclosed_value(parser, '\'')?.map(|s| serde_json::Value::String(s)))
     } else {
         _try_parse_nude_value(parser)
     };

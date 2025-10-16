@@ -501,3 +501,38 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
     Ok(Some(identifier))
 }
 
+fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
+    if parser.consume_matching_char('"') {
+        _try_parse_enclosed_value(parser, "\"")
+    } else if parser.consume_matching_char('\'') {
+        _try_parse_enclosed_value(parser, "\'")
+    } else {
+        _try_parse_nude_value(parser)
+    }
+}
+
+fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Option<serde_json::Value>> {
+
+    let mut value = String::new();
+
+    loop {
+        if parser.consume_matching_string("\\\"") {
+            value.push('\"');
+        } else if parser.consume_matching_string("\\\'") {
+            value.push('\'');
+        // TODO altre sequenze escaping
+        } else if parser.consume_matching_string(closure) {
+            return Ok(Some(value))
+        } else {
+            match parser.advance() {
+                None => {
+                    // TODO errore unclosed stirng
+                }
+                Some(x) => {
+                    value.push(x);
+                }
+            }
+        }
+    }
+}
+

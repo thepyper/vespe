@@ -1,6 +1,7 @@
 use anyhow::Result;
 
 #[cfg(test)]
+#[path = "tests/utils.rs"]
 mod utils;
 
 #[cfg(test)]

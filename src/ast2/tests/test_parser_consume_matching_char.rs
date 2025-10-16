@@ -6,8 +6,8 @@ use anyhow::Result;
 fn test_parser_consume_matching_char() {
     let document = "abc";
     let mut parser = Parser::new(document);
-    assert!(parser.consume_matching_char('a').is_some());
+    assert!(parser.consume_matching_char('a'));
     assert_eq!(parser.get_position(), create_pos(1, 1, 2));
-    assert!(parser.consume_matching_char('c').is_none());
+    assert!(!parser.consume_matching_char('c'));
     assert_eq!(parser.get_position(), create_pos(1, 1, 2));
 }

@@ -103,8 +103,8 @@ pub struct Parser<'a> {
 
 #[derive(Debug, Clone)]
 pub struct ParserStatus<'a> {
-    position: Position,
-    iterator: Chars<'a>,
+    pub position: Position,
+    pub iterator: Chars<'a>,
 }
 
 impl<'a> Parser<'a> {

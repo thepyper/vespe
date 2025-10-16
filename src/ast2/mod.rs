@@ -110,7 +110,7 @@ pub struct ParserStatus<'a> {
 impl<'a> Parser<'a> {
     pub fn new(document: &'a str) -> Self {
         Self {
-            document,
+            _document: document,
             position: Position { offset: 0, line: 1, column: 1 },
             iterator: document.chars(),
         }
@@ -471,7 +471,7 @@ fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
 }
 
 fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
-    let _start_pos = parser.get_position();
+    let start_pos = parser.get_position();
     let mut uuid_str = String::new();
 
     // UUID format: 8-4-4-4-12 hex digits

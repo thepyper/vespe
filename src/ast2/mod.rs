@@ -96,7 +96,7 @@ pub struct Document {
 }
 
 pub struct Parser<'a> {
-    document: &'a str,
+    _document: &'a str,
     position: Position,
     iterator: Chars<'a>,
 }
@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
         if !self.remain().starts_with(xs) {
             return false;
         }
-        for x in xs.chars() {
+        for _x in xs.chars() {
             self.advance();
         }
         true
@@ -255,7 +255,7 @@ pub fn parse_document(document: &str) -> Result<Document> {
     })
 }
 
-fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
+fn parse_content(_document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
 
     let mut contents = Vec::new();
 
@@ -471,7 +471,7 @@ fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
 }
 
 fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
-    let start_pos = parser.get_position();
+    let _start_pos = parser.get_position();
     let mut uuid_str = String::new();
 
     // UUID format: 8-4-4-4-12 hex digits

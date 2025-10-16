@@ -182,7 +182,7 @@ impl<'a> Parser<'a> {
         None
     }
     pub fn skip_many_of(&mut self, xs: &str) {
-        while self.consume_one_char_of(xs) {}
+        while self.consume_one_char_of(xs).is_some() {}
     }
     pub fn skip_many_whitespaces(&mut self) {
         self.skip_many_of(" \t\r");

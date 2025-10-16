@@ -539,11 +539,11 @@ fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
 
     for (name, kind) in tags_list {
         if parser.consume_matching_string(name) {
-            return Some(kind);
+            return Ok(Some(kind));
         }
     }
 
-    None
+    Ok(None)
 }
 
 fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {

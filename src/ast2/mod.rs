@@ -232,17 +232,17 @@ impl <'a> Parser<'a> {
     }
 }
 
-fn parse_document(document: &str) -> Result<Document> {
+pub fn parse_document(document: &str) -> Result<Document> {
 
     let mut parser = Parser::new(document);
     let begin = parser.get_position();
     let content = parse_content(document, &mut parser)?;
     let end   = parser.get_position();
 
-    Document {
+    Ok(Document {
         content: content,
         range: Range { begin, end },
-    }
+    })
 }
 
 fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
@@ -250,14 +250,21 @@ fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
     let mut contents = Vec::new();
 
     while !parser.is_eod() {
+        parser.skip_many_whitespaces_or_eol(); // Skip leading whitespace/newlines between nodes
+        if parser.is_eod() { break; }
+
+        let begin_pos = parser.get_position();
         if let Some(tag) = _try_parse_tag(document, parser)? {
-            contents.push(Tag(tag));            
+            contents.push(Content::Tag(tag));            
         } else if let Some(anchor) = _try_parse_anchor(document, parser)? {
-            contents.push(Anchor(anchor));
+            contents.push(Content::Anchor(anchor));
         } else if let Some(text) = _try_parse_text(document, parser)? {
-            contents.push(Text(text));
+            contents.push(Content::Text(text));
         } else {
-            // TODO parse error
+            return Err(ParsingError::InvalidSyntax {
+                message: "Unparseable content".to_string(),
+                range: Range { begin: begin_pos, end: parser.get_position() },
+            }.into());
         }
     }
 

@@ -155,23 +155,22 @@ impl <'a> Parser<'a> {
             }
         }
     }
-    pub fn consume_char_if<F>(&mut self, filter: F) -> bool 
-    where F: FnOnce() -> bool,
-    {
-        match self.remain().chars().next() {
-            None => {
-                return false;
-            }
-            Some(y) => {
-                if !F(y) {
-                    return false;
+        pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char>
+        where F: FnOnce(char) -> bool,
+        {
+            match self.remain().chars().next() {
+                None => {
+                    return None;
                 }
-                self.advance();
-                return true;
+                Some(y) => {
+                    if !filter(y) {
+                        return None;
+                    }
+                    self.advance();
+                    return Some(y);
+                }
             }
-        }
-    }
-    pub fn consume_one_char_of(&mut self, xs: &str) -> Option<char> {
+        }    pub fn consume_one_char_of(&mut self, xs: &str) -> Option<char> {
         for x in xs.chars() {
             if self.consume_matching_char(x) {
                 return Some(x);
@@ -188,23 +187,23 @@ impl <'a> Parser<'a> {
     pub fn skip_many_whitespaces_or_eol(&mut self) {
         self.skip_many_of(" \t\r\n");
     }
-    pub fn consume_one_dec_digit(&muf self) -> Option<char> {
-        self.consume_char_if(|x| x.is_digit(10)); 
+    pub fn consume_one_dec_digit(&mut self) -> Option<char> {
+        self.consume_char_if(|x| x.is_ascii_digit())
     }
-    pub fn consume_one_hex_digit(&muf self) -> Option<char> {
-        self.consume_char_if(|x| x.is_digit(16)); 
+    pub fn consume_one_hex_digit(&mut self) -> Option<char> {
+        self.consume_char_if(|x| x.is_ascii_hexdigit())
     }
-    pub fn consume_one_alpha(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphabetic()); 
+    pub fn consume_one_alpha(&mut self) -> Option<char> {
+        self.consume_char_if(|x| x.is_ascii_alphabetic())
     }
-    pub fn consume_one_alnum(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphanumeric()); 
+    pub fn consume_one_alnum(&mut self) -> Option<char> {
+        self.consume_char_if(|x| x.is_ascii_alphanumeric())
     }
-    pub fn consume_one_alpha_or_underscore(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphabetic() | (x == '_')); 
+    pub fn consume_one_alpha_or_underscore(&mut self) -> Option<char> {
+        self.consume_char_if(|x| x.is_ascii_alphabetic() || x == '_')
     }
-    pub fn consume_one_alnum_or_underscore(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphanumeric() | (x == '_')); 
+    pub fn consume_one_alnum_or_underscore(&mut self) -> Option<char> {
+        self.consume_char_if(|x| x.is_ascii_alphanumeric() || x == '_')
     }
     pub fn advance(&mut self) -> Option<char> {
         match self.iterator.next() {

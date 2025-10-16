@@ -207,7 +207,7 @@ impl<'a> Parser<'a> {
     }
     pub fn consume(&mut self) -> Option<char> {
         let current_char = self.peek()?;
-        self.advance_position_by_char_count(1);
+        self.advance();
         Some(current_char)
     }
     pub fn advance(&mut self) -> Option<char> {

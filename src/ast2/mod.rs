@@ -284,24 +284,37 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
         return Ok(None);
     }
 
-    let command = _try_parse_command_kind(document, parser)?;
-    if command.is_none() {
-        return Ok(None);
-    }
+    let command = match _try_parse_command_kind(document, parser)? {
+        Some(c) => c,
+        None => return Err(ParsingError::InvalidSyntax {
+            message: "Expected command kind after @".to_string(),
+            range: Range { begin, end: parser.get_position() },
+        }.into()),
+    };
 
     parser.skip_many_whitespaces();
 
-    let parameters = _try_parse_parameters(document, parser)?;
+    let parameters = match _try_parse_parameters(parser)? {
+        Some(p) => p,
+        None => Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } },
+    };
     
     parser.skip_many_whitespaces();
 
-    let arguments = _try_parse_arguments(document, parser)?;
+    let arguments = match _try_parse_arguments(parser)? {
+        Some(a) => a,
+        None => Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } },
+    };
 
     parser.skip_many_whitespaces();
 
-    if !parser.consume_matching_char('\n') {
-        // TODO errore, text dopo arguments e prima di fine linea!?
+    if !parser.is_eol() && !parser.is_eod() {
+        return Err(ParsingError::InvalidSyntax {
+            message: "Unexpected content after tag arguments".to_string(),
+            range: Range { begin: parser.get_position(), end: parser.get_position() },
+        }.into());
     }
+    parser.consume_matching_char('\n'); // Consume newline if present
 
     let end = parser.get_position();
 
@@ -337,45 +350,77 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
 
     parser.skip_many_whitespaces();
 
-    let command = _try_parse_command_kind(document, parser)?;
-    if command.is_none() {
-        return Ok(None);
-    }
+    let command = match _try_parse_command_kind(document, parser)? {
+        Some(c) => c,
+        None => return Err(ParsingError::InvalidSyntax {
+            message: "Expected command kind after <!--".to_string(),
+            range: Range { begin, end: parser.get_position() },
+        }.into()),
+    };
 
     if !parser.consume_matching_char('-') {
-        // TODO parsing error anchor, manca trattino prima di uuid
+        return Err(ParsingError::UnexpectedToken {
+            expected: "-".to_string(),
+            found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+            range: Range { begin: parser.get_position(), end: parser.get_position() },
+        }.into());
     }
 
-    let uuid = _try_parse_uuid(document, parser)?;
-    if uuid.is_none() {
-        // TODO parsing error anchor, manca uuid
-    }
+    let uuid = match _try_parse_uuid(parser)? {
+        Some(u) => u,
+        None => return Err(ParsingError::InvalidSyntax {
+            message: "Expected UUID after command kind and -".to_string(),
+            range: Range { begin, end: parser.get_position() },
+        }.into()),
+    };
 
     if !parser.consume_matching_char(':') {
-        // TODO parsing error anchor, manca :
+        return Err(ParsingError::UnexpectedToken {
+            expected: ":".to_string(),
+            found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+            range: Range { begin: parser.get_position(), end: parser.get_position() },
+        }.into());
     }
 
-    let kind = _try_parse_anchor_kind(document, parser)?;
+    let kind = match _try_parse_anchor_kind(document, parser)? {
+        Some(k) => k,
+        None => return Err(ParsingError::InvalidSyntax {
+            message: "Expected anchor kind after UUID and :".to_string(),
+            range: Range { begin, end: parser.get_position() },
+        }.into()),
+    };
 
     parser.skip_many_whitespaces();
 
-    let parameters = _try_parse_parameters(document, parser)?;
+    let parameters = match _try_parse_parameters(parser)? {
+        Some(p) => p,
+        None => Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } },
+    };
     
     parser.skip_many_whitespaces();
 
-    let arguments = _try_parse_arguments(document, parser)?;
+    let arguments = match _try_parse_arguments(parser)? {
+        Some(a) => a,
+        None => Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } },
+    };
 
     parser.skip_many_whitespaces_or_eol();
 
     if !parser.consume_matching_string("-->") {
-        // TODO errore, ancora non chiusa
+        return Err(ParsingError::UnterminatedString {
+            range: Range { begin, end: parser.get_position() },
+        }.into());
     }
 
     parser.skip_many_whitespaces();
 
-    if !parser.consume_matching_char('\n') {
-        // TODO errore, text dopo arguments e prima di fine linea!?
+    if !parser.is_eol() && !parser.is_eod() {
+        return Err(ParsingError::InvalidSyntax {
+            message: "Unexpected content after anchor closing tag".to_string(),
+            range: Range { begin: parser.get_position(), end: parser.get_position() },
+        }.into());
     }
+    parser.consume_matching_char('\n'); // Consume newline if present
 
     let end = parser.get_position();
 
@@ -410,6 +455,69 @@ fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option
     }
 
     None
+}
+
+fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
+    let start_pos = parser.get_position();
+    let mut uuid_str = String::new();
+
+    // UUID format: 8-4-4-4-12 hex digits
+    for _ in 0..8 {
+        if let Some(c) = parser.consume_one_hex_digit() {
+            uuid_str.push(c);
+        } else {
+            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            return Ok(None);
+        }
+    }
+    if !parser.consume_matching_char('-') { return Ok(None); }
+    uuid_str.push('-');
+    for _ in 0..4 {
+        if let Some(c) = parser.consume_one_hex_digit() {
+            uuid_str.push(c);
+        } else {
+            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            return Ok(None);
+        }
+    }
+    if !parser.consume_matching_char('-') { return Ok(None); }
+    uuid_str.push('-');
+    for _ in 0..4 {
+        if let Some(c) = parser.consume_one_hex_digit() {
+            uuid_str.push(c);
+        } else {
+            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            return Ok(None);
+        }
+    }
+    if !parser.consume_matching_char('-') { return Ok(None); }
+    uuid_str.push('-');
+    for _ in 0..4 {
+        if let Some(c) = parser.consume_one_hex_digit() {
+            uuid_str.push(c);
+        } else {
+            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            return Ok(None);
+        }
+    }
+    if !parser.consume_matching_char('-') { return Ok(None); }
+    uuid_str.push('-');
+    for _ in 0..12 {
+        if let Some(c) = parser.consume_one_hex_digit() {
+            uuid_str.push(c);
+        } else {
+            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            return Ok(None);
+        }
+    }
+
+    match Uuid::parse_str(&uuid_str) {
+        Ok(uuid) => Ok(Some(uuid)),
+        Err(_) => Err(ParsingError::InvalidSyntax {
+            message: format!("Invalid UUID format: {}", uuid_str),
+            range: Range { begin: start_pos, end: parser.get_position() },
+        }.into()),
+    }
 }
 
 fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {

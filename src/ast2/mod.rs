@@ -223,13 +223,13 @@ impl <'a> Parser<'a> {
             }
         }
     }
-    pub fn store(&self) -> ParserStatus {
+    pub fn store(&self) -> ParserStatus<'a> {
         ParserStatus {
             position: self.position.clone(),
             iterator: self.iterator.clone(),
         }
     }
-    pub fn load(&mut self, status: &ParserStatus) {
+    pub fn load(&mut self, status: ParserStatus<'a>) {
         self.position = status.position;
         self.iterator = status.iterator;
     }

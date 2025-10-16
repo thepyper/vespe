@@ -791,9 +791,10 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
 
     // Handle leading '.' for floats like ".5"
     if parser.peek() == Some('.') {
-        if parser.consume_matching_char('.') {
-            number.push(c);
-            has_decimal = true;
+        if parser.peek() == Some('.') {
+            if let Some(c) = parser.consume() {
+                number.push(c);
+            }
         }
     }
 

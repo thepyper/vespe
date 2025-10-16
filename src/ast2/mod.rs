@@ -1,22 +1,43 @@
-use clap::builder::Str;
+use std::str::Chars;
+use uuid::Uuid;
+use serde_json::{json, Value};
+use thiserror::Error;
+use anyhow::Result;
 
-
-struct Position {
-    offset: usize,      /// 0-based character offset
-    line: usize,        /// 1-based line
-    column: usize,      /// 1-based column
+#[derive(Error, Debug)]
+pub enum ParsingError {
+    #[error("Unexpected token: expected {expected}, found {found} at {range:?}")]
+    UnexpectedToken { expected: String, found: String, range: Range },
+    #[error("Invalid syntax: {message} at {range:?}")]
+    InvalidSyntax { message: String, range: Range },
+    #[error("Unexpected end of file: expected {expected} at {range:?}")]
+    EndOfFileUnexpected { expected: String, range: Range },
+    #[error("Invalid number format: {value} at {range:?}")]
+    InvalidNumberFormat { value: String, range: Range },
+    #[error("Unterminated string at {range:?}")]
+    UnterminatedString { range: Range },
+    #[error("Custom error: {message} at {range:?}")]
+    Custom { message: String, range: Range },
 }
 
-struct Range {
-    begin: Position,
-    end: Position,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Position {
+    pub offset: usize,      /// 0-based character offset
+    pub line: usize,        /// 1-based line
+    pub column: usize,      /// 1-based column
 }
 
-struct Text {
-    range: Range,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Range {
+    pub begin: Position,
+    pub end: Position,
 }
 
-enum CommandKind {
+pub struct Text {
+    pub range: Range,
+}
+
+pub enum CommandKind {
     Tag,        // for debug purpose
     Include,
     Inline,
@@ -26,51 +47,52 @@ enum CommandKind {
     Repeat,
 }
 
-struct Parameters {
-    parameters: serde_json::Value,
-    range: Range,
+pub struct Parameters {
+    pub parameters: serde_json::Value,
+    pub range: Range,
 }
 
-struct Argument {
-    range: Range,
+pub struct Argument {
+    pub value: String,
+    pub range: Range,
 }
 
-struct Arguments {
-    arguments: Vec<Argument>,
-    range: Range,
+pub struct Arguments {
+    pub arguments: Vec<Argument>,
+    pub range: Range,
 }
 
-struct Tag {
-    command: CommandKind,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,   
+pub struct Tag {
+    pub command: CommandKind,
+    pub parameters: Parameters,
+    pub arguments: Arguments,
+    pub range: Range,   
 }
 
-enum AnchorKind 
+pub enum AnchorKind 
 {
     Begin,
     End,
 }
 
-struct Anchor {
-    command: CommandKind,
-    uuid: Uuid,
-    kind: AnchorKind,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
+pub struct Anchor {
+    pub command: CommandKind,
+    pub uuid: Uuid,
+    pub kind: AnchorKind,
+    pub parameters: Parameters,
+    pub arguments: Arguments,
+    pub range: Range,
 }
 
-enum Content {
+pub enum Content {
     Text(Text),
     Tag(Tag),
     Anchor(Anchor),
 }
 
-struct Document {
-    content: Vec<Content>,
-    range: Range,
+pub struct Document {
+    pub content: Vec<Content>,
+    pub range: Range,
 }
 
 pub struct Parser<'a> {

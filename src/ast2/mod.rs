@@ -132,6 +132,9 @@ impl <'a> Parser<'a> {
     pub fn is_begin_of_line(&self) -> bool {
         self.position.column == 1
     }
+    pub fn peek(&self) -> Option<char> {
+        self.iterator.clone().next()
+    }
     pub fn consume_matching_string(&mut self, xs: &str) -> bool {
         if !self.remain().starts_with(xs) {
             return false;

@@ -577,6 +577,8 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Optio
                 value.push('\r');
             } else if parser.consume_matching_char('t') {
                 value.push('\t');
+            } else if parser.consume_matching_char('t') {
+                value.push('\t');
             } else if parser.consume_matching_char('\\') {
                 value.push('\\');
             } else if parser.consume_matching_char('"') {
@@ -658,8 +660,17 @@ fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
 }
 
 fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
+    let start_pos = parser.get_position();
     let mut number = String::new();
     let mut has_decimal = false;
+
+    // Handle leading '.' for floats like ".5"
+    if parser.peek() == Some('.') {
+        if let Some(c) = parser.consume_matching_char('.') {
+            number.push(c);
+            has_decimal = true;
+        }
+    }
 
     // Consume leading digits
     while let Some(x) = parser.consume_one_dec_digit() {
@@ -667,7 +678,7 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
     }
 
     // Consume optional decimal point and subsequent digits
-    if parser.consume_matching_char('.') {
+    if !has_decimal && parser.consume_matching_char('.') {
         has_decimal = true;
         number.push('.');
         while let Some(x) = parser.consume_one_dec_digit() {
@@ -676,6 +687,7 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
     }
 
     if number.is_empty() || (number == "." && has_decimal) {
+        parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if nothing was parsed
         return Ok(None);
     }
 
@@ -684,10 +696,11 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
             Ok(f) => Ok(Some(f)),
             Err(_) => Err(ParsingError::InvalidNumberFormat {
                 value: number,
-                range: Range { begin: parser.get_position(), end: parser.get_position() }, // TODO: Correct range
+                range: Range { begin: start_pos, end: parser.get_position() },
             }.into()),
         }
     } else {
+        parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if it was just an integer
         Ok(None) // Not a float if no decimal was found
     }
 }
@@ -710,7 +723,7 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
     loop {
         let current_char = parser.peek();
         match current_char {
-            Some(c) if c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '/' => {
+            Some(c) if c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '/' || c == '-' => {
                 parser.advance();
                 s.push(c);
             },

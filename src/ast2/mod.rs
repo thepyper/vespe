@@ -104,6 +104,9 @@ impl <'a> Parser<'a> {
     pub fn is_eod(&self) -> bool {
         self.remain().is_empty()
     }
+    pub fn is_eol(&self) -> bool {
+        self.remain().starts_with("\n")
+    }
     pub fn is_begin_of_line(&self) -> bool {
         self.position.column == 1
     }
@@ -593,4 +596,32 @@ fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
 fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<f64>> {
  /// TODO  accept a-z A-Z 0-9 / . 
  
+}
+
+fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
+
+    let begin = parser.get_position();
+
+    let mut content = String::new();
+
+    loop {
+        match parser.advance() {
+            None => {
+                break;
+            }
+            Some('\n') => {
+                content.push('\n');
+                break;
+            }
+            Some(x) => {
+                content.push(x);
+            }
+        }
+    }
+
+    let end = parser.get_position();
+
+    Ok(Some(Text {
+        range: Range {begin, end }
+    }))
 }

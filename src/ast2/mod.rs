@@ -677,31 +677,30 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 }
 
 fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
-    if parser.consume_matching_char('"') {
-        _try_parse_enclosed_value(parser, "\"")
-    } else if parser.consume_matching_char('\'') {
-        _try_parse_enclosed_value(parser, "\'")
+    if parser.peek() == Some('"') { // Check peek instead of consume to get the char
+        parser.advance(); // Consume the opening quote
+        Ok(_try_parse_enclosed_value(parser, '"')?.map(json!)) // Convert String to serde_json::Value
+    } else if parser.peek() == Some('\'') { // Check peek instead of consume to get the char
+        parser.advance(); // Consume the opening quote
+        Ok(_try_parse_enclosed_value(parser, '\'')?.map(json!)) // Convert String to serde_json::Value
     } else {
         _try_parse_nude_value(parser)
     }
 }
 
-fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Option<serde_json::Value>> {
-
+fn _try_parse_enclosed_value(parser: &mut Parser, closure: char) -> Result<Option<String>> {
     let mut value = String::new();
     let start_pos = parser.get_position();
 
     loop {
-        if parser.consume_matching_string(closure) {
-            return Ok(Some(json!(value)));
-        } else if parser.consume_matching_string("\\") {
+        if parser.consume_matching_char(closure) {
+            return Ok(Some(value));
+        } else if parser.consume_matching_char('\\') {
             // Handle escape sequences
             if parser.consume_matching_char('n') {
                 value.push('\n');
             } else if parser.consume_matching_char('r') {
                 value.push('\r');
-            } else if parser.consume_matching_char('t') {
-                value.push('\t');
             } else if parser.consume_matching_char('t') {
                 value.push('\t');
             } else if parser.consume_matching_char('\\') {
@@ -710,7 +709,10 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Optio
                 value.push('"');
             } else if parser.consume_matching_char('\'') {
                 value.push('\'');
-            } else {
+            } else if parser.consume_matching_char(closure) { // Handle escaped closure character
+                value.push(closure);
+            }
+            else {
                 // Invalid escape sequence, just push the backslash and the next char
                 value.push('\\');
                 if let Some(c) = parser.advance() {
@@ -876,10 +878,10 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
 
     let value_json_result = if parser.peek() == Some('"') {
         parser.advance(); // Consume the opening quote
-        _try_parse_enclosed_value(parser, "\"")
+        _try_parse_enclosed_value(parser, '"')?.map(json!)
     } else if parser.peek() == Some('\'') {
         parser.advance(); // Consume the opening quote
-        _try_parse_enclosed_value(parser, "\'")
+        _try_parse_enclosed_value(parser, '\'')?.map(json!)
     } else {
         _try_parse_nude_value(parser)
     };

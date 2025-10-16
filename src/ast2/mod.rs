@@ -725,6 +725,67 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
     }
 }
 
+fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
+    let begin = parser.get_position();
+    let status = parser.store();
+
+    let value_json = if parser.peek() == Some('"') {
+        parser.advance(); // Consume the opening quote
+        _try_parse_enclosed_value(parser, "\"")?
+    } else if parser.peek() == Some('\'') {
+        parser.advance(); // Consume the opening quote
+        _try_parse_enclosed_value(parser, "\'")?
+    } else {
+        _try_parse_nude_value(parser)?
+    };
+
+    if let Some(json_value) = value_json {
+        let end = parser.get_position();
+        // Convert serde_json::Value back to String for Argument.value
+        let value_str = match json_value {
+            serde_json::Value::String(s) => s,
+            _ => json_value.to_string(), // Convert other types to string representation
+        };
+        Ok(Some(Argument {
+            value: value_str,
+            range: Range { begin, end },
+        }))
+    } else {
+        parser.load(&status);
+        Ok(None)
+    }
+}
+
+fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
+    let begin = parser.get_position();
+    let mut args = Vec::new();
+
+    loop {
+        parser.skip_many_whitespaces();
+        if parser.is_eol() || parser.is_eod() {
+            break;
+        }
+
+        let status = parser.store();
+        if let Some(arg) = _try_parse_argument(parser)? {
+            args.push(arg);
+        } else {
+            parser.load(&status);
+            break;
+        }
+    }
+
+    if args.is_empty() {
+        Ok(None)
+    } else {
+        let end = parser.get_position();
+        Ok(Some(Arguments {
+            arguments: args,
+            range: Range { begin, end },
+        }))
+    }
+}
+
 fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
 
     let begin = parser.get_position();

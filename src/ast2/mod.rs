@@ -351,7 +351,7 @@ fn _try_parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>> {
         return Ok(Some(x));
     }
 
-    parser.load(status);
+    parser.load(status.clone());
     Ok(None)
 }
 

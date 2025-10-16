@@ -742,14 +742,23 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     let begin = parser.get_position();
     let status = parser.store();
 
-    let value_json = if parser.peek() == Some('"') {
+    let value_json_result = if parser.peek() == Some('"') {
         parser.advance(); // Consume the opening quote
-        _try_parse_enclosed_value(parser, "\"")?
+        _try_parse_enclosed_value(parser, "\"")
     } else if parser.peek() == Some('\'') {
         parser.advance(); // Consume the opening quote
-        _try_parse_enclosed_value(parser, "\'")?
+        _try_parse_enclosed_value(parser, "\'")
     } else {
-        _try_parse_nude_value(parser)?
+        _try_parse_nude_value(parser)
+    };
+
+    let value_json = match value_json_result {
+        Ok(Some(v)) => Some(v),
+        Ok(None) => {
+            parser.load(&status);
+            return Ok(None);
+        },
+        Err(e) => return Err(e),
     };
 
     if let Some(json_value) = value_json {

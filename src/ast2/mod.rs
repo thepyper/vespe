@@ -740,7 +740,7 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
     if let Ok(Some(x)) = _try_parse_nude_float(parser) {
         return Ok(Some(json!(x)));
     }
-    parser.load(&);
+    parser.load(document);
 
     if let Ok(Some(x)) = _try_parse_nude_bool(parser) {
         return Ok(Some(json!(x)));

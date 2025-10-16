@@ -919,16 +919,17 @@ fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
 fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
 
     let begin = parser.get_position();
-
     let mut content = String::new();
 
     loop {
+        let current_status = parser.store();
+        if parser.is_eod() || parser.remain().starts_with(" @") || parser.remain().starts_with("<!--") {
+            parser.load(&current_status);
+            break;
+        }
+
         match parser.advance() {
             None => {
-                break;
-            }
-            Some('\n') => {
-                content.push('\n');
                 break;
             }
             Some(x) => {
@@ -937,9 +938,12 @@ fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
         }
     }
 
-    let end = parser.get_position();
-
-    Ok(Some(Text {
-        range: Range {begin, end }
-    }))
+    if content.is_empty() {
+        Ok(None)
+    } else {
+        let end = parser.get_position();
+        Ok(Some(Text {
+            range: Range {begin, end }
+        }))
+    }
 }

@@ -205,6 +205,12 @@ impl<'a> Parser<'a> {
     pub fn consume_one_alpha_or_underscore(&mut self) -> Option<char> {
         self.consume_char_if(|x| x.is_ascii_alphabetic() || x == '_')
     }
+    pub fn consume(&mut self) -> Option<char> {
+        let current_char = self.peek()?;
+        self.advance();
+        Some(current_char)
+    }
+
     pub fn consume_one_alnum_or_underscore(&mut self) -> Option<char> {
         self.consume_char_if(|x| x.is_ascii_alphanumeric() || x == '_')
     }

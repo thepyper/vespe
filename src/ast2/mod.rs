@@ -450,7 +450,7 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
 
     let mut parameters = json!({});
 
-    while !parser.is_eod() {
+    loop {
 
         parser.skip_many_whitespaces_or_eol();
 
@@ -458,44 +458,68 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
             break;
         }
         
-        let parameter = _try_parse_parameter(parser)?;
+        let parameter_begin = parser.get_position();
+        let (key, value) = match _try_parse_parameter(parser)? {
+            Some(p) => p,
+            None => return Err(ParsingError::InvalidSyntax {
+                message: "Expected parameter entry".to_string(),
+                range: Range { begin: parameter_begin, end: parser.get_position() },
+            }.into()),
+        };
 
-        if parameter.is_none() {
-            // TODO errore, parametro non parsed!?!?
+        parameters[key] = value;
+
+        parser.skip_many_whitespaces_or_eol();
+
+        if parser.consume_matching_char(",") {
+            // Continue loop for next parameter
+        } else if parser.peek() == Some('}') {
+            // Closing brace will be consumed in the next iteration
+        } else {
+            return Err(ParsingError::UnexpectedToken {
+                expected: ", or } ".to_string(),
+                found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+                range: Range { begin: parser.get_position(), end: parser.get_position() },
+            }.into());
         }
-
-        // TODO add parameter to serde_json object
-
     }
 
     let end = parser.get_position();
 
-    Ok(Parameters { parameters, range: Range { begin, end }})
+    Ok(Some(Parameters { parameters, range: Range { begin, end } }))
 }
 
 fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_json::Value)>> {
 
     let begin = parser.get_position();
 
-    let key = _try_parse_identifier(parser)?;
-    if key.is_none() {
-        // TODO errore parsing key
-    }    
+    let key = match _try_parse_identifier(parser)? {
+        Some(k) => k,
+        None => return Err(ParsingError::InvalidSyntax {
+            message: "Expected parameter key".to_string(),
+            range: Range { begin, end: parser.get_position() },
+        }.into()),
+    };
 
     parser.skip_many_whitespaces_or_eol();
 
     if !parser.consume_matching_char(":") {
-        // TODO errore parsing :
-    } 
+        return Err(ParsingError::UnexpectedToken {
+            expected: ":".to_string(),
+            found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+            range: Range { begin, end: parser.get_position() },
+        }.into());
+    }
 
     parser.skip_many_whitespaces_or_eol();
 
-    let value = _try_parse_value(parser)?;
-    if value.is_none() {
-        // TODO errore parsing value
-    }
-
-    let end = parser.get_position();
+    let value = match _try_parse_value(parser)? {
+        Some(v) => v,
+        None => return Err(ParsingError::InvalidSyntax {
+            message: "Expected parameter value".to_string(),
+            range: Range { begin, end: parser.get_position() },
+        }.into()),
+    };
 
     Ok(Some((key, value)))
 }
@@ -540,19 +564,42 @@ fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
 fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Option<serde_json::Value>> {
 
     let mut value = String::new();
+    let start_pos = parser.get_position();
 
     loop {
-        if parser.consume_matching_string("\\\"") {
-            value.push('\"');
-        } else if parser.consume_matching_string("\\\'") {
-            value.push('\'');
-        // TODO altre sequenze escaping
-        } else if parser.consume_matching_string(closure) {
-            return Ok(Some(value))
+        if parser.consume_matching_string(closure) {
+            return Ok(Some(json!(value)));
+        } else if parser.consume_matching_string("\\") {
+            // Handle escape sequences
+            if parser.consume_matching_char('n') {
+                value.push('\n');
+            } else if parser.consume_matching_char('r') {
+                value.push('\r');
+            } else if parser.consume_matching_char('t') {
+                value.push('\t');
+            } else if parser.consume_matching_char('\\') {
+                value.push('\\');
+            } else if parser.consume_matching_char('"') {
+                value.push('"');
+            } else if parser.consume_matching_char('\'') {
+                value.push('\'');
+            } else {
+                // Invalid escape sequence, just push the backslash and the next char
+                value.push('\\');
+                if let Some(c) = parser.advance() {
+                    value.push(c);
+                } else {
+                    return Err(ParsingError::UnterminatedString {
+                        range: Range { begin: start_pos, end: parser.get_position() },
+                    }.into());
+                }
+            }
         } else {
             match parser.advance() {
                 None => {
-                    // TODO errore unclosed stirng
+                    return Err(ParsingError::UnterminatedString {
+                        range: Range { begin: start_pos, end: parser.get_position() },
+                    }.into());
                 }
                 Some(x) => {
                     value.push(x);
@@ -563,18 +610,29 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Optio
 }
 
 fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
+    let status = parser.store();
 
-    if let Some(x) = _try_parse_nude_integer(parser) {
-        return Some(json!(x));
-    } else if let Some(x) = _try_parse_nude_float(parser) {
-        return Some(json!(x));
-    } else if let Some(x) = _try_parse_nude_bool(parser) {
-        return Some(json!(x));
-    } else if let Some(x) = _try_parse_nude_string(parser) {
-        return Some(json!(x));
-    } else {
-        // TODO errore stringa malformata?
+    if let Ok(Some(x)) = _try_parse_nude_integer(parser) {
+        return Ok(Some(json!(x)));
     }
+    parser.load(&status);
+
+    if let Ok(Some(x)) = _try_parse_nude_float(parser) {
+        return Ok(Some(json!(x)));
+    }
+    parser.load(&status);
+
+    if let Ok(Some(x)) = _try_parse_nude_bool(parser) {
+        return Ok(Some(json!(x)));
+    }
+    parser.load(&status);
+
+    if let Ok(Some(x)) = _try_parse_nude_string(parser) {
+        return Ok(Some(json!(x)));
+    }
+    parser.load(&status);
+
+    Ok(None)
 }
 
 fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
@@ -600,7 +658,38 @@ fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
 }
 
 fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
- /// TODO
+    let mut number = String::new();
+    let mut has_decimal = false;
+
+    // Consume leading digits
+    while let Some(x) = parser.consume_one_dec_digit() {
+        number.push(x);
+    }
+
+    // Consume optional decimal point and subsequent digits
+    if parser.consume_matching_char('.') {
+        has_decimal = true;
+        number.push('.');
+        while let Some(x) = parser.consume_one_dec_digit() {
+            number.push(x);
+        }
+    }
+
+    if number.is_empty() || (number == "." && has_decimal) {
+        return Ok(None);
+    }
+
+    if has_decimal {
+        match number.parse::<f64>() {
+            Ok(f) => Ok(Some(f)),
+            Err(_) => Err(ParsingError::InvalidNumberFormat {
+                value: number,
+                range: Range { begin: parser.get_position(), end: parser.get_position() }, // TODO: Correct range
+            }.into()),
+        }
+    } else {
+        Ok(None) // Not a float if no decimal was found
+    }
 }
 
 fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
@@ -614,9 +703,26 @@ fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
     }
 }
 
-fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<f64>> {
- /// TODO  accept a-z A-Z 0-9 / . 
- 
+fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
+    let mut s = String::new();
+    let start_pos = parser.get_position();
+
+    loop {
+        let current_char = parser.peek();
+        match current_char {
+            Some(c) if c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '/' => {
+                parser.advance();
+                s.push(c);
+            },
+            _ => break,
+        }
+    }
+
+    if s.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(s))
+    }
 }
 
 fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {

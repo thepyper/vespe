@@ -551,11 +551,11 @@ fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
     let status = parser.store();
 
     if let Some(x) = _try_parse_parameters0(parser)? {
-        return Some(x);
+        return Ok(Some(x));
     }
 
     parser.load(status);
-    None
+    Ok(None)
 }
 
 fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {

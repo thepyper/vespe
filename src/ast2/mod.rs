@@ -194,13 +194,37 @@ impl <'a> Parser<'a> {
     pub fn skip_many_whitespaces_or_eol(&mut self) {
         self.skip_many_of(" \t\r\n");
     }
+    pub fn peek(&self) -> Option<char> {
+        self.iterator.clone().next()
+    }
+    pub fn peek_str(&self, len: usize) -> Option<&str> {
+        if self.remain().len() >= len {
+            Some(&self.remain()[..len])
+        } else {
+            None
+        }
+    }
+    pub fn take_while<F>(&mut self, predicate: F) -> &str
+    where
+        F: Fn(char) -> bool,
+    {
+        let start_offset = self.position.offset;
+        while let Some(c) = self.peek() {
+            if predicate(c) {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        &self.document[start_offset..self.position.offset]
+    }
     pub fn advance(&mut self) -> Option<char> {
         match self.iterator.next() {
             None => None,
             Some(c) => {
                 self.position.offset += 1;
                 match c {
-                    c if c = '\n' => {
+                    c if c == '\n' => {
                         self.position.line += 1;
                         self.position.column = 1;
                     }

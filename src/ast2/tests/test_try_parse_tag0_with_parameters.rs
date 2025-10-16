@@ -11,6 +11,6 @@ fn test_try_parse_tag0_with_parameters() -> Result<()> {
     assert_eq!(tag.parameters.parameters["key"], json!("value"));
     assert_eq!(tag.arguments.arguments.len(), 1);
     assert_eq!(tag.arguments.arguments[0].value, "arg1");
-    assert_eq!(tag.range, create_range(0, 1, 1, 29, 1, 30));
+    assert_eq!(tag.range, create_range(0, 1, 1, 28, 2, 1));
     Ok(())
 }

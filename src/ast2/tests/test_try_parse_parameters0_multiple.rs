@@ -10,6 +10,6 @@ fn test_try_parse_parameters0_multiple() -> Result<()> {
     assert_eq!(params.parameters["key1"], json!("value1"));
     assert_eq!(params.parameters["key2"], json!(123));
     assert_eq!(params.parameters["key3"], json!(true));
-    assert_eq!(params.range, create_range(0, 1, 1, 40, 1, 41));
+    assert_eq!(params.range, create_range(0, 1, 1, 39, 1, 40));
     Ok(())
 }

@@ -1321,7 +1321,24 @@ fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
 fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
     dbg!("_try_parse_text", parser.get_position());
     let begin = parser.get_position();
-    let mut content_len = 0;
+
+    loop {
+        match parser.advance() {
+            None => break,
+            Some('\n') => break,            
+            _ => {},
+        }
+    }
+
+    let end = parser.get_position();
+
+    if end.offset > begin.offset {
+        Ok(Some(Text{ range: Range{begin, end}}))
+    } else {
+        Ok(None)
+    }
+
+    /*let mut content_len = 0;
 
     loop {
         dbg!("_try_parse_text loop", parser.get_position());
@@ -1355,5 +1372,5 @@ fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
         Ok(Some(Text {
             range: Range { begin, end },
         }))
-    }
+    }*/
 }

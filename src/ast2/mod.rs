@@ -282,7 +282,7 @@ fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
         return Ok(Some(x));
     }
 
-    parser.load(&status);
+    parser.load(status);
     Ok(None)
 } 
 
@@ -344,7 +344,7 @@ fn _try_parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>> {
         return Ok(Some(x));
     }
 
-    parser.load(&status);
+    parser.load(status);
     Ok(None)
 }
 
@@ -472,7 +472,7 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
-            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
             return Ok(None);
         }
     }
@@ -482,7 +482,7 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
-            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
             return Ok(None);
         }
     }
@@ -492,7 +492,7 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
-            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
             return Ok(None);
         }
     }
@@ -502,7 +502,7 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
-            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
             return Ok(None);
         }
     }
@@ -512,7 +512,7 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
-            parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
             return Ok(None);
         }
     }
@@ -562,7 +562,7 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
 
     let begin = parser.get_position();
 
-    if !parser.consume_matching_char("{") {
+    if !parser.consume_matching_char('{') {
         return Ok(None);
     } 
 
@@ -572,7 +572,7 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
 
         parser.skip_many_whitespaces_or_eol();
 
-        if parser.consume_matching_char("}") {
+        if parser.consume_matching_char('}') {
             break;
         }
         
@@ -589,7 +589,7 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
 
         parser.skip_many_whitespaces_or_eol();
 
-        if parser.consume_matching_char(",") {
+        if parser.consume_matching_char(',') {
             // Continue loop for next parameter
         } else if parser.peek() == Some('}') {
             // Closing brace will be consumed in the next iteration
@@ -621,7 +621,7 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
 
     parser.skip_many_whitespaces_or_eol();
 
-    if !parser.consume_matching_char(":") {
+    if !parser.consume_matching_char(':') {
         return Err(ParsingError::UnexpectedToken {
             expected: ":".to_string(),
             found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
@@ -735,22 +735,22 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
     if let Ok(Some(x)) = _try_parse_nude_integer(parser) {
         return Ok(Some(json!(x)));
     }
-    parser.load(&status);
+    parser.load(status);
 
     if let Ok(Some(x)) = _try_parse_nude_float(parser) {
         return Ok(Some(json!(x)));
     }
-    parser.load(&status);
+    parser.load(&);
 
     if let Ok(Some(x)) = _try_parse_nude_bool(parser) {
         return Ok(Some(json!(x)));
     }
-    parser.load(&status);
+    parser.load(status);
 
     if let Ok(Some(x)) = _try_parse_nude_string(parser) {
         return Ok(Some(json!(x)));
     }
-    parser.load(&status);
+    parser.load(status);
 
     Ok(None)
 }
@@ -812,7 +812,7 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
     }
 
     if number.is_empty() || (number == "." && has_decimal) {
-        parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if nothing was parsed
+        parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if nothing was parsed
         return Ok(None);
     }
 
@@ -825,7 +825,7 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
             }.into()),
         }
     } else {
-        parser.load(&ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if it was just an integer
+        parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if it was just an integer
         Ok(None) // Not a float if no decimal was found
     }
 }
@@ -880,7 +880,7 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     let value_json = match value_json_result {
         Ok(Some(v)) => Some(v),
         Ok(None) => {
-            parser.load(&status);
+            parser.load(status);
             return Ok(None);
         },
         Err(e) => return Err(e),
@@ -898,7 +898,7 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
             range: Range { begin, end },
         }))
     } else {
-        parser.load(&status);
+        parser.load(status);
         Ok(None)
     }
 }
@@ -917,7 +917,7 @@ fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
         if let Some(arg) = _try_parse_argument(parser)? {
             args.push(arg);
         } else {
-            parser.load(&status);
+            parser.load(status);
             break;
         }
     }
@@ -941,7 +941,7 @@ fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
     loop {
         let current_status = parser.store();
         if parser.is_eod() || parser.remain().starts_with(" @") || parser.remain().starts_with("<!--") {
-            parser.load(&current_status);
+            parser.load(current_status);
             break;
         }
 

@@ -1,6 +1,5 @@
 use super::*;
 use anyhow::Result;
-use uuid::Uuid;
 
 fn create_pos(offset: usize, line: usize, column: usize) -> Position {
     Position { offset, line, column }
@@ -402,6 +401,7 @@ fn test_try_parse_anchor_kind() -> Result<()> {
 
 #[test]
 fn test_try_parse_tag0_simple() -> Result<()> {
+    let mut parser = Parser::new("@answer arg1 arg2");
     let tag = _try_parse_tag0(&mut parser)?.unwrap();
     assert!(matches!(tag.command, CommandKind::Answer));
     assert_eq!(tag.arguments.arguments.len(), 2);
@@ -457,8 +457,7 @@ fn test_try_parse_anchor0_with_parameters_and_args() -> Result<()> {
 
 #[test]
 fn test_try_parse_text_simple() -> Result<()> {
-    let mut parser = Parser::new("Hello world\n");
-    let text = _try_parse_text("", &mut parser)?.unwrap();
+    let text = _try_parse_text(&mut parser)?.unwrap();
     assert_eq!(text.range, create_range(0, 1, 1, 12, 1, 13));
     Ok(())
 }
@@ -466,7 +465,7 @@ fn test_try_parse_text_simple() -> Result<()> {
 #[test]
 fn test_try_parse_text_until_tag() -> Result<()> {
     let mut parser = Parser::new("Text before tag.\n@tag\n");
-    let text = _try_parse_text("", &mut parser)?.unwrap();
+    let text = _try_parse_text(&mut parser)?.unwrap();
     assert_eq!(text.range, create_range(0, 1, 1, 17, 2, 1));
     assert_eq!(parser.remain(), "@tag\n");
     Ok(())
@@ -475,7 +474,7 @@ fn test_try_parse_text_until_tag() -> Result<()> {
 #[test]
 fn test_try_parse_text_until_anchor() -> Result<()> {
     let mut parser = Parser::new("Text before anchor.\n<!-- anchor -->\n");
-    let text = _try_parse_text("", &mut parser)?.unwrap();
+    let text = _try_parse_text(&mut parser)?.unwrap();
     assert_eq!(text.range, create_range(0, 1, 1, 20, 2, 1));
     assert_eq!(parser.remain(), "<!-- anchor -->\n");
     Ok(())
@@ -486,7 +485,7 @@ fn test_parse_content_mixed() -> Result<()> {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let input = format!("Some text.\n@tag arg1\n<!-- answer-{}:begin -->\nMore text.\n<!-- answer-{}:end -->\nFinal text.", uuid_str, uuid_str);
     let mut parser = Parser::new(&input);
-    let content = parse_content("", &mut parser)?;
+    let content = parse_content(&mut parser)?;
 
     assert_eq!(content.len(), 6);
 

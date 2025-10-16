@@ -257,11 +257,11 @@ fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
         if parser.is_eod() { break; }
 
         let begin_pos = parser.get_position();
-        if let Some(tag) = _try_parse_tag(document, parser)? {
+        if let Some(tag) = _try_parse_tag(parser)? {
             contents.push(Content::Tag(tag));            
-        } else if let Some(anchor) = _try_parse_anchor(document, parser)? {
+        } else if let Some(anchor) = _try_parse_anchor(parser)? {
             contents.push(Content::Anchor(anchor));
-        } else if let Some(text) = _try_parse_text(document, parser)? {
+        } else if let Some(text) = _try_parse_text(parser)? {
             contents.push(Content::Text(text));
         } else {
             return Err(ParsingError::InvalidSyntax {

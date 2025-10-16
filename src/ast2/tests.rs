@@ -457,6 +457,7 @@ fn test_try_parse_anchor0_with_parameters_and_args() -> Result<()> {
 
 #[test]
 fn test_try_parse_text_simple() -> Result<()> {
+    let mut parser = Parser::new("Some text.");
     let text = _try_parse_text(&mut parser)?.unwrap();
     assert_eq!(text.range, create_range(0, 1, 1, 12, 1, 13));
     Ok(())
@@ -485,7 +486,7 @@ fn test_parse_content_mixed() -> Result<()> {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let input = format!("Some text.\n@tag arg1\n<!-- answer-{}:begin -->\nMore text.\n<!-- answer-{}:end -->\nFinal text.", uuid_str, uuid_str);
     let mut parser = Parser::new(&input);
-    let content = parse_content(&mut parser)?;
+    let content = parse_content(&input, &mut parser)?;
 
     assert_eq!(content.len(), 6);
 

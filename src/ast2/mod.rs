@@ -24,7 +24,7 @@ pub enum ParsingError {
 pub struct Position {
     pub offset: usize,      /// 0-based character offset
     pub line: usize,        /// 1-based line
-    pub column: usize,      /// 1-based column
+    pub column: usize, // 1-based column
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

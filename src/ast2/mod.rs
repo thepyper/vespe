@@ -648,7 +648,7 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 
     match parser.consume_one_alpha_or_underscore() {
         None => {
-            return None;
+            return Ok(None);
         }
         Some(x) => {
             identifier.push(x);

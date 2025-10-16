@@ -106,7 +106,7 @@ pub struct ParserStatus<'a> {
     iterator: Chars<'a>,
 }
 
-impl <'a> Parser<'a> {
+impl<'a> Parser<'a> {
     pub fn new(document: &'a str) -> Self {
         Self {
             document,

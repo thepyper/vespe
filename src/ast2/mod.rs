@@ -1,3 +1,5 @@
+use clap::builder::Str;
+
 
 struct Position {
     offset: usize,      /// 0-based character offset
@@ -553,6 +555,42 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
 
 fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
 
-    let status = parser.store();
+    let mut number = String::new();
 
+    loop {
+        match parser.consume_one_dec_digit() {
+            Some(x) => {
+                number.push(x);
+            }
+            None => {
+                break;
+            }
+        }
+    }
+
+    if number.is_empty() {
+        return Ok(None);
+    } else {
+        return Ok(Some(i64::from_str_radix(&number, 10)));
+    }
+}
+
+fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
+ /// TODO
+}
+
+fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
+
+    if parser.consume_matching_string("true") {
+        return Ok(Some(true));
+    } else if parser.consume_matching_string("false") {
+        return Ok(Some(false));
+    } else {
+        return Ok(None);
+    }
+}
+
+fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<f64>> {
+ /// TODO  accept a-z A-Z 0-9 / . 
+ 
 }

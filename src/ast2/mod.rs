@@ -224,11 +224,11 @@ fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
     let mut contents = Vec::new();
 
     while !parser.is_eod() {
-        if let Some(tag) = try_parse_tag(document, parser)? {
+        if let Some(tag) = _try_parse_tag(document, parser)? {
             contents.push(Tag(tag));            
-        } else if let Some(anchor) = try_parse_anchor(document, parser)? {
+        } else if let Some(anchor) = _try_parse_anchor(document, parser)? {
             contents.push(Anchor(anchor));
-        } else if let Some(text) = try_parse_text(document, parser)? {
+        } else if let Some(text) = _try_parse_text(document, parser)? {
             contents.push(Text(text));
         } else {
             // TODO parse error
@@ -238,24 +238,23 @@ fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
     Ok(contents)
 }
 
-fn try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     let status = parser.store();
 
-    match _try_parse_tag(document, parser)? {
-        None => {
-            parser.load(status);
-            None           
-        }
-        Some(x) => Some(x)
-    }    
+    if let Some(x) = _try_parse_tag0(document, parser)? {
+        return Some(x);
+    }
+
+    parser.load(status);
+    None
 } 
 
-fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     let begin = parser.get_position();
 
-    if !parser.consume("@") {
+    if !parser.consume_matching_char('@') {
         return Ok(None);
     }
 
@@ -274,7 +273,7 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     parser.skip_many_whitespaces();
 
-    if !parser.consume("\n") {
+    if !parser.consume_matching_char('\n') {
         // TODO errore, text dopo arguments e prima di fine linea!?
     }
 
@@ -290,24 +289,23 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
     }))
 }
 
-fn try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
 
     let status = parser.store();
 
-    match _try_parse_anchor(document, parser)? {
-        None => {
-            parser.load(status);
-            None           
-        }
-        Some(x) => Some(x)
-    }    
+    if let Some(x) = _try_parse_anchor0(document, parser)? {
+        return Some(x);
+    }
+
+    parser.load(status);
+    None
 }
 
-fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
 
     let begin = parser.get_position();
 
-    if !parser.consume("<!--") {
+    if !parser.consume_matching_string("<!--") {
         return Ok(None);
     }
 
@@ -318,7 +316,7 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
         return Ok(None);
     }
 
-    if !parser.consume("-") {
+    if !parser.consume_matching_char('-') {
         // TODO parsing error anchor, manca trattino prima di uuid
     }
 
@@ -327,7 +325,7 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
         // TODO parsing error anchor, manca uuid
     }
 
-    if !parser.consume(":") {
+    if !parser.consume_matching_char(':') {
         // TODO parsing error anchor, manca :
     }
 
@@ -343,13 +341,13 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
 
     parser.skip_many_whitespaces_or_eol();
 
-    if !parser.consume("-->") {
+    if !parser.consume_matching_string("-->") {
         // TODO errore, ancora non chiusa
     }
 
     parser.skip_many_whitespaces();
 
-    if !parser.consume("\n") {
+    if !parser.consume_matching_char('\n') {
         // TODO errore, text dopo arguments e prima di fine linea!?
     }
 
@@ -379,16 +377,13 @@ fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option
         ("repeat", CommandKind::Repeat),
     ];
 
-    let status = parser.store();
     for (name, kind) in tags_list {
-        if !parser.consume(name) {
-            parser.load(status);
-        } else {
+        if parser.consume_matching_string(name) {
             return Some(kind);
         }
     }
 
-    kind
+    None
 }
 
 fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {
@@ -398,11 +393,8 @@ fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<
         ("end", AnchorKind::End),
     ];
 
-    let status = parser.store();
     for (name, kind) in tags_list {
-        if !parser.consume(name) {
-            parser.load(status);
-        } else {
+        if parser.consume_matching_string(name) {
             return Some(kind);
         }
     }

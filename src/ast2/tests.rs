@@ -371,7 +371,7 @@ fn test_try_parse_arguments_multiline() -> Result<()> {
 #[test]
 fn test_try_parse_command_kind() -> Result<()> {
     let mut parser = Parser::new("answer");
-    assert!(matches!(_try_parse_command_kind("", &mut parser)?,
+    assert!(matches!(_try_parse_command_kind(&mut parser)?,
               Some(CommandKind::Answer)));
     assert_eq!(parser.get_position(), create_pos(6, 1, 7));
     Ok(())
@@ -394,7 +394,7 @@ fn test_try_parse_uuid() -> Result<()> {
 #[test]
 fn test_try_parse_anchor_kind() -> Result<()> {
     let mut parser = Parser::new("begin");
-    assert!(matches!(_try_parse_anchor_kind("", &mut parser)?,
+    assert!(matches!(_try_parse_anchor_kind(&mut parser)?,
               Some(AnchorKind::Begin)));
     assert_eq!(parser.get_position(), create_pos(5, 1, 6));
     Ok(())
@@ -402,8 +402,7 @@ fn test_try_parse_anchor_kind() -> Result<()> {
 
 #[test]
 fn test_try_parse_tag0_simple() -> Result<()> {
-    let mut parser = Parser::new("@answer arg1 arg2\n");
-    let tag = _try_parse_tag0("", &mut parser)?.unwrap();
+    let tag = _try_parse_tag0(&mut parser)?.unwrap();
     assert!(matches!(tag.command, CommandKind::Answer));
     assert_eq!(tag.arguments.arguments.len(), 2);
     assert_eq!(tag.arguments.arguments[0].value, "arg1");
@@ -415,7 +414,7 @@ fn test_try_parse_tag0_simple() -> Result<()> {
 #[test]
 fn test_try_parse_tag0_with_parameters() -> Result<()> {
     let mut parser = Parser::new("@inline {key: \"value\"} arg1\n");
-    let tag = _try_parse_tag0("", &mut parser)?.unwrap();
+    let tag = _try_parse_tag0(&mut parser)?.unwrap();
     assert!(matches!(tag.command, CommandKind::Inline));
     assert_eq!(tag.parameters.parameters["key"], json!("value"));
     assert_eq!(tag.arguments.arguments.len(), 1);
@@ -429,7 +428,7 @@ fn test_try_parse_anchor0_simple() -> Result<()> {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let input = format!("<!-- answer-{}:begin -->\n", uuid_str);
     let mut parser = Parser::new(&input);
-    let anchor = _try_parse_anchor0("", &mut parser)?.unwrap();
+    let anchor = _try_parse_anchor0(&mut parser)?.unwrap();
     assert!(matches!(anchor.command, CommandKind::Answer));
     assert_eq!(anchor.uuid.to_string(), uuid_str);
     assert!(matches!(anchor.kind, AnchorKind::Begin));
@@ -444,7 +443,7 @@ fn test_try_parse_anchor0_with_parameters_and_args() -> Result<()> {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let input = format!("<!-- derive-{}:end {{key: \"value\"}} arg1 arg2 -->\n", uuid_str);
     let mut parser = Parser::new(&input);
-    let anchor = _try_parse_anchor0("", &mut parser)?.unwrap();
+    let anchor = _try_parse_anchor0(&mut parser)?.unwrap();
     assert!(matches!(anchor.command, CommandKind::Derive));
     assert_eq!(anchor.uuid.to_string(), uuid_str);
     assert!(matches!(anchor.kind, AnchorKind::End));

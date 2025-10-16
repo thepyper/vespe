@@ -1,20 +1,65 @@
+use std::str::Chars;
+use uuid::Uuid;
+use serde_json::{json, Value};
+use thiserror::Error;
 
-struct Position {
-    offset: usize,      /// 0-based character offset
-    line: usize,        /// 1-based line
-    column: usize,      /// 1-based column
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum ParsingError {
+    #[error("Unexpected token: expected {expected}, found {found} at {range:?}")]
+    UnexpectedToken {
+        expected: String,
+        found: String,
+        range: Range,
+    },
+    #[error("Invalid syntax: {message} at {range:?}")]
+    InvalidSyntax {
+        message: String,
+        range: Range,
+    },
+    #[error("Unexpected end of file: expected {expected} at {range:?}")]
+    EndOfFileUnexpected {
+        expected: String,
+        range: Range,
+    },
+    #[error("Invalid number format: {value} at {range:?}")]
+    InvalidNumberFormat {
+        value: String,
+        range: Range,
+    },
+    #[error("Unterminated string at {range:?}")]
+    UnterminatedString {
+        range: Range,
+    },
+    #[error("Custom parsing error: {message} at {range:?}")]
+    Custom {
+        message: String,
+        range: Range,
+    },
 }
 
-struct Range {
-    begin: Position,
-    end: Position,
+pub type Result<T> = std::result::Result<T, ParsingError>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Position {
+    pub offset: usize,      /// 0-based character offset
+    pub line: usize,        /// 1-based line
+    pub column: usize,      /// 1-based column
 }
 
-struct Text {
-    range: Range,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Range {
+    pub begin: Position,
+    pub end: Position,
 }
 
-enum CommandKind {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Text {
+    pub range: Range,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CommandKind {
     Tag,        // for debug purpose
     Include,
     Inline,
@@ -24,51 +69,59 @@ enum CommandKind {
     Repeat,
 }
 
-struct Parameters {
-    parameters: serde_json::Value,
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Parameters {
+    pub parameters: serde_json::Value,
+    pub range: Range,
 }
 
-struct Argument {
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Argument {
+    pub value: String,
+    pub range: Range,
 }
 
-struct Arguments {
-    arguments: Vec<Argument>,
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Arguments {
+    pub arguments: Vec<Argument>,
+    pub range: Range,
 }
 
-struct Tag {
-    command: CommandKind,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,   
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tag {
+    pub command: CommandKind,
+    pub parameters: Option<Parameters>,
+    pub arguments: Option<Arguments>,
+    pub range: Range,   
 }
 
-enum AnchorKind 
+#[derive(Debug, Clone, PartialEq)]
+pub enum AnchorKind 
 {
     Begin,
     End,
 }
 
-struct Anchor {
-    command: CommandKind,
-    uuid: Uuid,
-    kind: AnchorKind,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Anchor {
+    pub command: CommandKind,
+    pub uuid: Uuid,
+    pub kind: AnchorKind,
+    pub parameters: Option<Parameters>,
+    pub arguments: Option<Arguments>,
+    pub range: Range,
 }
 
-enum Content {
+#[derive(Debug, Clone, PartialEq)]
+pub enum Content {
     Text(Text),
     Tag(Tag),
     Anchor(Anchor),
 }
 
-struct Document {
-    content: Vec<Content>,
-    range: Range,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Document {
+    pub content: Vec<Content>,
 }
 
 pub struct Parser<'a> {
@@ -77,9 +130,10 @@ pub struct Parser<'a> {
     iterator: Chars<'a>,
 }
 
+#[derive(Debug, Clone)]
 pub struct ParserStatus<'a> {
-    position: Position,
-    iterator: Chars<'a>,
+    pub position: Position,
+    pub iterator: Chars<'a>,
 }
 
 impl <'a> Parser<'a> {
@@ -170,20 +224,17 @@ impl <'a> Parser<'a> {
     }
 }
 
-fn parse_document(document: &str) -> Result<Document> {
+pub fn parse_document(document: &str) -> Result<Document> {
 
     let mut parser = Parser::new(document);
-    let begin = parser.get_position();
-    let content = parse_content(document, &mut parser)?;
-    let end   = parser.get_position();
+    let content = parse_content(&mut parser)?;
 
-    Document {
-        content: content,
-        range: Range { begin, end },
-    }
+    Ok(Document {
+        content,
+    })
 }
 
-fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
+fn parse_content(parser: &mut Parser) -> Result<Vec<Content>> {
 
     let mut contents = Vec::new();
 
@@ -206,7 +257,7 @@ fn try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     let status = parser.store();
 
-    match _try_parse_tag(document, parser)? {
+    match _try_parse_tag(parser)? {
         None => {
             parser.load(status);
             None           
@@ -215,7 +266,7 @@ fn try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
     }    
 } 
 
-fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
 
     let begin = parser.get_position();
 
@@ -223,7 +274,7 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
         return Ok(None);
     }
 
-    let command = _try_parse_command_kind(document, parser)?;
+    let command = _try_parse_command_kind(parser)?;
     if command.is_none() {
         return Ok(None);
     }
@@ -258,7 +309,7 @@ fn try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor
 
     let status = parser.store();
 
-    match _try_parse_anchor(document, parser)? {
+    match _try_parse_anchor(parser)? {
         None => {
             parser.load(status);
             None           
@@ -267,7 +318,7 @@ fn try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor
     }    
 }
 
-fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>> {
 
     let begin = parser.get_position();
 
@@ -277,7 +328,7 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
 
     parser.skip_many_whitespaces();
 
-    let command = _try_parse_command_kind(document, parser)?;
+    let command = _try_parse_command_kind(parser)?;
     if command.is_none() {
         return Ok(None);
     }
@@ -295,7 +346,7 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
         // TODO parsing error anchor, manca :
     }
 
-    let kind = _try_parse_anchor_kind(document, parser)?;
+    let kind = _try_parse_anchor_kind(parser)?;
 
     parser.skip_many_whitespaces();
 
@@ -331,7 +382,7 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
     }))
 }
 
-fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option<CommandKind>> {
+fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
 
     let tags_list = vec![
         ("tag", CommandKind::Tag),
@@ -355,7 +406,7 @@ fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option
     kind
 }
 
-fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {
+fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
 
     let tags_list = vec![
         ("begin", AnchorKind::Begin),

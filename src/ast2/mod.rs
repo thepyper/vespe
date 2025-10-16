@@ -924,9 +924,8 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
 
     if !parser.consume_matching_char(':') {
         dbg!("_try_parse_parameter no colon");
-        return Err(ParsingError::UnexpectedToken {
-            expected: ":".to_string(),
-            found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+        return Err(ParsingError::InvalidSyntax {
+            message: "Expected : ".to_string(),
             range: Range {
                 begin: parser.get_position(),
                 end: parser.get_position(),
@@ -1077,14 +1076,14 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
     dbg!("_try_parse_nude_value", parser.get_position());
     let status = parser.store();
 
-    if let Ok(Some(x)) = _try_parse_nude_integer(parser) {
-        dbg!("_try_parse_nude_value parsed integer", x);
+    if let Ok(Some(x)) = _try_parse_nude_float(parser) {
+        dbg!("_try_parse_nude_value parsed float", x);
         return Ok(Some(json!(x)));
     }
     parser.load(status.clone());
 
-    if let Ok(Some(x)) = _try_parse_nude_float(parser) {
-        dbg!("_try_parse_nude_value parsed float", x);
+    if let Ok(Some(x)) = _try_parse_nude_integer(parser) {
+        dbg!("_try_parse_nude_value parsed integer", x);
         return Ok(Some(json!(x)));
     }
     parser.load(status.clone());

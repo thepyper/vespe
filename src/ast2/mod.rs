@@ -527,6 +527,10 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
     }
 }
 
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;
+
 fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {
 
     let tags_list = vec![

@@ -121,15 +121,14 @@ impl <'a> Parser<'a> {
                 None => {
                     return false;
                 }
-                Some(y) if y == x {
-                    return true;
-                }
-                Some(y) {
-                    self.load(status);
+                Some(y) => {
+                    if y == x {
+                        return true;
+                    }
                 }
             }
+            self.load(&status);
         }
-        self.load(status);
         false
     }
     pub fn skip_many_of(&mut self, xs: &str) {
@@ -165,7 +164,7 @@ impl <'a> Parser<'a> {
             iterator: self.iterator.clone(),
         }
     }
-    pub fn load(&mut self, status: ParserStatus) {
+    pub fn load(&mut self, status: &ParserStatus) {
         self.position = status.position;
         self.iterator = status.iterator;
     }
@@ -373,5 +372,50 @@ fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<
     }
 
     None
+}
+
+fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
+
+    let status = parser.store();
+
+    if let Some(x) = _try_parse_parameters0(parser)? {
+        return Some(x);
+    }
+
+    parser.load(status);
+    None
+}
+
+fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
+
+    let begin = parser.get_position();
+
+    if !parser.consume("{") {
+        return Ok(None);
+    } 
+
+    let mut parameters = json!({});
+
+    while !parser.is_eod() {
+
+        parser.skip_many_whitespaces_or_eol();
+
+        if parser.consume("}") {
+            break;
+        } 
+        
+        let parameter = _try_parse_parameter(parser)?;
+
+        if parameter.is_none() {
+            // TODO errore, parametro non parsed!?!?
+        }
+
+        // TODO add parameter to serde_json object
+
+    }
+
+    let end = parser.get_position();
+
+    Ok(Parameters { parameters, range: Range { begin, end }})
 }
 

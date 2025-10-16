@@ -421,13 +421,36 @@ fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
     let status = parser.store();
     for (name, kind) in tags_list {
         if !parser.consume(name) {
-            parser.load(status);
+            parser.load(&status);
         } else {
-            return Some(kind);
+            return Ok(Some(kind));
         }
     }
 
-    kind
+    Ok(None)
+}
+
+pub fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
+    let status = parser.store();
+    let begin = parser.get_position();
+
+    let uuid_str = parser.take_while(|c| c.is_ascii_hexdigit() || c == '-');
+
+    if uuid_str.is_empty() {
+        parser.load(&status);
+        return Ok(None);
+    }
+
+    match Uuid::parse_str(uuid_str) {
+        Ok(uuid) => Ok(Some(uuid)),
+        Err(_) => {
+            parser.load(&status);
+            Err(ParsingError::InvalidSyntax {
+                message: "Invalid UUID format".to_string(),
+                range: Range { begin, end: parser.get_position() },
+            })
+        }
+    }
 }
 
 fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
@@ -440,13 +463,13 @@ fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
     let status = parser.store();
     for (name, kind) in tags_list {
         if !parser.consume(name) {
-            parser.load(status);
+            parser.load(&status);
         } else {
-            return Some(kind);
+            return Ok(Some(kind));
         }
     }
 
-    None
+    Ok(None)
 }
 
 fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
@@ -492,5 +515,59 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
     let end = parser.get_position();
 
     Ok(Parameters { parameters, range: Range { begin, end }})
+}
+
+fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
+    let status = parser.store();
+    let begin = parser.get_position();
+
+    parser.skip_many_whitespaces();
+
+    let value_str = if let Some(c) = parser.peek() {
+        if c == '\'' || c == '"' {
+            let quote_char = c;
+            parser.advance(); // Consume the opening quote
+            let mut value = String::new();
+            loop {
+                match parser.advance() {
+                    Some(c) if c == quote_char => break, // Closing quote
+                    Some('\\') => {
+                        // Handle escape sequences
+                        match parser.advance() {
+                            Some('n') => value.push('\n'),
+                            Some('r') => value.push('\r'),
+                            Some('t') => value.push('\t'),
+                            Some('\\') => value.push('\\'),
+                            Some(''') => value.push('\''),
+                            Some('"') => value.push('"'),
+                            Some(other) => value.push(other), // Unrecognized escape, just push the char
+                            None => return Err(ParsingError::UnterminatedString { range: Range { begin, end: parser.get_position() } }),
+                        }
+                    },
+                    Some(c) => value.push(c),
+                    None => return Err(ParsingError::UnterminatedString { range: Range { begin, end: parser.get_position() } }),
+                }
+            }
+            value
+        } else {
+            // Unquoted argument: sequence of non-whitespace, non-quote, non-brace, non-comma characters
+            parser.take_while(|c| !c.is_whitespace() && c != '\'' && c != '"' && c != '{' && c != '}' && c != ',').to_string()
+        }
+    } else {
+        parser.load(&status);
+        return Ok(None);
+    };
+
+    if value_str.is_empty() {
+        parser.load(&status);
+        return Ok(None);
+    }
+
+    let end = parser.get_position();
+
+    Ok(Some(Argument {
+        value: value_str,
+        range: Range { begin, end },
+    }))
 }
 

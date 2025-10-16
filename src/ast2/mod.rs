@@ -758,6 +758,7 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
 fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
 
     let mut number = String::new();
+    let start_pos = parser.get_position();
 
     loop {
         match parser.consume_one_dec_digit() {
@@ -771,9 +772,15 @@ fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
     }
 
     if number.is_empty() {
-        return Ok(None);
+        Ok(None)
     } else {
-        return Ok(Some(i64::from_str_radix(&number, 10)));
+        match i64::from_str_radix(&number, 10) {
+            Ok(num) => Ok(Some(num)),
+            Err(_) => Err(ParsingError::InvalidNumberFormat {
+                value: number,
+                range: Range { begin: start_pos, end: parser.get_position() },
+            }.into()),
+        }
     }
 }
 

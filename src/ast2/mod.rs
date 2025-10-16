@@ -271,19 +271,19 @@ fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
     Ok(contents)
 }
 
-fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
 
     let status = parser.store();
 
-    if let Some(x) = _try_parse_tag0(document, parser)? {
-        return Some(x);
+    if let Some(x) = _try_parse_tag0(parser)? {
+        return Ok(Some(x));
     }
 
-    parser.load(status);
-    None
+    parser.load(&status);
+    Ok(None)
 } 
 
-fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag0(parser: &mut Parser) -> Result<Option<Tag>> {
 
     let begin = parser.get_position();
 
@@ -291,7 +291,7 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
         return Ok(None);
     }
 
-    let command = match _try_parse_command_kind(document, parser)? {
+    let command = match _try_parse_command_kind(parser)? {
         Some(c) => c,
         None => return Err(ParsingError::InvalidSyntax {
             message: "Expected command kind after @".to_string(),
@@ -301,17 +301,15 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     parser.skip_many_whitespaces();
 
-    let parameters = match _try_parse_parameters(parser)? {
-        Some(p) => p,
-        None => Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } },
-    };
+    let parameters = _try_parse_parameters(parser)?.unwrap_or_else(|| {
+        Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+    });
     
     parser.skip_many_whitespaces();
 
-    let arguments = match _try_parse_arguments(parser)? {
-        Some(a) => a,
-        None => Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } },
-    };
+    let arguments = _try_parse_arguments(parser)?.unwrap_or_else(|| {
+        Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+    });
 
     parser.skip_many_whitespaces();
 
@@ -335,19 +333,19 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
     }))
 }
 
-fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>> {
 
     let status = parser.store();
 
-    if let Some(x) = _try_parse_anchor0(document, parser)? {
-        return Some(x);
+    if let Some(x) = _try_parse_anchor0(parser)? {
+        return Ok(Some(x));
     }
 
-    parser.load(status);
-    None
+    parser.load(&status);
+    Ok(None)
 }
 
-fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
 
     let begin = parser.get_position();
 
@@ -357,7 +355,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
 
     parser.skip_many_whitespaces();
 
-    let command = match _try_parse_command_kind(document, parser)? {
+    let command = match _try_parse_command_kind(parser)? {
         Some(c) => c,
         None => return Err(ParsingError::InvalidSyntax {
             message: "Expected command kind after <!--".to_string(),
@@ -389,7 +387,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
         }.into());
     }
 
-    let kind = match _try_parse_anchor_kind(document, parser)? {
+    let kind = match _try_parse_anchor_kind(parser)? {
         Some(k) => k,
         None => return Err(ParsingError::InvalidSyntax {
             message: "Expected anchor kind after UUID and :".to_string(),
@@ -399,17 +397,15 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
 
     parser.skip_many_whitespaces();
 
-    let parameters = match _try_parse_parameters(parser)? {
-        Some(p) => p,
-        None => Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } },
-    };
+    let parameters = _try_parse_parameters(parser)?.unwrap_or_else(|| {
+        Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+    });
     
     parser.skip_many_whitespaces();
 
-    let arguments = match _try_parse_arguments(parser)? {
-        Some(a) => a,
-        None => Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } },
-    };
+    let arguments = _try_parse_arguments(parser)?.unwrap_or_else(|| {
+        Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+    });
 
     parser.skip_many_whitespaces_or_eol();
 
@@ -443,7 +439,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
     }))
 }
 
-fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option<CommandKind>> {
+fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
 
     let tags_list = vec![
         ("tag", CommandKind::Tag),
@@ -531,7 +527,7 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
 #[path = "tests.rs"]
 mod tests;
 
-fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {
+fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
 
     let tags_list = vec![
         ("begin", AnchorKind::Begin),

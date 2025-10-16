@@ -3,6 +3,7 @@ use uuid::Uuid;
 use serde_json::json;
 use thiserror::Error;
 use anyhow::Result;
+use tracing::debug;
 
 #[derive(Error, Debug)]
 pub enum ParsingError {
@@ -33,10 +34,12 @@ pub struct Range {
     pub end: Position,
 }
 
+#[derive(Debug)]
 pub struct Text {
     pub range: Range,
 }
 
+#[derive(Debug)]
 pub enum CommandKind {
     Tag,        // for debug purpose
     Include,
@@ -47,21 +50,25 @@ pub enum CommandKind {
     Repeat,
 }
 
+#[derive(Debug)]
 pub struct Parameters {
     pub parameters: serde_json::Value,
     pub range: Range,
 }
 
+#[derive(Debug)]
 pub struct Argument {
     pub value: String,
     pub range: Range,
 }
 
+#[derive(Debug)]
 pub struct Arguments {
     pub arguments: Vec<Argument>,
     pub range: Range,
 }
 
+#[derive(Debug)]
 pub struct Tag {
     pub command: CommandKind,
     pub parameters: Parameters,
@@ -69,12 +76,14 @@ pub struct Tag {
     pub range: Range,   
 }
 
+#[derive(Debug)]
 pub enum AnchorKind 
 {
     Begin,
     End,
 }
 
+#[derive(Debug)]
 pub struct Anchor {
     pub command: CommandKind,
     pub uuid: Uuid,
@@ -84,17 +93,20 @@ pub struct Anchor {
     pub range: Range,
 }
 
+#[derive(Debug)]
 pub enum Content {
     Text(Text),
     Tag(Tag),
     Anchor(Anchor),
 }
 
+#[derive(Debug)]
 pub struct Document {
     pub content: Vec<Content>,
     pub range: Range,
 }
 
+#[derive(Debug)]
 pub struct Parser<'a> {
     _document: &'a str,
     position: Position,
@@ -798,14 +810,10 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 
 fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
     dbg!("_try_parse_value", parser.get_position());
-    if parser.peek() == Some('"') { // Check peek instead of consume to get the char
-        parser.advance(); // Consume the opening quote
-        dbg!("_try_parse_value parsing double quoted string");
-        Ok(_try_parse_enclosed_value(parser, '"')?.map(|s| serde_json::Value::String(s)))
-    } else if parser.peek() == Some('\'') { // Check peek instead of consume to get the char
-        parser.advance(); // Consume the opening quote
-        dbg!("_try_parse_value parsing single quoted string");
-        Ok(_try_parse_enclosed_value(parser, '\'')?.map(|s| serde_json::Value::String(s)))
+    if let Some(x) = _try_parse_enclosed_value(parser, '\"')? {
+        Ok(Some(x).map(|s| serde_json::Value::String(s)))
+    } else if let Some(x) = _try_parse_enclosed_value(parser, '\'')? {
+        Ok(Some(x).map(|s| serde_json::Value::String(s)))
     } else {
         dbg!("_try_parse_value parsing nude value");
         _try_parse_nude_value(parser)
@@ -816,7 +824,11 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: char) -> Result<Optio
     dbg!("_try_parse_enclosed_value", parser.get_position(), closure);
     let mut value = String::new();
     let start_pos = parser.get_position();
-
+    // Consume opening enclosure
+    if !parser.consume_matching_char(closure) {
+        return Ok(None);
+    }
+    // Consume string
     loop {
         dbg!("_try_parse_enclosed_value loop", parser.get_position());
         if parser.consume_matching_char(closure) {
@@ -891,7 +903,7 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
     parser.load(status.clone());
 
     if let Ok(Some(x)) = _try_parse_nude_string(parser) {
-        dbg!("_try_parse_nude_value parsed string", x);
+        dbg!("_try_parse_nude_value parsed string", &x);
         return Ok(Some(json!(x)));
     }
     parser.load(status.clone());
@@ -1025,46 +1037,29 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     let begin = parser.get_position();
     let status = parser.store();
 
-    let value_json_result = if parser.peek() == Some('"') {
-        parser.advance(); // Consume the opening quote
-        dbg!("_try_parse_argument parsing double quoted string");
-        Ok(_try_parse_enclosed_value(parser, '"')?.map(|s| serde_json::Value::String(s)))
-    } else if parser.peek() == Some('\'') {
-        parser.advance(); // Consume the opening quote
-        dbg!("_try_parse_argument parsing single quoted string");
-        Ok(_try_parse_enclosed_value(parser, '\'')?.map(|s| serde_json::Value::String(s)))
-    } else {
-        dbg!("_try_parse_argument parsing nude value");
-        _try_parse_nude_value(parser)
-    };
+    let value: Option<String> = if let Some(x) = _try_parse_enclosed_value(parser, '\"')? {
+        Ok(Some(x)) 
+    } else if let Some(x) = _try_parse_enclosed_value(parser, '\'')? {
+        Ok(Some(x)) 
+    } else {      
+        _try_parse_nude_string(parser)
+    }?;
 
-    let value_json = match value_json_result {
-        Ok(Some(v)) => Some(v),
-        Ok(None) => {
-            dbg!("_try_parse_argument no value parsed, loading status");
+    match value {
+        None => {
             parser.load(status);
             return Ok(None);
-        },
-        Err(e) => { dbg!("_try_parse_argument error", &e); return Err(e); },
-    };
-
-    if let Some(json_value) = value_json {
-        let end = parser.get_position();
-        // Convert serde_json::Value back to String for Argument.value
-        let value_str = match json_value {
-            serde_json::Value::String(s) => s,
-            _ => json_value.to_string(), // Convert other types to string representation
-        };
-        dbg!("_try_parse_argument success", &value_str);
-        Ok(Some(Argument {
-            value: value_str,
-            range: Range { begin, end },
-        }))
-    } else {
-        dbg!("_try_parse_argument final no value, loading status");
-        parser.load(status);
-        Ok(None)
+        }
+        Some(x) => {
+            let end = parser.get_position();
+            dbg!("_try_parse_argument success", &x);
+            Ok(Some(Argument {
+                value: x,
+                range: Range { begin, end },
+            }))
+        }
     }
+
 }
 
 fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {

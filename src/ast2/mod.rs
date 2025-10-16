@@ -926,7 +926,7 @@ fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
 fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
 
     let begin = parser.get_position();
-    let mut content = String::new();
+    let mut content_len = 0;
 
     loop {
         let current_status = parser.store();
@@ -939,13 +939,13 @@ fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
             None => {
                 break;
             }
-            Some(x) => {
-                content.push(x);
+            Some(_) => {
+                content_len += 1;
             }
         }
     }
 
-    if content.is_empty() {
+    if content_len == 0 {
         Ok(None)
     } else {
         let end = parser.get_position();

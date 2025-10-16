@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 use uuid::Uuid;
 
@@ -17,4 +17,3 @@ fn test_try_parse_anchor0_simple() -> Result<()> {
     assert_eq!(anchor.range, create_range(0, 1, 1, 49, 1, 50));
     Ok(())
 }
-

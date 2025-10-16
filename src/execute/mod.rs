@@ -4,14 +4,13 @@ use std::collections::HashSet;
 
 use crate::agent::ShellAgentCall;
 use crate::execute::states::{
-    AnswerState, AnswerStatus, InlineState, InlineStatus, SummaryState, SummaryStatus,
-    DeriveState, DeriveStatus
+    AnswerState, AnswerStatus, DeriveState, DeriveStatus, InlineState, InlineStatus, SummaryState,
+    SummaryStatus,
 };
 use crate::git::Commit;
 use crate::project::Project;
 use crate::semantic::{self, Context, Line, Patches};
 use crate::utils::AnchorIndex;
-
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -170,7 +169,10 @@ impl ExecuteWorker {
                     // Exit processing, summary could add content needed for further actions
                     break;
                 }
-                Line::DeriveTag { snippet_name, context_name } => {
+                Line::DeriveTag {
+                    snippet_name,
+                    context_name,
+                } => {
                     let uid = uuid::Uuid::new_v4();
                     let anchors = semantic::Line::new_derive_anchors(uid);
                     patches.insert(
@@ -260,7 +262,7 @@ impl ExecuteWorker {
                                     _ => { /* Do nothing */ }
                                 }
                             }
-                             Line::DeriveBeginAnchor { uuid } => {
+                            Line::DeriveBeginAnchor { uuid } => {
                                 let state = project.load_derive_state(uuid)?;
                                 match state.status {
                                     DeriveStatus::Completed => {
@@ -282,7 +284,8 @@ impl ExecuteWorker {
                 Line::AnswerBeginAnchor { .. }
                 | Line::InlineBeginAnchor { .. }
                 | Line::SummaryBeginAnchor { .. }
-                | Line::DeriveBeginAnchor { .. } => { // TODO anchors annidate non funzionano bene cosi!!!
+                | Line::DeriveBeginAnchor { .. } => {
+                    // TODO anchors annidate non funzionano bene cosi!!!
                     latest_anchor = Some(i);
                 }
                 _ => { /* Do nothing */ }
@@ -485,7 +488,8 @@ impl ExecuteWorker {
                                 commit,
                             )?;
                             let snippet = project.load_snippet(&state.snippet_name)?;
-                            let snippet_text =  snippet.content
+                            let snippet_text = snippet
+                                .content
                                 .iter()
                                 .filter_map(|line| {
                                     if let Line::Text(t) = line {
@@ -512,18 +516,15 @@ impl ExecuteWorker {
                             let mut new_state = state.clone();
                             new_state.context = context_text;
                             new_state.snippet = snippet_text;
-                            new_state.derived = agent.call(&format!(                               
-                                "{}\n{}",
-                                new_state.snippet,
-                                new_state.context
-                            ))?;
+                            new_state.derived = agent
+                                .call(&format!("{}\n{}", new_state.snippet, new_state.context))?;
                             new_state.status = DeriveStatus::NeedInjection;
                             project.save_derive_state(uuid, &new_state, commit)?;
                             need_next_step = true;
                         }
                         _ => { /* Do nothing */ }
                     }
-                }                
+                }
                 _ => { /* Do nothing */ }
             }
         }

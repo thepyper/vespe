@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 
 #[test]
@@ -10,4 +10,3 @@ fn test_try_parse_argument_quoted() -> Result<()> {
     assert_eq!(arg.range, create_range(0, 1, 1, 13, 1, 14));
     Ok(())
 }
-

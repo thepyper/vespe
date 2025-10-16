@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 
 #[test]
@@ -10,4 +10,3 @@ fn test_parser_skip_many_whitespaces_or_eol() {
     assert_eq!(parser.get_position(), create_pos(5, 2, 2));
     assert_eq!(parser.remain(), "hello");
 }
-

@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 
 #[test]
@@ -10,4 +10,3 @@ fn test_try_parse_text_until_tag() -> Result<()> {
     assert_eq!(parser.remain(), "@tag\n");
     Ok(())
 }
-

@@ -2,10 +2,21 @@ use crate::ast::*;
 use uuid::Uuid;
 
 fn create_pos(offset: usize, line: usize, column: usize) -> Position {
-    Position { offset, line, column }
+    Position {
+        offset,
+        line,
+        column,
+    }
 }
 
-fn create_range(start_offset: usize, start_line: usize, start_column: usize, end_offset: usize, end_line: usize, end_column: usize) -> Range {
+fn create_range(
+    start_offset: usize,
+    start_line: usize,
+    start_column: usize,
+    end_offset: usize,
+    end_line: usize,
+    end_column: usize,
+) -> Range {
     Range {
         start: create_pos(start_offset, start_line, start_column),
         end: create_pos(end_offset, end_line, end_column),
@@ -36,7 +47,10 @@ fn test_parse_tag_with_parameters() {
     let tag = parse_tag(&mut parser).unwrap().unwrap();
     assert_eq!(tag.command, Command::Answer);
     assert_eq!(tag.parameters.len(), 1);
-    assert_eq!(tag.parameters["key"], ParameterValue::String("value".to_string()));
+    assert_eq!(
+        tag.parameters["key"],
+        ParameterValue::String("value".to_string())
+    );
     assert_eq!(tag.arguments, vec!["arg1"]);
     assert_eq!(tag.range, create_range(0, 1, 1, 27, 1, 28));
 }
@@ -59,5 +73,8 @@ fn test_parse_anchor_begin() {
     assert_eq!(anchor.kind, Kind::Begin);
     assert!(anchor.parameters.is_empty());
     assert_eq!(anchor.arguments, vec!["arg1"]);
-    assert_eq!(anchor.range, create_range(0, 1, 1, document.len(), 1, document.len() + 1));
+    assert_eq!(
+        anchor.range,
+        create_range(0, 1, 1, document.len(), 1, document.len() + 1)
+    );
 }

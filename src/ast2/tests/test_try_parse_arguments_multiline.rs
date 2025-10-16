@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 
 #[test]
@@ -12,4 +12,3 @@ fn test_try_parse_arguments_multiline() -> Result<()> {
     assert_eq!(parser.get_position(), create_pos(4, 1, 5)); // Should stop before newline
     Ok(())
 }
-

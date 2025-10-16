@@ -1,7 +1,11 @@
 use crate::ast2::{Position, Range};
 
 pub fn create_pos(offset: usize, line: usize, column: usize) -> Position {
-    Position { offset, line, column }
+    Position {
+        offset,
+        line,
+        column,
+    }
 }
 
 pub fn create_range(

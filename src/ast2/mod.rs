@@ -1,14 +1,18 @@
-use std::str::Chars;
-use uuid::Uuid;
-use serde_json::json;
-use thiserror::Error;
 use anyhow::Result;
+use serde_json::json;
+use std::str::Chars;
+use thiserror::Error;
 use tracing::debug;
+use uuid::Uuid;
 
 #[derive(Error, Debug)]
 pub enum ParsingError {
     #[error("Unexpected token: expected {expected}, found {found} at {range:?}")]
-    UnexpectedToken { expected: String, found: String, range: Range },
+    UnexpectedToken {
+        expected: String,
+        found: String,
+        range: Range,
+    },
     #[error("Invalid syntax: {message} at {range:?}")]
     InvalidSyntax { message: String, range: Range },
     #[error("Unexpected end of file: expected {expected} at {range:?}")]
@@ -23,8 +27,10 @@ pub enum ParsingError {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
-    pub offset: usize,      /// 0-based character offset
-    pub line: usize,        /// 1-based line
+    pub offset: usize,
+    /// 0-based character offset
+    pub line: usize,
+    /// 1-based line
     pub column: usize, // 1-based column
 }
 
@@ -41,7 +47,7 @@ pub struct Text {
 
 #[derive(Debug)]
 pub enum CommandKind {
-    Tag,        // for debug purpose
+    Tag, // for debug purpose
     Include,
     Inline,
     Answer,
@@ -73,12 +79,11 @@ pub struct Tag {
     pub command: CommandKind,
     pub parameters: Parameters,
     pub arguments: Arguments,
-    pub range: Range,   
+    pub range: Range,
 }
 
 #[derive(Debug)]
-pub enum AnchorKind 
-{
+pub enum AnchorKind {
     Begin,
     End,
 }
@@ -124,7 +129,11 @@ impl<'a> Parser<'a> {
         dbg!("Parser::new", document);
         Self {
             _document: document,
-            position: Position { offset: 0, line: 1, column: 1 },
+            position: Position {
+                offset: 0,
+                line: 1,
+                column: 1,
+            },
             iterator: document.chars(),
         }
     }
@@ -163,7 +172,7 @@ impl<'a> Parser<'a> {
         }
         dbg!("Parser::consume_matching_string matched");
         true
-    }    
+    }
     pub fn consume_matching_char(&mut self, x: char) -> bool {
         dbg!("Parser::consume_matching_char", x, self.position);
         match self.remain().chars().next() {
@@ -182,26 +191,28 @@ impl<'a> Parser<'a> {
             }
         }
     }
-        pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char> 
-        where F: FnOnce(char) -> bool,
-        {
-            dbg!("Parser::consume_char_if", self.position);
-            match self.remain().chars().next() {
-                None => {
-                    dbg!("Parser::consume_char_if EOD");
+    pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char>
+    where
+        F: FnOnce(char) -> bool,
+    {
+        dbg!("Parser::consume_char_if", self.position);
+        match self.remain().chars().next() {
+            None => {
+                dbg!("Parser::consume_char_if EOD");
+                return None;
+            }
+            Some(y) => {
+                if !filter(y) {
+                    dbg!("Parser::consume_char_if filter failed", y);
                     return None;
                 }
-                Some(y) => {
-                    if !filter(y) {
-                        dbg!("Parser::consume_char_if filter failed", y);
-                        return None;
-                    }
-                    self.advance();
-                    dbg!("Parser::consume_char_if consumed", y);
-                    return Some(y);
-                }
+                self.advance();
+                dbg!("Parser::consume_char_if consumed", y);
+                return Some(y);
             }
-        }    pub fn consume_one_char_of(&mut self, xs: &str) -> Option<char> {
+        }
+    }
+    pub fn consume_one_char_of(&mut self, xs: &str) -> Option<char> {
         dbg!("Parser::consume_one_char_of", xs, self.position);
         for x in xs.chars() {
             if self.consume_matching_char(x) {
@@ -225,7 +236,10 @@ impl<'a> Parser<'a> {
     pub fn skip_many_whitespaces_or_eol(&mut self) {
         dbg!("Parser::skip_many_whitespaces_or_eol", self.position);
         self.skip_many_of(" \t\r\n");
-        dbg!("Parser::skip_many_whitespaces_or_eol finished", self.position);
+        dbg!(
+            "Parser::skip_many_whitespaces_or_eol finished",
+            self.position
+        );
     }
     pub fn consume_one_dec_digit(&mut self) -> Option<char> {
         dbg!("Parser::consume_one_dec_digit", self.position);
@@ -269,7 +283,7 @@ impl<'a> Parser<'a> {
                 } else {
                     self.position.column += 1;
                 }
-                Some(c)                
+                Some(c)
             }
         };
         dbg!("Parser::advance", self.position, next_char);
@@ -294,7 +308,7 @@ pub fn parse_document(document: &str) -> Result<Document> {
     let mut parser = Parser::new(document);
     let begin = parser.get_position();
     let content = parse_content(document, &mut parser)?;
-    let end   = parser.get_position();
+    let end = parser.get_position();
 
     Ok(Document {
         content: content,
@@ -309,12 +323,15 @@ fn parse_content(_document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
     while !parser.is_eod() {
         dbg!("parse_content loop", parser.get_position());
         parser.skip_many_whitespaces_or_eol(); // Skip leading whitespace/newlines between nodes
-        if parser.is_eod() { dbg!("parse_content eod"); break; }
+        if parser.is_eod() {
+            dbg!("parse_content eod");
+            break;
+        }
 
         let begin_pos = parser.get_position();
         if let Some(tag) = _try_parse_tag(parser)? {
             dbg!("parse_content parsed tag", &tag);
-            contents.push(Content::Tag(tag));            
+            contents.push(Content::Tag(tag));
         } else if let Some(anchor) = _try_parse_anchor(parser)? {
             dbg!("parse_content parsed anchor", &anchor);
             contents.push(Content::Anchor(anchor));
@@ -325,8 +342,12 @@ fn parse_content(_document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
             dbg!("parse_content unparseable content");
             return Err(ParsingError::InvalidSyntax {
                 message: "Unparseable content".to_string(),
-                range: Range { begin: begin_pos, end: parser.get_position() },
-            }.into());
+                range: Range {
+                    begin: begin_pos,
+                    end: parser.get_position(),
+                },
+            }
+            .into());
         }
     }
 
@@ -347,7 +368,7 @@ fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
     parser.load(status.clone());
     Ok(None)
 }
- 
+
 fn _try_parse_tag0(parser: &mut Parser) -> Result<Option<Tag>> {
     dbg!("_try_parse_tag0", parser.get_position());
     let begin = parser.get_position();
@@ -358,43 +379,75 @@ fn _try_parse_tag0(parser: &mut Parser) -> Result<Option<Tag>> {
     }
 
     let command = match _try_parse_command_kind(parser)? {
-        Some(c) => { dbg!("_try_parse_tag0 command", &c); c },
+        Some(c) => {
+            dbg!("_try_parse_tag0 command", &c);
+            c
+        }
         None => {
             dbg!("_try_parse_tag0 no command kind");
             return Err(ParsingError::InvalidSyntax {
                 message: "Expected command kind after @".to_string(),
-                range: Range { begin, end: parser.get_position() },
-            }.into());
-        },
+                range: Range {
+                    begin,
+                    end: parser.get_position(),
+                },
+            }
+            .into());
+        }
     };
 
     parser.skip_many_whitespaces();
-    dbg!("_try_parse_tag0 after command and whitespace", parser.get_position());
+    dbg!(
+        "_try_parse_tag0 after command and whitespace",
+        parser.get_position()
+    );
 
     let parameters = _try_parse_parameters(parser)?.unwrap_or_else(|| {
         dbg!("_try_parse_tag0 no parameters");
-        Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+        Parameters {
+            parameters: json!({}),
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
     });
     dbg!("_try_parse_tag0 parameters", &parameters);
-    
+
     parser.skip_many_whitespaces();
-    dbg!("_try_parse_tag0 after parameters and whitespace", parser.get_position());
+    dbg!(
+        "_try_parse_tag0 after parameters and whitespace",
+        parser.get_position()
+    );
 
     let arguments = _try_parse_arguments(parser)?.unwrap_or_else(|| {
         dbg!("_try_parse_tag0 no arguments");
-        Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+        Arguments {
+            arguments: Vec::new(),
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
     });
     dbg!("_try_parse_tag0 arguments", &arguments);
 
     parser.skip_many_whitespaces();
-    dbg!("_try_parse_tag0 after arguments and whitespace", parser.get_position());
+    dbg!(
+        "_try_parse_tag0 after arguments and whitespace",
+        parser.get_position()
+    );
 
     if !parser.is_eol() && !parser.is_eod() {
         dbg!("_try_parse_tag0 unexpected content after tag");
         return Err(ParsingError::InvalidSyntax {
             message: "Unexpected content after tag arguments".to_string(),
-            range: Range { begin: parser.get_position(), end: parser.get_position() },
-        }.into());
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
+        .into());
     }
     dbg!("_try_parse_tag0 consuming newline");
     parser.consume_matching_char('\n'); // Consume newline if present
@@ -406,9 +459,7 @@ fn _try_parse_tag0(parser: &mut Parser) -> Result<Option<Tag>> {
         command,
         parameters,
         arguments,
-        range: Range {
-            begin, end 
-        }
+        range: Range { begin, end },
     }))
 }
 
@@ -436,17 +487,27 @@ fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
     }
 
     parser.skip_many_whitespaces();
-    dbg!("_try_parse_anchor0 after <!-- and whitespace", parser.get_position());
+    dbg!(
+        "_try_parse_anchor0 after <!-- and whitespace",
+        parser.get_position()
+    );
 
     let command = match _try_parse_command_kind(parser)? {
-        Some(c) => { dbg!("_try_parse_anchor0 command", &c); c },
+        Some(c) => {
+            dbg!("_try_parse_anchor0 command", &c);
+            c
+        }
         None => {
             dbg!("_try_parse_anchor0 no command kind");
             return Err(ParsingError::InvalidSyntax {
                 message: "Expected command kind after <!--".to_string(),
-                range: Range { begin, end: parser.get_position() },
-            }.into());
-        },
+                range: Range {
+                    begin,
+                    end: parser.get_position(),
+                },
+            }
+            .into());
+        }
     };
 
     if !parser.consume_matching_char('-') {
@@ -454,19 +515,30 @@ fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
         return Err(ParsingError::UnexpectedToken {
             expected: "-".to_string(),
             found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
-            range: Range { begin: parser.get_position(), end: parser.get_position() },
-        }.into());
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
+        .into());
     }
 
     let uuid = match _try_parse_uuid(parser)? {
-        Some(u) => { dbg!("_try_parse_anchor0 uuid", &u); u },
+        Some(u) => {
+            dbg!("_try_parse_anchor0 uuid", &u);
+            u
+        }
         None => {
             dbg!("_try_parse_anchor0 no uuid");
             return Err(ParsingError::InvalidSyntax {
                 message: "Expected UUID after command kind and -".to_string(),
-                range: Range { begin, end: parser.get_position() },
-            }.into());
-        },
+                range: Range {
+                    begin,
+                    end: parser.get_position(),
+                },
+            }
+            .into());
+        }
     };
 
     if !parser.consume_matching_char(':') {
@@ -474,59 +546,102 @@ fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
         return Err(ParsingError::UnexpectedToken {
             expected: ":".to_string(),
             found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
-            range: Range { begin: parser.get_position(), end: parser.get_position() },
-        }.into());
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
+        .into());
     }
 
     let kind = match _try_parse_anchor_kind(parser)? {
-        Some(k) => { dbg!("_try_parse_anchor0 kind", &k); k },
+        Some(k) => {
+            dbg!("_try_parse_anchor0 kind", &k);
+            k
+        }
         None => {
             dbg!("_try_parse_anchor0 no anchor kind");
             return Err(ParsingError::InvalidSyntax {
                 message: "Expected anchor kind after UUID and :".to_string(),
-                range: Range { begin, end: parser.get_position() },
-            }.into());
-        },
+                range: Range {
+                    begin,
+                    end: parser.get_position(),
+                },
+            }
+            .into());
+        }
     };
 
     parser.skip_many_whitespaces();
-    dbg!("_try_parse_anchor0 after kind and whitespace", parser.get_position());
+    dbg!(
+        "_try_parse_anchor0 after kind and whitespace",
+        parser.get_position()
+    );
 
     let parameters = _try_parse_parameters(parser)?.unwrap_or_else(|| {
         dbg!("_try_parse_anchor0 no parameters");
-        Parameters { parameters: json!({}), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+        Parameters {
+            parameters: json!({}),
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
     });
     dbg!("_try_parse_anchor0 parameters", &parameters);
-    
+
     parser.skip_many_whitespaces();
-    dbg!("_try_parse_anchor0 after parameters and whitespace", parser.get_position());
+    dbg!(
+        "_try_parse_anchor0 after parameters and whitespace",
+        parser.get_position()
+    );
 
     let arguments = _try_parse_arguments(parser)?.unwrap_or_else(|| {
         dbg!("_try_parse_anchor0 no arguments");
-        Arguments { arguments: Vec::new(), range: Range { begin: parser.get_position(), end: parser.get_position() } }
+        Arguments {
+            arguments: Vec::new(),
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
     });
     dbg!("_try_parse_anchor0 arguments", &arguments);
 
     parser.skip_many_whitespaces_or_eol();
-    dbg!("_try_parse_anchor0 after arguments and whitespace/eol", parser.get_position());
+    dbg!(
+        "_try_parse_anchor0 after arguments and whitespace/eol",
+        parser.get_position()
+    );
 
     if !parser.consume_matching_string("-->") {
         dbg!("_try_parse_anchor0 no closing -->");
         return Err(ParsingError::UnterminatedString {
-            range: Range { begin, end: parser.get_position() },
-        }.into());
+            range: Range {
+                begin,
+                end: parser.get_position(),
+            },
+        }
+        .into());
     }
     dbg!("_try_parse_anchor0 consumed -->");
 
     parser.skip_many_whitespaces();
-    dbg!("_try_parse_anchor0 after closing --> and whitespace", parser.get_position());
+    dbg!(
+        "_try_parse_anchor0 after closing --> and whitespace",
+        parser.get_position()
+    );
 
     if !parser.is_eol() && !parser.is_eod() {
         dbg!("_try_parse_anchor0 unexpected content after anchor");
         return Err(ParsingError::InvalidSyntax {
             message: "Unexpected content after anchor closing tag".to_string(),
-            range: Range { begin: parser.get_position(), end: parser.get_position() },
-        }.into());
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
+        .into());
     }
     dbg!("_try_parse_anchor0 consuming newline");
     parser.consume_matching_char('\n'); // Consume newline if present
@@ -540,9 +655,7 @@ fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
         kind,
         parameters,
         arguments,
-        range: Range {
-            begin, end 
-        }
+        range: Range { begin, end },
     }))
 }
 
@@ -580,62 +693,99 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
             uuid_str.push(c);
         } else {
             dbg!("_try_parse_uuid failed at first 8 hex digits");
-            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus {
+                position: start_pos,
+                iterator: parser.iterator.clone(),
+            });
             return Ok(None);
         }
     }
-    if !parser.consume_matching_char('-') { dbg!("_try_parse_uuid no first hyphen"); return Ok(None); }
+    if !parser.consume_matching_char('-') {
+        dbg!("_try_parse_uuid no first hyphen");
+        return Ok(None);
+    }
     uuid_str.push('-');
     for i in 0..4 {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
             dbg!("_try_parse_uuid failed at first 4 hex digits");
-            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus {
+                position: start_pos,
+                iterator: parser.iterator.clone(),
+            });
             return Ok(None);
         }
     }
-    if !parser.consume_matching_char('-') { dbg!("_try_parse_uuid no second hyphen"); return Ok(None); }
+    if !parser.consume_matching_char('-') {
+        dbg!("_try_parse_uuid no second hyphen");
+        return Ok(None);
+    }
     uuid_str.push('-');
     for i in 0..4 {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
             dbg!("_try_parse_uuid failed at second 4 hex digits");
-            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus {
+                position: start_pos,
+                iterator: parser.iterator.clone(),
+            });
             return Ok(None);
         }
     }
-    if !parser.consume_matching_char('-') { dbg!("_try_parse_uuid no third hyphen"); return Ok(None); }
+    if !parser.consume_matching_char('-') {
+        dbg!("_try_parse_uuid no third hyphen");
+        return Ok(None);
+    }
     uuid_str.push('-');
     for i in 0..4 {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
             dbg!("_try_parse_uuid failed at third 4 hex digits");
-            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus {
+                position: start_pos,
+                iterator: parser.iterator.clone(),
+            });
             return Ok(None);
         }
     }
-    if !parser.consume_matching_char('-') { dbg!("_try_parse_uuid no fourth hyphen"); return Ok(None); }
+    if !parser.consume_matching_char('-') {
+        dbg!("_try_parse_uuid no fourth hyphen");
+        return Ok(None);
+    }
     uuid_str.push('-');
     for i in 0..12 {
         if let Some(c) = parser.consume_one_hex_digit() {
             uuid_str.push(c);
         } else {
             dbg!("_try_parse_uuid failed at last 12 hex digits");
-            parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() });
+            parser.load(ParserStatus {
+                position: start_pos,
+                iterator: parser.iterator.clone(),
+            });
             return Ok(None);
         }
     }
 
     dbg!("_try_parse_uuid parsed string", &uuid_str);
     match Uuid::parse_str(&uuid_str) {
-        Ok(uuid) => { dbg!("_try_parse_uuid success", &uuid); Ok(Some(uuid)) },
-        Err(e) => { dbg!("_try_parse_uuid parse error", &e); Err(ParsingError::InvalidSyntax {
-            message: format!("Invalid UUID format: {}", uuid_str),
-            range: Range { begin: start_pos, end: parser.get_position() },
-        }.into())},
+        Ok(uuid) => {
+            dbg!("_try_parse_uuid success", &uuid);
+            Ok(Some(uuid))
+        }
+        Err(e) => {
+            dbg!("_try_parse_uuid parse error", &e);
+            Err(ParsingError::InvalidSyntax {
+                message: format!("Invalid UUID format: {}", uuid_str),
+                range: Range {
+                    begin: start_pos,
+                    end: parser.get_position(),
+                },
+            }
+            .into())
+        }
     }
 }
 
@@ -645,10 +795,7 @@ mod tests;
 
 fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
     dbg!("_try_parse_anchor_kind", parser.get_position());
-    let tags_list = vec![
-        ("begin", AnchorKind::Begin),
-        ("end", AnchorKind::End),
-    ];
+    let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
         if parser.consume_matching_string(name) {
@@ -682,7 +829,7 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
     if !parser.consume_matching_char('{') {
         dbg!("_try_parse_parameters0 no opening brace");
         return Ok(None);
-    } 
+    }
 
     let mut parameters = json!({});
 
@@ -694,17 +841,24 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
             dbg!("_try_parse_parameters0 closing brace");
             break;
         }
-        
+
         let parameter_begin = parser.get_position();
         let (key, value) = match _try_parse_parameter(parser)? {
-            Some(p) => { dbg!("_try_parse_parameters0 parsed parameter", &p); p },
+            Some(p) => {
+                dbg!("_try_parse_parameters0 parsed parameter", &p);
+                p
+            }
             None => {
                 dbg!("_try_parse_parameters0 no parameter entry");
                 return Err(ParsingError::InvalidSyntax {
                     message: "Expected parameter entry".to_string(),
-                    range: Range { begin: parameter_begin, end: parser.get_position() },
-                }.into());
-            },
+                    range: Range {
+                        begin: parameter_begin,
+                        end: parser.get_position(),
+                    },
+                }
+                .into());
+            }
         };
 
         parameters[key] = value;
@@ -722,15 +876,22 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
             return Err(ParsingError::UnexpectedToken {
                 expected: ", or } ".to_string(),
                 found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
-                range: Range { begin: parser.get_position(), end: parser.get_position() },
-            }.into());
+                range: Range {
+                    begin: parser.get_position(),
+                    end: parser.get_position(),
+                },
+            }
+            .into());
         }
     }
 
     let end = parser.get_position();
     dbg!("_try_parse_parameters0 end", end);
 
-    Ok(Some(Parameters { parameters, range: Range { begin, end } }))
+    Ok(Some(Parameters {
+        parameters,
+        range: Range { begin, end },
+    }))
 }
 
 fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_json::Value)>> {
@@ -738,41 +899,65 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
     let begin = parser.get_position();
 
     let key = match _try_parse_identifier(parser)? {
-        Some(k) => { dbg!("_try_parse_parameter key", &k); k },
+        Some(k) => {
+            dbg!("_try_parse_parameter key", &k);
+            k
+        }
         None => {
             dbg!("_try_parse_parameter no key");
             return Err(ParsingError::InvalidSyntax {
                 message: "Expected parameter key".to_string(),
-                range: Range { begin, end: parser.get_position() },
-            }.into());
-        },
+                range: Range {
+                    begin,
+                    end: parser.get_position(),
+                },
+            }
+            .into());
+        }
     };
 
     parser.skip_many_whitespaces_or_eol();
-    dbg!("_try_parse_parameter after key and whitespace/eol", parser.get_position());
+    dbg!(
+        "_try_parse_parameter after key and whitespace/eol",
+        parser.get_position()
+    );
 
     if !parser.consume_matching_char(':') {
         dbg!("_try_parse_parameter no colon");
         return Err(ParsingError::UnexpectedToken {
             expected: ":".to_string(),
             found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
-            range: Range { begin: parser.get_position(), end: parser.get_position() },
-        }.into());
+            range: Range {
+                begin: parser.get_position(),
+                end: parser.get_position(),
+            },
+        }
+        .into());
     }
     dbg!("_try_parse_parameter consumed colon");
 
     parser.skip_many_whitespaces_or_eol();
-    dbg!("_try_parse_parameter after colon and whitespace/eol", parser.get_position());
+    dbg!(
+        "_try_parse_parameter after colon and whitespace/eol",
+        parser.get_position()
+    );
 
     let value = match _try_parse_value(parser)? {
-        Some(v) => { dbg!("_try_parse_parameter value", &v); v },
+        Some(v) => {
+            dbg!("_try_parse_parameter value", &v);
+            v
+        }
         None => {
             dbg!("_try_parse_parameter no value");
             return Err(ParsingError::InvalidSyntax {
                 message: "Expected parameter value".to_string(),
-                range: Range { begin, end: parser.get_position() },
-            }.into());
-        },
+                range: Range {
+                    begin,
+                    end: parser.get_position(),
+                },
+            }
+            .into());
+        }
     };
 
     Ok(Some((key, value)))
@@ -791,7 +976,7 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
             identifier.push(x);
         }
     }
-    
+
     loop {
         match parser.consume_one_alnum_or_underscore() {
             None => {
@@ -849,10 +1034,10 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: char) -> Result<Optio
                 value.push('"');
             } else if parser.consume_matching_char('\'') {
                 value.push('\'');
-            } else if parser.consume_matching_char(closure) { // Handle escaped closure character
+            } else if parser.consume_matching_char(closure) {
+                // Handle escaped closure character
                 value.push(closure);
-            }
-            else {
+            } else {
                 dbg!("_try_parse_enclosed_value invalid escape sequence");
                 // Invalid escape sequence, just push the backslash and the next char
                 value.push('\\');
@@ -860,8 +1045,12 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: char) -> Result<Optio
                     value.push(c);
                 } else {
                     return Err(ParsingError::UnterminatedString {
-                        range: Range { begin: start_pos, end: parser.get_position() },
-                    }.into());
+                        range: Range {
+                            begin: start_pos,
+                            end: parser.get_position(),
+                        },
+                    }
+                    .into());
                 }
             }
         } else {
@@ -869,8 +1058,12 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: char) -> Result<Optio
                 None => {
                     dbg!("_try_parse_enclosed_value EOD, unterminated string");
                     return Err(ParsingError::UnterminatedString {
-                        range: Range { begin: start_pos, end: parser.get_position() },
-                    }.into());
+                        range: Range {
+                            begin: start_pos,
+                            end: parser.get_position(),
+                        },
+                    }
+                    .into());
                 }
                 Some(x) => {
                     value.push(x);
@@ -934,11 +1127,21 @@ fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
     } else {
         dbg!("_try_parse_nude_integer parsing", &number);
         match i64::from_str_radix(&number, 10) {
-            Ok(num) => { dbg!("_try_parse_nude_integer success", num); Ok(Some(num)) },
-            Err(_) => { dbg!("_try_parse_nude_integer error"); Err(ParsingError::InvalidNumberFormat {
-                value: number,
-                range: Range { begin: start_pos, end: parser.get_position() },
-            }.into())},
+            Ok(num) => {
+                dbg!("_try_parse_nude_integer success", num);
+                Ok(Some(num))
+            }
+            Err(_) => {
+                dbg!("_try_parse_nude_integer error");
+                Err(ParsingError::InvalidNumberFormat {
+                    value: number,
+                    range: Range {
+                        begin: start_pos,
+                        end: parser.get_position(),
+                    },
+                }
+                .into())
+            }
         }
     }
 }
@@ -973,22 +1176,38 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
 
     if number.is_empty() || (number == "." && has_decimal) {
         dbg!("_try_parse_nude_float empty or just dot");
-        parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if nothing was parsed
+        parser.load(ParserStatus {
+            position: start_pos,
+            iterator: parser.iterator.clone(),
+        }); // Rewind if nothing was parsed
         return Ok(None);
     }
 
     if has_decimal {
         dbg!("_try_parse_nude_float parsing float", &number);
         match number.parse::<f64>() {
-            Ok(f) => { dbg!("_try_parse_nude_float success", f); Ok(Some(f)) },
-            Err(_) => { dbg!("_try_parse_nude_float error"); Err(ParsingError::InvalidNumberFormat {
-                value: number,
-                range: Range { begin: start_pos, end: parser.get_position() },
-            }.into())},
+            Ok(f) => {
+                dbg!("_try_parse_nude_float success", f);
+                Ok(Some(f))
+            }
+            Err(_) => {
+                dbg!("_try_parse_nude_float error");
+                Err(ParsingError::InvalidNumberFormat {
+                    value: number,
+                    range: Range {
+                        begin: start_pos,
+                        end: parser.get_position(),
+                    },
+                }
+                .into())
+            }
         }
     } else {
         dbg!("_try_parse_nude_float not a float (no decimal)");
-        parser.load(ParserStatus { position: start_pos, iterator: parser.iterator.clone() }); // Rewind if it was just an integer
+        parser.load(ParserStatus {
+            position: start_pos,
+            iterator: parser.iterator.clone(),
+        }); // Rewind if it was just an integer
         Ok(None) // Not a float if no decimal was found
     }
 }
@@ -1015,10 +1234,12 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
     loop {
         let current_char = parser.peek();
         match current_char {
-            Some(c) if c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '/' || c == '-' => {
+            Some(c)
+                if c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '/' || c == '-' =>
+            {
                 parser.advance();
                 s.push(c);
-            },
+            }
             _ => break,
         }
     }
@@ -1038,10 +1259,10 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     let status = parser.store();
 
     let value: Option<String> = if let Some(x) = _try_parse_enclosed_value(parser, '\"')? {
-        Ok(Some(x)) 
+        Ok(Some(x))
     } else if let Some(x) = _try_parse_enclosed_value(parser, '\'')? {
-        Ok(Some(x)) 
-    } else {      
+        Ok(Some(x))
+    } else {
         _try_parse_nude_string(parser)
     }?;
 
@@ -1059,7 +1280,6 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
             }))
         }
     }
-
 }
 
 fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
@@ -1107,7 +1327,10 @@ fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
     loop {
         dbg!("_try_parse_text loop", parser.get_position());
         let current_status = parser.store();
-        if parser.is_eod() || parser.remain().starts_with(" @") || parser.remain().starts_with("<!--") {
+        if parser.is_eod()
+            || parser.remain().starts_with(" @")
+            || parser.remain().starts_with("<!--")
+        {
             dbg!("_try_parse_text EOD or start of tag/anchor");
             parser.load(current_status);
             break;
@@ -1129,9 +1352,9 @@ fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
         Ok(None)
     } else {
         let end = parser.get_position();
-        dbg!("_try_parse_text result", Range {begin, end });
+        dbg!("_try_parse_text result", Range { begin, end });
         Ok(Some(Text {
-            range: Range {begin, end }
+            range: Range { begin, end },
         }))
     }
 }

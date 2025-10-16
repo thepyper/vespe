@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 use serde_json::json;
 
@@ -11,4 +11,3 @@ fn test_try_parse_enclosed_value_with_escapes() -> Result<()> {
     assert_eq!(parser.get_position(), create_pos(18, 1, 19));
     Ok(())
 }
-

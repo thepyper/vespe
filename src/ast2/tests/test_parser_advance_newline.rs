@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 
 #[test]
@@ -11,4 +11,3 @@ fn test_parser_advance_newline() {
     assert_eq!(parser.advance(), Some('\n'));
     assert_eq!(parser.get_position(), create_pos(2, 2, 1));
 }
-

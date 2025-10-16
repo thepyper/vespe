@@ -38,29 +38,15 @@ pub enum ParsingError {
         range: Range,
     },
     #[error("Invalid syntax: {{message}} at {{range:?}}")]
-    InvalidSyntax {
-        message: String,
-        range: Range,
-    },
+    InvalidSyntax { message: String, range: Range },
     #[error("Unexpected end of file: expected '{{expected}}' at {{range:?}}")]
-    EndOfFileUnexpected {
-        expected: String,
-        range: Range,
-    },
+    EndOfFileUnexpected { expected: String, range: Range },
     #[error("Invalid number format: '{{value}}' at {{range:?}}")]
-    InvalidNumberFormat {
-        value: String,
-        range: Range,
-    },
+    InvalidNumberFormat { value: String, range: Range },
     #[error("Unterminated string at {{range:?}}")]
-    UnterminatedString {
-        range: Range,
-    },
+    UnterminatedString { range: Range },
     #[error("Custom parsing error: {{message}} at {{range:?}}")]
-    Custom {
-        message: String,
-        range: Range,
-    },
+    Custom { message: String, range: Range },
 }
 
 // Placeholder for other structs that will be defined later
@@ -127,7 +113,11 @@ impl<'a> Parser<'a> {
     pub fn new(document: &'a str) -> Self {
         Self {
             document,
-            current_pos: Position { offset: 0, line: 1, column: 1 },
+            current_pos: Position {
+                offset: 0,
+                line: 1,
+                column: 1,
+            },
         }
     }
 
@@ -165,7 +155,6 @@ impl<'a> Parser<'a> {
         } else {
             self.current_pos.column += 1;
         }
-
     }
 
     pub fn advance_position_by_str(&mut self, s: &str) {
@@ -250,7 +239,10 @@ impl<'a> Parser<'a> {
         &self.document[self.current_pos.offset..]
     }
 
-    pub fn parse_quoted_string(&mut self, quote_char: char) -> Result<(String, Range), ParsingError> {
+    pub fn parse_quoted_string(
+        &mut self,
+        quote_char: char,
+    ) -> Result<(String, Range), ParsingError> {
         let start_pos = self.current_pos;
         self.consume(); // Consume the opening quote
 
@@ -267,29 +259,43 @@ impl<'a> Parser<'a> {
                         '\'' => '\'',
                         '"' => '"',
                         '\\' => '\\',
-                        _ => return Err(ParsingError::InvalidSyntax {
-                            message: format!("Invalid escape sequence: {}", c),
-                            range: Range { start: start_pos, end: self.current_pos },
-                        }),
+                        _ => {
+                            return Err(ParsingError::InvalidSyntax {
+                                message: format!("Invalid escape sequence: {}", c),
+                                range: Range {
+                                    start: start_pos,
+                                    end: self.current_pos,
+                                },
+                            })
+                        }
                     };
                     value.push(escaped_char);
                     escaped = false;
-                },
+                }
                 Some('\\') => {
                     escaped = true;
-                },
+                }
                 Some(c) if c == quote_char => {
                     let end_pos = self.current_pos;
-                    return Ok((value, Range { start: start_pos, end: end_pos }));
-                },
+                    return Ok((
+                        value,
+                        Range {
+                            start: start_pos,
+                            end: end_pos,
+                        },
+                    ));
+                }
                 Some(c) => {
                     value.push(c);
-                },
+                }
                 None => {
                     return Err(ParsingError::UnterminatedString {
-                        range: Range { start: start_pos, end: self.current_pos },
+                        range: Range {
+                            start: start_pos,
+                            end: self.current_pos,
+                        },
                     });
-                },
+                }
             }
         }
     }
@@ -302,7 +308,13 @@ impl<'a> Parser<'a> {
             None
         } else {
             let end_pos = self.current_pos;
-            Some((identifier_str.to_string(), Range { start: start_pos, end: end_pos }))
+            Some((
+                identifier_str.to_string(),
+                Range {
+                    start: start_pos,
+                    end: end_pos,
+                },
+            ))
         }
     }
 
@@ -315,17 +327,26 @@ impl<'a> Parser<'a> {
         }
 
         let end_pos = self.current_pos;
-        let range = Range { start: start_pos, end: end_pos };
+        let range = Range {
+            start: start_pos,
+            end: end_pos,
+        };
 
         if num_str.contains('.') {
             match num_str.parse::<f64>() {
                 Ok(f) => Ok(Some((ParameterValue::Float(f), range))),
-                Err(_) => Err(ParsingError::InvalidNumberFormat { value: num_str.to_string(), range }),
+                Err(_) => Err(ParsingError::InvalidNumberFormat {
+                    value: num_str.to_string(),
+                    range,
+                }),
             }
         } else {
             match num_str.parse::<i64>() {
                 Ok(i) => Ok(Some((ParameterValue::Integer(i), range))),
-                Err(_) => Err(ParsingError::InvalidNumberFormat { value: num_str.to_string(), range }),
+                Err(_) => Err(ParsingError::InvalidNumberFormat {
+                    value: num_str.to_string(),
+                    range,
+                }),
             }
         }
     }
@@ -335,7 +356,10 @@ impl<'a> Parser<'a> {
         let bool_str = self.take_while(|c| c.is_alphabetic());
 
         let end_pos = self.current_pos;
-        let range = Range { start: start_pos, end: end_pos };
+        let range = Range {
+            start: start_pos,
+            end: end_pos,
+        };
 
         match bool_str {
             "true" => Some((ParameterValue::Boolean(true), range)),
@@ -345,71 +369,80 @@ impl<'a> Parser<'a> {
     }
 }
 
-    pub fn parse(document: &str) -> Result<Root, ParsingError> {
-        let mut parser = Parser::new(document);
-        let start_position = parser.current_position(); // Define start_position
-        let mut nodes = Vec::new();
+pub fn parse(document: &str) -> Result<Root, ParsingError> {
+    let mut parser = Parser::new(document);
+    let start_position = parser.current_position(); // Define start_position
+    let mut nodes = Vec::new();
 
-        while !parser.is_eof() {
-            if parser.is_eof() {
-                break;
-            }
-            match parse_node(&mut parser) {
-                Ok(Some(node)) => nodes.push(node),
-                Ok(None) => {
-                    if !parser.is_eof() {
-                        return Err(ParsingError::Custom {
-                            message: "Unexpected content after parsing node".to_string(),
-                            range: Range { start: parser.current_pos, end: parser.current_pos },
-                        });
-                    }
-                }
-                Err(e) => return Err(e),
-            }
+    while !parser.is_eof() {
+        if parser.is_eof() {
+            break;
         }
-
-        let end_position = parser.current_pos;
-        let root_range = Range { start: start_position, end: end_position };
-
-        Ok(Root {
-            children: nodes, // Use 'nodes' for 'children'
-            range: root_range,
-        })
-    }
-
-    pub fn parse_node(parser: &mut Parser) -> Result<Option<Node>, ParsingError> {
-        let start_pos = parser.current_pos;
-
-        if let Ok(Some(tag)) = parse_tag(parser) {
-            return Ok(Some(Node::Tag(tag)));
-        }
-
-        // Reset parser position if tag parsing failed to try anchor parsing from the same start
-        parser.set_position(start_pos);
-        if let Ok(Some(anchor)) = parse_anchor(parser) {
-            return Ok(Some(Node::Anchor(anchor)));
-        }
-
-        parser.set_position(start_pos); // Reset if anchor failed
-        // If tag and anchor parsing failed, it must be text (or EOF)
-        match parse_text(parser) {
-            Ok(Some(text)) => Ok(Some(Node::Text(text))),
+        match parse_node(&mut parser) {
+            Ok(Some(node)) => nodes.push(node),
             Ok(None) => {
-                // If parse_text returns None, it means it consumed no characters.
-                // This should only happen if we are truly at EOF.
-                if parser.is_eof() {
-                    Ok(None)
-                } else {
-                    // If not at EOF, but parse_text found nothing, it's an error.
-                    Err(ParsingError::Custom {
-                        message: "Unparseable content found".to_string(),
-                        range: Range { start: parser.current_pos, end: parser.current_pos },
-                    })
+                if !parser.is_eof() {
+                    return Err(ParsingError::Custom {
+                        message: "Unexpected content after parsing node".to_string(),
+                        range: Range {
+                            start: parser.current_pos,
+                            end: parser.current_pos,
+                        },
+                    });
                 }
-            },
-            Err(e) => Err(e),
+            }
+            Err(e) => return Err(e),
         }
     }
+
+    let end_position = parser.current_pos;
+    let root_range = Range {
+        start: start_position,
+        end: end_position,
+    };
+
+    Ok(Root {
+        children: nodes, // Use 'nodes' for 'children'
+        range: root_range,
+    })
+}
+
+pub fn parse_node(parser: &mut Parser) -> Result<Option<Node>, ParsingError> {
+    let start_pos = parser.current_pos;
+
+    if let Ok(Some(tag)) = parse_tag(parser) {
+        return Ok(Some(Node::Tag(tag)));
+    }
+
+    // Reset parser position if tag parsing failed to try anchor parsing from the same start
+    parser.set_position(start_pos);
+    if let Ok(Some(anchor)) = parse_anchor(parser) {
+        return Ok(Some(Node::Anchor(anchor)));
+    }
+
+    parser.set_position(start_pos); // Reset if anchor failed
+                                    // If tag and anchor parsing failed, it must be text (or EOF)
+    match parse_text(parser) {
+        Ok(Some(text)) => Ok(Some(Node::Text(text))),
+        Ok(None) => {
+            // If parse_text returns None, it means it consumed no characters.
+            // This should only happen if we are truly at EOF.
+            if parser.is_eof() {
+                Ok(None)
+            } else {
+                // If not at EOF, but parse_text found nothing, it's an error.
+                Err(ParsingError::Custom {
+                    message: "Unparseable content found".to_string(),
+                    range: Range {
+                        start: parser.current_pos,
+                        end: parser.current_pos,
+                    },
+                })
+            }
+        }
+        Err(e) => Err(e),
+    }
+}
 
 fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingError> {
     let start_pos = parser.current_pos;
@@ -417,7 +450,13 @@ fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingE
 
     if parser.peek() != Some('{') {
         let end_pos = parser.current_pos;
-        return Ok((HashMap::new(), Range { start: start_pos, end: end_pos }));
+        return Ok((
+            HashMap::new(),
+            Range {
+                start: start_pos,
+                end: end_pos,
+            },
+        ));
     }
 
     parser.consume(); // Consume '{'
@@ -431,19 +470,29 @@ fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingE
             Some('\'') | Some('"') => {
                 let (k, _) = parser.parse_quoted_string(parser.peek().unwrap())?;
                 k
-            },
+            }
             Some(c) if c.is_alphanumeric() || c == '_' => {
-                let (k, _) = parser.parse_unquoted_identifier().ok_or_else(|| ParsingError::InvalidSyntax {
-                    message: "Expected parameter key".to_string(),
-                    range: Range { start: key_start_pos, end: parser.current_pos },
+                let (k, _) = parser.parse_unquoted_identifier().ok_or_else(|| {
+                    ParsingError::InvalidSyntax {
+                        message: "Expected parameter key".to_string(),
+                        range: Range {
+                            start: key_start_pos,
+                            end: parser.current_pos,
+                        },
+                    }
                 })?;
                 k
-            },
+            }
             Some('}') => break, // End of parameters
-            _ => return Err(ParsingError::InvalidSyntax {
-                message: "Expected parameter key or '}'".to_string(),
-                range: Range { start: key_start_pos, end: parser.current_pos },
-            }),
+            _ => {
+                return Err(ParsingError::InvalidSyntax {
+                    message: "Expected parameter key or '}'".to_string(),
+                    range: Range {
+                        start: key_start_pos,
+                        end: parser.current_pos,
+                    },
+                })
+            }
         };
 
         parser.skip_whitespace();
@@ -451,7 +500,10 @@ fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingE
             return Err(ParsingError::UnexpectedToken {
                 expected: ":".to_string(),
                 found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
-                range: Range { start: parser.current_pos, end: parser.current_pos },
+                range: Range {
+                    start: parser.current_pos,
+                    end: parser.current_pos,
+                },
             });
         }
 
@@ -461,34 +513,55 @@ fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingE
             Some('\'') | Some('"') => {
                 let (s, r) = parser.parse_quoted_string(parser.peek().unwrap())?;
                 (ParameterValue::String(s), r)
-            },
+            }
             Some(c) if c.is_ascii_digit() || c == '-' => {
-                let (v, r) = parser.parse_number()?.ok_or_else(|| ParsingError::InvalidSyntax {
-                    message: "Expected number value".to_string(),
-                    range: Range { start: value_start_pos, end: parser.current_pos },
-                })?;
+                let (v, r) = parser
+                    .parse_number()?
+                    .ok_or_else(|| ParsingError::InvalidSyntax {
+                        message: "Expected number value".to_string(),
+                        range: Range {
+                            start: value_start_pos,
+                            end: parser.current_pos,
+                        },
+                    })?;
                 (v, r)
-            },
+            }
             Some(c) if c.is_alphabetic() => {
                 let current_slice = parser.current_slice();
                 if current_slice.starts_with("true") || current_slice.starts_with("false") {
-                    let (v, r) = parser.parse_boolean().ok_or_else(|| ParsingError::InvalidSyntax {
-                        message: "Expected boolean value".to_string(),
-                        range: Range { start: value_start_pos, end: parser.current_pos },
-                    })?;
+                    let (v, r) =
+                        parser
+                            .parse_boolean()
+                            .ok_or_else(|| ParsingError::InvalidSyntax {
+                                message: "Expected boolean value".to_string(),
+                                range: Range {
+                                    start: value_start_pos,
+                                    end: parser.current_pos,
+                                },
+                            })?;
                     (v, r)
                 } else {
-                    let (s, r) = parser.parse_unquoted_identifier().ok_or_else(|| ParsingError::InvalidSyntax {
-                        message: "Expected string value".to_string(),
-                        range: Range { start: value_start_pos, end: parser.current_pos },
+                    let (s, r) = parser.parse_unquoted_identifier().ok_or_else(|| {
+                        ParsingError::InvalidSyntax {
+                            message: "Expected string value".to_string(),
+                            range: Range {
+                                start: value_start_pos,
+                                end: parser.current_pos,
+                            },
+                        }
                     })?;
                     (ParameterValue::String(s), r)
                 }
-            },
-            _ => return Err(ParsingError::InvalidSyntax {
-                message: "Expected parameter value".to_string(),
-                range: Range { start: value_start_pos, end: parser.current_pos },
-            }),
+            }
+            _ => {
+                return Err(ParsingError::InvalidSyntax {
+                    message: "Expected parameter value".to_string(),
+                    range: Range {
+                        start: value_start_pos,
+                        end: parser.current_pos,
+                    },
+                })
+            }
         };
         params.insert(key, value_and_range.0);
 
@@ -496,19 +569,30 @@ fn parse_parameters(parser: &mut Parser) -> Result<(Parameters, Range), ParsingE
         match parser.peek() {
             Some(',') => {
                 parser.consume();
-            },
+            }
             Some('}') => break,
-            _ => return Err(ParsingError::UnexpectedToken {
-                expected: ",".to_string(),
-                found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
-                range: Range { start: parser.current_pos, end: parser.current_pos },
-            }),
+            _ => {
+                return Err(ParsingError::UnexpectedToken {
+                    expected: ",".to_string(),
+                    found: parser.peek().map_or("EOF".to_string(), |c| c.to_string()),
+                    range: Range {
+                        start: parser.current_pos,
+                        end: parser.current_pos,
+                    },
+                })
+            }
         }
     }
 
     parser.consume(); // Consume '}'
     let end_pos = parser.current_pos;
-    Ok((params, Range { start: start_pos, end: end_pos }))
+    Ok((
+        params,
+        Range {
+            start: start_pos,
+            end: end_pos,
+        },
+    ))
 }
 
 fn parse_argument(parser: &mut Parser) -> Result<Option<(String, Range)>, ParsingError> {
@@ -519,17 +603,33 @@ fn parse_argument(parser: &mut Parser) -> Result<Option<(String, Range)>, Parsin
         Some('\'') | Some('"') => {
             let (s, r) = parser.parse_quoted_string(parser.peek().unwrap())?;
             Some((s, r))
-        },
-        Some(c) if !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<' => {
+        }
+        Some(c)
+            if !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<' =>
+        {
             let word_start_pos = parser.current_pos;
-            let word = parser.take_while(|c| !c.is_whitespace() && c != '{' && c != '}' && c != ',' && c != '-' && c != '<' && c != '\n');
+            let word = parser.take_while(|c| {
+                !c.is_whitespace()
+                    && c != '{'
+                    && c != '}'
+                    && c != ','
+                    && c != '-'
+                    && c != '<'
+                    && c != '\n'
+            });
             if word.is_empty() {
                 None
             } else {
                 let end_pos = parser.current_pos;
-                Some((word.to_string(), Range { start: word_start_pos, end: end_pos }))
+                Some((
+                    word.to_string(),
+                    Range {
+                        start: word_start_pos,
+                        end: end_pos,
+                    },
+                ))
             }
-        },
+        }
         _ => None,
     };
 
@@ -547,23 +647,31 @@ pub fn parse_arguments(parser: &mut Parser) -> Result<(Vec<String>, Range), Pars
         }
 
         // Original check for start of a new tag or anchor (might be redundant if we break on newline)
-        if (parser.remaining_slice().starts_with("@") && parser.current_pos.column == 1) || (parser.remaining_slice().starts_with("<!--") && parser.current_pos.column == 1) {
+        if (parser.remaining_slice().starts_with("@") && parser.current_pos.column == 1)
+            || (parser.remaining_slice().starts_with("<!--") && parser.current_pos.column == 1)
+        {
             break;
         }
 
         match parse_argument(parser)? {
             Some((arg, _)) => {
                 args.push(arg);
-            },
+            }
             None => {
                 // No more arguments found, or an empty string was parsed (which shouldn't happen with current parse_argument logic)
                 break;
-            },
+            }
         }
     }
 
     let end_pos = parser.current_pos;
-    Ok((args, Range { start: start_pos, end: end_pos }))
+    Ok((
+        args,
+        Range {
+            start: start_pos,
+            end: end_pos,
+        },
+    ))
 }
 
 pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
@@ -589,22 +697,30 @@ pub fn parse_tag(parser: &mut Parser) -> Result<Option<Tag>, ParsingError> {
         "set" => Command::Set,
         "repeat" => Command::Repeat,
         "tag" => Command::Tag,
-        _ => return Err(ParsingError::InvalidSyntax {
-            message: format!("Unknown command: {}", command_str),
-            range: Range { start: command_start_pos, end: parser.current_pos },
-        }),
+        _ => {
+            return Err(ParsingError::InvalidSyntax {
+                message: format!("Unknown command: {}", command_str),
+                range: Range {
+                    start: command_start_pos,
+                    end: parser.current_pos,
+                },
+            })
+        }
     };
 
-        let (parameters, _) = parse_parameters(parser)?;
-        let (arguments, _) = parse_arguments(parser)?;
+    let (parameters, _) = parse_parameters(parser)?;
+    let (arguments, _) = parse_arguments(parser)?;
 
-        let end_pos = parser.current_pos;
-        Ok(Some(Tag {
-            command,
-            parameters,
-            arguments,
-            range: Range { start: start_pos, end: end_pos },
-        }))
+    let end_pos = parser.current_pos;
+    Ok(Some(Tag {
+        command,
+        parameters,
+        arguments,
+        range: Range {
+            start: start_pos,
+            end: end_pos,
+        },
+    }))
 }
 
 pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError> {
@@ -615,7 +731,9 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
         return Ok(None);
     }
 
-    let line_start_offset = parser.document[..start_pos.offset].rfind('\n').map_or(0, |i| i + 1);
+    let line_start_offset = parser.document[..start_pos.offset]
+        .rfind('\n')
+        .map_or(0, |i| i + 1);
     let line_slice = &parser.document[line_start_offset..];
 
     let anchor_regex = regex::Regex::new(r"^<!--\s*([a-zA-Z_][a-zA-Z0-9_]*)-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}):(begin|end)").unwrap();
@@ -634,15 +752,23 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
             "summarize" => Command::Summarize,
             "set" => Command::Set,
             "repeat" => Command::Repeat,
-            _ => return Err(ParsingError::InvalidSyntax {
-                message: format!("Unknown command in anchor: {}", command_str),
-                range: Range { start: start_pos, end: parser.current_position() },
-            }),
+            _ => {
+                return Err(ParsingError::InvalidSyntax {
+                    message: format!("Unknown command in anchor: {}", command_str),
+                    range: Range {
+                        start: start_pos,
+                        end: parser.current_position(),
+                    },
+                })
+            }
         };
 
         let uuid = Uuid::parse_str(uuid_str).map_err(|e| ParsingError::InvalidSyntax {
             message: format!("Invalid UUID in anchor: {}", e),
-            range: Range { start: start_pos, end: parser.current_position() },
+            range: Range {
+                start: start_pos,
+                end: parser.current_position(),
+            },
         })?;
 
         let kind = match kind_str {
@@ -662,7 +788,10 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
         let remaining_after_match = parser.remaining_slice();
         if !remaining_after_match.starts_with("-->") {
             return Err(ParsingError::UnterminatedString {
-                range: Range { start: parser.current_position(), end: parser.current_position() },
+                range: Range {
+                    start: parser.current_position(),
+                    end: parser.current_position(),
+                },
             });
         }
         parser.advance_position_by_str("-->");
@@ -684,7 +813,10 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
             kind,
             parameters,
             arguments,
-            range: Range { start: start_pos, end: end_pos },
+            range: Range {
+                start: start_pos,
+                end: end_pos,
+            },
         }))
     } else {
         Ok(None)
@@ -702,7 +834,9 @@ pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
         }
 
         // Check for start of a new tag or anchor
-        if (remaining.starts_with("@") && parser.current_pos.column == 1) || (remaining.starts_with("<!--") && parser.current_pos.column == 1) {
+        if (remaining.starts_with("@") && parser.current_pos.column == 1)
+            || (remaining.starts_with("<!--") && parser.current_pos.column == 1)
+        {
             break;
         }
 
@@ -719,7 +853,10 @@ pub fn parse_text(parser: &mut Parser) -> Result<Option<Text>, ParsingError> {
         let end_pos = parser.current_pos;
         Ok(Some(Text {
             content,
-            range: Range { start: start_pos, end: end_pos },
+            range: Range {
+                start: start_pos,
+                end: end_pos,
+            },
         }))
     }
 }

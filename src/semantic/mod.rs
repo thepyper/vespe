@@ -93,20 +93,45 @@ impl Line {
 #[derive(Debug, Clone)]
 pub enum Line {
     Text(String),
-    InlineTag { snippet_name: String },
-    SummaryTag { context_name: String },
+    InlineTag {
+        snippet_name: String,
+    },
+    SummaryTag {
+        context_name: String,
+    },
     AnswerTag,
-    IncludeTag { context_name: String },
+    IncludeTag {
+        context_name: String,
+    },
     RepeatTag,
-    DeriveTag { snippet_name: String, context_name: String },
-    InlineBeginAnchor { uuid: Uuid },
-    InlineEndAnchor { uuid: Uuid },
-    SummaryBeginAnchor { uuid: Uuid },
-    SummaryEndAnchor { uuid: Uuid },
-    AnswerBeginAnchor { uuid: Uuid },
-    AnswerEndAnchor { uuid: Uuid },
-    DeriveBeginAnchor { uuid: Uuid },
-    DeriveEndAnchor { uuid: Uuid },
+    DeriveTag {
+        snippet_name: String,
+        context_name: String,
+    },
+    InlineBeginAnchor {
+        uuid: Uuid,
+    },
+    InlineEndAnchor {
+        uuid: Uuid,
+    },
+    SummaryBeginAnchor {
+        uuid: Uuid,
+    },
+    SummaryEndAnchor {
+        uuid: Uuid,
+    },
+    AnswerBeginAnchor {
+        uuid: Uuid,
+    },
+    AnswerEndAnchor {
+        uuid: Uuid,
+    },
+    DeriveBeginAnchor {
+        uuid: Uuid,
+    },
+    DeriveEndAnchor {
+        uuid: Uuid,
+    },
 }
 
 impl std::fmt::Display for Line {
@@ -153,8 +178,15 @@ impl std::fmt::Display for Line {
                 };
                 write!(f, "{}", syntax_line)
             }
-            Line::DeriveTag { snippet_name, context_name } => {
-                let syntax_line = SyntaxLine::Tagged { tag: TagKind::Derive, parameters: HashMap::new(), arguments: vec![snippet_name.clone(), context_name.clone()] };
+            Line::DeriveTag {
+                snippet_name,
+                context_name,
+            } => {
+                let syntax_line = SyntaxLine::Tagged {
+                    tag: TagKind::Derive,
+                    parameters: HashMap::new(),
+                    arguments: vec![snippet_name.clone(), context_name.clone()],
+                };
                 write!(f, "{}", syntax_line)
             }
             Line::InlineBeginAnchor { uuid } => {
@@ -274,7 +306,10 @@ fn enrich_syntax_tagged_line(
                 .ok_or(SemanticError::MissingArgument(
                     "Context not specified in @derive tag.".to_string(),
                 ))?;
-            Ok(Line::DeriveTag { snippet_name, context_name })            
+            Ok(Line::DeriveTag {
+                snippet_name,
+                context_name,
+            })
         }
     }
 }

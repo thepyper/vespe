@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 use uuid::Uuid;
 
@@ -13,6 +13,8 @@ fn test_try_parse_uuid() -> Result<()> {
 
     let mut parser = Parser::new("invalid-uuid");
     let result = _try_parse_uuid(&mut parser);
-    assert!(matches!(result, Err(e) if e.downcast_ref::<ParsingError>().unwrap().to_string().contains("Invalid UUID format")));
+    assert!(
+        matches!(result, Err(e) if e.downcast_ref::<ParsingError>().unwrap().to_string().contains("Invalid UUID format"))
+    );
     Ok(())
 }

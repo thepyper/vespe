@@ -1,5 +1,5 @@
-use crate::ast2::*;
 use crate::ast2::tests::utils::*;
+use crate::ast2::*;
 use anyhow::Result;
 use serde_json::json;
 
@@ -14,4 +14,3 @@ fn test_try_parse_tag0_with_parameters() -> Result<()> {
     assert_eq!(tag.range, create_range(0, 1, 1, 29, 1, 30));
     Ok(())
 }
-

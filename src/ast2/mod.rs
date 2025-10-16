@@ -418,7 +418,7 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
 
     let begin = parser.get_position();
 
-    if !parser.consume("{") {
+    if !parser.consume_matching_char("{") {
         return Ok(None);
     } 
 
@@ -428,9 +428,9 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
 
         parser.skip_many_whitespaces_or_eol();
 
-        if parser.consume("}") {
+        if parser.consume_matching_char("}") {
             break;
-        } 
+        }
         
         let parameter = _try_parse_parameter(parser)?;
 
@@ -445,5 +445,59 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
     let end = parser.get_position();
 
     Ok(Parameters { parameters, range: Range { begin, end }})
+}
+
+fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_json::Value)>> {
+
+    let begin = parser.get_position();
+
+    let key = _try_parse_identifier(parser)?;
+    if key.is_none() {
+        // TODO errore parsing key
+    }    
+
+    parser.skip_many_whitespaces_or_eol();
+
+    if !parser.consume_matching_char(":") {
+        // TODO errore parsing :
+    } 
+
+    parser.skip_many_whitespaces_or_eol();
+
+    let value = _try_parse_value(parser)?;
+    if value.is_none() {
+        // TODO errore parsing value
+    }
+
+    let end = parser.get_position();
+
+    Ok(Some((key, value)))
+}
+
+fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
+
+    let mut identifier = String::new();
+
+    match parser.consume_one_alpha_or_underscore() {
+        None => {
+            return None;
+        }
+        Some(x) => {
+            identifier.push(x);
+        }
+    }
+    
+    loop {
+        match parser.consume_one_alnum_or_underscore() {
+            None => {
+                break;
+            }
+            Some(x) => {
+                identifier.push(x);
+            }
+        }
+    }
+
+    Ok(Some(identifier))
 }
 

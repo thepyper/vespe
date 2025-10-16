@@ -1,6 +1,6 @@
 use std::str::Chars;
 use uuid::Uuid;
-use serde_json::{json, Value};
+use serde_json::json;
 use thiserror::Error;
 use anyhow::Result;
 

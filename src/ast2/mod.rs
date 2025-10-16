@@ -536,3 +536,23 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Optio
     }
 }
 
+fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
+
+    if let Some(x) = _try_parse_nude_integer(parser) {
+        return Some(json!(x));
+    } else if let Some(x) = _try_parse_nude_float(parser) {
+        return Some(json!(x));
+    } else if let Some(x) = _try_parse_nude_bool(parser) {
+        return Some(json!(x));
+    } else if let Some(x) = _try_parse_nude_string(parser) {
+        return Some(json!(x));
+    } else {
+        // TODO errore stringa malformata?
+    }
+}
+
+fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
+
+    let status = parser.store();
+
+}

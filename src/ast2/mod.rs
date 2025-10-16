@@ -456,11 +456,11 @@ fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
 
     for (name, kind) in tags_list {
         if parser.consume_matching_string(name) {
-            return Some(kind);
+            return Ok(Some(kind));
         }
     }
 
-    None
+    Ok(None)
 }
 
 fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {

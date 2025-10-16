@@ -289,7 +289,7 @@ fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
         return Ok(Some(x));
     }
 
-    parser.load(status);
+    parser.load(status.clone());
     Ok(None)
 } 
 

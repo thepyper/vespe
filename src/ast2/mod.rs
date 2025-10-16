@@ -105,7 +105,7 @@ impl <'a> Parser<'a> {
     pub fn is_begin_of_line(&self) -> bool {
         self.position.column == 1
     }
-    pub fn consume(&mut self, xs: &str) -> bool {
+    pub fn consume_matching_string(&mut self, xs: &str) -> bool {
         if !self.remain().starts_with(xs) {
             return false;
         }
@@ -114,25 +114,46 @@ impl <'a> Parser<'a> {
         }
         true
     }    
-    pub fn skip_one_of(&mut self, xs: &str) -> bool {
-        let status = self.store();
-        for x in xs.chars() {
-            match self.advance() {
-                None => {
+    pub fn consume_matching_char(&mut self, x: char) -> bool {
+        match self.remain().chars().next() {
+            None => {
+                return false;
+            }
+            Some(y) => {
+                if x != y {
                     return false;
                 }
-                Some(y) => {
-                    if y == x {
-                        return true;
-                    }
-                }
+                self.advance();
+                return true;
             }
-            self.load(&status);
         }
-        false
+    }
+    pub fn consume_char_if<F>(&mut self, filter: F) -> bool 
+    where F: FnOnce() -> bool,
+    {
+        match self.remain().chars().next() {
+            None => {
+                return false;
+            }
+            Some(y) => {
+                if !F(y) {
+                    return false;
+                }
+                self.advance();
+                return true;
+            }
+        }
+    }
+    pub fn consume_one_char_of(&mut self, xs: &str) -> Option<char> {
+        for x in xs.chars() {
+            if self.consume_matching_char(x) {
+                return Some(x);
+            }
+        }
+        None
     }
     pub fn skip_many_of(&mut self, xs: &str) {
-        while self.skip_one_of(xs) {}
+        while self.consume_one_char_of(xs) {}
     }
     pub fn skip_many_whitespaces(&mut self) {
         self.skip_many_of(" \t\r");
@@ -140,19 +161,34 @@ impl <'a> Parser<'a> {
     pub fn skip_many_whitespaces_or_eol(&mut self) {
         self.skip_many_of(" \t\r\n");
     }
+    pub fn consume_one_dec_digit(&muf self) -> Option<char> {
+        self.consume_char_if(|x| x.is_digit(10)); 
+    }
+    pub fn consume_one_hex_digit(&muf self) -> Option<char> {
+        self.consume_char_if(|x| x.is_digit(16)); 
+    }
+    pub fn consume_one_alpha(&muf self) -> Option<char> {
+        self.consume_one_char_of(|x| x.is_alphabetic()); 
+    }
+    pub fn consume_one_alnum(&muf self) -> Option<char> {
+        self.consume_one_char_of(|x| x.is_alphanumeric()); 
+    }
+    pub fn consume_one_alpha_or_underscore(&muf self) -> Option<char> {
+        self.consume_one_char_of(|x| x.is_alphabetic() | (x == '_')); 
+    }
+    pub fn consume_one_alnum_or_underscore(&muf self) -> Option<char> {
+        self.consume_one_char_of(|x| x.is_alphanumeric() | (x == '_')); 
+    }
     pub fn advance(&mut self) -> Option<char> {
         match self.iterator.next() {
             None => None,
             Some(c) => {
                 self.position.offset += 1;
-                match c {
-                    c if c = '\n' => {
-                        self.position.line += 1;
-                        self.position.column = 1;
-                    }
-                    _ => {
-                        self.position.column += 1;
-                    }
+                if c == '\n' {
+                    self.position.line += 1;
+                    self.position.column = 1;
+                } else {
+                    self.position.column += 1;
                 }
                 Some(c)                
             }

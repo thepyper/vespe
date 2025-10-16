@@ -1230,18 +1230,15 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
     let mut s = String::new();
     let start_pos = parser.get_position();
 
-    loop {
-        let current_char = parser.peek();
-        match current_char {
-            Some(c)
-                if c.is_ascii_alphanumeric() || c == '_' || c == '.' || c == '/' || c == '-' =>
-            {
-                parser.advance();
-                s.push(c);
+            let mut current_string = String::new();
+            while let Some(c) = parser.peek() {
+                if c.is_alphanumeric() || c == '_' || c == '.' {
+                    parser.advance();
+                    current_string.push(c);
+                } else {
+                    break;
+                }
             }
-            _ => break,
-        }
-    }
 
     if s.is_empty() {
         dbg!("_try_parse_nude_string empty");
@@ -1249,6 +1246,33 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
     } else {
         dbg!("_try_parse_nude_string result", &s);
         Ok(Some(s))
+    }
+}
+
+fn _try_parse_unquoted_argument_content(parser: &mut Parser) -> Result<Option<String>> {
+    dbg!("_try_parse_unquoted_argument_content", parser.get_position());
+    let mut content = String::new();
+    let start_pos = parser.get_position();
+
+    loop {
+        match parser.peek() {
+            Some(c) if c.is_whitespace() || c == '(' || c == ')' || c == '{' || c == '}' || c == '[' || c == ']' || c == ',' || c == '!' || c == '<' || c == '>' => {
+                break;
+            },
+            Some(c) => {
+                parser.advance();
+                content.push(c);
+            },
+            None => break,
+        }
+    }
+
+    if content.is_empty() {
+        dbg!("_try_parse_unquoted_argument_content empty");
+        Ok(None)
+    } else {
+        dbg!("_try_parse_unquoted_argument_content result", &content);
+        Ok(Some(content))
     }
 }
 
@@ -1262,7 +1286,7 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     } else if let Some(x) = _try_parse_enclosed_value(parser, '\'')? {
         Ok(Some(x))
     } else {
-        _try_parse_nude_string(parser)
+        _try_parse_unquoted_argument_content(parser)
     }?;
 
     match value {

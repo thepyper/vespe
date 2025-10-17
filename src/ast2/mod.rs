@@ -308,7 +308,7 @@ fn parse_document(document: &str) -> Result<Document> {
     })
 }
 
-fn parse_content(parser: &mut Parser) -> Result<Vec<Content>> {
+fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
     let mut contents = Vec::new();
 
     while !parser.is_eod() {
@@ -329,7 +329,7 @@ fn parse_content(parser: &mut Parser) -> Result<Vec<Content>> {
     Ok(contents)
 }
 
-fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
     let status = parser.store();
 
     if let Some(x) = _try_parse_tag0(parser)? {
@@ -340,7 +340,7 @@ fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
     Ok(None)
 }
 
-fn _try_parse_tag0(parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
     let begin = parser.get_position();
 
     if parser.consume_matching_char('@').is_none() {
@@ -387,7 +387,7 @@ fn _try_parse_tag0(parser: &mut Parser) -> Result<Option<Tag>> {
     }))
 }
 
-fn _try_parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
     let status = parser.store();
 
     if let Some(x) = _try_parse_anchor0(parser)? {
@@ -398,7 +398,7 @@ fn _try_parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>> {
     Ok(None)
 }
 
-fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
     let begin = parser.get_position();
 
     if parser.consume_matching_string("<!--").is_none() {
@@ -489,7 +489,7 @@ fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
     }))
 }
 
-fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
+fn _try_parse_command_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<CommandKind>> {
     let tags_list = vec![
         ("tag", CommandKind::Tag),
         ("include", CommandKind::Include),
@@ -509,7 +509,7 @@ fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
     Ok(None)
 }
 
-fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
+fn _try_parse_anchor_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<AnchorKind>> {
     let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
@@ -521,7 +521,7 @@ fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
     Ok(None)
 }
 
-fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
+fn _try_parse_parameters<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
     let status = parser.store();
 
     if let Some(x) = _try_parse_parameters0(parser)? {
@@ -532,7 +532,7 @@ fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
     Ok(None)
 }
 
-fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
+fn _try_parse_parameters0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
     let begin = parser.get_position();
 
     if parser.consume_matching_char('{').is_none() {
@@ -591,7 +591,7 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
     }))
 }
 
-fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_json::Value)>> {
+fn _try_parse_parameter<'a>(parser: &'a mut Parser<'a>) -> Result<Option<(String, serde_json::Value)>> {
     let begin = parser.get_position();
 
     let key = _try_parse_identifier(parser)?;
@@ -629,7 +629,7 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
     Ok(Some((key, value)))
 }
 
-fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
+fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
     let status = parser.store();
 
     if let Some(x) = _try_parse_arguments0(parser)? {
@@ -640,7 +640,7 @@ fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
     Ok(None)
 }
 
-fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
+fn _try_parse_arguments0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
     let begin = parser.get_position();
 
     let mut arguments = Vec::new();
@@ -671,7 +671,7 @@ fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
     }))
 }
 
-fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
+fn _try_parse_argument<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Argument>> {
     let begin = parser.get_position();
 
     let value = if let Some(x) = _try_parse_enclosed_string(parser, "\'")? {
@@ -689,7 +689,7 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     Ok(value.map(|value| Argument { value, range: Range {begin, end}}))
 }
 
-fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
+fn _try_parse_identifier<'a>(parser: &'a mut Parser<'a>) -> Result<Option<String>> {
     let mut identifier = String::new();
 
     match parser.consume_char_if(|c| c.is_alphabetic() || c == '_') {
@@ -712,7 +712,7 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
     }
 }
 
-fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
+fn _try_parse_value<'a>(parser: &'a mut Parser<'a>) -> Result<Option<serde_json::Value>> {
     match parser.consume_matching_char('"') {
         Some(_) => _try_parse_enclosed_value(parser, "\""),
         None => match parser.consume_matching_char('\'') {
@@ -722,8 +722,8 @@ fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
     }
 }
 
-fn _try_parse_enclosed_value(
-    parser: &mut Parser,
+fn _try_parse_enclosed_value<'a>(
+    parser: &'a mut Parser<'a>,
     closure: &str,
 ) -> Result<Option<serde_json::Value>> {
     _try_parse_enclosed_string(parser, closure).map(|x| match x {
@@ -732,8 +732,8 @@ fn _try_parse_enclosed_value(
     })
 }
 
-fn _try_parse_enclosed_string(
-    parser: &mut Parser,
+fn _try_parse_enclosed_string<'a>(
+    parser: &'a mut Parser<'a>,
     closure: &str,
 ) -> Result<Option<String>> {
     let begin_pos = parser.get_position();
@@ -769,23 +769,25 @@ fn _try_parse_enclosed_string(
     }
 }
 
-fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
+fn _try_parse_nude_value<'a>(parser: &'a mut Parser<'a>) -> Result<Option<serde_json::Value>> {
     if let Some(x) = _try_parse_nude_integer(parser)? {
         return Ok(Some(json!(x)));
-    } else if let Some(x) = _try_parse_nude_float(parser)? {
+    } 
+    if let Some(x) = _try_parse_nude_float(parser)? {
         return Ok(Some(json!(x)));
-    } else if let Some(x) = _try_parse_nude_bool(parser)? {
+    } 
+    if let Some(x) = _try_parse_nude_bool(parser)? {
         return Ok(Some(json!(x)));
-    } else if let Some(x) = _try_parse_nude_string(parser)? {
+    } 
+    if let Some(x) = _try_parse_nude_string(parser)? {
         return Ok(Some(json!(x)));
-    } else {
-        return Err(Ast2Error::MalformedValue {
-            position: parser.get_position(),
-        });
-    }
+    } 
+    return Err(Ast2Error::MalformedValue {
+        position: parser.get_position(),
+    });
 }
 
-fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
+fn _try_parse_nude_integer<'a>(parser: &'a mut Parser<'a>) -> Result<Option<i64>> {
     let number_str_option = parser.consume_many_if(|x| x.is_digit(10));
 
     match number_str_option {
@@ -797,7 +799,7 @@ fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
     }
 }
 
-fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
+fn _try_parse_nude_float<'a>(parser: &'a mut Parser<'a>) -> Result<Option<f64>> {
     let mut number_str = String::new();
 
     let integer_part = parser.consume_many_if(|x| x.is_digit(10));
@@ -825,7 +827,7 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
     }
 }
 
-fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
+fn _try_parse_nude_bool<'a>(parser: &'a mut Parser<'a>) -> Result<Option<bool>> {
     if parser.consume_matching_string("true").is_some() {
         return Ok(Some(true));
     } else if parser.consume_matching_string("false").is_some() {
@@ -835,7 +837,7 @@ fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
     }
 }
 
-fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
+fn _try_parse_nude_string<'a>(parser: &'a mut Parser<'a>) -> Result<Option<String>> {
     let xs = parser.consume_many_if(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
     if xs.is_none() {
         return Ok(None);
@@ -844,7 +846,7 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
     }
 }
 
-fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
+fn _try_parse_uuid<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Uuid>> {
     let start_pos = parser.get_position();
     let uuid_str_option = parser.consume_many_if(|c| c.is_ascii_hexdigit() || c == '-');
 
@@ -859,7 +861,7 @@ fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
     }
 }
 
-fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
+fn _try_parse_text<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Text>> {
     let begin = parser.get_position();
 
     let mut content = String::new();

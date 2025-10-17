@@ -1235,7 +1235,10 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
                 if c.is_alphanumeric() || c == '_' || c == '.' {
                     parser.advance();
                     current_string.push(c);
-                } else {
+                } else if c == '>' || c == '-' {
+                    break;
+                }
+                else {
                     break;
                 }
             }

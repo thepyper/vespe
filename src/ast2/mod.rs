@@ -283,19 +283,22 @@ impl<'a> Parser<'a> {
 fn parse_document(document: &str) -> Result<Document> {
     let mut parser = Parser::new(document);
     let begin = parser.get_position();
-    let content = parse_content(document, &mut parser)?;
+    let content = parse_content(&mut parser)?;
     let end = parser.get_position();
 
     Ok(Document {
         content: content,
-        range: Range { begin, end },
+        range: Range { begin, end }, 
     })
 }
 
 fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
     let mut contents = Vec::new();
 
-    while !parser.is_eod() {
+    loop {
+        if parser.is_eod() {
+            break;
+        }
         if let Some(tag) = _try_parse_tag(parser)? {
             contents.push(Content::Tag(tag));
             continue;

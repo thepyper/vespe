@@ -192,6 +192,13 @@ impl<'a> Parser<'a> {
     pub fn get_position(&self) -> Position {
         self.position.clone()
     }
+    pub fn get_checkpoint(&self) -> Position {
+        self.position.clone()
+    }
+    pub fn restore_checkpoint(&mut self, checkpoint: Position) {
+        self.position = checkpoint;
+        self.iterator = self.document[self.position.offset..].chars();
+    }
     pub fn get_offset(&self) -> usize {
         self.position.offset
     }
@@ -322,12 +329,15 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
 }
 
 fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_tag0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
+    let checkpoint = parser.get_checkpoint();
+    match _try_parse_tag0(parser)? {
+        Ok(Some(tag)) => Ok(Some(tag)),
+        Ok(None) => {
+            parser.restore_checkpoint(checkpoint);
+            Ok(None)
+        },
+        Err(e) => Err(e),
     }
-    Ok(None)
 }
 
 fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
@@ -378,12 +388,15 @@ fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
 }
 
 fn _try_parse_anchor<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_anchor0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
+    let checkpoint = parser.get_checkpoint();
+    match _try_parse_anchor0(parser)? {
+        Ok(Some(anchor)) => Ok(Some(anchor)),
+        Ok(None) => {
+            parser.restore_checkpoint(checkpoint);
+            Ok(None)
+        },
+        Err(e) => Err(e),
     }
-    Ok(None)
 }
 
 fn _try_parse_anchor0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
@@ -510,12 +523,15 @@ fn _try_parse_anchor_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Ancho
 }
 
 fn _try_parse_parameters<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_parameters0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
+    let checkpoint = parser.get_checkpoint();
+    match _try_parse_parameters0(parser)? {
+        Ok(Some(parameters)) => Ok(Some(parameters)),
+        Ok(None) => {
+            parser.restore_checkpoint(checkpoint);
+            Ok(None)
+        },
+        Err(e) => Err(e),
     }
-    Ok(None)
 }
 
 fn _try_parse_parameters0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
@@ -618,12 +634,15 @@ fn _try_parse_parameter<'a>(
 }
 
 fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_arguments0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
+    let checkpoint = parser.get_checkpoint();
+    match _try_parse_arguments0(parser)? {
+        Ok(Some(arguments)) => Ok(Some(arguments)),
+        Ok(None) => {
+            parser.restore_checkpoint(checkpoint);
+            Ok(None)
+        },
+        Err(e) => Err(e),
     }
-    Ok(None)
 }
 
 fn _try_parse_arguments0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {

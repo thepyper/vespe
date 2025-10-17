@@ -865,7 +865,12 @@ fn _try_parse_text<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Text>> {
     let begin = parser.get_position();
 
     let mut content = String::new();
-
+    
+    /*  Note: This functions stops on newline on purpose, to avoid
+        checking conditions that occur on begin of the line here,
+        but return to the upper parser loop which will
+        continue checking those. It's acceptable that Text
+        becomes broken into single-lines, it's not a problem. */
     loop {
         match parser.advance() {
             None => {

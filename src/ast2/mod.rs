@@ -791,7 +791,6 @@ fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
 
 fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
     let mut number_str = String::new();
-    let start_pos = parser.get_position();
 
     let integer_part = parser.consume_many_if(|x| x.is_digit(10));
     if let Some(s) = integer_part {
@@ -803,14 +802,10 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
         let fractional_part = parser.consume_many_if(|x| x.is_digit(10));
         if let Some(s) = fractional_part {
             number_str.push_str(&s);
-        } else if number_str == "." {
-            // Only a dot, not a number
-            return Ok(None);
+        } else {
+            number_str.push('0');
         }
-    } else if number_str.is_empty() {
-        // No integer part and no dot
-        return Ok(None);
-    }
+    } 
 
     if number_str.is_empty() {
         Ok(None)

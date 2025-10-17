@@ -7,9 +7,12 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
 struct Position {
-    offset: usize,      /// 0-based character offset
-    line: usize,        /// 1-based line
-    column: usize,      /// 1-based column
+    /// 0-based character offset
+    offset: usize,     
+    /// 1-based line
+    line: usize,       
+    /// 1-based column
+    column: usize,     
 }
 
 impl Position {
@@ -20,12 +23,24 @@ impl Position {
             column: 0,
         }
     }
+    fn is_valid(&self) -> bool {
+        (line > 0) && (column > 0)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 struct Range {
     begin: Position,
     end: Position,
+    fn is_valid(&self) -> bool {
+        if !begin.is_valid() {
+            false
+        } else if !end.is_valid() {
+            false
+        } else {
+            begin.offset <= end.offset
+        }
+    }
 }
 
 impl Range {
@@ -285,6 +300,7 @@ impl <'a> Parser<'a> {
             position: self.position.clone(),
             iterator: self.iterator.clone(),
         }
+    }
     pub fn load(&mut self, status: &ParserStatus) {
         self.position = status.position;
         self.iterator = status.iterator;

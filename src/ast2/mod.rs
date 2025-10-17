@@ -290,8 +290,7 @@ impl<'a> Parser<'a> {
 fn parse_document(document: &str) -> Result<Document> {
     let mut parser = Parser::new(document);
     let begin = parser.get_position();
-    let content = parse_content(&mut parser)?;
-    let end = parser.get_position();
+    let (content, end) = parse_content(&mut parser)?;
 
     Ok(Document {
         content: content,
@@ -299,7 +298,7 @@ fn parse_document(document: &str) -> Result<Document> {
     })
 }
 
-fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
+fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Position)> {
     let mut contents = Vec::new();
 
     loop {
@@ -325,7 +324,8 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
         });
     }
 
-    Ok(contents)
+    let end = parser.get_position();
+    Ok((contents, end))
 }
 
 fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
@@ -743,9 +743,9 @@ fn _try_parse_enclosed_value<'a>(
     parser: &'a mut Parser<'a>,
     closure: &str,
 ) -> Result<Option<serde_json::Value>> {
-    _try_parse_enclosed_string(parser, closure).map(|x| match x {
-        Some(x) => Ok(serde_json::Value::String(x)),
-        None => Ok(serde_json::Value::Null),
+    _try_parse_enclosed_string(parser, closure).and_then(|x| match x {
+        Some(s) => Ok(Some(serde_json::Value::String(s))),
+        None => Ok(Some(serde_json::Value::Null)),
     })
 }
 

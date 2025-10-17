@@ -32,15 +32,6 @@ impl Position {
 struct Range {
     begin: Position,
     end: Position,
-    fn is_valid(&self) -> bool {
-        if !begin.is_valid() {
-            false
-        } else if !end.is_valid() {
-            false
-        } else {
-            begin.offset <= end.offset
-        }
-    }
 }
 
 impl Range {
@@ -48,6 +39,15 @@ impl Range {
         Range {
             begin: Position::null(),
             end: Position::null(),
+        }
+    }
+    fn is_valid(&self) -> bool {
+        if !begin.is_valid() {
+            false
+        } else if !end.is_valid() {
+            false
+        } else {
+            begin.offset <= end.offset
         }
     }
 }

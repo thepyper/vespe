@@ -7,9 +7,28 @@ struct Position {
     column: usize,      /// 1-based column
 }
 
+impl Position {
+    fn null() -> Self {
+        Position {
+            offset: 0,
+            line: 0,
+            column: 0,
+        }
+    }
+}
+
 struct Range {
     begin: Position,
     end: Position,
+}
+
+impl Range {
+    fn null() -> Self {
+        Range {
+            begin: Position::null(),
+            end: Position::null(),
+        }
+    }
 }
 
 struct Text {
@@ -137,9 +156,6 @@ impl <'a> Parser<'a> {
     pub fn consume_matching_char(&mut self, x: char) -> Option<char> {
         self.consume_char_if(|y| x == y)
     }
-    pub fn consume_one_char_of(&mut self, xs: &str) -> Option<char> {
-        self.consume_char_if(|y| { for x in xs.chars() { if x == y return true; } return false; } )
-    }
     pub fn consume_many_if<F>(&mut self, filter: F) -> Option<String> 
     where F: FnOnce() -> bool,
     {
@@ -156,7 +172,7 @@ impl <'a> Parser<'a> {
             Some(xs)
         }
     }
-    pub fn consume_many_of(&mut self, xs: &str) -> Option<String> {
+    fn consume_many_of(&mut self, xs: &str) -> Option<String> {
         self.consume_many_if(|y| { for x in xs.chars() { if x == y return true; } return false; } )
     }
     pub fn skip_many_whitespaces(&mut self) {
@@ -165,24 +181,6 @@ impl <'a> Parser<'a> {
     pub fn skip_many_whitespaces_or_eol(&mut self) {
         let _ = self.consume_many_of(" \t\r\n");
     }
-/*    pub fn consume_one_dec_digit(&muf self) -> Option<char> {
-        self.consume_char_if(|x| x.is_digit(10)); 
-    }
-    pub fn consume_one_hex_digit(&muf self) -> Option<char> {
-        self.consume_char_if(|x| x.is_digit(16)); 
-    }
-    pub fn consume_one_alpha(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphabetic()); 
-    }
-    pub fn consume_one_alnum(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphanumeric()); 
-    }
-    pub fn consume_one_alpha_or_underscore(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphabetic() | (x == '_')); 
-    }
-    pub fn consume_one_alnum_or_underscore(&muf self) -> Option<char> {
-        self.consume_one_char_of(|x| x.is_alphanumeric() | (x == '_')); 
-    } */
     pub fn advance(&mut self) -> Option<char> {
         match self.iterator.next() {
             None => None,
@@ -336,7 +334,13 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
 
     parser.skip_many_whitespaces();
 
-    let parameters = _try_parse_parameters(document, parser)?;
+    let parameters = match _try_parse_parameters(document, parser)? {
+        Some(x) => x,
+        None => Parameters {
+            parameters: json!({}),
+            range: Range::null(),
+        }
+    }
     
     parser.skip_many_whitespaces();
 
@@ -559,30 +563,38 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
 
 fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
 
-    let mut number = String::new();
-
-    loop {
-        match parser.consume_one_dec_digit() {
-            Some(x) => {
-                number.push(x);
-            }
-            None => {
-                break;
-            }
-        }
-    }
+    let number = parser.consume_many_if(|x| x.is_digit(10));
 
     if number.is_empty() {
         return Ok(None);
     } else {
-        return Ok(Some(i64::from_str_radix(&number, 10)));
+        return Ok(Some(i64::from_str_radix(&number, 10)?));
     }
 }
 
 fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
  
-    
+    let mut number = parser.consume_many_if(|x| x.is_digit(10));
 
+    match parser.consume_matching_char('.') {
+        Some(x) => {
+            number.push(x);
+            match parser.consume_many_if(|x| x.is_digit(10)) {
+                Some(xs) => {
+                    number.push_str(xs);
+                }
+                None => {
+                    number.push('0');
+                }
+            }
+        }
+    }
+    
+    if number.is_empty() {
+        return Ok(None);
+    } else {
+        return Ok(Some(f64::from_str(number)?))
+    }
 }
 
 fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
@@ -596,9 +608,14 @@ fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
     }
 }
 
-fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<f64>> {
- /// TODO  accept a-z A-Z 0-9 / . 
- 
+fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
+
+    let xs = parser.consume_many_if(|x| x.is_alphanumeric() | x == '/' | x == '.' );
+    if xs.is_empty() {
+        return None;
+    } else {
+        return Some(xs);
+    }
 }
 
 fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {

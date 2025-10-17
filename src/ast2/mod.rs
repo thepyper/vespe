@@ -279,14 +279,16 @@ impl <'a> Parser<'a> {
                 Some(c)                
             }
         }
-    }
-    pub fn consume_one_alpha_or_underscore(&mut self) -> Option<char> {
-        self.consume_char_if(|c| c.is_alphabetic() || c == '_')
-    }
-
-    pub fn consume_one_alnum_or_underscore(&mut self) -> Option<char> {
-        self.consume_char_if(|c| c.is_alphanumeric() || c == '_')
-    }
+    }   
+    pub fn store(&self) -> ParserStatus {
+        ParserStatus {
+            position: self.position.clone(),
+            iterator: self.iterator.clone(),
+        }
+    pub fn load(&mut self, status: &ParserStatus) {
+        self.position = status.position;
+        self.iterator = status.iterator;
+    }    
 }
 
 fn parse_document(document: &str) -> Result<Document> {
@@ -634,27 +636,23 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 
     let mut identifier = String::new();
 
-    match parser.consume_one_alpha_or_underscore() {
-        None => {
-            return Ok(None);
-        }
+    match parser.consume_char_if(|c| c.is_alphabetic() || c == '_') {
         Some(x) => {
             identifier.push(x);
-        }
-    }
-    
-    loop {
-        match parser.consume_one_alnum_or_underscore() {
-            None => {
-                break;
-            }
-            Some(x) => {
-                identifier.push(x);
+            match parser.consume_many_if(|c| c.is_alphanumeric() || c == '_') {
+                Some(x) => {
+                    identifier.push_str(x);
+                }
+                None => {}
             }
         }
     }
 
-    Ok(Some(identifier))
+    if identifier.is_empty() {
+        return Ok(None);
+    } else {
+        return Some(identifier);
+    }
 }
 
 fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {

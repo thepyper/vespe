@@ -1,18 +1,18 @@
 use clap::builder::Str;
-use std::str::Chars;
-use uuid::Uuid;
 use serde_json::json;
-use thiserror::Error;
+use std::str::Chars;
 use std::str::FromStr;
+use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
 struct Position {
     /// 0-based character offset
-    offset: usize,     
+    offset: usize,
     /// 1-based line
-    line: usize,       
+    line: usize,
     /// 1-based column
-    column: usize,     
+    column: usize,
 }
 
 impl Position {
@@ -30,7 +30,7 @@ impl Position {
 
 #[derive(Debug, Clone, Copy)]
 struct Range {
-    begin: Position, 
+    begin: Position,
     end: Position,
 }
 
@@ -55,10 +55,7 @@ impl Range {
 #[derive(Error, Debug)]
 pub enum Ast2Error {
     #[error("Parsing error at {position:?}: {message}")]
-    ParsingError {
-        position: Position,
-        message: String,
-    },
+    ParsingError { position: Position, message: String },
     #[error("JSON parsing error: {0}")]
     JsonError(#[from] serde_json::Error),
     #[error("Integer parsing error: {0}")]
@@ -66,9 +63,7 @@ pub enum Ast2Error {
     #[error("Float parsing error: {0}")]
     ParseFloatError(#[from] std::num::ParseFloatError),
     #[error("Unexpected end of document at {position:?}")]
-    UnexpectedEndOfDocument {
-        position: Position,
-    },
+    UnexpectedEndOfDocument { position: Position },
     #[error("Expected character '{expected}' but found '{found:?}' at {position:?}")]
     ExpectedChar {
         position: Position,
@@ -82,45 +77,25 @@ pub enum Ast2Error {
         found: Option<String>,
     },
     #[error("Invalid command kind at {position:?}")]
-    InvalidCommandKind {
-        position: Position,
-    },
+    InvalidCommandKind { position: Position },
     #[error("Invalid anchor kind at {position:?}")]
-    InvalidAnchorKind {
-        position: Position,
-    },
+    InvalidAnchorKind { position: Position },
     #[error("Invalid UUID at {position:?}")]
-    InvalidUuid {
-        position: Position,
-    },
+    InvalidUuid { position: Position },
     #[error("Missing parameter key at {position:?}")]
-    MissingParameterKey {
-        position: Position,
-    },
+    MissingParameterKey { position: Position },
     #[error("Missing colon in parameter at {position:?}")]
-    MissingParameterColon {
-        position: Position,
-    },
+    MissingParameterColon { position: Position },
     #[error("Missing parameter value at {position:?}")]
-    MissingParameterValue {
-        position: Position,
-    },
+    MissingParameterValue { position: Position },
     #[error("Unclosed string at {position:?}")]
-    UnclosedString {
-        position: Position,
-    },
+    UnclosedString { position: Position },
     #[error("Malformed value at {position:?}")]
-    MalformedValue {
-        position: Position,
-    },
+    MalformedValue { position: Position },
     #[error("Missing comma in parameters at {position:?}")]
-    MissingCommaInParameters {
-        position: Position,
-    },
+    MissingCommaInParameters { position: Position },
     #[error("Parameter not parsed at {position:?}")]
-    ParameterNotParsed {
-        position: Position,
-    },
+    ParameterNotParsed { position: Position },
 }
 
 pub type Result<T> = std::result::Result<T, Ast2Error>;
@@ -130,7 +105,7 @@ struct Text {
 }
 
 enum CommandKind {
-    Tag,        // for debug purpose
+    Tag, // for debug purpose
     Include,
     Inline,
     Answer,
@@ -158,11 +133,10 @@ struct Tag {
     command: CommandKind,
     parameters: Parameters,
     arguments: Arguments,
-    range: Range,   
+    range: Range,
 }
 
-enum AnchorKind 
-{
+enum AnchorKind {
     Begin,
     End,
 }
@@ -198,11 +172,15 @@ pub struct ParserStatus<'a> {
     iterator: Chars<'a>,
 }
 
-impl <'a> Parser<'a> {
+impl<'a> Parser<'a> {
     pub fn new(document: &'a str) -> Self {
         Self {
             document,
-            position: Position { offset: 0, line: 1, column: 1 },
+            position: Position {
+                offset: 0,
+                line: 1,
+                column: 1,
+            },
             iterator: document.chars(),
         }
     }
@@ -227,32 +205,34 @@ impl <'a> Parser<'a> {
     pub fn consume_matching_string(&mut self, xs: &str) -> Option<String> {
         if !self.remain().starts_with(xs) {
             None
-        } else {            
+        } else {
             for x in xs.chars() {
                 self.advance();
             }
             Some(xs.into())
         }
-    }    
+    }
     pub fn consume_matching_char(&mut self, x: char) -> Option<char> {
         self.consume_char_if(|y| x == y)
     }
-    pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char> 
-    where F: FnOnce(char) -> bool,
+    pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char>
+    where
+        F: FnOnce(char) -> bool,
     {
         match self.remain().chars().next() {
             None => None,
             Some(y) => {
                 if !filter(y) {
-                    None 
+                    None
                 } else {
                     self.advance()
                 }
             }
         }
     }
-    pub fn consume_many_if<F>(&mut self, filter: F) -> Option<String> 
-    where F: Fn(char) -> bool,
+    pub fn consume_many_if<F>(&mut self, filter: F) -> Option<String>
+    where
+        F: Fn(char) -> bool,
     {
         let mut xs = String::new();
         loop {
@@ -261,12 +241,12 @@ impl <'a> Parser<'a> {
                 None => {
                     self.load(&status);
                     break;
-                },
-                Some(x) => xs.push(x)
+                }
+                Some(x) => xs.push(x),
             }
         }
         if xs.is_empty() {
-            None 
+            None
         } else {
             Some(xs)
         }
@@ -291,10 +271,10 @@ impl <'a> Parser<'a> {
                 } else {
                     self.position.column += 1;
                 }
-                Some(c)                
+                Some(c)
             }
         }
-    }   
+    }
     pub fn store(&self) -> ParserStatus {
         ParserStatus {
             position: self.position.clone(),
@@ -304,15 +284,14 @@ impl <'a> Parser<'a> {
     pub fn load(&mut self, status: &ParserStatus) {
         self.position = status.position;
         self.iterator = status.iterator;
-    }    
+    }
 }
 
 fn parse_document(document: &str) -> Result<Document> {
-
     let mut parser = Parser::new(document);
     let begin = parser.get_position();
     let content = parse_content(document, &mut parser)?;
-    let end   = parser.get_position();
+    let end = parser.get_position();
 
     Ok(Document {
         content: content,
@@ -321,12 +300,11 @@ fn parse_document(document: &str) -> Result<Document> {
 }
 
 fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
-
     let mut contents = Vec::new();
 
     while !parser.is_eod() {
         if let Some(tag) = _try_parse_tag(document, parser)? {
-            contents.push(Content::Tag(tag));            
+            contents.push(Content::Tag(tag));
         } else if let Some(anchor) = _try_parse_anchor(document, parser)? {
             contents.push(Content::Anchor(anchor));
         } else if let Some(text) = _try_parse_text(parser)? {
@@ -343,7 +321,6 @@ fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
 }
 
 fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
-
     let status = parser.store();
 
     if let Some(x) = _try_parse_tag0(document, parser)? {
@@ -352,10 +329,9 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     parser.load(&status);
     Ok(None)
-} 
+}
 
 fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
-
     let begin = parser.get_position();
 
     if parser.consume_matching_char('@').is_none() {
@@ -378,7 +354,7 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
             range: Range::null(),
         },
     };
-    
+
     parser.skip_many_whitespaces();
 
     let arguments = _try_parse_arguments(parser)?;
@@ -401,14 +377,11 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
         command,
         parameters,
         arguments,
-        range: Range {
-            begin, end 
-        }
+        range: Range { begin, end },
     }))
 }
 
 fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
-
     let status = parser.store();
 
     if let Some(x) = _try_parse_anchor0(document, parser)? {
@@ -420,7 +393,6 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
 }
 
 fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
-
     let begin = parser.get_position();
 
     if parser.consume_matching_string("<!--").is_none() {
@@ -445,9 +417,11 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
     let uuid = _try_parse_uuid(document, parser)?;
     let uuid = match uuid {
         Some(u) => u,
-        None => return Err(Ast2Error::InvalidUuid {
-            position: parser.get_position(),
-        }),
+        None => {
+            return Err(Ast2Error::InvalidUuid {
+                position: parser.get_position(),
+            })
+        }
     };
 
     if parser.consume_matching_char(':').is_none() {
@@ -460,9 +434,11 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
     let kind = _try_parse_anchor_kind(document, parser)?;
     let kind = match kind {
         Some(k) => k,
-        None => return Err(Ast2Error::InvalidAnchorKind {
-            position: parser.get_position(),
-        }),
+        None => {
+            return Err(Ast2Error::InvalidAnchorKind {
+                position: parser.get_position(),
+            })
+        }
     };
 
     parser.skip_many_whitespaces();
@@ -472,9 +448,9 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
         None => Parameters {
             parameters: json!({}),
             range: Range::null(),
-        }
+        },
     };
-    
+
     parser.skip_many_whitespaces();
 
     let arguments = _try_parse_arguments(parser)?;
@@ -506,14 +482,11 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
         kind,
         parameters,
         arguments,
-        range: Range {
-            begin, end 
-        }
+        range: Range { begin, end },
     }))
 }
 
 fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option<CommandKind>> {
-
     let tags_list = vec![
         ("tag", CommandKind::Tag),
         ("include", CommandKind::Include),
@@ -534,11 +507,7 @@ fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option
 }
 
 fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {
-
-    let tags_list = vec![
-        ("begin", AnchorKind::Begin),
-        ("end", AnchorKind::End),
-    ];
+    let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
         if parser.consume_matching_string(name).is_some() {
@@ -550,7 +519,6 @@ fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<
 }
 
 fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
-
     let status = parser.store();
 
     if let Some(x) = _try_parse_parameters0(parser)? {
@@ -562,19 +530,21 @@ fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
 }
 
 fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
-
     let begin = parser.get_position();
 
     if parser.consume_matching_char("{").is_none() {
         return Ok(None);
-    } 
+    }
 
     parser.skip_many_whitespaces_or_eol();
 
     if parser.consume_matching_char('}').is_some() {
         return Ok(Some(Parameters {
             parameters: serde_json::Map::new(),
-            range: Range { begin, end: parser.get_position() },
+            range: Range {
+                begin,
+                end: parser.get_position(),
+            },
         }));
     }
 
@@ -594,9 +564,11 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
         let parameter = _try_parse_parameter(parser)?;
         let (key, value) = match parameter {
             Some(p) => p,
-            None => return Err(Ast2Error::ParameterNotParsed {
-                position: parser.get_position(),
-            }),
+            None => {
+                return Err(Ast2Error::ParameterNotParsed {
+                    position: parser.get_position(),
+                })
+            }
         };
         parameters_map.insert(key, value);
 
@@ -610,20 +582,24 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
 
     let end = parser.get_position();
 
-    Ok(Some(Parameters { parameters: parameters_map, range: Range { begin, end }}))
+    Ok(Some(Parameters {
+        parameters: parameters_map,
+        range: Range { begin, end },
+    }))
 }
 
 fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_json::Value)>> {
-
     let begin = parser.get_position();
 
     let key = _try_parse_identifier(parser)?;
     let key = match key {
         Some(k) => k,
-        None => return Err(Ast2Error::MissingParameterKey {
-            position: parser.get_position(),
-        }),
-    };    
+        None => {
+            return Err(Ast2Error::MissingParameterKey {
+                position: parser.get_position(),
+            })
+        }
+    };
 
     parser.skip_many_whitespaces_or_eol();
 
@@ -631,16 +607,18 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
         return Err(Ast2Error::MissingParameterColon {
             position: parser.get_position(),
         });
-    } 
+    }
 
     parser.skip_many_whitespaces_or_eol();
 
     let value = _try_parse_value(parser)?;
     let value = match value {
         Some(v) => v,
-        None => return Err(Ast2Error::MissingParameterValue {
-            position: parser.get_position(),
-        }),
+        None => {
+            return Err(Ast2Error::MissingParameterValue {
+                position: parser.get_position(),
+            })
+        }
     };
 
     let end = parser.get_position();
@@ -649,7 +627,6 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
 }
 
 fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
-
     let status = parser.store();
 
     if let Some(x) = _try_parse_arguments0(parser)? {
@@ -661,7 +638,6 @@ fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
 }
 
 fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
-
     let begin = parser.get_position();
 
     let arguments = Vec::new();
@@ -669,31 +645,30 @@ fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
     loop {
         parser.skip_many_whitespaces();
 
-        // Check for anchor end 
+        // Check for anchor end
         if parser.remain().starts_with("-->") {
             break;
         }
 
         match _try_parse_argument(parser) {
             Some(x) => arguments.push(x),
-            None => break;
-        }        
+            None => break,
+        }
     }
 
     if arguments.is_empty() {
         return Ok(None);
-    } 
-    
+    }
+
     let end = parser.get_position();
 
-Ok(Arguments {
-            arguments,
-            range: Range { begin, end }        
-        })
+    Ok(Arguments {
+        arguments,
+        range: Range { begin, end },
+    })
 }
 
 fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
-
     let begin = parser.get_position();
 
     let value = if let Some(x) = _try_parse_enclosed_value(parser, "\'") {
@@ -703,19 +678,21 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     } else if let Some(x) = _try_parse_nude_string(parser) {
         Some(x)
     } else {
-        None 
-    }
+        None
+    };
 
     let end = parser.get_position();
 
     match value {
-        Some(x) => Ok(Argument { value, Range {begin, end }}),
-        None => Ok(None)
+        Some(x) => Ok(Argument {
+            value,
+            range: Range { begin, end },
+        }),
+        None => Ok(None),
     }
 }
 
 fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
-
     let mut identifier = String::new();
 
     match parser.consume_char_if(|c| c.is_alphabetic() || c == '_') {
@@ -747,8 +724,10 @@ fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
     }
 }
 
-fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Option<serde_json::Value>> {
-
+fn _try_parse_enclosed_value(
+    parser: &mut Parser,
+    closure: &str,
+) -> Result<Option<serde_json::Value>> {
     let begin_pos = parser.get_position();
     let mut value = String::new();
 
@@ -783,7 +762,6 @@ fn _try_parse_enclosed_value(parser: &mut Parser, closure: &str) -> Result<Optio
 }
 
 fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
-
     if let Some(x) = _try_parse_nude_integer(parser)? {
         return Ok(Some(json!(x)));
     } else if let Some(x) = _try_parse_nude_float(parser)? {
@@ -800,22 +778,18 @@ fn _try_parse_nude_value(parser: &mut Parser) -> Result<Option<serde_json::Value
 }
 
 fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
-
     let number_str_option = parser.consume_many_if(|x| x.is_digit(10));
 
     match number_str_option {
-        Some(number_str) => {
-            match i64::from_str_radix(&number_str, 10) {
-                Ok(num) => Ok(Some(num)),
-                Err(e) => Err(Ast2Error::ParseIntError(e)),
-            }
+        Some(number_str) => match i64::from_str_radix(&number_str, 10) {
+            Ok(num) => Ok(Some(num)),
+            Err(e) => Err(Ast2Error::ParseIntError(e)),
         },
         None => Ok(None),
     }
 }
 
 fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
- 
     let mut number_str = String::new();
     let start_pos = parser.get_position();
 
@@ -829,10 +803,12 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
         let fractional_part = parser.consume_many_if(|x| x.is_digit(10));
         if let Some(s) = fractional_part {
             number_str.push_str(&s);
-        } else if number_str == "." { // Only a dot, not a number
+        } else if number_str == "." {
+            // Only a dot, not a number
             return Ok(None);
         }
-    } else if number_str.is_empty() { // No integer part and no dot
+    } else if number_str.is_empty() {
+        // No integer part and no dot
         return Ok(None);
     }
 
@@ -847,7 +823,6 @@ fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
 }
 
 fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
-
     if parser.consume_matching_string("true").is_some() {
         return Ok(Some(true));
     } else if parser.consume_matching_string("false").is_some() {
@@ -858,7 +833,6 @@ fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {
 }
 
 fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
-
     let xs = parser.consume_many_if(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
     if xs.is_none() {
         return Ok(None);
@@ -872,20 +846,17 @@ fn _try_parse_uuid(document: &str, parser: &mut Parser) -> Result<Option<Uuid>> 
     let uuid_str_option = parser.consume_many_if(|c| c.is_ascii_hexdigit() || c == '-');
 
     match uuid_str_option {
-        Some(uuid_str) => {
-            match Uuid::parse_str(&uuid_str) {
-                Ok(uuid) => Ok(Some(uuid)),
-                Err(_) => Err(Ast2Error::InvalidUuid {
-                    position: start_pos,
-                }),
-            }
+        Some(uuid_str) => match Uuid::parse_str(&uuid_str) {
+            Ok(uuid) => Ok(Some(uuid)),
+            Err(_) => Err(Ast2Error::InvalidUuid {
+                position: start_pos,
+            }),
         },
         None => Ok(None),
     }
 }
 
 fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
-
     let begin = parser.get_position();
 
     let mut content = String::new();
@@ -908,6 +879,6 @@ fn _try_parse_text(parser: &mut Parser) -> Result<Option<Text>> {
     let end = parser.get_position();
 
     Ok(Some(Text {
-        range: Range {begin, end }
+        range: Range { begin, end },
     }))
 }

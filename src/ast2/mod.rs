@@ -24,7 +24,7 @@ impl Position {
         }
     }
     fn is_valid(&self) -> bool {
-        (line > 0) && (column > 0)
+        (self.line > 0) && (self.column > 0)
     }
 }
 
@@ -42,12 +42,12 @@ impl Range {
         }
     }
     fn is_valid(&self) -> bool {
-        if !begin.is_valid() {
+        if !self.begin.is_valid() {
             false
-        } else if !end.is_valid() {
+        } else if !self.end.is_valid() {
             false
         } else {
-            begin.offset <= end.offset
+            self.begin.offset <= self.end.offset
         }
     }
 }
@@ -119,6 +119,15 @@ struct Parameters {
     range: Range,
 }
 
+impl Parameters {
+    fn new() -> Self {
+        Parameters {
+            parameters: serde_json::Map::new(),
+            range: Range::null(),
+        }
+    }
+}
+
 struct Argument {
     value: String,
     range: Range,
@@ -167,9 +176,9 @@ pub struct Parser<'a> {
     iterator: Chars<'a>,
 }
 
-pub struct ParserStatus {
+pub struct ParserStatus<'a> {
     position: Position,
-    iterator: Chars,
+    iterator: Chars<'a>,
 }
 
 impl<'a> Parser<'a> {
@@ -281,7 +290,7 @@ impl<'a> Parser<'a> {
             iterator: self.iterator.clone(),
         }
     }
-    pub fn load(&mut self, status: &ParserStatus) {
+    pub fn load(&mut self, status: &ParserStatus<'a>) {
         self.position = status.position;
         self.iterator = status.iterator.clone();
     }
@@ -349,10 +358,7 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
     let parameters = _try_parse_parameters(parser)?;
     let parameters = match parameters {
         Some(p) => p,
-        None => Parameters {
-            parameters: json!({}),
-            range: Range::null(),
-        },
+        None => Parameters::new()
     };
 
     parser.skip_many_whitespaces();
@@ -445,10 +451,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
 
     let parameters = match _try_parse_parameters(parser)? {
         Some(x) => x,
-        None => Parameters {
-            parameters: json!({}),
-            range: Range::null(),
-        },
+        None => Parameters::new(),
     };
 
     parser.skip_many_whitespaces();
@@ -640,7 +643,7 @@ fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
 fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
     let begin = parser.get_position();
 
-    let arguments = Vec::new();
+    let mut arguments = Vec::new();
 
     loop {
         parser.skip_many_whitespaces();
@@ -723,7 +726,7 @@ fn _try_parse_enclosed_value(
     parser: &mut Parser,
     closure: &str,
 ) -> Result<Option<serde_json::Value>> {
-    _try_parse_enclosed_string(parameter, closure).map(|x| serde_json::Value(String(x)))
+    _try_parse_enclosed_string(parser, closure).map(|x| serde_json::Value::from_str(x))
 }
 
 fn _try_parse_enclosed_string(

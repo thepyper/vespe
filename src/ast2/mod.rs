@@ -305,15 +305,20 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Positi
         if parser.is_eod() {
             break;
         }
-        if let Some(tag) = _try_parse_tag(parser)? {
+        let tag_result = _try_parse_tag(parser)?;
+        if let Some(tag) = tag_result {
             contents.push(Content::Tag(tag));
             continue;
         } 
-        if let Some(anchor) = _try_parse_anchor(parser)? {
+        
+        let anchor_result = _try_parse_anchor(parser)?;
+        if let Some(anchor) = anchor_result {
             contents.push(Content::Anchor(anchor));
             continue;
         } 
-        if let Some(text) = _try_parse_text(parser)? {
+        
+        let text_result = _try_parse_text(parser)?;
+        if let Some(text) = text_result {
             contents.push(Content::Text(text));
             continue;
         } 

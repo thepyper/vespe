@@ -217,10 +217,10 @@ fn parse_document(document: &str) -> Result<Document> {
     let content = parse_content(document, &mut parser)?;
     let end   = parser.get_position();
 
-    Document {
+    Ok(Document {
         content: content,
         range: Range { begin, end },
-    }
+    })
 }
 
 fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
@@ -277,9 +277,8 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
 
     parser.skip_many_whitespaces();
 
-    if !parser.consume_matching_char('\n') {
-        // TODO errore, text dopo arguments e prima di fine linea!?
-    }
+    // Consuma EOL se c'e', altrimenti siamo a fine documento
+    parser.consume_matching_char('\n');
 
     let end = parser.get_position();
 
@@ -351,9 +350,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
 
     parser.skip_many_whitespaces();
 
-    if !parser.consume_matching_char('\n') {
-        // TODO errore, text dopo arguments e prima di fine linea!?
-    }
+    parser.consume_matching_char('\n');
 
     let end = parser.get_position();
 
@@ -426,24 +423,29 @@ fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
         return Ok(None);
     } 
 
+    parser.skip_many_whitespaces_or_eol();
+
+    if parser.consume_matching_char('}') {
+        return Ok(None);
+    }
+
     let mut parameters = json!({});
 
     while !parser.is_eod() {
 
-        parser.skip_many_whitespaces_or_eol();
-
-        if parser.consume_matching_char("}") {
-            break;
-        }
-        
         let parameter = _try_parse_parameter(parser)?;
 
         if parameter.is_none() {
             // TODO errore, parametro non parsed!?!?
         }
 
-        // TODO add parameter to serde_json object
+        if parser.consume_matching_char('}') {
+            break;
+        } else if !parse.consume_matching_char(',') {
+            // TODO missing comma?
+        }
 
+        parser.skip_many_whitespaces_or_eol();
     }
 
     let end = parser.get_position();
@@ -578,7 +580,9 @@ fn _try_parse_nude_integer(parser: &mut Parser) -> Result<Option<i64>> {
 }
 
 fn _try_parse_nude_float(parser: &mut Parser) -> Result<Option<f64>> {
- /// TODO
+ 
+    
+
 }
 
 fn _try_parse_nude_bool(parser: &mut Parser) -> Result<Option<bool>> {

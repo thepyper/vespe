@@ -167,9 +167,9 @@ pub struct Parser<'a> {
     iterator: Chars<'a>,
 }
 
-pub struct ParserStatus<'a> {
+pub struct ParserStatus {
     position: Position,
-    iterator: Chars<'a>,
+    iterator: Chars,
 }
 
 impl<'a> Parser<'a> {
@@ -283,7 +283,7 @@ impl<'a> Parser<'a> {
     }
     pub fn load(&mut self, status: &ParserStatus) {
         self.position = status.position;
-        self.iterator = status.iterator;
+        self.iterator = status.iterator.clone();
     }
 }
 
@@ -650,7 +650,7 @@ fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
             break;
         }
 
-        match _try_parse_argument(parser) {
+        match _try_parse_argument(parser)? {
             Some(x) => arguments.push(x),
             None => break,
         }
@@ -662,20 +662,20 @@ fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
 
     let end = parser.get_position();
 
-    Ok(Arguments {
+    Ok(Some(Arguments {
         arguments,
         range: Range { begin, end },
-    })
+    }))
 }
 
 fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
     let begin = parser.get_position();
 
-    let value = if let Some(x) = _try_parse_enclosed_value(parser, "\'") {
+    let value = if let Some(x) = _try_parse_enclosed_string(parser, "\'")? {
         Some(x)
-    } else if let Some(x) = _try_parse_enclosed_value(parser, "\"") {
+    } else if let Some(x) = _try_parse_enclosed_string(parser, "\"")? {
         Some(x)
-    } else if let Some(x) = _try_parse_nude_string(parser) {
+    } else if let Some(x) = _try_parse_nude_string(parser)? {
         Some(x)
     } else {
         None
@@ -683,13 +683,7 @@ fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
 
     let end = parser.get_position();
 
-    match value {
-        Some(x) => Ok(Argument {
-            value,
-            range: Range { begin, end },
-        }),
-        None => Ok(None),
-    }
+    Ok(value.map(|value| Argument { value, range: Range {begin, end}}))
 }
 
 fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
@@ -700,17 +694,18 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
             identifier.push(x);
             match parser.consume_many_if(|c| c.is_alphanumeric() || c == '_') {
                 Some(x) => {
-                    identifier.push_str(x);
+                    identifier.push_str(&x);
                 }
                 None => {}
             }
         }
+        None => {}
     }
 
     if identifier.is_empty() {
         return Ok(None);
     } else {
-        return Some(identifier);
+        return Ok(Some(identifier));
     }
 }
 
@@ -728,6 +723,13 @@ fn _try_parse_enclosed_value(
     parser: &mut Parser,
     closure: &str,
 ) -> Result<Option<serde_json::Value>> {
+    _try_parse_enclosed_string(parameter, closure).map(|x| serde_json::Value(String(x)))
+}
+
+fn _try_parse_enclosed_string(
+    parser: &mut Parser,
+    closure: &str,
+) -> Result<Option<String>> {
     let begin_pos = parser.get_position();
     let mut value = String::new();
 
@@ -745,7 +747,7 @@ fn _try_parse_enclosed_value(
         } else if parser.consume_matching_string("\\\\").is_some() {
             value.push('\\');
         } else if parser.consume_matching_string(closure).is_some() {
-            return Ok(Some(serde_json::Value::String(value)));
+            return Ok(Some(value));
         } else {
             match parser.advance() {
                 None => {

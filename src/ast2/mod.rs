@@ -170,13 +170,13 @@ struct Document {
     range: Range,
 }
 
+#[derive(Clone)]
 pub struct Parser<'a> {
     document: &'a str,
     position: Position,
     iterator: Chars<'a>,
 }
 
-#[derive(Clone)]
 impl<'a> Parser<'a> {
     pub fn new(document: &'a str) -> Self {
         Self {

@@ -30,7 +30,7 @@ impl Position {
 
 #[derive(Debug, Clone, Copy)]
 struct Range {
-    begin: Position,
+    begin: Position, 
     end: Position,
 }
 
@@ -648,8 +648,6 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
     Ok(Some((key, value)))
 }
 
-****************
-
 fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
 
     let status = parser.store();
@@ -694,41 +692,27 @@ Ok(Arguments {
         })
 }
 
-fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_json::Value)>> {
+fn _try_parse_argument(parser: &mut Parser) -> Result<Option<Argument>> {
 
     let begin = parser.get_position();
 
-    let key = _try_parse_identifier(parser)?;
-    let key = match key {
-        Some(k) => k,
-        None => return Err(Ast2Error::MissingParameterKey {
-            position: parser.get_position(),
-        }),
-    };    
-
-    parser.skip_many_whitespaces_or_eol();
-
-    if parser.consume_matching_char(":").is_none() {
-        return Err(Ast2Error::MissingParameterColon {
-            position: parser.get_position(),
-        });
-    } 
-
-    parser.skip_many_whitespaces_or_eol();
-
-    let value = _try_parse_value(parser)?;
-    let value = match value {
-        Some(v) => v,
-        None => return Err(Ast2Error::MissingParameterValue {
-            position: parser.get_position(),
-        }),
-    };
+    let value = if let Some(x) = _try_parse_enclosed_value(parser, "\'") {
+        Some(x)
+    } else if let Some(x) = _try_parse_enclosed_value(parser, "\"") {
+        Some(x)
+    } else if let Some(x) = _try_parse_nude_string(parser) {
+        Some(x)
+    } else {
+        None 
+    }
 
     let end = parser.get_position();
 
-    Ok(Some((key, value)))
+    match value {
+        Some(x) => Ok(Argument { value, Range {begin, end }}),
+        None => Ok(None)
+    }
 }
-********************
 
 fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 

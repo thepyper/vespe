@@ -298,16 +298,21 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
     while !parser.is_eod() {
         if let Some(tag) = _try_parse_tag(parser)? {
             contents.push(Content::Tag(tag));
-        } else if let Some(anchor) = _try_parse_anchor(parser)? {
+            continue;
+        } 
+        if let Some(anchor) = _try_parse_anchor(parser)? {
             contents.push(Content::Anchor(anchor));
-        } else if let Some(text) = _try_parse_text(parser)? {
+            continue;
+        } 
+        if let Some(text) = _try_parse_text(parser)? {
             contents.push(Content::Text(text));
-        } else {
-            return Err(Ast2Error::ParsingError {
-                position: parser.get_position(),
-                message: "Unable to parse content".to_string(),
-            });
-        }
+            continue;
+        } 
+        
+        return Err(Ast2Error::ParsingError {
+            position: parser.get_position(),
+            message: "Unable to parse content".to_string(),
+        });
     }
 
     Ok(contents)
@@ -321,7 +326,7 @@ fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
         return Ok(Some(x));
     }
 
-    parser = parser_mem;
+    *parser = parser_mem;
     Ok(None)
 }
 
@@ -380,7 +385,7 @@ fn _try_parse_anchor<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
         return Ok(Some(x));
     }
 
-    parser = parser_mem;
+    *parser = parser_mem;
     Ok(None)
 }
 
@@ -515,7 +520,7 @@ fn _try_parse_parameters<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parame
         return Ok(Some(x));
     }
 
-    parser = parser_mem;
+    *parser = parser_mem;
     Ok(None)
 }
 
@@ -623,7 +628,7 @@ fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Argumen
         return Ok(Some(x));
     }
 
-    parser = parser_mem;
+    *parser = parser_mem;
     Ok(None)
 }
 

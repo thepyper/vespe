@@ -302,13 +302,16 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Positi
     let mut contents = Vec::new();
 
     loop {
-        if parser.is_eod() {
+        let current_parser = &mut *parser; 
+
+        if current_parser.is_eod() {
             break;
         }
+
         let mut parsed_something = false;
 
         // Attempt to parse a tag
-        match _try_parse_tag(parser) {
+        match _try_parse_tag(current_parser) {
             Ok(Some(tag)) => {
                 contents.push(Content::Tag(tag));
                 parsed_something = true;
@@ -322,7 +325,7 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Positi
         }
 
         // Attempt to parse an anchor
-        match _try_parse_anchor(parser) {
+        match _try_parse_anchor(current_parser) {
             Ok(Some(anchor)) => {
                 contents.push(Content::Anchor(anchor));
                 parsed_something = true;
@@ -336,7 +339,7 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Positi
         }
 
         // Attempt to parse text
-        match _try_parse_text(parser) {
+        match _try_parse_text(current_parser) {
             Ok(Some(text)) => {
                 contents.push(Content::Text(text));
                 parsed_something = true;
@@ -348,9 +351,10 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Positi
         if parsed_something {
             continue;
         }
-        
+
+        // If none of the above parsed anything, it's an error
         return Err(Ast2Error::ParsingError {
-            position: parser.get_position(),
+            position: current_parser.get_position(),
             message: "Unable to parse content".to_string(),
         });
     }

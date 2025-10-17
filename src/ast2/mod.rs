@@ -330,13 +330,16 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
 
 fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
     let checkpoint = parser.get_checkpoint();
-    match _try_parse_tag0(parser)? {
+    match _try_parse_tag0(parser) {
         Ok(Some(tag)) => Ok(Some(tag)),
         Ok(None) => {
             parser.restore_checkpoint(checkpoint);
             Ok(None)
         },
-        Err(e) => Err(e),
+        Err(e) => {
+            parser.restore_checkpoint(checkpoint);
+            Err(e)
+        },
     }
 }
 
@@ -389,13 +392,16 @@ fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
 
 fn _try_parse_anchor<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
     let checkpoint = parser.get_checkpoint();
-    match _try_parse_anchor0(parser)? {
+    match _try_parse_anchor0(parser) {
         Ok(Some(anchor)) => Ok(Some(anchor)),
         Ok(None) => {
             parser.restore_checkpoint(checkpoint);
             Ok(None)
         },
-        Err(e) => Err(e),
+        Err(e) => {
+            parser.restore_checkpoint(checkpoint);
+            Err(e)
+        },
     }
 }
 
@@ -524,13 +530,16 @@ fn _try_parse_anchor_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Ancho
 
 fn _try_parse_parameters<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
     let checkpoint = parser.get_checkpoint();
-    match _try_parse_parameters0(parser)? {
+    match _try_parse_parameters0(parser) {
         Ok(Some(parameters)) => Ok(Some(parameters)),
         Ok(None) => {
             parser.restore_checkpoint(checkpoint);
             Ok(None)
         },
-        Err(e) => Err(e),
+        Err(e) => {
+            parser.restore_checkpoint(checkpoint);
+            Err(e)
+        },
     }
 }
 
@@ -635,13 +644,16 @@ fn _try_parse_parameter<'a>(
 
 fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
     let checkpoint = parser.get_checkpoint();
-    match _try_parse_arguments0(parser)? {
+    match _try_parse_arguments0(parser) {
         Ok(Some(arguments)) => Ok(Some(arguments)),
         Ok(None) => {
             parser.restore_checkpoint(checkpoint);
             Ok(None)
         },
-        Err(e) => Err(e),
+        Err(e) => {
+            parser.restore_checkpoint(checkpoint);
+            Err(e)
+        },
     }
 }
 

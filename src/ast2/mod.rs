@@ -308,13 +308,13 @@ fn parse_document(document: &str) -> Result<Document> {
     })
 }
 
-fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
+fn parse_content(parser: &mut Parser) -> Result<Vec<Content>> {
     let mut contents = Vec::new();
 
     while !parser.is_eod() {
-        if let Some(tag) = _try_parse_tag(document, parser)? {
+        if let Some(tag) = _try_parse_tag(parser)? {
             contents.push(Content::Tag(tag));
-        } else if let Some(anchor) = _try_parse_anchor(document, parser)? {
+        } else if let Some(anchor) = _try_parse_anchor(parser)? {
             contents.push(Content::Anchor(anchor));
         } else if let Some(text) = _try_parse_text(parser)? {
             contents.push(Content::Text(text));
@@ -329,10 +329,10 @@ fn parse_content(document: &str, parser: &mut Parser) -> Result<Vec<Content>> {
     Ok(contents)
 }
 
-fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag(parser: &mut Parser) -> Result<Option<Tag>> {
     let status = parser.store();
 
-    if let Some(x) = _try_parse_tag0(document, parser)? {
+    if let Some(x) = _try_parse_tag0(parser)? {
         return Ok(Some(x));
     }
 
@@ -340,14 +340,14 @@ fn _try_parse_tag(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
     Ok(None)
 }
 
-fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
+fn _try_parse_tag0(parser: &mut Parser) -> Result<Option<Tag>> {
     let begin = parser.get_position();
 
     if parser.consume_matching_char('@').is_none() {
         return Ok(None);
     }
 
-    let command = _try_parse_command_kind(document, parser)?;
+    let command = _try_parse_command_kind(parser)?;
     let command = match command {
         Some(c) => c,
         None => return Ok(None),
@@ -387,10 +387,10 @@ fn _try_parse_tag0(document: &str, parser: &mut Parser) -> Result<Option<Tag>> {
     }))
 }
 
-fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>> {
     let status = parser.store();
 
-    if let Some(x) = _try_parse_anchor0(document, parser)? {
+    if let Some(x) = _try_parse_anchor0(parser)? {
         return Ok(Some(x));
     }
 
@@ -398,7 +398,7 @@ fn _try_parse_anchor(document: &str, parser: &mut Parser) -> Result<Option<Ancho
     Ok(None)
 }
 
-fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anchor>> {
+fn _try_parse_anchor0(parser: &mut Parser) -> Result<Option<Anchor>> {
     let begin = parser.get_position();
 
     if parser.consume_matching_string("<!--").is_none() {
@@ -407,7 +407,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
 
     parser.skip_many_whitespaces();
 
-    let command = _try_parse_command_kind(document, parser)?;
+    let command = _try_parse_command_kind(parser)?;
     let command = match command {
         Some(c) => c,
         None => return Ok(None),
@@ -420,7 +420,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
         });
     }
 
-    let uuid = _try_parse_uuid(document, parser)?;
+    let uuid = _try_parse_uuid(parser)?;
     let uuid = match uuid {
         Some(u) => u,
         None => {
@@ -437,7 +437,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
         });
     }
 
-    let kind = _try_parse_anchor_kind(document, parser)?;
+    let kind = _try_parse_anchor_kind(parser)?;
     let kind = match kind {
         Some(k) => k,
         None => {
@@ -489,7 +489,7 @@ fn _try_parse_anchor0(document: &str, parser: &mut Parser) -> Result<Option<Anch
     }))
 }
 
-fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option<CommandKind>> {
+fn _try_parse_command_kind(parser: &mut Parser) -> Result<Option<CommandKind>> {
     let tags_list = vec![
         ("tag", CommandKind::Tag),
         ("include", CommandKind::Include),
@@ -509,7 +509,7 @@ fn _try_parse_command_kind(document: &str, parser: &mut Parser) -> Result<Option
     Ok(None)
 }
 
-fn _try_parse_anchor_kind(document: &str, parser: &mut Parser) -> Result<Option<AnchorKind>> {
+fn _try_parse_anchor_kind(parser: &mut Parser) -> Result<Option<AnchorKind>> {
     let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
@@ -726,7 +726,10 @@ fn _try_parse_enclosed_value(
     parser: &mut Parser,
     closure: &str,
 ) -> Result<Option<serde_json::Value>> {
-    _try_parse_enclosed_string(parser, closure).map(|x| serde_json::Value::from_str(x))
+    _try_parse_enclosed_string(parser, closure).map(|x| match x {
+        Some(x) => serde_json::Value::from_str(x),
+        None => serde_json::Value::null,
+    })
 }
 
 fn _try_parse_enclosed_string(
@@ -841,7 +844,7 @@ fn _try_parse_nude_string(parser: &mut Parser) -> Result<Option<String>> {
     }
 }
 
-fn _try_parse_uuid(document: &str, parser: &mut Parser) -> Result<Option<Uuid>> {
+fn _try_parse_uuid(parser: &mut Parser) -> Result<Option<Uuid>> {
     let start_pos = parser.get_position();
     let uuid_str_option = parser.consume_many_if(|c| c.is_ascii_hexdigit() || c == '-');
 

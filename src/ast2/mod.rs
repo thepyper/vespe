@@ -305,23 +305,32 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Positi
         if parser.is_eod() {
             break;
         }
-        let tag_result = _try_parse_tag(parser)?;
-        if let Some(tag) = tag_result {
-            contents.push(Content::Tag(tag));
-            continue;
-        } 
-        
-        let anchor_result = _try_parse_anchor(parser)?;
-        if let Some(anchor) = anchor_result {
-            contents.push(Content::Anchor(anchor));
-            continue;
-        } 
-        
-        let text_result = _try_parse_text(parser)?;
-        if let Some(text) = text_result {
-            contents.push(Content::Text(text));
-            continue;
-        } 
+        match _try_parse_tag(parser) {
+            Ok(Some(tag)) => {
+                contents.push(Content::Tag(tag));
+                continue;
+            }
+            Ok(None) => { /* No tag found, try next */ }
+            Err(e) => return Err(e),
+        }
+
+        match _try_parse_anchor(parser) {
+            Ok(Some(anchor)) => {
+                contents.push(Content::Anchor(anchor));
+                continue;
+            }
+            Ok(None) => { /* No anchor found, try next */ }
+            Err(e) => return Err(e),
+        }
+
+        match _try_parse_text(parser) {
+            Ok(Some(text)) => {
+                contents.push(Content::Text(text));
+                continue;
+            }
+            Ok(None) => { /* No text found, this should ideally not happen if other parsers failed */ }
+            Err(e) => return Err(e),
+        }
         
         return Err(Ast2Error::ParsingError {
             position: parser.get_position(),

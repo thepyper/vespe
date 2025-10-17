@@ -176,11 +176,7 @@ pub struct Parser<'a> {
     iterator: Chars<'a>,
 }
 
-pub struct ParserStatus<'a> {
-    position: Position,
-    iterator: Chars<'a>,
-}
-
+#[derive(Clone)]
 impl<'a> Parser<'a> {
     pub fn new(document: &'a str) -> Self {
         Self {
@@ -245,10 +241,8 @@ impl<'a> Parser<'a> {
     {
         let mut xs = String::new();
         loop {
-            let status = self.store();
             match self.consume_char_if(|c| filter(c)) {
                 None => {
-                    self.load(&status);
                     break;
                 }
                 Some(x) => xs.push(x),
@@ -283,16 +277,6 @@ impl<'a> Parser<'a> {
                 Some(c)
             }
         }
-    }
-    pub fn store(&self) -> ParserStatus {
-        ParserStatus {
-            position: self.position.clone(),
-            iterator: self.iterator.clone(),
-        }
-    }
-    pub fn load(&mut self, status: &ParserStatus<'a>) {
-        self.position = status.position;
-        self.iterator = status.iterator.clone();
     }
 }
 
@@ -330,13 +314,14 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
 }
 
 fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
-    let status = parser.store();
-
+    
+    let parser_mem = parser.clone();
+        
     if let Some(x) = _try_parse_tag0(parser)? {
         return Ok(Some(x));
     }
 
-    parser.load(&status);
+    parser = parser_mem;
     Ok(None)
 }
 
@@ -388,13 +373,14 @@ fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
 }
 
 fn _try_parse_anchor<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
-    let status = parser.store();
+    
+    let parser_mem = parser.clone();
 
     if let Some(x) = _try_parse_anchor0(parser)? {
         return Ok(Some(x));
     }
 
-    parser.load(&status);
+    parser = parser_mem;
     Ok(None)
 }
 
@@ -522,13 +508,14 @@ fn _try_parse_anchor_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Ancho
 }
 
 fn _try_parse_parameters<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
-    let status = parser.store();
+    
+    let parser_mem = parser.clone();
 
     if let Some(x) = _try_parse_parameters0(parser)? {
         return Ok(Some(x));
     }
 
-    parser.load(&status);
+    parser = parser_mem;
     Ok(None)
 }
 
@@ -630,13 +617,13 @@ fn _try_parse_parameter<'a>(parser: &'a mut Parser<'a>) -> Result<Option<(String
 }
 
 fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
-    let status = parser.store();
+    let parser_mem = parser.clone();
 
     if let Some(x) = _try_parse_arguments0(parser)? {
         return Ok(Some(x));
     }
 
-    parser.load(&status);
+    parser = parser_mem;
     Ok(None)
 }
 

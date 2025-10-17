@@ -209,6 +209,19 @@ impl <'a> Parser<'a> {
     pub fn is_begin_of_line(&self) -> bool {
         self.position.column == 1
     }
+    pub fn consume_matching_string(&mut self, xs: &str) -> Option<String> {
+        if !self.remain().starts_with(xs) {
+            None
+        } else {            
+            for x in xs.chars() {
+                self.advance();
+            }
+            Some(xs.into())
+        }
+    }    
+    pub fn consume_matching_char(&mut self, x: char) -> Option<char> {
+        self.consume_char_if(|y| x == y)
+    }
     pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char> 
     where F: FnOnce(char) -> bool,
     {

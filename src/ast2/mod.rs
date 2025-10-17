@@ -713,8 +713,8 @@ fn _try_parse_enclosed_value<'a>(
     closure: &str,
 ) -> Result<Option<serde_json::Value>> {
     _try_parse_enclosed_string(parser, closure).map(|x| match x {
-        Some(x) => serde_json::Value::from_str(x),
-        None => serde_json::Value::null,
+        Some(x) => Ok(serde_json::Value::String(x)),
+        None => Ok(serde_json::Value::Null),
     })
 }
 

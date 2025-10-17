@@ -110,63 +110,62 @@ impl <'a> Parser<'a> {
     pub fn is_begin_of_line(&self) -> bool {
         self.position.column == 1
     }
-    pub fn consume_matching_string(&mut self, xs: &str) -> bool {
-        if !self.remain().starts_with(xs) {
-            return false;
-        }
-        for x in xs.chars() {
-            self.advance();
-        }
-        true
-    }    
-    pub fn consume_matching_char(&mut self, x: char) -> bool {
-        match self.remain().chars().next() {
-            None => {
-                return false;
-            }
-            Some(y) => {
-                if x != y {
-                    return false;
-                }
-                self.advance();
-                return true;
-            }
-        }
-    }
-    pub fn consume_char_if<F>(&mut self, filter: F) -> bool 
+    pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char> 
     where F: FnOnce() -> bool,
     {
         match self.remain().chars().next() {
-            None => {
-                return false;
-            }
+            None => None,
             Some(y) => {
                 if !F(y) {
-                    return false;
+                    None 
+                } else {
+                    self.advance()
                 }
-                self.advance();
-                return true;
             }
         }
+    }
+    pub fn consume_matching_string(&mut self, xs: &str) -> Option<String> {
+        if !self.remain().starts_with(xs) {
+            None
+        } else {            
+            for x in xs.chars() {
+                self.advance();
+            }
+            Some(xs.into())
+        }
+    }    
+    pub fn consume_matching_char(&mut self, x: char) -> Option<char> {
+        self.consume_char_if(|y| x == y)
     }
     pub fn consume_one_char_of(&mut self, xs: &str) -> Option<char> {
-        for x in xs.chars() {
-            if self.consume_matching_char(x) {
-                return Some(x);
+        self.consume_char_if(|y| { for x in xs.chars() { if x == y return true; } return false; } )
+    }
+    pub fn consume_many_if<F>(&mut self, filter: F) -> Option<String> 
+    where F: FnOnce() -> bool,
+    {
+        let mut xs = String::new();
+        loop {
+            match self.consume_char_if(filter) {
+                None => break,
+                Some(x) => xs.push(x)
             }
         }
-        None
+        if xs.is_empty {
+            None 
+        } else {
+            Some(xs)
+        }
     }
-    pub fn skip_many_of(&mut self, xs: &str) {
-        while self.consume_one_char_of(xs) {}
+    pub fn consume_many_of(&mut self, xs: &str) -> Option<String> {
+        self.consume_many_if(|y| { for x in xs.chars() { if x == y return true; } return false; } )
     }
     pub fn skip_many_whitespaces(&mut self) {
-        self.skip_many_of(" \t\r");
+        let _ = self.consume_many_of(" \t\r");
     }
     pub fn skip_many_whitespaces_or_eol(&mut self) {
-        self.skip_many_of(" \t\r\n");
+        let _ = self.consume_many_of(" \t\r\n");
     }
-    pub fn consume_one_dec_digit(&muf self) -> Option<char> {
+/*    pub fn consume_one_dec_digit(&muf self) -> Option<char> {
         self.consume_char_if(|x| x.is_digit(10)); 
     }
     pub fn consume_one_hex_digit(&muf self) -> Option<char> {
@@ -183,7 +182,7 @@ impl <'a> Parser<'a> {
     }
     pub fn consume_one_alnum_or_underscore(&muf self) -> Option<char> {
         self.consume_one_char_of(|x| x.is_alphanumeric() | (x == '_')); 
-    }
+    } */
     pub fn advance(&mut self) -> Option<char> {
         match self.iterator.next() {
             None => None,

@@ -302,61 +302,61 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<(Vec<Content>, Positi
     let mut contents = Vec::new();
 
     loop {
-        let current_parser = &mut *parser; 
-
-        if current_parser.is_eod() {
-            break;
-        }
-
-        let mut parsed_something = false;
-
-        // Attempt to parse a tag
-        match _try_parse_tag(current_parser) {
-            Ok(Some(tag)) => {
-                contents.push(Content::Tag(tag));
-                parsed_something = true;
+        let result = {
+            if parser.is_eod() {
+                break;
             }
-            Ok(None) => { /* No tag found, try next */ }
-            Err(e) => return Err(e),
-        }
 
-        if parsed_something {
-            continue;
-        }
+            let mut parsed_something = false;
+            let mut current_result: Option<Content> = None;
 
-        // Attempt to parse an anchor
-        match _try_parse_anchor(current_parser) {
-            Ok(Some(anchor)) => {
-                contents.push(Content::Anchor(anchor));
-                parsed_something = true;
+            // Attempt to parse a tag
+            match _try_parse_tag(parser) {
+                Ok(Some(tag)) => {
+                    current_result = Some(Content::Tag(tag));
+                    parsed_something = true;
+                }
+                Ok(None) => { /* No tag found, try next */ }
+                Err(e) => return Err(e),
             }
-            Ok(None) => { /* No anchor found, try next */ }
-            Err(e) => return Err(e),
-        }
 
-        if parsed_something {
-            continue;
-        }
-
-        // Attempt to parse text
-        match _try_parse_text(current_parser) {
-            Ok(Some(text)) => {
-                contents.push(Content::Text(text));
-                parsed_something = true;
+            if !parsed_something {
+                // Attempt to parse an anchor
+                match _try_parse_anchor(parser) {
+                    Ok(Some(anchor)) => {
+                        current_result = Some(Content::Anchor(anchor));
+                        parsed_something = true;
+                    }
+                    Ok(None) => { /* No anchor found, try next */ }
+                    Err(e) => return Err(e),
+                }
             }
-            Ok(None) => { /* No text found, this should ideally not happen if other parsers failed */ }
-            Err(e) => return Err(e),
-        }
-        
-        if parsed_something {
-            continue;
-        }
 
-        // If none of the above parsed anything, it's an error
-        return Err(Ast2Error::ParsingError {
-            position: current_parser.get_position(),
-            message: "Unable to parse content".to_string(),
-        });
+            if !parsed_something {
+                // Attempt to parse text
+                match _try_parse_text(parser) {
+                    Ok(Some(text)) => {
+                        current_result = Some(Content::Text(text));
+                        parsed_something = true;
+                    }
+                    Ok(None) => { /* No text found, this should ideally not happen if other parsers failed */ }
+                    Err(e) => return Err(e),
+                }
+            }
+            
+            if !parsed_something {
+                // If none of the above parsed anything, it's an error
+                return Err(Ast2Error::ParsingError {
+                    position: parser.get_position(),
+                    message: "Unable to parse content".to_string(),
+                });
+            }
+            current_result
+        };
+
+        if let Some(content) = result {
+            contents.push(content);
+        }
     }
 
     let end = parser.get_position();

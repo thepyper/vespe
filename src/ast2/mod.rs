@@ -715,12 +715,12 @@ fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 }
 
 fn _try_parse_value(parser: &mut Parser) -> Result<Option<serde_json::Value>> {
-    if parser.consume_matching_char('"') {
-        _try_parse_enclosed_value(parser, "\"")
-    } else if parser.consume_matching_char('\'') {
-        _try_parse_enclosed_value(parser, "\'")
-    } else {
-        _try_parse_nude_value(parser)
+    match parser.consume_matching_char('"') {
+        Some(_) => _try_parse_enclosed_value(parser, "\""),
+        None => match parser.consume_matching_char('\'') {
+            Some(_) => _try_parse_enclosed_value(parser, "\'"),
+            None => _try_parse_nude_value(parser)
+        }
     }
 }
 

@@ -532,7 +532,7 @@ fn _try_parse_parameters(parser: &mut Parser) -> Result<Option<Parameters>> {
 fn _try_parse_parameters0(parser: &mut Parser) -> Result<Option<Parameters>> {
     let begin = parser.get_position();
 
-    if parser.consume_matching_char("{").is_none() {
+    if parser.consume_matching_char('{').is_none() {
         return Ok(None);
     }
 
@@ -603,7 +603,7 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
 
     parser.skip_many_whitespaces_or_eol();
 
-    if parser.consume_matching_char(":").is_none() {
+    if parser.consume_matching_char(':').is_none() {
         return Err(Ast2Error::MissingParameterColon {
             position: parser.get_position(),
         });

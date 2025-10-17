@@ -322,14 +322,11 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
 }
 
 fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
-    
-    let parser_mem = parser.clone();
-        
-    if let Some(x) = _try_parse_tag0(parser)? {
+    let mut temp_parser = parser.clone();
+    if let Some(x) = _try_parse_tag0(&mut temp_parser)? {
+        *parser = temp_parser;
         return Ok(Some(x));
     }
-
-    *parser = parser_mem;
     Ok(None)
 }
 
@@ -351,7 +348,7 @@ fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
     let parameters = _try_parse_parameters(parser)?;
     let parameters = match parameters {
         Some(p) => p,
-        None => Parameters::new()
+        None => Parameters::new(),
     };
 
     parser.skip_many_whitespaces();
@@ -381,14 +378,11 @@ fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
 }
 
 fn _try_parse_anchor<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
-    
-    let parser_mem = parser.clone();
-
-    if let Some(x) = _try_parse_anchor0(parser)? {
+    let mut temp_parser = parser.clone();
+    if let Some(x) = _try_parse_anchor0(&mut temp_parser)? {
+        *parser = temp_parser;
         return Ok(Some(x));
     }
-
-    *parser = parser_mem;
     Ok(None)
 }
 
@@ -516,14 +510,11 @@ fn _try_parse_anchor_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Ancho
 }
 
 fn _try_parse_parameters<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
-    
-    let parser_mem = parser.clone();
-
-    if let Some(x) = _try_parse_parameters0(parser)? {
+    let mut temp_parser = parser.clone();
+    if let Some(x) = _try_parse_parameters0(&mut temp_parser)? {
+        *parser = temp_parser;
         return Ok(Some(x));
     }
-
-    *parser = parser_mem;
     Ok(None)
 }
 
@@ -586,7 +577,9 @@ fn _try_parse_parameters0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Param
     }))
 }
 
-fn _try_parse_parameter<'a>(parser: &'a mut Parser<'a>) -> Result<Option<(String, serde_json::Value)>> {
+fn _try_parse_parameter<'a>(
+    parser: &'a mut Parser<'a>,
+) -> Result<Option<(String, serde_json::Value)>> {
     let begin = parser.get_position();
 
     let key = _try_parse_identifier(parser)?;
@@ -625,13 +618,11 @@ fn _try_parse_parameter<'a>(parser: &'a mut Parser<'a>) -> Result<Option<(String
 }
 
 fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
-    let parser_mem = parser.clone();
-
-    if let Some(x) = _try_parse_arguments0(parser)? {
+    let mut temp_parser = parser.clone();
+    if let Some(x) = _try_parse_arguments0(&mut temp_parser)? {
+        *parser = temp_parser;
         return Ok(Some(x));
     }
-
-    *parser = parser_mem;
     Ok(None)
 }
 

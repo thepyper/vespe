@@ -648,6 +648,88 @@ fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_jso
     Ok(Some((key, value)))
 }
 
+****************
+
+fn _try_parse_arguments(parser: &mut Parser) -> Result<Option<Arguments>> {
+
+    let status = parser.store();
+
+    if let Some(x) = _try_parse_arguments0(parser)? {
+        return Ok(Some(x));
+    }
+
+    parser.load(&status);
+    Ok(None)
+}
+
+fn _try_parse_arguments0(parser: &mut Parser) -> Result<Option<Arguments>> {
+
+    let begin = parser.get_position();
+
+    let arguments = Vec::new();
+
+    loop {
+        parser.skip_many_whitespaces();
+
+        // Check for anchor end 
+        if parser.remain().starts_with("-->") {
+            break;
+        }
+
+        match _try_parse_argument(parser) {
+            Some(x) => arguments.push(x),
+            None => break;
+        }        
+    }
+
+    if arguments.is_empty() {
+        return Ok(None);
+    } 
+    
+    let end = parser.get_position();
+
+Ok(Arguments {
+            arguments,
+            range: Range { begin, end }        
+        })
+}
+
+fn _try_parse_parameter(parser: &mut Parser) -> Result<Option<(String, serde_json::Value)>> {
+
+    let begin = parser.get_position();
+
+    let key = _try_parse_identifier(parser)?;
+    let key = match key {
+        Some(k) => k,
+        None => return Err(Ast2Error::MissingParameterKey {
+            position: parser.get_position(),
+        }),
+    };    
+
+    parser.skip_many_whitespaces_or_eol();
+
+    if parser.consume_matching_char(":").is_none() {
+        return Err(Ast2Error::MissingParameterColon {
+            position: parser.get_position(),
+        });
+    } 
+
+    parser.skip_many_whitespaces_or_eol();
+
+    let value = _try_parse_value(parser)?;
+    let value = match value {
+        Some(v) => v,
+        None => return Err(Ast2Error::MissingParameterValue {
+            position: parser.get_position(),
+        }),
+    };
+
+    let end = parser.get_position();
+
+    Ok(Some((key, value)))
+}
+********************
+
 fn _try_parse_identifier(parser: &mut Parser) -> Result<Option<String>> {
 
     let mut identifier = String::new();

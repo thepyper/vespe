@@ -653,7 +653,9 @@ fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Paramete
 fn _try_parse_parameter<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<((String, serde_json::Value), Parser<'doc>)>> {
-    let (key, p1) = match _try_parse_identifier(parser)? {
+    let p_initial = parser.skip_many_whitespaces_or_eol_immutable();
+
+    let (key, p1) = match _try_parse_identifier(&p_initial)? {
         Some((k, p)) => (k, p),
         None => return Ok(None), // Not an error, just didn't find an identifier
     };
@@ -667,15 +669,16 @@ fn _try_parse_parameter<'doc>(
 
     let p4 = p3.skip_many_whitespaces_or_eol_immutable();
 
-    let (value, p5) = match _try_parse_value(&p4)? {
-        Some((v, p)) => (v, p),
-        None => {
+    let (value, p5) = match _try_parse_value(&p4) {
+        Ok(Some((v, p))) => (v, p),
+        Ok(None) => {
             // Here, a key and colon were found, so a value is expected.
             // This IS a syntax error.
             return Err(Ast2Error::MissingParameterValue {
                 position: p4.get_position(),
             });
         }
+        Err(e) => return Err(e),
     };
 
     Ok(Some(((key, value), p5)))
@@ -831,10 +834,10 @@ fn _try_parse_enclosed_string<'doc>(
 }
 
 fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
-    if let Some((x, p)) = _try_parse_nude_integer(parser)? {
+    if let Some((x, p)) = _try_parse_nude_float(parser)? {
         return Ok(Some((json!(x), p)));
     } 
-    if let Some((x, p)) = _try_parse_nude_float(parser)? {
+    if let Some((x, p)) = _try_parse_nude_integer(parser)? {
         return Ok(Some((json!(x), p)));
     } 
     if let Some((x, p)) = _try_parse_nude_bool(parser)? {

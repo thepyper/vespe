@@ -636,43 +636,34 @@ fn _try_parse_parameters0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Param
 }
 
 fn _try_parse_parameter<'a>(
-    parser: &'a mut Parser<'a>,
-) -> Result<Option<(String, serde_json::Value)>> {
-    let begin = parser.get_position();
-
-    let key = _try_parse_identifier(parser)?;
-    let key = match key {
-        Some(k) => k,
-        None => {
-            return Err(Ast2Error::MissingParameterKey {
-                position: parser.get_position(),
-            })
-        }
+    parser: &'a Parser<'a>,
+) -> Result<Option<((String, serde_json::Value), Parser<'a>)>> {
+    let (key, p1) = match _try_parse_identifier(parser)? {
+        Some((k, p)) => (k, p),
+        None => return Ok(None), // Not an error, just didn't find an identifier
     };
 
-    parser.skip_many_whitespaces_or_eol();
+    let p2 = p1.skip_many_whitespaces_or_eol_immutable();
 
-    if parser.consume_matching_char(':').is_none() {
-        return Err(Ast2Error::MissingParameterColon {
-            position: parser.get_position(),
-        });
-    }
+    let p3 = match p2.consume_matching_char_immutable(':') {
+        Some(p) => p,
+        None => return Ok(None), // No colon, so not a parameter. Let the caller decide what to do.
+    };
 
-    parser.skip_many_whitespaces_or_eol();
+    let p4 = p3.skip_many_whitespaces_or_eol_immutable();
 
-    let value = _try_parse_value(parser)?;
-    let value = match value {
-        Some(v) => v,
+    let (value, p5) = match _try_parse_value(&p4)? {
+        Some((v, p)) => (v, p),
         None => {
+            // Here, a key and colon were found, so a value is expected.
+            // This IS a syntax error.
             return Err(Ast2Error::MissingParameterValue {
-                position: parser.get_position(),
-            })
+                position: p4.get_position(),
+            });
         }
     };
 
-    let end = parser.get_position();
-
-    Ok(Some((key, value)))
+    Ok(Some(((key, value), p5)))
 }
 
 fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {

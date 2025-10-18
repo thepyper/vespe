@@ -535,7 +535,7 @@ fn _try_parse_anchor0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> 
     }))
 }
 
-fn _try_parse_command_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<CommandKind>> {
+fn _try_parse_command_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(CommandKind, Parser<'a>)>> {
     let tags_list = vec![
         ("tag", CommandKind::Tag),
         ("include", CommandKind::Include),
@@ -547,20 +547,20 @@ fn _try_parse_command_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Comm
     ];
 
     for (name, kind) in tags_list {
-        if parser.consume_matching_string(name).is_some() {
-            return Ok(Some(kind));
+        if let Some(new_parser) = parser.consume_matching_string_immutable(name) {
+            return Ok(Some((kind, new_parser)));
         }
     }
 
     Ok(None)
 }
 
-fn _try_parse_anchor_kind<'a>(parser: &'a mut Parser<'a>) -> Result<Option<AnchorKind>> {
+fn _try_parse_anchor_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(AnchorKind, Parser<'a>)>> {
     let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
-        if parser.consume_matching_string(name).is_some() {
-            return Ok(Some(kind));
+        if let Some(new_parser) = parser.consume_matching_string_immutable(name) {
+            return Ok(Some((kind, new_parser)));
         }
     }
 
@@ -733,27 +733,20 @@ fn _try_parse_argument<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Argument
     Ok(value.map(|value| Argument { value, range: Range {begin, end}}))
 }
 
-fn _try_parse_identifier<'a>(parser: &'a mut Parser<'a>) -> Result<Option<String>> {
+fn _try_parse_identifier<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, Parser<'a>)>> {
+    let (first_char, parser1) =
+        match parser.consume_char_if_immutable(|c| c.is_alphabetic() || c == '_') {
+            Some((c, p)) => (c, p),
+            None => return Ok(None),
+        };
+
+    let (rest, parser2) = parser1.consume_many_if_immutable(|c| c.is_alphanumeric() || c == '_');
+
     let mut identifier = String::new();
+    identifier.push(first_char);
+    identifier.push_str(&rest);
 
-    match parser.consume_char_if(|c| c.is_alphabetic() || c == '_') {
-        Some(x) => {
-            identifier.push(x);
-            match parser.consume_many_if(|c| c.is_alphanumeric() || c == '_') {
-                Some(x) => {
-                    identifier.push_str(&x);
-                }
-                None => {}
-            }
-        }
-        None => {}
-    }
-
-    if identifier.is_empty() {
-        return Ok(None);
-    } else {
-        return Ok(Some(identifier));
-    }
+    Ok(Some((identifier, parser2)))
 }
 
 fn _try_parse_value<'a>(parser: &'a mut Parser<'a>) -> Result<Option<serde_json::Value>> {
@@ -831,78 +824,180 @@ fn _try_parse_nude_value<'a>(parser: &'a mut Parser<'a>) -> Result<Option<serde_
     });
 }
 
-fn _try_parse_nude_integer<'a>(parser: &'a mut Parser<'a>) -> Result<Option<i64>> {
-    let number_str_option = parser.consume_many_if(|x| x.is_digit(10));
+fn _try_parse_nude_integer<'a>(parser: &'a Parser<'a>) -> Result<Option<(i64, Parser<'a>)>> {
 
-    match number_str_option {
-        Some(number_str) => match i64::from_str_radix(&number_str, 10) {
-            Ok(num) => Ok(Some(num)),
-            Err(e) => Err(Ast2Error::ParseIntError(e)),
-        },
-        None => Ok(None),
-    }
-}
+    let (number_str, new_parser) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
-fn _try_parse_nude_float<'a>(parser: &'a mut Parser<'a>) -> Result<Option<f64>> {
-    let mut number_str = String::new();
 
-    let integer_part = parser.consume_many_if(|x| x.is_digit(10));
-    if let Some(s) = integer_part {
-        number_str.push_str(&s);
-    }
-
-    if parser.consume_matching_char('.').is_some() {
-        number_str.push('.');
-        let fractional_part = parser.consume_many_if(|x| x.is_digit(10));
-        if let Some(s) = fractional_part {
-            number_str.push_str(&s);
-        } else {
-            number_str.push('0');
-        }
-    } 
 
     if number_str.is_empty() {
-        Ok(None)
-    } else {
-        match f64::from_str(&number_str) {
-            Ok(num) => Ok(Some(num)),
-            Err(e) => Err(Ast2Error::ParseFloatError(e)),
+
+        return Ok(None);
+
+    }
+
+
+
+    match i64::from_str_radix(&number_str, 10) {
+
+        Ok(num) => Ok(Some((num, new_parser))),
+
+        Err(e) => Err(Ast2Error::ParseIntError(e)),
+
+    }
+
+}
+
+
+
+fn _try_parse_nude_float<'a>(parser: &'a Parser<'a>) -> Result<Option<(f64, Parser<'a>)>> {
+
+
+
+    let (int_part, p1) = parser.consume_many_if_immutable(|x| x.is_digit(10));
+
+
+
+
+
+
+
+    if let Some(p2) = p1.consume_matching_char_immutable('.') {
+
+
+
+        // Found a dot.
+
+
+
+        let (frac_part, p3) = p2.consume_many_if_immutable(|x| x.is_digit(10));
+
+
+
+
+
+
+
+        if int_part.is_empty() && frac_part.is_empty() {
+
+
+
+            return Ok(None); // Just a dot, not a number
+
+
+
         }
-    }
-}
 
-fn _try_parse_nude_bool<'a>(parser: &'a mut Parser<'a>) -> Result<Option<bool>> {
-    if parser.consume_matching_string("true").is_some() {
-        return Ok(Some(true));
-    } else if parser.consume_matching_string("false").is_some() {
-        return Ok(Some(false));
+
+
+
+
+
+
+        let num_str = format!("{}.{}", int_part, frac_part);
+
+
+
+        match f64::from_str(&num_str) {
+
+
+
+            Ok(n) => Ok(Some((n, p3))),
+
+
+
+            Err(e) => Err(Ast2Error::ParseFloatError(e)),
+
+
+
+        }
+
+
+
     } else {
-        return Ok(None);
+
+
+
+        // No dot, not a float for our purposes.
+
+
+
+        Ok(None)
+
+
+
     }
+
+
+
 }
 
-fn _try_parse_nude_string<'a>(parser: &'a mut Parser<'a>) -> Result<Option<String>> {
-    let xs = parser.consume_many_if(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
-    if xs.is_none() {
-        return Ok(None);
+
+
+fn _try_parse_nude_bool<'a>(parser: &'a Parser<'a>) -> Result<Option<(bool, Parser<'a>)>> {
+
+    if let Some(p) = parser.consume_matching_string_immutable("true") {
+
+        return Ok(Some((true, p)));
+
+    } else if let Some(p) = parser.consume_matching_string_immutable("false") {
+
+        return Ok(Some((false, p)));
+
     } else {
-        return Ok(xs);
+
+        return Ok(None);
+
     }
+
 }
 
-fn _try_parse_uuid<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Uuid>> {
+
+
+fn _try_parse_nude_string<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, Parser<'a>)>> {
+
+    let (result, new_parser) = parser.consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
+
+    if result.is_empty() {
+
+        Ok(None)
+
+    } else {
+
+        Ok(Some((result, new_parser)))}
+
+}
+
+
+
+fn _try_parse_uuid<'a>(parser: &'a Parser<'a>) -> Result<Option<(Uuid, Parser<'a>)>> {
+
     let start_pos = parser.get_position();
-    let uuid_str_option = parser.consume_many_if(|c| c.is_ascii_hexdigit() || c == '-');
 
-    match uuid_str_option {
-        Some(uuid_str) => match Uuid::parse_str(&uuid_str) {
-            Ok(uuid) => Ok(Some(uuid)),
-            Err(_) => Err(Ast2Error::InvalidUuid {
-                position: start_pos,
-            }),
-        },
-        None => Ok(None),
+    let (uuid_str, new_parser) = parser.consume_many_if_immutable(|c| c.is_ascii_hexdigit() || c == '-');
+
+
+
+    if uuid_str.is_empty() {
+
+        return Ok(None);
+
     }
+
+
+
+    match Uuid::parse_str(&uuid_str) {
+
+        Ok(uuid) => Ok(Some((uuid, new_parser))),
+
+        Err(_) => Err(Ast2Error::InvalidUuid {
+
+            position: start_pos,
+
+        }),
+
+    }
+
 }
 
 fn _try_parse_text<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Text>> {

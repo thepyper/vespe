@@ -1071,5 +1071,6 @@ mod tests {
     mod test_parse_argument;
     mod test_parse_arguments;
     mod test_parse_parameters;
+    mod test_parse_kinds;
 }
 

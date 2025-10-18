@@ -1063,5 +1063,6 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
 mod tests {
     mod utils;
     mod test_position_range;
+    mod test_parser_advance;
 }
 

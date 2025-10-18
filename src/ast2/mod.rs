@@ -537,12 +537,10 @@ fn _try_parse_anchor0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Par
         }
     };
 
-    let p14 = p13.skip_many_whitespaces_immutable();
-
     // Consume EOL if it's there
-    let p15 = p14.consume_matching_char_immutable('\n').unwrap_or(p14);
+    let p14 = p13.consume_matching_char_immutable('\n').unwrap_or(p13);
 
-    let end = p15.get_position();
+    let end = p14.get_position();
 
     let anchor = Anchor {
         command,
@@ -553,7 +551,7 @@ fn _try_parse_anchor0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Par
         range: Range { begin, end },
     };
 
-    Ok(Some((anchor, p15)))
+    Ok(Some((anchor, p14)))
 }
 
 fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(CommandKind, Parser<'doc>)>> {

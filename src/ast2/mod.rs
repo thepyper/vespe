@@ -567,72 +567,70 @@ fn _try_parse_anchor_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(AnchorKi
     Ok(None)
 }
 
-fn _try_parse_parameters<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_parameters0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
-    }
-    Ok(None)
+fn _try_parse_parameters<'a>(parser: &'a Parser<'a>) -> Result<Option<(Parameters, Parser<'a>)>> {
+    _try_parse_parameters0(parser)
 }
 
-fn _try_parse_parameters0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Parameters>> {
+fn _try_parse_parameters0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Parameters, Parser<'a>)>> {
     let begin = parser.get_position();
 
-    if parser.consume_matching_char('{').is_none() {
-        return Ok(None);
-    }
+    // Must start with '{'
+    let mut p_current = match parser.consume_matching_char_immutable('{') {
+        Some(p) => p,
+        None => return Ok(None),
+    };
+    p_current = p_current.skip_many_whitespaces_or_eol_immutable();
 
-    parser.skip_many_whitespaces_or_eol();
-
-    if parser.consume_matching_char('}').is_some() {
-        return Ok(Some(Parameters {
-            parameters: serde_json::Map::new(),
-            range: Range {
-                begin,
-                end: parser.get_position(),
+    // Check for empty parameters: {}
+    if let Some(p_final) = p_current.consume_matching_char_immutable('}') {
+        let end = p_final.get_position();
+        return Ok(Some((
+            Parameters {
+                parameters: serde_json::Map::new(),
+                range: Range { begin, end },
             },
-        }));
+            p_final,
+        )));
     }
 
     let mut parameters_map = serde_json::Map::new();
-    let mut first_param = true;
 
+    // Loop to parse key-value pairs
     loop {
-        if !first_param {
-            if parser.consume_matching_char(',').is_none() {
-                return Err(Ast2Error::MissingCommaInParameters {
-                    position: parser.get_position(),
-                });
-            }
-            parser.skip_many_whitespaces_or_eol();
-        }
-
-        let parameter = _try_parse_parameter(parser)?;
-        let (key, value) = match parameter {
-            Some(p) => p,
+        // Parse a parameter
+        let ((key, value), p_after_param) = match _try_parse_parameter(&p_current)? {
+            Some((param, p_next)) => (param, p_next),
             None => {
+                // This means we couldn't parse a parameter where one was expected.
                 return Err(Ast2Error::ParameterNotParsed {
-                    position: parser.get_position(),
-                })
+                    position: p_current.get_position(),
+                });
             }
         };
         parameters_map.insert(key, value);
+        p_current = p_after_param.skip_many_whitespaces_or_eol_immutable();
 
-        parser.skip_many_whitespaces_or_eol();
-
-        if parser.consume_matching_char('}').is_some() {
-            break;
+        // After a parameter, we expect either a '}' (end) or a ',' (continue)
+        if let Some(p_final) = p_current.consume_matching_char_immutable('}') {
+            // End of parameters
+            let end = p_final.get_position();
+            return Ok(Some((
+                Parameters {
+                    parameters: parameters_map,
+                    range: Range { begin, end },
+                },
+                p_final,
+            )));
+        } else if let Some(p_after_comma) = p_current.consume_matching_char_immutable(',') {
+            // Comma found, continue loop
+            p_current = p_after_comma.skip_many_whitespaces_or_eol_immutable();
+        } else {
+            // Neither '}' nor ',' found after a parameter. Syntax error.
+            return Err(Ast2Error::MissingCommaInParameters { // Or missing closing brace
+                position: p_current.get_position(),
+            });
         }
-        first_param = false;
     }
-
-    let end = parser.get_position();
-
-    Ok(Some(Parameters {
-        parameters: parameters_map,
-        range: Range { begin, end },
-    }))
 }
 
 fn _try_parse_parameter<'a>(

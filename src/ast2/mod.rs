@@ -1076,5 +1076,6 @@ mod tests {
     mod test_parse_tag;
     mod test_parse_anchor;
     mod test_parse_text;
+    mod test_parse_document;
 }
 

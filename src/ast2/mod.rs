@@ -339,10 +339,12 @@ impl<'a> Parser<'a> {
 }
 
 fn parse_document(document: &str) -> Result<Document> {
-    let mut parser = Parser::new(document);
+    let parser = Parser::new(document);
     let begin = parser.get_position();
-    let content = parse_content(&mut parser)?;
-    let end = parser.get_position();
+    
+    let (content, parser_after_content) = parse_content(parser)?;
+    
+    let end = parser_after_content.get_position();
 
     Ok(Document {
         content: content,
@@ -350,9 +352,9 @@ fn parse_document(document: &str) -> Result<Document> {
     })
 }
 
-fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
+fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
     let mut contents = Vec::new();
-    let mut p_current = parser.clone();
+    let mut p_current = parser; // Takes ownership
 
     loop {
         if p_current.is_eod() {
@@ -384,15 +386,14 @@ fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
         });
     }
     
-    *parser = p_current;
-    Ok(contents)
+    Ok((contents, p_current)) // Return the final state
 }
 
-fn _try_parse_tag<'a>(parser: &'a Parser<'a>) -> Result<Option<(Tag, Parser<'a>)>> {
+fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     _try_parse_tag0(parser)
 }
 
-fn _try_parse_tag0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Tag, Parser<'a>)>> {
+fn _try_parse_tag0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '@'
@@ -446,11 +447,11 @@ fn _try_parse_tag0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Tag, Parser<'a>
     Ok(Some((tag, p8)))
 }
 
-fn _try_parse_anchor<'a>(parser: &'a Parser<'a>) -> Result<Option<(Anchor, Parser<'a>)>> {
+fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
     _try_parse_anchor0(parser)
 }
 
-fn _try_parse_anchor0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Anchor, Parser<'a>)>> {
+fn _try_parse_anchor0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     let p1 = match parser.consume_matching_string_immutable("<!--") {
@@ -553,7 +554,7 @@ fn _try_parse_anchor0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Anchor, Pars
     Ok(Some((anchor, p15)))
 }
 
-fn _try_parse_command_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(CommandKind, Parser<'a>)>> {
+fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(CommandKind, Parser<'doc>)>> {
     let tags_list = vec![
         ("tag", CommandKind::Tag),
         ("include", CommandKind::Include),
@@ -573,7 +574,7 @@ fn _try_parse_command_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(Command
     Ok(None)
 }
 
-fn _try_parse_anchor_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(AnchorKind, Parser<'a>)>> {
+fn _try_parse_anchor_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(AnchorKind, Parser<'doc>)>> {
     let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
@@ -585,11 +586,11 @@ fn _try_parse_anchor_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(AnchorKi
     Ok(None)
 }
 
-fn _try_parse_parameters<'a>(parser: &'a Parser<'a>) -> Result<Option<(Parameters, Parser<'a>)>> {
+fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Parameters, Parser<'doc>)>> {
     _try_parse_parameters0(parser)
 }
 
-fn _try_parse_parameters0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Parameters, Parser<'a>)>> {
+fn _try_parse_parameters0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Parameters, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '{'
@@ -651,9 +652,9 @@ fn _try_parse_parameters0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Paramete
     }
 }
 
-fn _try_parse_parameter<'a>(
-    parser: &'a Parser<'a>,
-) -> Result<Option<((String, serde_json::Value), Parser<'a>)>> {
+fn _try_parse_parameter<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<((String, serde_json::Value), Parser<'doc>)>> {
     let (key, p1) = match _try_parse_identifier(parser)? {
         Some((k, p)) => (k, p),
         None => return Ok(None), // Not an error, just didn't find an identifier
@@ -682,11 +683,11 @@ fn _try_parse_parameter<'a>(
     Ok(Some(((key, value), p5)))
 }
 
-fn _try_parse_arguments<'a>(parser: &'a Parser<'a>) -> Result<Option<(Arguments, Parser<'a>)>> {
+fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments, Parser<'doc>)>> {
     _try_parse_arguments0(parser)
 }
 
-fn _try_parse_arguments0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Arguments, Parser<'a>)>> {
+fn _try_parse_arguments0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments, Parser<'doc>)>> {
     let begin = parser.get_position();
     let mut p_current = parser.clone();
     let mut arguments = Vec::new();
@@ -723,7 +724,7 @@ fn _try_parse_arguments0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Arguments
     )))
 }
 
-fn _try_parse_argument<'a>(parser: &'a Parser<'a>) -> Result<Option<(Argument, Parser<'a>)>> {
+fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argument, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     if let Some((value, p)) = _try_parse_enclosed_string(parser, "\'")? {
@@ -747,7 +748,7 @@ fn _try_parse_argument<'a>(parser: &'a Parser<'a>) -> Result<Option<(Argument, P
     Ok(None)
 }
 
-fn _try_parse_identifier<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, Parser<'a>)>> {
+fn _try_parse_identifier<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
     let (first_char, parser1) =
         match parser.consume_char_if_immutable(|c| c.is_alphabetic() || c == '_') {
             Some((c, p)) => (c, p),
@@ -763,7 +764,7 @@ fn _try_parse_identifier<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, P
     Ok(Some((identifier, parser2)))
 }
 
-fn _try_parse_value<'a>(parser: &'a Parser<'a>) -> Result<Option<(serde_json::Value, Parser<'a>)>> {
+fn _try_parse_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     if let Some(p1) = parser.consume_matching_char_immutable('"') {
         // try to parse a double-quoted string
         _try_parse_enclosed_value(&p1, "\"")
@@ -776,20 +777,20 @@ fn _try_parse_value<'a>(parser: &'a Parser<'a>) -> Result<Option<(serde_json::Va
     }
 }
 
-fn _try_parse_enclosed_value<'a>(
-    parser: &'a Parser<'a>,
+fn _try_parse_enclosed_value<'doc>(
+    parser: &Parser<'doc>,
     closure: &str,
-) -> Result<Option<(serde_json::Value, Parser<'a>)>> {
+) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     match _try_parse_enclosed_string(parser, closure)? {
         Some((s, p)) => Ok(Some((serde_json::Value::String(s), p))),
         None => Ok(None),
     }
 }
 
-fn _try_parse_enclosed_string<'a>(
-    parser: &'a Parser<'a>,
+fn _try_parse_enclosed_string<'doc>(
+    parser: &Parser<'doc>,
     closure: &str,
-) -> Result<Option<(String, Parser<'a>)>> {
+) -> Result<Option<(String, Parser<'doc>)>> {
     let begin_pos = parser.get_position();
     let mut value = String::new();
     let mut current_parser = parser.clone();
@@ -831,7 +832,7 @@ fn _try_parse_enclosed_string<'a>(
     }
 }
 
-fn _try_parse_nude_value<'a>(parser: &'a Parser<'a>) -> Result<Option<(serde_json::Value, Parser<'a>)>> {
+fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     if let Some((x, p)) = _try_parse_nude_integer(parser)? {
         return Ok(Some((json!(x), p)));
     } 
@@ -847,7 +848,7 @@ fn _try_parse_nude_value<'a>(parser: &'a Parser<'a>) -> Result<Option<(serde_jso
     Ok(None)
 }
 
-fn _try_parse_nude_integer<'a>(parser: &'a Parser<'a>) -> Result<Option<(i64, Parser<'a>)>> {
+fn _try_parse_nude_integer<'doc>(parser: &Parser<'doc>) -> Result<Option<(i64, Parser<'doc>)>> {
 
     let (number_str, new_parser) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
@@ -873,7 +874,7 @@ fn _try_parse_nude_integer<'a>(parser: &'a Parser<'a>) -> Result<Option<(i64, Pa
 
 
 
-fn _try_parse_nude_float<'a>(parser: &'a Parser<'a>) -> Result<Option<(f64, Parser<'a>)>> {
+fn _try_parse_nude_float<'doc>(parser: &Parser<'doc>) -> Result<Option<(f64, Parser<'doc>)>> {
 
 
 
@@ -957,7 +958,7 @@ fn _try_parse_nude_float<'a>(parser: &'a Parser<'a>) -> Result<Option<(f64, Pars
 
 
 
-fn _try_parse_nude_bool<'a>(parser: &'a Parser<'a>) -> Result<Option<(bool, Parser<'a>)>> {
+fn _try_parse_nude_bool<'doc>(parser: &Parser<'doc>) -> Result<Option<(bool, Parser<'doc>)>> {
 
     if let Some(p) = parser.consume_matching_string_immutable("true") {
 
@@ -977,7 +978,7 @@ fn _try_parse_nude_bool<'a>(parser: &'a Parser<'a>) -> Result<Option<(bool, Pars
 
 
 
-fn _try_parse_nude_string<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, Parser<'a>)>> {
+fn _try_parse_nude_string<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
 
     let (result, new_parser) = parser.consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
 
@@ -993,7 +994,7 @@ fn _try_parse_nude_string<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, 
 
 
 
-fn _try_parse_uuid<'a>(parser: &'a Parser<'a>) -> Result<Option<(Uuid, Parser<'a>)>> {
+fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Parser<'doc>)>> {
 
     let start_pos = parser.get_position();
 
@@ -1023,7 +1024,7 @@ fn _try_parse_uuid<'a>(parser: &'a Parser<'a>) -> Result<Option<(Uuid, Parser<'a
 
 }
 
-fn _try_parse_text<'a>(parser: &'a Parser<'a>) -> Result<Option<(Text, Parser<'a>)>> {
+fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     if parser.is_eod() {

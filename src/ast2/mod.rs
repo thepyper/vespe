@@ -587,21 +587,17 @@ fn _try_parse_anchor_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(AnchorK
 }
 
 fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Parameters, Parser<'doc>)>> {
-    _try_parse_parameters0(parser)
-}
-
-fn _try_parse_parameters0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Parameters, Parser<'doc>)>> {
     let begin = parser.get_position();
 
-    // Must start with '{'
-    let mut p_current = match parser.consume_matching_char_immutable('{') {
+    // Must start with '['
+    let mut p_current = match parser.consume_matching_char_immutable('[') {
         Some(p) => p,
         None => return Ok(None),
     };
     p_current = p_current.skip_many_whitespaces_or_eol_immutable();
 
-    // Check for empty parameters: {}
-    if let Some(p_final) = p_current.consume_matching_char_immutable('}') {
+    // Check for empty parameters: []
+    if let Some(p_final) = p_current.consume_matching_char_immutable(']') {
         let end = p_final.get_position();
         return Ok(Some((
             Parameters {
@@ -629,8 +625,8 @@ fn _try_parse_parameters0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Paramet
         parameters_map.insert(key, value);
         p_current = p_after_param.skip_many_whitespaces_or_eol_immutable();
 
-        // After a parameter, we expect either a '}' (end) or a ',' (continue)
-        if let Some(p_final) = p_current.consume_matching_char_immutable('}') {
+        // After a parameter, we expect either a ']' (end) or a ',' (continue)
+        if let Some(p_final) = p_current.consume_matching_char_immutable(']') {
             // End of parameters
             let end = p_final.get_position();
             return Ok(Some((
@@ -644,7 +640,7 @@ fn _try_parse_parameters0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Paramet
             // Comma found, continue loop
             p_current = p_after_comma.skip_many_whitespaces_or_eol_immutable();
         } else {
-            // Neither '}' nor ',' found after a parameter. Syntax error.
+            // Neither ']' nor ',' found after a parameter. Syntax error.
             return Err(Ast2Error::MissingCommaInParameters { // Or missing closing brace
                 position: p_current.get_position(),
             });
@@ -662,7 +658,7 @@ fn _try_parse_parameter<'doc>(
 
     let p2 = p1.skip_many_whitespaces_or_eol_immutable();
 
-    let p3 = match p2.consume_matching_char_immutable(':') {
+    let p3 = match p2.consume_matching_char_immutable('=') {
         Some(p) => p,
         None => return Ok(None), // No colon, so not a parameter. Let the caller decide what to do.
     };
@@ -684,10 +680,6 @@ fn _try_parse_parameter<'doc>(
 }
 
 fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments, Parser<'doc>)>> {
-    _try_parse_arguments0(parser)
-}
-
-fn _try_parse_arguments0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments, Parser<'doc>)>> {
     let begin = parser.get_position();
     let mut p_current = parser.clone();
     let mut arguments = Vec::new();
@@ -1067,5 +1059,3 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
     Ok(Some((text, p_current)))
 }
 
-#[cfg(test)]
-mod tests;

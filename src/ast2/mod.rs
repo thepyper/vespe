@@ -1064,5 +1064,6 @@ mod tests {
     mod utils;
     mod test_position_range;
     mod test_parser_advance;
+    mod test_parser_consume;
 }
 

@@ -1072,5 +1072,6 @@ mod tests {
     mod test_parse_arguments;
     mod test_parse_parameters;
     mod test_parse_kinds;
+    mod test_parse_uuid;
 }
 

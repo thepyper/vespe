@@ -1066,5 +1066,6 @@ mod tests {
     mod test_parser_advance;
     mod test_parser_consume;
     mod test_parse_identifier;
+    mod test_parse_nude_values;
 }
 

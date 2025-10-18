@@ -5,7 +5,7 @@ use std::str::FromStr;
 use thiserror::Error;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Position {
     /// 0-based character offset
     pub offset: usize,
@@ -104,6 +104,7 @@ pub struct Text {
     pub range: Range,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CommandKind {
     Tag, // for debug purpose
     Include,
@@ -145,6 +146,7 @@ pub struct Tag {
     pub range: Range,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum AnchorKind {
     Begin,
     End,
@@ -719,16 +721,20 @@ fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments
 fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argument, Parser<'doc>)>> {
     let begin = parser.get_position();
 
-    if let Some((value, p)) = _try_parse_enclosed_string(parser, "\'")? {
-        let end = p.get_position();
-        let arg = Argument { value, range: Range { begin, end } };
-        return Ok(Some((arg, p)));
+    if let Some(p1) = parser.consume_matching_char_immutable('\'') {
+        if let Some((value, p)) = _try_parse_enclosed_string(&p1, "'")? {
+            let end = p.get_position();
+            let arg = Argument { value, range: Range { begin, end } };
+            return Ok(Some((arg, p)));
+        }
     }
     
-    if let Some((value, p)) = _try_parse_enclosed_string(parser, "\"")? {
-        let end = p.get_position();
-        let arg = Argument { value, range: Range { begin, end } };
-        return Ok(Some((arg, p)));
+    if let Some(p1) = parser.consume_matching_char_immutable('"') {
+        if let Some((value, p)) = _try_parse_enclosed_string(&p1, "\"")? {
+            let end = p.get_position();
+            let arg = Argument { value, range: Range { begin, end } };
+            return Ok(Some((arg, p)));
+        }
     }
 
     if let Some((value, p)) = _try_parse_nude_string(parser)? {
@@ -808,13 +814,13 @@ fn _try_parse_enclosed_string<'doc>(
             current_parser = p;
         } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
             return Ok(Some((value, p)));
+        } else if current_parser.is_eod() {
+            return Err(Ast2Error::UnclosedString {
+                position: begin_pos,
+            });
         } else {
             match current_parser.advance_immutable() {
-                None => {
-                    return Err(Ast2Error::UnclosedString {
-                        position: begin_pos,
-                    });
-                }
+                None => unreachable!("Checked is_eod() already"),
                 Some((x, p)) => {
                     value.push(x);
                     current_parser = p;

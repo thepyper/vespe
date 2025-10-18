@@ -33,7 +33,7 @@ fn test_try_parse_enclosed_string_single_quote() {
     assert_eq!(value, "hello world");
     assert_eq!(p_next.remain(), " rest");
 
-    let doc_escaped = "'hello \'world\'' rest";
+    let doc_escaped = "'hello 'world'' rest";
     let parser_escaped = Parser::new(doc_escaped);
     let p_after_opening_quote_escaped = parser_escaped.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
     let (value_escaped, p_next_escaped) = super::super::_try_parse_enclosed_string(&p_after_opening_quote_escaped, "'").unwrap().unwrap();

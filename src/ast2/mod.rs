@@ -749,79 +749,88 @@ fn _try_parse_identifier<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, P
     Ok(Some((identifier, parser2)))
 }
 
-fn _try_parse_value<'a>(parser: &'a mut Parser<'a>) -> Result<Option<serde_json::Value>> {
-    match parser.consume_matching_char('"') {
-        Some(_) => _try_parse_enclosed_value(parser, "\""),
-        None => match parser.consume_matching_char('\'') {
-            Some(_) => _try_parse_enclosed_value(parser, "\'"),
-            None => _try_parse_nude_value(parser)
-        }
+fn _try_parse_value<'a>(parser: &'a Parser<'a>) -> Result<Option<(serde_json::Value, Parser<'a>)>> {
+    if let Some(p1) = parser.consume_matching_char_immutable('"') {
+        // try to parse a double-quoted string
+        _try_parse_enclosed_value(&p1, "\"")
+    } else if let Some(p1) = parser.consume_matching_char_immutable('\'') {
+        // try to parse a single-quoted string
+        _try_parse_enclosed_value(&p1, "\'")
+    } else {
+        // try to parse a "nude" value (unquoted)
+        _try_parse_nude_value(parser)
     }
 }
 
 fn _try_parse_enclosed_value<'a>(
-    parser: &'a mut Parser<'a>,
+    parser: &'a Parser<'a>,
     closure: &str,
-) -> Result<Option<serde_json::Value>> {
-    _try_parse_enclosed_string(parser, closure).map(|x| match x {
-        Some(x) => Ok(serde_json::Value::String(x)),
-        None => Ok(serde_json::Value::Null),
-    })
+) -> Result<Option<(serde_json::Value, Parser<'a>)>> {
+    match _try_parse_enclosed_string(parser, closure)? {
+        Some((s, p)) => Ok(Some((serde_json::Value::String(s), p))),
+        None => Ok(None),
+    }
 }
 
 fn _try_parse_enclosed_string<'a>(
-    parser: &'a mut Parser<'a>,
+    parser: &'a Parser<'a>,
     closure: &str,
-) -> Result<Option<String>> {
+) -> Result<Option<(String, Parser<'a>)>> {
     let begin_pos = parser.get_position();
     let mut value = String::new();
+    let mut current_parser = parser.clone();
 
     loop {
-        if parser.consume_matching_string("\\\"").is_some() {
+        if let Some(p) = current_parser.consume_matching_string_immutable("\\\"") {
             value.push('\"');
-        } else if parser.consume_matching_string("\\\'").is_some() {
+            current_parser = p;
+        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\'") {
             value.push('\'');
-        } else if parser.consume_matching_string("\\n").is_some() {
+            current_parser = p;
+        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
             value.push('\n');
-        } else if parser.consume_matching_string("\\r").is_some() {
+            current_parser = p;
+        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
             value.push('\r');
-        } else if parser.consume_matching_string("\\t").is_some() {
+            current_parser = p;
+        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
             value.push('\t');
-        } else if parser.consume_matching_string("\\\\").is_some() {
+            current_parser = p;
+        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
             value.push('\\');
-        } else if parser.consume_matching_string(closure).is_some() {
-            return Ok(Some(value));
+            current_parser = p;
+        } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
+            return Ok(Some((value, p)));
         } else {
-            match parser.advance() {
+            match current_parser.advance_immutable() {
                 None => {
                     return Err(Ast2Error::UnclosedString {
                         position: begin_pos,
                     });
                 }
-                Some(x) => {
+                Some((x, p)) => {
                     value.push(x);
+                    current_parser = p;
                 }
             }
         }
     }
 }
 
-fn _try_parse_nude_value<'a>(parser: &'a mut Parser<'a>) -> Result<Option<serde_json::Value>> {
-    if let Some(x) = _try_parse_nude_integer(parser)? {
-        return Ok(Some(json!(x)));
+fn _try_parse_nude_value<'a>(parser: &'a Parser<'a>) -> Result<Option<(serde_json::Value, Parser<'a>)>> {
+    if let Some((x, p)) = _try_parse_nude_integer(parser)? {
+        return Ok(Some((json!(x), p)));
     } 
-    if let Some(x) = _try_parse_nude_float(parser)? {
-        return Ok(Some(json!(x)));
+    if let Some((x, p)) = _try_parse_nude_float(parser)? {
+        return Ok(Some((json!(x), p)));
     } 
-    if let Some(x) = _try_parse_nude_bool(parser)? {
-        return Ok(Some(json!(x)));
+    if let Some((x, p)) = _try_parse_nude_bool(parser)? {
+        return Ok(Some((json!(x), p)));
     } 
-    if let Some(x) = _try_parse_nude_string(parser)? {
-        return Ok(Some(json!(x)));
+    if let Some((x, p)) = _try_parse_nude_string(parser)? {
+        return Ok(Some((json!(x), p)));
     } 
-    return Err(Ast2Error::MalformedValue {
-        position: parser.get_position(),
-    });
+    Ok(None)
 }
 
 fn _try_parse_nude_integer<'a>(parser: &'a Parser<'a>) -> Result<Option<(i64, Parser<'a>)>> {

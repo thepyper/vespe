@@ -352,187 +352,205 @@ fn parse_document(document: &str) -> Result<Document> {
 
 fn parse_content<'a>(parser: &'a mut Parser<'a>) -> Result<Vec<Content>> {
     let mut contents = Vec::new();
+    let mut p_current = parser.clone();
 
     loop {
-        if parser.is_eod() {
+        if p_current.is_eod() {
             break;
         }
-        if let Some(tag) = _try_parse_tag(parser)? {
+
+        if let Some((tag, p_next)) = _try_parse_tag(&p_current)? {
             contents.push(Content::Tag(tag));
+            p_current = p_next;
             continue;
-        } 
-        if let Some(anchor) = _try_parse_anchor(parser)? {
+        }
+
+        if let Some((anchor, p_next)) = _try_parse_anchor(&p_current)? {
             contents.push(Content::Anchor(anchor));
+            p_current = p_next;
             continue;
-        } 
-        if let Some(text) = _try_parse_text(parser)? {
+        }
+
+        if let Some((text, p_next)) = _try_parse_text(&p_current)? {
             contents.push(Content::Text(text));
+            p_current = p_next;
             continue;
-        } 
+        }
         
+        // If nothing matches, we have a problem.
         return Err(Ast2Error::ParsingError {
-            position: parser.get_position(),
+            position: p_current.get_position(),
             message: "Unable to parse content".to_string(),
         });
     }
-
+    
+    *parser = p_current;
     Ok(contents)
 }
 
-fn _try_parse_tag<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_tag0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
-    }
-    Ok(None)
+fn _try_parse_tag<'a>(parser: &'a Parser<'a>) -> Result<Option<(Tag, Parser<'a>)>> {
+    _try_parse_tag0(parser)
 }
 
-fn _try_parse_tag0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Tag>> {
+fn _try_parse_tag0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Tag, Parser<'a>)>> {
     let begin = parser.get_position();
 
-    if parser.consume_matching_char('@').is_none() {
-        return Ok(None);
-    }
-
-    let command = _try_parse_command_kind(parser)?;
-    let command = match command {
-        Some(c) => c,
+    // Must start with '@'
+    let p1 = match parser.consume_matching_char_immutable('@') {
+        Some(p) => p,
         None => return Ok(None),
     };
 
-    parser.skip_many_whitespaces();
-
-    let parameters = _try_parse_parameters(parser)?;
-    let parameters = match parameters {
-        Some(p) => p,
-        None => Parameters::new(),
+    // Then a command
+    let (command, p2) = match _try_parse_command_kind(&p1)? {
+        Some((c, p)) => (c, p),
+        None => return Ok(None), // Not a valid tag if no command
     };
 
-    parser.skip_many_whitespaces();
+    let p3 = p2.skip_many_whitespaces_immutable();
 
-    let arguments = _try_parse_arguments(parser)?;
-    let arguments = match arguments {
-        Some(a) => a,
-        None => Arguments {
-            arguments: Vec::new(),
-            range: Range::null(),
-        },
+    // Then optional parameters
+    let (parameters, p4) = match _try_parse_parameters(&p3)? {
+        Some((p, p_next)) => (p, p_next),
+        None => (Parameters::new(), p3), // No parameters found, use default and continue from p3
     };
 
-    parser.skip_many_whitespaces();
+    let p5 = p4.skip_many_whitespaces_immutable();
 
-    // Consuma EOL se c'e', altrimenti siamo a fine documento
-    parser.consume_matching_char('\n');
+    // Then optional arguments
+    let (arguments, p6) = match _try_parse_arguments(&p5)? {
+        Some((a, p_next)) => (a, p_next),
+        None => (
+            Arguments {
+                arguments: Vec::new(),
+                range: Range::null(),
+            },
+            p5,
+        ), // No arguments found, use default and continue from p5
+    };
 
-    let end = parser.get_position();
+    let p7 = p6.skip_many_whitespaces_immutable();
 
-    Ok(Some(Tag {
+    // Consume EOL if it's there, but don't fail if it's not (e.g. end of file)
+    let p8 = p7.consume_matching_char_immutable('\n').unwrap_or(p7);
+
+    let end = p8.get_position();
+
+    let tag = Tag {
         command,
         parameters,
         arguments,
         range: Range { begin, end },
-    }))
+    };
+
+    Ok(Some((tag, p8)))
 }
 
-fn _try_parse_anchor<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_anchor0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
-    }
-    Ok(None)
+fn _try_parse_anchor<'a>(parser: &'a Parser<'a>) -> Result<Option<(Anchor, Parser<'a>)>> {
+    _try_parse_anchor0(parser)
 }
 
-fn _try_parse_anchor0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Anchor>> {
+fn _try_parse_anchor0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Anchor, Parser<'a>)>> {
     let begin = parser.get_position();
 
-    if parser.consume_matching_string("<!--").is_none() {
-        return Ok(None);
-    }
-
-    parser.skip_many_whitespaces();
-
-    let command = _try_parse_command_kind(parser)?;
-    let command = match command {
-        Some(c) => c,
+    let p1 = match parser.consume_matching_string_immutable("<!--") {
+        Some(p) => p,
         None => return Ok(None),
     };
 
-    if parser.consume_matching_char('-').is_none() {
-        return Err(Ast2Error::ParsingError {
-            position: parser.get_position(),
-            message: "Expected '-' before UUID in anchor".to_string(),
-        });
-    }
+    let p2 = p1.skip_many_whitespaces_immutable();
 
-    let uuid = _try_parse_uuid(parser)?;
-    let uuid = match uuid {
-        Some(u) => u,
+    let (command, p3) = match _try_parse_command_kind(&p2)? {
+        Some((c, p)) => (c, p),
+        None => return Ok(None), // Not a valid anchor if no command
+    };
+
+    let p4 = match p3.consume_matching_char_immutable('-') {
+        Some(p) => p,
+        None => {
+            return Err(Ast2Error::ParsingError {
+                position: p3.get_position(),
+                message: "Expected '-' before UUID in anchor".to_string(),
+            });
+        }
+    };
+
+    let (uuid, p5) = match _try_parse_uuid(&p4)? {
+        Some((u, p)) => (u, p),
         None => {
             return Err(Ast2Error::InvalidUuid {
-                position: parser.get_position(),
+                position: p4.get_position(),
             })
         }
     };
 
-    if parser.consume_matching_char(':').is_none() {
-        return Err(Ast2Error::ParsingError {
-            position: parser.get_position(),
-            message: "Expected ':' after UUID in anchor".to_string(),
-        });
-    }
+    let p6 = match p5.consume_matching_char_immutable(':') {
+        Some(p) => p,
+        None => {
+            return Err(Ast2Error::ParsingError {
+                position: p5.get_position(),
+                message: "Expected ':' after UUID in anchor".to_string(),
+            });
+        }
+    };
 
-    let kind = _try_parse_anchor_kind(parser)?;
-    let kind = match kind {
-        Some(k) => k,
+    let (kind, p7) = match _try_parse_anchor_kind(&p6)? {
+        Some((k, p)) => (k, p),
         None => {
             return Err(Ast2Error::InvalidAnchorKind {
-                position: parser.get_position(),
+                position: p6.get_position(),
             })
         }
     };
 
-    parser.skip_many_whitespaces();
+    let p8 = p7.skip_many_whitespaces_immutable();
 
-    let parameters = match _try_parse_parameters(parser)? {
-        Some(x) => x,
-        None => Parameters::new(),
+    let (parameters, p9) = match _try_parse_parameters(&p8)? {
+        Some((p, p_next)) => (p, p_next),
+        None => (Parameters::new(), p8),
     };
 
-    parser.skip_many_whitespaces();
+    let p10 = p9.skip_many_whitespaces_immutable();
 
-    let arguments = _try_parse_arguments(parser)?;
-    let arguments = match arguments {
-        Some(a) => a,
-        None => Arguments {
-            arguments: Vec::new(),
-            range: Range::null(),
-        },
+    let (arguments, p11) = match _try_parse_arguments(&p10)? {
+        Some((a, p_next)) => (a, p_next),
+        None => (
+            Arguments {
+                arguments: Vec::new(),
+                range: Range::null(),
+            },
+            p10,
+        ),
     };
 
-    parser.skip_many_whitespaces_or_eol();
+    let p12 = p11.skip_many_whitespaces_or_eol_immutable();
 
-    if parser.consume_matching_string("-->").is_none() {
-        return Err(Ast2Error::UnclosedString {
-            position: parser.get_position(),
-        });
-    }
+    let p13 = match p12.consume_matching_string_immutable("-->") {
+        Some(p) => p,
+        None => {
+            return Err(Ast2Error::UnclosedString { // Using UnclosedString for a missing -->
+                position: p12.get_position(),
+            });
+        }
+    };
 
-    parser.skip_many_whitespaces();
+    let p14 = p13.skip_many_whitespaces_immutable();
 
-    parser.consume_matching_char('\n');
+    // Consume EOL if it's there
+    let p15 = p14.consume_matching_char_immutable('\n').unwrap_or(p14);
 
-    let end = parser.get_position();
+    let end = p15.get_position();
 
-    Ok(Some(Anchor {
+    let anchor = Anchor {
         command,
         uuid,
         kind,
         parameters,
         arguments,
         range: Range { begin, end },
-    }))
+    };
+
+    Ok(Some((anchor, p15)))
 }
 
 fn _try_parse_command_kind<'a>(parser: &'a Parser<'a>) -> Result<Option<(CommandKind, Parser<'a>)>> {
@@ -1005,34 +1023,45 @@ fn _try_parse_uuid<'a>(parser: &'a Parser<'a>) -> Result<Option<(Uuid, Parser<'a
 
 }
 
-fn _try_parse_text<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Text>> {
+fn _try_parse_text<'a>(parser: &'a Parser<'a>) -> Result<Option<(Text, Parser<'a>)>> {
     let begin = parser.get_position();
 
+    if parser.is_eod() {
+        return Ok(None);
+    }
+    
+    // Stop if we see a tag or anchor start
+    if parser.remain().starts_with('@') || parser.remain().starts_with("<!--") {
+        return Ok(None);
+    }
+
+    let mut p_current = parser.clone();
     let mut content = String::new();
     
-    /*  Note: This functions stops on newline on purpose, to avoid
-        checking conditions that occur on begin of the line here,
-        but return to the upper parser loop which will
-        continue checking those. It's acceptable that Text
-        becomes broken into single-lines, it's not a problem. */
     loop {
-        match parser.advance() {
-            None => {
-                break;
-            }
-            Some('\n') => {
+        if p_current.remain().starts_with('@') || p_current.remain().starts_with("<!--") {
+            break;
+        }
+
+        match p_current.advance_immutable() {
+            None => break, // EOD
+            Some(('\n', p_next)) => {
                 content.push('\n');
-                break;
+                p_current = p_next;
+                break; // Consumed newline and stopped
             }
-            Some(x) => {
-                content.push(x);
+            Some((c, p_next)) => {
+                content.push(c);
+                p_current = p_next;
             }
         }
     }
 
-    let end = parser.get_position();
+    if content.is_empty() {
+        return Ok(None);
+    }
 
-    Ok(Some(Text {
-        range: Range { begin, end },
-    }))
+    let end = p_current.get_position();
+    let text = Text { range: Range { begin, end } };
+    Ok(Some((text, p_current)))
 }

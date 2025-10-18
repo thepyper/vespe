@@ -688,12 +688,14 @@ fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments
     let mut arguments = Vec::new();
 
     loop {
-        p_current = p_current.skip_many_whitespaces_immutable();
+        let p_current_after_whitespaces = p_current.skip_many_whitespaces_immutable();
 
         // Check for anchor end, a special case for arguments
-        if p_current.remain().starts_with("-->") {
+        if p_current_after_whitespaces.remain().starts_with("-->") {
             break;
         }
+
+        p_current = p_current_after_whitespaces;
 
         match _try_parse_argument(&p_current)? {
             Some((arg, p_next)) => {

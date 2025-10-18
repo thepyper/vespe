@@ -96,6 +96,8 @@ pub enum Ast2Error {
     MissingCommaInParameters { position: Position },
     #[error("Parameter not parsed at {position:?}")]
     ParameterNotParsed { position: Position },
+    #[error("Expected beginning of line at {position:?}")]
+    ExpectedBeginOfLine { position: Position },
 }
 
 pub type Result<T> = std::result::Result<T, Ast2Error>;
@@ -172,7 +174,7 @@ pub struct Document {
     pub range: Range,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Parser<'a> {
     document: &'a str,
     position: Position,
@@ -365,6 +367,11 @@ fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'do
 
         // TODO controlla di essere ad inizio linea. se non e' cosi, PROBLEMA perche'
         // le subroutine devono SEMPRE fermarsi ad un inizio linea.
+        if !p_current.is_begin_of_line() {
+            return Err(Ast2Error::ExpectedBeginOfLine {
+                position: p_current.get_position(),
+            });
+        }
 
         if let Some((tag, p_next)) = _try_parse_tag(&p_current)? {
             contents.push(Content::Tag(tag));

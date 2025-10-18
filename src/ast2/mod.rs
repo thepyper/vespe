@@ -1074,5 +1074,6 @@ mod tests {
     mod test_parse_kinds;
     mod test_parse_uuid;
     mod test_parse_tag;
+    mod test_parse_anchor;
 }
 

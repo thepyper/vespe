@@ -412,7 +412,7 @@ fn _try_parse_tag0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Tag, Parser<'a>
     // Then optional parameters
     let (parameters, p4) = match _try_parse_parameters(&p3)? {
         Some((p, p_next)) => (p, p_next),
-        None => (Parameters::new(), p3), // No parameters found, use default and continue from p3
+        None => (Parameters::new(), p3.clone()), // No parameters found, use default and continue from p3
     };
 
     let p5 = p4.skip_many_whitespaces_immutable();
@@ -425,7 +425,7 @@ fn _try_parse_tag0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Tag, Parser<'a>
                 arguments: Vec::new(),
                 range: Range::null(),
             },
-            p5,
+            p5.clone(),
         ), // No arguments found, use default and continue from p5
     };
 
@@ -507,7 +507,7 @@ fn _try_parse_anchor0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Anchor, Pars
 
     let (parameters, p9) = match _try_parse_parameters(&p8)? {
         Some((p, p_next)) => (p, p_next),
-        None => (Parameters::new(), p8),
+        None => (Parameters::new(), p8.clone()),
     };
 
     let p10 = p9.skip_many_whitespaces_immutable();
@@ -519,7 +519,7 @@ fn _try_parse_anchor0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Anchor, Pars
                 arguments: Vec::new(),
                 range: Range::null(),
             },
-            p10,
+            p10.clone(),
         ),
     };
 

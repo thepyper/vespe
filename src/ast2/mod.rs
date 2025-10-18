@@ -1070,5 +1070,6 @@ mod tests {
     mod test_parse_enclosed_values;
     mod test_parse_argument;
     mod test_parse_arguments;
+    mod test_parse_parameters;
 }
 

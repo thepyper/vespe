@@ -26,16 +26,16 @@ fn test_try_parse_enclosed_string_double_quote() {
 
 #[test]
 fn test_try_parse_enclosed_string_single_quote() {
-    let doc = "'hello world' rest";
+    let doc = r#"'hello world' rest"#;
     let parser = Parser::new(doc);
-    let p_after_opening_quote = parser.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
+    let p_after_opening_quote = parser.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
     let (value, p_next) = super::super::_try_parse_enclosed_string(&p_after_opening_quote, "'").unwrap().unwrap();
     assert_eq!(value, "hello world");
     assert_eq!(p_next.remain(), " rest");
 
-    let doc_escaped = "'hello 'world'' rest";
+    let doc_escaped = r#"'hello \'world\'' rest"#;
     let parser_escaped = Parser::new(doc_escaped);
-    let p_after_opening_quote_escaped = parser_escaped.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
+    let p_after_opening_quote_escaped = parser_escaped.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
     let (value_escaped, p_next_escaped) = super::super::_try_parse_enclosed_string(&p_after_opening_quote_escaped, "'").unwrap().unwrap();
     assert_eq!(value_escaped, "hello 'world'"); // Expect unescaped
     assert_eq!(p_next_escaped.remain(), " rest");
@@ -45,7 +45,8 @@ fn test_try_parse_enclosed_string_single_quote() {
 fn test_try_parse_enclosed_value_double_quote() {
     let doc = r#""json value" rest"#;
     let parser = Parser::new(doc);
-    let (value, p_next) = super::super::_try_parse_enclosed_value(&parser, "\"").unwrap().unwrap();
+    let p_after_opening_quote = parser.consume_matching_char_immutable('\"').unwrap(); // Consume opening quote
+    let (value, p_next) = super::super::_try_parse_enclosed_value(&p_after_opening_quote, "\"").unwrap().unwrap();
     assert_eq!(value, json!("json value"));
     assert_eq!(p_next.remain(), " rest");
 }
@@ -54,7 +55,8 @@ fn test_try_parse_enclosed_value_double_quote() {
 fn test_try_parse_enclosed_value_single_quote() {
     let doc = "'json value' rest";
     let parser = Parser::new(doc);
-    let (value, p_next) = super::super::_try_parse_enclosed_value(&parser, "'").unwrap().unwrap();
+    let p_after_opening_quote = parser.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
+    let (value, p_next) = super::super::_try_parse_enclosed_value(&p_after_opening_quote, "'").unwrap().unwrap();
     assert_eq!(value, json!("json value"));
     assert_eq!(p_next.remain(), " rest");
 }

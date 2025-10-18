@@ -695,9 +695,7 @@ fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments
             break;
         }
 
-        p_current = p_current_after_whitespaces;
-
-        match _try_parse_argument(&p_current)? {
+        match _try_parse_argument(&p_current_after_whitespaces)? {
             Some((arg, p_next)) => {
                 arguments.push(arg);
                 p_current = p_next;

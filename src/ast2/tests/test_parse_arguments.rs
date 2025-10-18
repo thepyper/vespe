@@ -2,12 +2,12 @@ use crate::ast2::{Parser, Ast2Error};
 
 #[test]
 fn test_try_parse_arguments_single() {
-    let doc = "'arg1' rest";
+    let doc = "'arg1' ";
     let parser = Parser::new(doc);
     let (args, p_next) = super::super::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 1);
     assert_eq!(args.arguments[0].value, "arg1");
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), " ");
 
     let arg1_str = "'arg1'";
     assert_eq!(args.range.begin.offset, 0);
@@ -16,14 +16,14 @@ fn test_try_parse_arguments_single() {
 
 #[test]
 fn test_try_parse_arguments_multiple() {
-    let doc = "'arg1' \"arg2\" nude_arg rest";
+    let doc = "'arg1' \"arg2\" nude_arg ";
     let parser = Parser::new(doc);
     let (args, p_next) = super::super::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 3);
     assert_eq!(args.arguments[0].value, "arg1");
     assert_eq!(args.arguments[1].value, "arg2");
     assert_eq!(args.arguments[2].value, "nude_arg");
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), " ");
 
     let arg1_str = "'arg1' ";
     let arg2_str = "\"arg2\" ";

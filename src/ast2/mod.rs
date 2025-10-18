@@ -392,10 +392,6 @@ fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'do
 }
 
 fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
-    _try_parse_tag0(parser)
-}
-
-fn _try_parse_tag0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '@'
@@ -415,7 +411,7 @@ fn _try_parse_tag0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'d
     // Then optional parameters
     let (parameters, p4) = match _try_parse_parameters(&p3)? {
         Some((p, p_next)) => (p, p_next),
-        None => (Parameters::new(), p3.clone()), // No parameters found, use default and continue from p3
+        None => (Parameters::new(), p2.clone()), // No parameters found, use default and continue from p2
     };
 
     let p5 = p4.skip_many_whitespaces_immutable();
@@ -428,16 +424,16 @@ fn _try_parse_tag0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'d
                 arguments: Vec::new(),
                 range: Range::null(),
             },
-            p5.clone(),
-        ), // No arguments found, use default and continue from p5
+            p4.clone(),
+        ), // No arguments found, use default and continue from p4
     };
+
+    let end = p6.get_position();
 
     let p7 = p6.skip_many_whitespaces_immutable();
 
     // Consume EOL if it's there, but don't fail if it's not (e.g. end of file)
     let p8 = p7.consume_matching_char_immutable('\n').unwrap_or(p7);
-
-    let end = p8.get_position();
 
     let tag = Tag {
         command,

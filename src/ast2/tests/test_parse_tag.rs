@@ -3,13 +3,13 @@ use serde_json::json;
 
 #[test]
 fn test_try_parse_tag_simple() {
-    let doc = "@tag rest";
+    let doc = "@tag ";
     let parser = Parser::new(doc);
     let (tag, p_next) = super::super::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Tag);
     assert!(tag.parameters.parameters.is_empty());
     assert!(tag.arguments.arguments.is_empty());
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), "");
 
     let tag_str = "@tag";
     assert_eq!(tag.range.begin.offset, 0);
@@ -18,14 +18,14 @@ fn test_try_parse_tag_simple() {
 
 #[test]
 fn test_try_parse_tag_with_parameters() {
-    let doc = "@include [file=\"path/to/file.txt\"] rest";
+    let doc = "@include [file=\"path/to/file.txt\"] ";
     let parser = Parser::new(doc);
     let (tag, p_next) = super::super::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Include);
     assert_eq!(tag.parameters.parameters.len(), 1);
     assert_eq!(tag.parameters.parameters["file"], json!("path/to/file.txt"));
     assert!(tag.arguments.arguments.is_empty());
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), "");
 
     let tag_str = "@include [file=\"path/to/file.txt\"]";
     assert_eq!(tag.range.begin.offset, 0);
@@ -34,7 +34,7 @@ fn test_try_parse_tag_with_parameters() {
 
 #[test]
 fn test_try_parse_tag_with_arguments() {
-    let doc = "@inline 'arg1' \"arg2\" rest";
+    let doc = "@inline 'arg1' \"arg2\" ";
     let parser = Parser::new(doc);
     let (tag, p_next) = super::super::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Inline);
@@ -42,7 +42,7 @@ fn test_try_parse_tag_with_arguments() {
     assert_eq!(tag.arguments.arguments.len(), 2);
     assert_eq!(tag.arguments.arguments[0].value, "arg1");
     assert_eq!(tag.arguments.arguments[1].value, "arg2");
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), "");
 
     let tag_str = "@inline 'arg1' \"arg2\"";
     assert_eq!(tag.range.begin.offset, 0);
@@ -51,7 +51,7 @@ fn test_try_parse_tag_with_arguments() {
 
 #[test]
 fn test_try_parse_tag_with_parameters_and_arguments() {
-    let doc = "@answer [id=123] 'arg1' rest";
+    let doc = "@answer [id=123] 'arg1' ";
     let parser = Parser::new(doc);
     let (tag, p_next) = super::super::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Answer);
@@ -59,7 +59,7 @@ fn test_try_parse_tag_with_parameters_and_arguments() {
     assert_eq!(tag.parameters.parameters["id"], json!(123));
     assert_eq!(tag.arguments.arguments.len(), 1);
     assert_eq!(tag.arguments.arguments[0].value, "arg1");
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), "");
 
     let tag_str = "@answer [id=123] 'arg1'";
     assert_eq!(tag.range.begin.offset, 0);
@@ -68,7 +68,7 @@ fn test_try_parse_tag_with_parameters_and_arguments() {
 
 #[test]
 fn test_try_parse_tag_no_at_sign() {
-    let doc = "tag rest";
+    let doc = "tag ";
     let parser = Parser::new(doc);
     let result = super::super::_try_parse_tag(&parser).unwrap();
     assert!(result.is_none());
@@ -76,7 +76,7 @@ fn test_try_parse_tag_no_at_sign() {
 
 #[test]
 fn test_try_parse_tag_invalid_command() {
-    let doc = "@invalid_command rest";
+    let doc = "@invalid_command ";
     let parser = Parser::new(doc);
     let result = super::super::_try_parse_tag(&parser).unwrap();
     assert!(result.is_none());

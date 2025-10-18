@@ -189,6 +189,64 @@ impl<'a> Parser<'a> {
             iterator: document.chars(),
         }
     }
+
+    pub fn advance_immutable(&self) -> Option<(char, Parser<'a>)> {
+        let mut new_parser = self.clone();
+        if let Some(char) = new_parser.advance() {
+            Some((char, new_parser))
+        } else {
+            None
+        }
+    }
+
+    pub fn consume_char_if_immutable<F>(&self, filter: F) -> Option<(char, Parser<'a>)>
+    where
+        F: FnOnce(char) -> bool,
+    {
+        let mut new_parser = self.clone();
+        match new_parser.consume_char_if(filter) {
+            Some(c) => Some((c, new_parser)),
+            None => None,
+        }
+    }
+
+    pub fn consume_matching_char_immutable(&self, x: char) -> Option<Parser<'a>> {
+        let mut new_parser = self.clone();
+        match new_parser.consume_matching_char(x) {
+            Some(_) => Some(new_parser),
+            None => None,
+        }
+    }
+
+    pub fn consume_matching_string_immutable(&self, xs: &str) -> Option<Parser<'a>> {
+        let mut new_parser = self.clone();
+        match new_parser.consume_matching_string(xs) {
+            Some(_) => Some(new_parser),
+            None => None,
+        }
+    }
+    
+    pub fn consume_many_if_immutable<F>(&self, filter: F) -> (String, Parser<'a>)
+    where
+        F: Fn(char) -> bool,
+    {
+        let mut new_parser = self.clone();
+        let result = new_parser.consume_many_if(filter).unwrap_or_default();
+        (result, new_parser)
+    }
+
+    pub fn skip_many_whitespaces_immutable(&self) -> Parser<'a> {
+        let mut new_parser = self.clone();
+        new_parser.skip_many_whitespaces();
+        new_parser
+    }
+
+    pub fn skip_many_whitespaces_or_eol_immutable(&self) -> Parser<'a> {
+        let mut new_parser = self.clone();
+        new_parser.skip_many_whitespaces_or_eol();
+        new_parser
+    }
+
     pub fn get_position(&self) -> Position {
         self.position.clone()
     }

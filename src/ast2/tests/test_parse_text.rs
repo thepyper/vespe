@@ -2,10 +2,10 @@ use crate::ast2::{Parser, Ast2Error};
 
 #[test]
 fn test_try_parse_text_simple() {
-    let doc = "hello world rest";
+    let doc = "hello world";
     let parser = Parser::new(doc);
     let (text, p_next) = super::super::_try_parse_text(&parser).unwrap().unwrap();
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), "");
 
     let text_str = "hello world";
     assert_eq!(text.range.begin.offset, 0);
@@ -17,9 +17,9 @@ fn test_try_parse_text_until_tag() {
     let doc = "hello @tag rest";
     let parser = Parser::new(doc);
     let (text, p_next) = super::super::_try_parse_text(&parser).unwrap().unwrap();
-    assert_eq!(p_next.remain(), " @tag rest");
+    assert_eq!(p_next.remain(), "");
 
-    let text_str = "hello";
+    let text_str = "hello @tag rest";
     assert_eq!(text.range.begin.offset, 0);
     assert_eq!(text.range.end.offset, text_str.len());
 }
@@ -29,9 +29,9 @@ fn test_try_parse_text_until_anchor() {
     let doc = "hello <!-- anchor --> rest";
     let parser = Parser::new(doc);
     let (text, p_next) = super::super::_try_parse_text(&parser).unwrap().unwrap();
-    assert_eq!(p_next.remain(), " <!-- anchor --> rest");
+    assert_eq!(p_next.remain(), "");
 
-    let text_str = "hello";
+    let text_str = "hello <!-- anchor --> rest";
     assert_eq!(text.range.begin.offset, 0);
     assert_eq!(text.range.end.offset, text_str.len());
 }

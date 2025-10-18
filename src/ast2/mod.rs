@@ -363,6 +363,9 @@ fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'do
             break;
         }
 
+        // TODO controlla di essere ad inizio linea. se non e' cosi, PROBLEMA perche'
+        // le subroutine devono SEMPRE fermarsi ad un inizio linea.
+
         if let Some((tag, p_next)) = _try_parse_tag(&p_current)? {
             contents.push(Content::Tag(tag));
             p_current = p_next;
@@ -1035,10 +1038,6 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
     let mut content = String::new();
     
     loop {
-        if p_current.remain().starts_with('@') || p_current.remain().starts_with("<!--") {
-            break;
-        }
-
         match p_current.advance_immutable() {
             None => break, // EOD
             Some(('\n', p_next)) => {

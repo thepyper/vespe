@@ -998,15 +998,11 @@ fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Parser<'
 
     let (uuid_str, new_parser) = parser.consume_many_if_immutable(|c| c.is_ascii_hexdigit() || c == '-');
 
-
-
     if uuid_str.is_empty() {
 
         return Ok(None);
 
     }
-
-
 
     match Uuid::parse_str(&uuid_str) {
 
@@ -1017,9 +1013,7 @@ fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Parser<'
             position: start_pos,
 
         }),
-
     }
-
 }
 
 fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'doc>)>> {

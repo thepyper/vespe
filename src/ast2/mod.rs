@@ -1059,3 +1059,9 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
     Ok(Some((text, p_current)))
 }
 
+#[cfg(test)]
+mod tests {
+    mod utils;
+    mod test_position_range;
+}
+

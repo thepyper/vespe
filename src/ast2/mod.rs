@@ -664,31 +664,29 @@ fn _try_parse_parameter<'a>(
     Ok(Some(((key, value), p5)))
 }
 
-fn _try_parse_arguments<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
-    let mut temp_parser = parser.clone();
-    if let Some(x) = _try_parse_arguments0(&mut temp_parser)? {
-        *parser = temp_parser;
-        return Ok(Some(x));
-    }
-    Ok(None)
+fn _try_parse_arguments<'a>(parser: &'a Parser<'a>) -> Result<Option<(Arguments, Parser<'a>)>> {
+    _try_parse_arguments0(parser)
 }
 
-fn _try_parse_arguments0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Arguments>> {
+fn _try_parse_arguments0<'a>(parser: &'a Parser<'a>) -> Result<Option<(Arguments, Parser<'a>)>> {
     let begin = parser.get_position();
-
+    let mut p_current = parser.clone();
     let mut arguments = Vec::new();
 
     loop {
-        parser.skip_many_whitespaces();
+        p_current = p_current.skip_many_whitespaces_immutable();
 
-        // Check for anchor end
-        if parser.remain().starts_with("-->") {
+        // Check for anchor end, a special case for arguments
+        if p_current.remain().starts_with("-->") {
             break;
         }
 
-        match _try_parse_argument(parser)? {
-            Some(x) => arguments.push(x),
-            None => break,
+        match _try_parse_argument(&p_current)? {
+            Some((arg, p_next)) => {
+                arguments.push(arg);
+                p_current = p_next;
+            }
+            None => break, // No more arguments to parse
         }
     }
 
@@ -696,30 +694,39 @@ fn _try_parse_arguments0<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Argume
         return Ok(None);
     }
 
-    let end = parser.get_position();
+    let end = p_current.get_position();
 
-    Ok(Some(Arguments {
-        arguments,
-        range: Range { begin, end },
-    }))
+    Ok(Some((
+        Arguments {
+            arguments,
+            range: Range { begin, end },
+        },
+        p_current,
+    )))
 }
 
-fn _try_parse_argument<'a>(parser: &'a mut Parser<'a>) -> Result<Option<Argument>> {
+fn _try_parse_argument<'a>(parser: &'a Parser<'a>) -> Result<Option<(Argument, Parser<'a>)>> {
     let begin = parser.get_position();
 
-    let value = if let Some(x) = _try_parse_enclosed_string(parser, "\'")? {
-        Some(x)
-    } else if let Some(x) = _try_parse_enclosed_string(parser, "\"")? {
-        Some(x)
-    } else if let Some(x) = _try_parse_nude_string(parser)? {
-        Some(x)
-    } else {
-        None
-    };
+    if let Some((value, p)) = _try_parse_enclosed_string(parser, "\'")? {
+        let end = p.get_position();
+        let arg = Argument { value, range: Range { begin, end } };
+        return Ok(Some((arg, p)));
+    }
+    
+    if let Some((value, p)) = _try_parse_enclosed_string(parser, "\"")? {
+        let end = p.get_position();
+        let arg = Argument { value, range: Range { begin, end } };
+        return Ok(Some((arg, p)));
+    }
 
-    let end = parser.get_position();
+    if let Some((value, p)) = _try_parse_nude_string(parser)? {
+        let end = p.get_position();
+        let arg = Argument { value, range: Range { begin, end } };
+        return Ok(Some((arg, p)));
+    }
 
-    Ok(value.map(|value| Argument { value, range: Range {begin, end}}))
+    Ok(None)
 }
 
 fn _try_parse_identifier<'a>(parser: &'a Parser<'a>) -> Result<Option<(String, Parser<'a>)>> {

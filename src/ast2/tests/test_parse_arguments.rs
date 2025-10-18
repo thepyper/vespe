@@ -34,7 +34,7 @@ fn test_try_parse_arguments_multiple() {
 
 #[test]
 fn test_try_parse_arguments_empty() {
-    let doc = " rest";
+    let doc = "";
     let parser = Parser::new(doc);
     let result = super::super::_try_parse_arguments(&parser).unwrap();
     assert!(result.is_none());

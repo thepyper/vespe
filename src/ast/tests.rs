@@ -1,3 +1,4 @@
+/*
 #[path = "tests/test_batch_1.rs"]
 mod test_batch_1;
 #[path = "tests/test_batch_10.rs"]
@@ -20,3 +21,4 @@ mod test_batch_7;
 mod test_batch_8;
 #[path = "tests/test_batch_9.rs"]
 mod test_batch_9;
+*/

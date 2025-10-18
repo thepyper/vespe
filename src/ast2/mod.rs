@@ -6,13 +6,13 @@ use thiserror::Error;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]
-struct Position {
+pub struct Position {
     /// 0-based character offset
-    offset: usize,
+    pub offset: usize,
     /// 1-based line
-    line: usize,
+    pub line: usize,
     /// 1-based column
-    column: usize,
+    pub column: usize,
 }
 
 impl Position {
@@ -29,9 +29,9 @@ impl Position {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Range {
-    begin: Position,
-    end: Position,
+pub struct Range {
+    pub begin: Position,
+    pub end: Position,
 }
 
 impl Range {
@@ -100,11 +100,11 @@ pub enum Ast2Error {
 
 pub type Result<T> = std::result::Result<T, Ast2Error>;
 
-struct Text {
-    range: Range,
+pub struct Text {
+    pub range: Range,
 }
 
-enum CommandKind {
+pub enum CommandKind {
     Tag, // for debug purpose
     Include,
     Inline,
@@ -114,9 +114,9 @@ enum CommandKind {
     Repeat,
 }
 
-struct Parameters {
-    parameters: serde_json::Map<String, serde_json::Value>,
-    range: Range,
+pub struct Parameters {
+    pub parameters: serde_json::Map<String, serde_json::Value>,
+    pub range: Range,
 }
 
 impl Parameters {
@@ -128,46 +128,46 @@ impl Parameters {
     }
 }
 
-struct Argument {
-    value: String,
-    range: Range,
+pub struct Argument {
+    pub value: String,
+    pub range: Range,
 }
 
-struct Arguments {
-    arguments: Vec<Argument>,
-    range: Range,
+pub struct Arguments {
+    pub arguments: Vec<Argument>,
+    pub range: Range,
 }
 
-struct Tag {
-    command: CommandKind,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
+pub struct Tag {
+    pub command: CommandKind,
+    pub parameters: Parameters,
+    pub arguments: Arguments,
+    pub range: Range,
 }
 
-enum AnchorKind {
+pub enum AnchorKind {
     Begin,
     End,
 }
 
-struct Anchor {
-    command: CommandKind,
-    uuid: Uuid,
-    kind: AnchorKind,
-    parameters: Parameters,
-    arguments: Arguments,
-    range: Range,
+pub struct Anchor {
+    pub command: CommandKind,
+    pub uuid: Uuid,
+    pub kind: AnchorKind,
+    pub parameters: Parameters,
+    pub arguments: Arguments,
+    pub range: Range,
 }
 
-enum Content {
+pub enum Content {
     Text(Text),
     Tag(Tag),
     Anchor(Anchor),
 }
 
-struct Document {
-    content: Vec<Content>,
-    range: Range,
+pub struct Document {
+    pub content: Vec<Content>,
+    pub range: Range,
 }
 
 #[derive(Clone)]
@@ -1066,3 +1066,6 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
     let text = Text { range: Range { begin, end } };
     Ok(Some((text, p_current)))
 }
+
+#[cfg(test)]
+mod tests;

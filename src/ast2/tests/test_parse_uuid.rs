@@ -31,6 +31,6 @@ fn test_try_parse_uuid_partial() {
 fn test_try_parse_uuid_empty() {
     let doc = " rest";
     let parser = Parser::new(doc);
-    let result = super::super::_try_parse_uuid(&parser).unwrap();
-    assert!(result.is_none());
+    let result = super::super::_try_parse_uuid(&parser);
+    assert!(matches!(result, Err(Ast2Error::InvalidUuid { .. })));
 }

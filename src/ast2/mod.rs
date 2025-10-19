@@ -456,10 +456,6 @@ fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'do
 }
 
 fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
-    _try_parse_anchor0(parser)
-}
-
-fn _try_parse_anchor0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     let p1 = match parser.consume_matching_string_immutable("<!--") {
@@ -543,10 +539,12 @@ fn _try_parse_anchor0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Par
         }
     };
 
-    // Consume EOL if it's there
-    let p14 = p13.consume_matching_char_immutable('\n').unwrap_or(p13);
+    let end = p13.get_position();
 
-    let end = p14.get_position();
+    let p14 = p13.skip_many_whitespaces_or_eol_immutable();
+
+    // Consume EOL if it's there
+    let p15 = p14.consume_matching_char_immutable('\n').unwrap_or(p14);
 
     let anchor = Anchor {
         command,
@@ -557,7 +555,7 @@ fn _try_parse_anchor0<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Par
         range: Range { begin, end },
     };
 
-    Ok(Some((anchor, p14)))
+    Ok(Some((anchor, p15)))
 }
 
 fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(CommandKind, Parser<'doc>)>> {
@@ -1004,12 +1002,6 @@ fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Parser<'
     let start_pos = parser.get_position();
 
     let (uuid_str, new_parser) = parser.consume_many_if_immutable(|c| c.is_ascii_hexdigit() || c == '-');
-
-    if uuid_str.is_empty() {
-
-        return Ok(None);
-
-    }
 
     match Uuid::parse_str(&uuid_str) {
 

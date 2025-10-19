@@ -5,7 +5,7 @@ use uuid::Uuid;
 #[test]
 fn test_parse_content_mixed() {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
-    let doc = format!("Some text @tag [param=1] 'arg1' <!-- include-{}:begin --> more text", uuid_str);
+    let doc = format!("Some text\n@tag [param=1] 'arg1'\n<!-- include-{}:begin -->\nmore text", uuid_str);
     let parser = Parser::new(&doc);
     let (content_vec, p_next) = super::super::parse_content(parser).unwrap();
 
@@ -14,7 +14,7 @@ fn test_parse_content_mixed() {
     // Text 1
     if let Content::Text(text) = &content_vec[0] {
         assert_eq!(text.range.begin.offset, 0);
-        assert_eq!(text.range.end.offset, "Some text ".len());
+        assert_eq!(text.range.end.offset, "Some text\n".len());
     } else {
         panic!("Expected Text");
     }
@@ -24,7 +24,7 @@ fn test_parse_content_mixed() {
         assert_eq!(tag.command, CommandKind::Tag);
         assert_eq!(tag.parameters.parameters["param"], json!(1));
         assert_eq!(tag.arguments.arguments[0].value, "arg1");
-        let tag_str = "@tag [param=1] 'arg1' ";
+        let tag_str = "@tag [param=1] 'arg1'";
         assert_eq!(tag.range.begin.offset, "Some text ".len());
         assert_eq!(tag.range.end.offset, "Some text ".len() + tag_str.len());
     } else {
@@ -36,9 +36,9 @@ fn test_parse_content_mixed() {
         assert_eq!(anchor.command, CommandKind::Include);
         assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
         assert_eq!(anchor.kind, AnchorKind::Begin);
-        let anchor_str = format!("<!-- include-{}:begin --> ", uuid_str);
-        assert_eq!(anchor.range.begin.offset, "Some text @tag [param=1] 'arg1' ".len());
-        assert_eq!(anchor.range.end.offset, "Some text @tag [param=1] 'arg1' ".len() + anchor_str.len());
+        let anchor_str = format!("<!-- include-{}:begin -->", uuid_str);
+        assert_eq!(anchor.range.begin.offset, "Some text @tag\n[param=1] 'arg1'\n".len());
+        assert_eq!(anchor.range.end.offset, "Some text @tag\n[param=1] 'arg1'\n".len() + anchor_str.len());
     } else {
         panic!("Expected Anchor");
     }

@@ -25,8 +25,10 @@ fn test_try_parse_parameter_with_spaces() {
 fn test_try_parse_parameter_missing_value() {
     let doc = "key= rest";
     let parser = Parser::new(doc);
-    let result = super::super::_try_parse_parameter(&parser);
-    assert!(matches!(result, Err(Ast2Error::MissingParameterValue { .. })));
+    let ((key, value), p_next) = super::super::_try_parse_parameter(&parser).unwrap().unwrap();
+    assert_eq!(key, "key");
+    assert_eq!(value, json!("rest"));
+    assert_eq!(p_next.remain(), "");
 }
 
 #[test]

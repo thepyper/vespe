@@ -342,7 +342,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn parse_document(document: &str) -> Result<Document> {
+pub fn parse_document(document: &str) -> Result<Document> {
     let parser = Parser::new(document);
     let begin = parser.get_position();
     

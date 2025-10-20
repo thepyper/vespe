@@ -1055,6 +1055,10 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
 }
 
 #[cfg(test)]
+#[path = "./tests/test_parse_anchor.rs"]
+mod test_parse_anchor;
+
+#[cfg(test)]
 mod tests {
     mod utils;
     mod test_position_range;
@@ -1069,7 +1073,6 @@ mod tests {
     mod test_parse_kinds;
     mod test_parse_uuid;
     mod test_parse_tag;
-    mod test_parse_anchor;
     mod test_parse_text;
     mod test_parse_document;
 }

@@ -15,10 +15,10 @@ fn test_try_parse_argument_single_quoted() {
 
 #[test]
 fn test_try_parse_argument_double_quoted() {
-    let doc = r#""arg2" rest"#;
+    let doc = "'value'";
     let parser = Parser::new(doc);
     let (arg, p_next) = _try_parse_argument(&parser).unwrap().unwrap();
-    assert_eq!(arg.value, "arg2");
+    assert_eq!(argument.value, "value");
     assert_eq!(p_next.remain(), " rest");
     assert_eq!(arg.range.begin.offset, 0);
     assert_eq!(arg.range.end.offset, r#""arg2""#.len());

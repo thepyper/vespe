@@ -239,11 +239,12 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
     
     #[cfg(test)]
     mod tests {
-        use super::parser::Parser;
-        use super::error::{Ast2Error, Result};
-        use super::types::{CommandKind, AnchorKind, Parameters, Argument, Arguments};
-        use super::parse_primitives::{_try_parse_nude_float, _try_parse_nude_integer, _try_parse_nude_bool, _try_parse_nude_string, _try_parse_nude_value, _try_parse_identifier, _try_parse_enclosed_string};
+        use crate::ast2::parser::Parser;
+        use crate::ast2::error::{Ast2Error, Result};
+        use crate::ast2::types::{CommandKind, AnchorKind, Parameters, Argument, Arguments};
+        use crate::ast2::parse_primitives::{_try_parse_nude_float, _try_parse_nude_integer, _try_parse_nude_bool, _try_parse_nude_string, _try_parse_nude_value, _try_parse_identifier, _try_parse_enclosed_string};
         use serde_json::json;
+        use super::{_try_parse_value, _try_parse_enclosed_value, _try_parse_argument, _try_parse_arguments, _try_parse_parameter, _try_parse_parameters, _try_parse_command_kind, _try_parse_anchor_kind};
     
         #[test]
         fn test_try_parse_identifier_valid() {
@@ -256,6 +257,8 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
     
         #[test]
         fn test_try_parse_identifier_starts_with_digit() {
+            let doc = "123identifier";
+            let parser = Parser::new(doc);
             let result = _try_parse_identifier(&parser).unwrap();
     
             assert!(result.is_none());

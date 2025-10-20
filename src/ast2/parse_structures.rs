@@ -264,6 +264,10 @@ mod tests {
     use super::error::{Ast2Error, Result};
     use super::types::{Tag, Anchor, Text, Content, Document};
     use super::{_try_parse_text, _try_parse_tag, _try_parse_anchor, parse_content};
+    use super::CommandKind;
+    use serde_json::json;
+    use super::AnchorKind;
+    use uuid::Uuid;
 
     #[test]
     fn test_try_parse_text_simple() {
@@ -299,14 +303,16 @@ mod tests {
 
     #[test]
     fn test_try_parse_text_with_newline() {
-        let doc = "line1\nline2 rest";
+        let doc = "line1
+line2 rest";
         let parser = Parser::new(doc);
         let (text, p_next) = _try_parse_text(&parser).unwrap().unwrap();
         assert_eq!(p_next.remain(), "line2 rest");
         assert_eq!(p_next.get_position().line, 2);
         assert_eq!(p_next.get_position().column, 1);
 
-        let text_str = "line1\n";
+        let text_str = "line1
+";
         assert_eq!(text.range.begin.offset, 0);
         assert_eq!(text.range.end.offset, text_str.len());
     }
@@ -334,9 +340,6 @@ mod tests {
         let result = _try_parse_text(&parser).unwrap();
         assert!(result.is_none());
     }
-
-    use super::CommandKind;
-    use serde_json::json;
 
     #[test]
     fn test_try_parse_tag_simple() {
@@ -421,7 +424,8 @@ mod tests {
 
     #[test]
     fn test_try_parse_tag_with_eol() {
-        let doc = "@tag\nrest";
+        let doc = "@tag
+rest";
         let parser = Parser::new(doc);
         let (tag, p_next) = _try_parse_tag(&parser).unwrap().unwrap();
         assert_eq!(tag.command, CommandKind::Tag);
@@ -429,9 +433,6 @@ mod tests {
         assert_eq!(p_next.get_position().line, 2);
         assert_eq!(p_next.get_position().column, 1);
     }
-
-    use super::AnchorKind;
-    use uuid::Uuid;
 
     #[test]
     fn test_try_parse_anchor_simple() {
@@ -513,5 +514,57 @@ mod tests {
         let parser = Parser::new(doc);
         let result = _try_parse_anchor(&parser).unwrap();
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_content_mixed() {
+        let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
+        let doc = format!("Some text\n@tag [param=1] 'arg1'\n<!-- include-{}:begin -->\nmore text", uuid_str);
+        let parser = Parser::new(&doc);
+        let (content_vec, p_next) = parse_content(parser).unwrap();
+
+        assert_eq!(content_vec.len(), 4);
+
+        // Text 1
+        if let Content::Text(text) = &content_vec[0] {
+            assert_eq!(text.range.begin.offset, 0);
+            assert_eq!(text.range.end.offset, "Some text\n".len());
+        } else {
+            panic!("Expected Text");
+        }
+
+        // Tag
+        if let Content::Tag(tag) = &content_vec[1] {
+            assert_eq!(tag.command, CommandKind::Tag);
+            assert_eq!(tag.parameters.parameters["param"], json!(1));
+            assert_eq!(tag.arguments.arguments[0].value, "arg1");
+            let tag_str = "@tag [param=1] 'arg1'";
+            assert_eq!(tag.range.begin.offset, "Some text ".len());
+            assert_eq!(tag.range.end.offset, "Some text ".len() + tag_str.len());
+        } else {
+            panic!("Expected Tag");
+        }
+
+        // Anchor
+        if let Content::Anchor(anchor) = &content_vec[2] {
+            assert_eq!(anchor.command, CommandKind::Include);
+            assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
+            assert_eq!(anchor.kind, AnchorKind::Begin);
+            let anchor_str = format!("<!-- include-{}:begin -->", uuid_str);
+            assert_eq!(anchor.range.begin.offset, "Some text @tag\n[param=1] 'arg1'\n".len());
+            assert_eq!(anchor.range.end.offset, "Some text @tag\n[param=1] 'arg1'\n".len() + anchor_str.len());
+        } else {
+            panic!("Expected Anchor");
+        }
+
+        // Text 2
+        if let Content::Text(text) = &content_vec[3] {
+            assert_eq!(text.range.begin.offset, doc.len() - "more text".len());
+            assert_eq!(text.range.end.offset, doc.len());
+        } else {
+            panic!("Expected Text");
+        }
+
+        assert!(p_next.is_eod());
     }
 }

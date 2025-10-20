@@ -141,8 +141,8 @@ pub(crate) fn _try_parse_enclosed_string<'doc>(
 
 #[cfg(test)]
 mod tests {
-    use super::parser::Parser;
-    use super::error::{Ast2Error, Result};
+    use crate::ast2::parser::Parser;
+    use crate::ast2::error::{Ast2Error, Result};
     use uuid::Uuid;
 
     #[test]

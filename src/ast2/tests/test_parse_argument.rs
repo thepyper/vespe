@@ -18,19 +18,19 @@ fn test_try_parse_argument_double_quoted() {
     let doc = "'value'";
     let parser = Parser::new(doc);
     let (arg, p_next) = _try_parse_argument(&parser).unwrap().unwrap();
-    assert_eq!(argument.value, "value");
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(arg.value, "value");
+    assert_eq!(p_next.remain(), "");
     assert_eq!(arg.range.begin.offset, 0);
     assert_eq!(arg.range.end.offset, r#""arg2""#.len());
 }
 
 #[test]
 fn test_try_parse_argument_nude() {
-    let doc = "nude_arg rest";
+    let doc = "nude_arg ";
     let parser = Parser::new(doc);
     let (arg, p_next) = _try_parse_argument(&parser).unwrap().unwrap();
     assert_eq!(arg.value, "nude_arg");
-    assert_eq!(p_next.remain(), " rest");
+    assert_eq!(p_next.remain(), " ");
     assert_eq!(arg.range.begin.offset, 0);
     assert_eq!(arg.range.end.offset, "nude_arg".len());
 }

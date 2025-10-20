@@ -21,7 +21,7 @@ fn test_try_parse_argument_double_quoted() {
     assert_eq!(arg.value, "value");
     assert_eq!(p_next.remain(), "");
     assert_eq!(arg.range.begin.offset, 0);
-    assert_eq!(arg.range.end.offset, r#""arg2""#.len());
+    assert_eq!(arg.range.end.offset, doc.len());
 }
 
 #[test]

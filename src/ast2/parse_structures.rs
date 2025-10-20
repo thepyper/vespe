@@ -18,7 +18,7 @@ pub fn parse_document(document: &str) -> Result<Document> {
     })
 }
 
-fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
+pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
     let mut contents = Vec::new();
     let mut p_current = parser; // Takes ownership
 
@@ -63,7 +63,7 @@ fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'do
     Ok((contents, p_current)) // Return the final state
 }
 
-fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
+pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '@'
@@ -117,7 +117,7 @@ fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'do
     Ok(Some((tag, p8)))
 }
 
-fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
+pub(crate) fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     let p1 = match parser.consume_matching_string_immutable("<!--") {
@@ -220,7 +220,7 @@ fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Pars
     Ok(Some((anchor, p15)))
 }
 
-fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'doc>)>> {
+pub(crate) fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     if parser.is_eod() {
@@ -257,3 +257,261 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
     let end = p_current.get_position();
     let text = Text { range: super::types::Range { begin, end } };
     Ok(Some((text, p_current)))}
+
+#[cfg(test)]
+mod tests {
+    use super::parser::Parser;
+    use super::error::{Ast2Error, Result};
+    use super::types::{Tag, Anchor, Text, Content, Document};
+    use super::{_try_parse_text, _try_parse_tag, _try_parse_anchor, parse_content};
+
+    #[test]
+    fn test_try_parse_text_simple() {
+        let doc = "hello world";
+        let parser = Parser::new(doc);
+        let (text, p_next) = _try_parse_text(&parser).unwrap().unwrap();
+        assert_eq!(p_next.remain(), "");
+
+        let text_str = "hello world";
+        assert_eq!(text.range.begin.offset, 0);
+        assert_eq!(text.range.end.offset, text_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_text_until_tag() {
+        let doc = "hello @tag rest";
+        let parser = Parser::new(doc);
+        let (text, p_next) = _try_parse_text(&parser).unwrap().unwrap();
+        assert_eq!(p_next.remain(), "@tag rest"); // Corrected remain()
+        assert_eq!(text.range.begin.offset, 0);
+        assert_eq!(text.range.end.offset, "hello ".len()); // Corrected end offset
+    }
+
+    #[test]
+    fn test_try_parse_text_until_anchor() {
+        let doc = "hello <!-- anchor --> rest";
+        let parser = Parser::new(doc);
+        let (text, p_next) = _try_parse_text(&parser).unwrap().unwrap();
+        assert_eq!(p_next.remain(), "<!-- anchor --> rest"); // Corrected remain()
+        assert_eq!(text.range.begin.offset, 0);
+        assert_eq!(text.range.end.offset, "hello ".len()); // Corrected end offset
+    }
+
+    #[test]
+    fn test_try_parse_text_with_newline() {
+        let doc = "line1\nline2 rest";
+        let parser = Parser::new(doc);
+        let (text, p_next) = _try_parse_text(&parser).unwrap().unwrap();
+        assert_eq!(p_next.remain(), "line2 rest");
+        assert_eq!(p_next.get_position().line, 2);
+        assert_eq!(p_next.get_position().column, 1);
+
+        let text_str = "line1\n";
+        assert_eq!(text.range.begin.offset, 0);
+        assert_eq!(text.range.end.offset, text_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_text_empty() {
+        let doc = "";
+        let parser = Parser::new(doc);
+        let result = _try_parse_text(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_try_parse_text_starts_with_tag() {
+        let doc = "@tag rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_text(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_try_parse_text_starts_with_anchor() {
+        let doc = "<!-- anchor --> rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_text(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    use super::CommandKind;
+    use serde_json::json;
+
+    #[test]
+    fn test_try_parse_tag_simple() {
+        let doc = "@tag ";
+        let parser = Parser::new(doc);
+        let (tag, p_next) = _try_parse_tag(&parser).unwrap().unwrap();
+        assert_eq!(tag.command, CommandKind::Tag);
+        assert!(tag.parameters.parameters.is_empty());
+        assert!(tag.arguments.arguments.is_empty());
+        assert_eq!(p_next.remain(), "");
+
+        let tag_str = "@tag";
+        assert_eq!(tag.range.begin.offset, 0);
+        assert_eq!(tag.range.end.offset, tag_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_tag_with_parameters() {
+        let doc = "@include [file=\"path/to/file.txt\"] ";
+        let parser = Parser::new(doc);
+        let (tag, p_next) = _try_parse_tag(&parser).unwrap().unwrap();
+        assert_eq!(tag.command, CommandKind::Include);
+        assert_eq!(tag.parameters.parameters.len(), 1);
+        assert_eq!(tag.parameters.parameters["file"], json!("path/to/file.txt"));
+        assert!(tag.arguments.arguments.is_empty());
+        assert_eq!(p_next.remain(), "");
+
+        let tag_str = "@include [file=\"path/to/file.txt\"]";
+        assert_eq!(tag.range.begin.offset, 0);
+        assert_eq!(tag.range.end.offset, tag_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_tag_with_arguments() {
+        let doc = "@inline 'arg1' \"arg2\" ";
+        let parser = Parser::new(doc);
+        let (tag, p_next) = _try_parse_tag(&parser).unwrap().unwrap();
+        assert_eq!(tag.command, CommandKind::Inline);
+        assert!(tag.parameters.parameters.is_empty());
+        assert_eq!(tag.arguments.arguments.len(), 2);
+        assert_eq!(tag.arguments.arguments[0].value, "arg1");
+        assert_eq!(tag.arguments.arguments[1].value, "arg2");
+        assert_eq!(p_next.remain(), "");
+
+        let tag_str = "@inline 'arg1' \"arg2\"";
+        assert_eq!(tag.range.begin.offset, 0);
+        assert_eq!(tag.range.end.offset, tag_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_tag_with_parameters_and_arguments() {
+        let doc = "@answer [id=123] 'arg1' ";
+        let parser = Parser::new(doc);
+        let (tag, p_next) = _try_parse_tag(&parser).unwrap().unwrap();
+        assert_eq!(tag.command, CommandKind::Answer);
+        assert_eq!(tag.parameters.parameters.len(), 1);
+        assert_eq!(tag.parameters.parameters["id"], json!(123));
+        assert_eq!(tag.arguments.arguments.len(), 1);
+        assert_eq!(tag.arguments.arguments[0].value, "arg1");
+        assert_eq!(p_next.remain(), "");
+
+        let tag_str = "@answer [id=123] 'arg1'";
+        assert_eq!(tag.range.begin.offset, 0);
+        assert_eq!(tag.range.end.offset, tag_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_tag_no_at_sign() {
+        let doc = "tag ";
+        let parser = Parser::new(doc);
+        let result = _try_parse_tag(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_try_parse_tag_invalid_command() {
+        let doc = "@invalid_command ";
+        let parser = Parser::new(doc);
+        let result = _try_parse_tag(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_try_parse_tag_with_eol() {
+        let doc = "@tag\nrest";
+        let parser = Parser::new(doc);
+        let (tag, p_next) = _try_parse_tag(&parser).unwrap().unwrap();
+        assert_eq!(tag.command, CommandKind::Tag);
+        assert_eq!(p_next.remain(), "rest");
+        assert_eq!(p_next.get_position().line, 2);
+        assert_eq!(p_next.get_position().column, 1);
+    }
+
+    use super::AnchorKind;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_try_parse_anchor_simple() {
+        let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
+        let doc = format!("<!-- tag-{}:begin --> rest", uuid_str);
+        let parser = Parser::new(&doc);
+        let (anchor, p_next) = _try_parse_anchor(&parser).unwrap().unwrap();
+        assert_eq!(anchor.command, CommandKind::Tag);
+        assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
+        assert_eq!(anchor.kind, AnchorKind::Begin);
+        assert!(anchor.parameters.parameters.is_empty());
+        assert!(anchor.arguments.arguments.is_empty());
+        assert_eq!(p_next.remain(), "rest");
+
+        let anchor_full_str = format!("<!-- tag-{}:begin -->", uuid_str);
+        assert_eq!(anchor.range.begin.offset, 0);
+        assert_eq!(anchor.range.end.offset, anchor_full_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_anchor_with_parameters() {
+        let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
+        let doc = format!("<!-- include-{}:end [file=\"path.txt\"] --> rest", uuid_str);
+        let parser = Parser::new(&doc);
+        let (anchor, p_next) = _try_parse_anchor(&parser).unwrap().unwrap();
+        assert_eq!(anchor.command, CommandKind::Include);
+        assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
+        assert_eq!(anchor.kind, AnchorKind::End);
+        assert_eq!(anchor.parameters.parameters.len(), 1);
+        assert_eq!(anchor.parameters.parameters["file"], json!("path.txt"));
+        assert!(anchor.arguments.arguments.is_empty());
+        assert_eq!(p_next.remain(), "rest");
+
+        let anchor_full_str = format!("<!-- include-{}:end [file=\"path.txt\"] -->", uuid_str);
+        assert_eq!(anchor.range.begin.offset, 0);
+        assert_eq!(anchor.range.end.offset, anchor_full_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_anchor_with_arguments() {
+        let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
+        let doc = format!("<!-- inline-{}:begin 'arg1' \"arg2\" --> rest", uuid_str);
+        let parser = Parser::new(&doc);
+        let (anchor, p_next) = _try_parse_anchor(&parser).unwrap().unwrap();
+        assert_eq!(anchor.command, CommandKind::Inline);
+        assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
+        assert_eq!(anchor.kind, AnchorKind::Begin);
+        assert!(anchor.parameters.parameters.is_empty());
+        assert_eq!(anchor.arguments.arguments.len(), 2);
+        assert_eq!(anchor.arguments.arguments[0].value, "arg1");
+        assert_eq!(anchor.arguments.arguments[1].value, "arg2");
+        assert_eq!(p_next.remain(), "rest");
+
+        let anchor_full_str = format!("<!-- inline-{}:begin 'arg1' \"arg2\" -->", uuid_str);
+        assert_eq!(anchor.range.begin.offset, 0);
+        assert_eq!(anchor.range.end.offset, anchor_full_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_anchor_missing_closing_tag() {
+        let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
+        let doc = format!("<!-- tag-{}:begin rest", uuid_str);
+        let parser = Parser::new(&doc);
+        let result = _try_parse_anchor(&parser);
+        assert!(matches!(result, Err(Ast2Error::UnclosedString { .. })));
+    }
+
+    #[test]
+    fn test_try_parse_anchor_invalid_uuid() {
+        let doc = "<!-- tag-invalid-uuid:begin --> rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_anchor(&parser);
+        assert!(matches!(result, Err(Ast2Error::InvalidUuid { .. })));
+    }
+
+    #[test]
+    fn test_try_parse_anchor_no_opening_comment() {
+        let doc = "tag-uuid:begin --> rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_anchor(&parser).unwrap();
+        assert!(result.is_none());
+    }
+}

@@ -168,3 +168,11 @@ impl<'a> Parser<'a> {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "tests/test_parser_advance.rs"]
+mod test_parser_advance;
+
+#[cfg(test)]
+#[path = "tests/test_parser_consume.rs"]
+mod test_parser_consume;

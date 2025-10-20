@@ -1,11 +1,16 @@
 use thiserror::Error;
 use crate::ast2::parser::Parser;
 use crate::ast2::parsing_logic::parse_content;
-use crate::ast2::types::{Document, Position, Range};
+use crate::ast2::types::{Content, Position, Range};
 
 pub mod types;
 pub mod parser;
 pub mod parsing_logic;
+
+pub struct Document {
+    pub content: Vec<Content>,
+    pub range: Range,
+}
 
 #[derive(Error, Debug)]
 pub enum Ast2Error {
@@ -72,22 +77,6 @@ pub fn parse_document(document: &str) -> Result<Document> {
 }
 
 #[cfg(test)]
-mod tests {
-    mod utils;
-    mod test_position_range;
-    mod test_parser_advance;
-    mod test_parser_consume;
-    mod test_parse_identifier;
-    mod test_parse_nude_values;
-    mod test_parse_enclosed_values;
-    mod test_parse_argument;
-    mod test_parse_arguments;
-    mod test_parse_parameters;
-    mod test_parse_kinds;
-    mod test_parse_uuid;
-    mod test_parse_tag;
-    mod test_parse_anchor;
-    mod test_parse_text;
-    mod test_parse_document;
-}
+#[path = "tests/test_parse_document.rs"]
+mod test_parse_document;
 

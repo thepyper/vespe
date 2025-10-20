@@ -115,7 +115,11 @@ pub enum Content {
     Anchor(Anchor),
 }
 
-pub struct Document {
-    pub content: Vec<Content>,
-    pub range: Range,
-}
+
+#[cfg(test)]
+#[path = "tests/test_position_range.rs"]
+mod test_position_range;
+
+#[cfg(test)]
+#[path = "tests/utils.rs"]
+mod utils;

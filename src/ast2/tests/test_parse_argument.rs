@@ -1,10 +1,12 @@
-use crate::ast2::{Parser, Ast2Error};
+use crate::ast2::parser::Parser;
+use crate::ast2::Ast2Error;
+use crate::ast2::parsing_logic::_try_parse_argument;
 
 #[test]
 fn test_try_parse_argument_single_quoted() {
     let doc = "'arg1' rest";
     let parser = Parser::new(doc);
-    let (arg, p_next) = super::super::_try_parse_argument(&parser).unwrap().unwrap();
+    let (arg, p_next) = _try_parse_argument(&parser).unwrap().unwrap();
     assert_eq!(arg.value, "arg1");
     assert_eq!(p_next.remain(), " rest");
     assert_eq!(arg.range.begin.offset, 0);
@@ -15,7 +17,7 @@ fn test_try_parse_argument_single_quoted() {
 fn test_try_parse_argument_double_quoted() {
     let doc = r#""arg2" rest"#;
     let parser = Parser::new(doc);
-    let (arg, p_next) = super::super::_try_parse_argument(&parser).unwrap().unwrap();
+    let (arg, p_next) = _try_parse_argument(&parser).unwrap().unwrap();
     assert_eq!(arg.value, "arg2");
     assert_eq!(p_next.remain(), " rest");
     assert_eq!(arg.range.begin.offset, 0);
@@ -26,7 +28,7 @@ fn test_try_parse_argument_double_quoted() {
 fn test_try_parse_argument_nude() {
     let doc = "nude_arg rest";
     let parser = Parser::new(doc);
-    let (arg, p_next) = super::super::_try_parse_argument(&parser).unwrap().unwrap();
+    let (arg, p_next) = _try_parse_argument(&parser).unwrap().unwrap();
     assert_eq!(arg.value, "nude_arg");
     assert_eq!(p_next.remain(), " rest");
     assert_eq!(arg.range.begin.offset, 0);
@@ -37,7 +39,7 @@ fn test_try_parse_argument_nude() {
 fn test_try_parse_argument_empty() {
     let doc = "";
     let parser = Parser::new(doc);
-    let result = super::super::_try_parse_argument(&parser).unwrap();
+    let result = _try_parse_argument(&parser).unwrap();
     assert!(result.is_none());
 }
 
@@ -45,6 +47,6 @@ fn test_try_parse_argument_empty() {
 fn test_try_parse_argument_no_match() {
     let doc = "@tag rest";
     let parser = Parser::new(doc);
-    let result = super::super::_try_parse_argument(&parser).unwrap();
+    let result = _try_parse_argument(&parser).unwrap();
     assert!(result.is_none());
 }

@@ -1,4 +1,6 @@
-use crate::ast2::{Parser, Ast2Error};
+use crate::ast2::parser::Parser;
+use crate::ast2::Ast2Error;
+use crate::ast2::parsing_logic::_try_parse_uuid;
 use uuid::Uuid;
 
 #[test]
@@ -6,7 +8,7 @@ fn test_try_parse_uuid_valid() {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let doc = format!("{} rest", uuid_str);
     let parser = Parser::new(&doc);
-    let (uuid, p_next) = super::super::_try_parse_uuid(&parser).unwrap().unwrap();
+    let (uuid, p_next) = _try_parse_uuid(&parser).unwrap().unwrap();
     assert_eq!(uuid, Uuid::parse_str(uuid_str).unwrap());
     assert_eq!(p_next.remain(), " rest");
 }
@@ -15,7 +17,7 @@ fn test_try_parse_uuid_valid() {
 fn test_try_parse_uuid_invalid_format() {
     let doc = "invalid-uuid rest";
     let parser = Parser::new(doc);
-    let result = super::super::_try_parse_uuid(&parser);
+    let result = _try_parse_uuid(&parser);
     assert!(matches!(result, Err(Ast2Error::InvalidUuid { .. })));
 }
 
@@ -23,7 +25,7 @@ fn test_try_parse_uuid_invalid_format() {
 fn test_try_parse_uuid_partial() {
     let doc = "123e4567-e89b rest";
     let parser = Parser::new(doc);
-    let result = super::super::_try_parse_uuid(&parser);
+    let result = _try_parse_uuid(&parser);
     assert!(matches!(result, Err(Ast2Error::InvalidUuid { .. })));
 }
 
@@ -31,6 +33,6 @@ fn test_try_parse_uuid_partial() {
 fn test_try_parse_uuid_empty() {
     let doc = " rest";
     let parser = Parser::new(doc);
-    let result = super::super::_try_parse_uuid(&parser);
+    let result = _try_parse_uuid(&parser);
     assert!(matches!(result, Err(Ast2Error::InvalidUuid { .. })));
 }

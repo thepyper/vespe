@@ -1,4 +1,7 @@
-use crate::ast2::{Parser, CommandKind, AnchorKind, Ast2Error, Content};
+use crate::ast2::parser::Parser;
+use crate::ast2::parsing_logic::parse_content;
+use crate::ast2::types::{AnchorKind, CommandKind, Content};
+use crate::ast2::{parse_document, Ast2Error};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -7,7 +10,7 @@ fn test_parse_content_mixed() {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let doc = format!("Some text\n@tag [param=1] 'arg1'\n<!-- include-{}:begin -->\nmore text", uuid_str);
     let parser = Parser::new(&doc);
-    let (content_vec, p_next) = super::super::parse_content(parser).unwrap();
+    let (content_vec, p_next) = parse_content(parser).unwrap();
 
     assert_eq!(content_vec.len(), 4);
 
@@ -57,7 +60,7 @@ fn test_parse_content_mixed() {
 #[test]
 fn test_parse_document_simple() {
     let doc = "hello world";
-    let document = super::super::parse_document(doc).unwrap();
+    let document = parse_document(doc).unwrap();
     assert_eq!(document.content.len(), 1);
     if let Content::Text(text) = &document.content[0] {
         assert_eq!(text.range.begin.offset, 0);
@@ -72,7 +75,7 @@ fn test_parse_document_simple() {
 #[test]
 fn test_parse_document_empty() {
     let doc = "";
-    let document = super::super::parse_document(doc).unwrap();
+    let document = parse_document(doc).unwrap();
     assert!(document.content.is_empty());
     assert_eq!(document.range.begin.offset, 0);
     assert_eq!(document.range.end.offset, 0);
@@ -81,6 +84,6 @@ fn test_parse_document_empty() {
 #[test]
 fn test_parse_document_with_error() {
     let doc = "@tag [param=] rest"; // Missing parameter value
-    let result = super::super::parse_document(doc);
+    let result = parse_document(doc);
     assert!(matches!(result, Err(Ast2Error::MissingParameterValue { .. })));
 }

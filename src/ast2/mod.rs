@@ -1063,6 +1063,10 @@ mod test_parse_anchor;
 mod test_parse_argument;
 
 #[cfg(test)]
+#[path = "./tests/test_parse_arguments.rs"]
+mod test_parse_arguments;
+
+#[cfg(test)]
 mod tests {
     mod utils;
     mod test_position_range;
@@ -1071,7 +1075,6 @@ mod tests {
     mod test_parse_identifier;
     mod test_parse_nude_values;
     mod test_parse_enclosed_values;
-    mod test_parse_arguments;
     mod test_parse_parameters;
     mod test_parse_kinds;
     mod test_parse_uuid;

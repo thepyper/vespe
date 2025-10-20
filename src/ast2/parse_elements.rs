@@ -202,7 +202,7 @@ pub(crate) fn _try_parse_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(se
     if let Some(p1) = parser.consume_matching_char_immutable('"') {
         // try to parse a double-quoted string
         _try_parse_enclosed_value(&p1, "\"")
-    } else if let Some(p1) = parser.consume_matching_char_immutable('\'') {
+    } else if let Some(p1) = parser.consume_matching_char_immutable("' அம்ச") {
         // try to parse a single-quoted string
         _try_parse_enclosed_value(&p1, "'")
     } else {
@@ -243,7 +243,7 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
         use super::error::{Ast2Error, Result};
         use super::types::{CommandKind, AnchorKind, Parameters, Argument, Arguments};
         use super::parse_primitives::{_try_parse_identifier, _try_parse_enclosed_string};
-        use super::{_try_parse_command_kind, _try_parse_anchor_kind, _try_parse_parameters, _try_parse_parameter, _try_parse_arguments, _try_parse_argument, _try_parse_value, _try_parse_enclosed_value, _try_parse_nude_value};
+        use super::parse_primitives::{_try_parse_nude_float, _try_parse_nude_integer, _try_parse_nude_bool, _try_parse_nude_string, _try_parse_nude_value};
         use serde_json::json;
     
         #[test]
@@ -417,16 +417,16 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
 
     #[test]
     fn test_try_parse_enclosed_string_single_quote() {
-        let doc = r#"'hello world' rest"#;
+        let doc = "'hello world' rest";
         let parser = Parser::new(doc);
-        let p_after_opening_quote = parser.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
+        let p_after_opening_quote = parser.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
         let (value, p_next) = super::parse_primitives::_try_parse_enclosed_string(&p_after_opening_quote, "'").unwrap().unwrap();
         assert_eq!(value, "hello world");
         assert_eq!(p_next.remain(), " rest");
 
-        let doc_escaped = r#"'hello \'world\'' rest"#;
+        let doc_escaped = "'hello \'world\'' rest";
         let parser_escaped = Parser::new(doc_escaped);
-        let p_after_opening_quote_escaped = parser_escaped.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
+        let p_after_opening_quote_escaped = parser_escaped.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
         let (value_escaped, p_next_escaped) = super::parse_primitives::_try_parse_enclosed_string(&p_after_opening_quote_escaped, "'").unwrap().unwrap();
         assert_eq!(value_escaped, "hello 'world'"); // Expect unescaped
         assert_eq!(p_next_escaped.remain(), " rest");
@@ -446,7 +446,7 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
     fn test_try_parse_enclosed_value_single_quote() {
         let doc = "'json value' rest";
         let parser = Parser::new(doc);
-        let p_after_opening_quote = parser.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
+        let p_after_opening_quote = parser.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
         let (value, p_next) = _try_parse_enclosed_value(&p_after_opening_quote, "'").unwrap().unwrap();
         assert_eq!(value, json!("json value"));
         assert_eq!(p_next.remain(), " rest");
@@ -514,5 +514,221 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
         let parser = Parser::new(doc);
         let result = _try_parse_argument(&parser).unwrap();
         assert!(result.is_none());
+    }
+
+    // Tests from test_parse_arguments.rs
+    #[test]
+    fn test_try_parse_arguments_single() {
+        let doc = "'arg1' ";
+        let parser = Parser::new(doc);
+        let (args, p_next) = _try_parse_arguments(&parser).unwrap().unwrap();
+        assert_eq!(args.arguments.len(), 1);
+        assert_eq!(args.arguments[0].value, "arg1");
+        assert_eq!(p_next.remain(), " ");
+
+        let arg1_str = "'arg1'";
+        assert_eq!(args.range.begin.offset, 0);
+        assert_eq!(args.range.end.offset, arg1_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_arguments_multiple() {
+        let doc = "'arg1' \"arg2\" nude_arg ";
+        let parser = Parser::new(doc);
+        let (args, p_next) = _try_parse_arguments(&parser).unwrap().unwrap();
+        assert_eq!(args.arguments.len(), 3);
+        assert_eq!(args.arguments[0].value, "arg1");
+        assert_eq!(args.arguments[1].value, "arg2");
+        assert_eq!(args.arguments[2].value, "nude_arg");
+        assert_eq!(p_next.remain(), " ");
+
+        let arg1_str = "'arg1' ";
+        let arg2_str = "\"arg2\" ";
+        let arg3_str = "nude_arg";
+        assert_eq!(args.range.begin.offset, 0);
+        assert_eq!(args.range.end.offset, arg1_str.len() + arg2_str.len() + arg3_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_arguments_empty() {
+        let doc = "";
+        let parser = Parser::new(doc);
+        let result = _try_parse_arguments(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_try_parse_arguments_with_anchor_end() {
+        let doc = "'arg1' --> rest";
+        let parser = Parser::new(doc);
+        let (args, p_next) = _try_parse_arguments(&parser).unwrap().unwrap();
+        assert_eq!(args.arguments.len(), 1);
+        assert_eq!(args.arguments[0].value, "arg1");
+        assert_eq!(p_next.remain(), " --> rest");
+
+        let arg1_str = "'arg1'";
+        assert_eq!(args.range.begin.offset, 0);
+        assert_eq!(args.range.end.offset, arg1_str.len());
+    }
+
+    // Tests from test_parse_parameters.rs
+    #[test]
+    fn test_try_parse_parameter_valid() {
+        let doc = "key=value rest";
+        let parser = Parser::new(doc);
+        let ((key, value), p_next) = _try_parse_parameter(&parser).unwrap().unwrap();
+        assert_eq!(key, "key");
+        assert_eq!(value, json!("value"));
+        assert_eq!(p_next.remain(), " rest");
+    }
+
+    #[test]
+    fn test_try_parse_parameter_with_spaces() {
+        let doc = "  key  =  \"value with spaces\"  rest";
+        let parser = Parser::new(doc);
+        let ((key, value), p_next) = _try_parse_parameter(&parser).unwrap().unwrap();
+        assert_eq!(key, "key");
+        assert_eq!(value, json!("value with spaces"));
+        assert_eq!(p_next.remain(), "  rest");
+    }
+
+    #[test]
+    fn test_try_parse_parameter_missing_value() {
+        let doc = "key= rest";
+        let parser = Parser::new(doc);
+        let ((key, value), p_next) = _try_parse_parameter(&parser).unwrap().unwrap();
+        assert_eq!(key, "key");
+        assert_eq!(value, json!("rest"));
+        assert_eq!(p_next.remain(), "");
+    }
+
+    #[test]
+    fn test_try_parse_parameter_no_equal() {
+        let doc = "key value rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_parameter(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_try_parse_parameters_empty() {
+        let doc = "[] rest";
+        let parser = Parser::new(doc);
+        let (params, p_next) = _try_parse_parameters(&parser).unwrap().unwrap();
+        assert!(params.parameters.is_empty());
+        assert_eq!(p_next.remain(), " rest");
+
+        let begin_str = "[";
+        let end_str = "]";
+        assert_eq!(params.range.begin.offset, 0);
+        assert_eq!(params.range.end.offset, begin_str.len() + end_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_parameters_single() {
+        let doc = "[key=value] rest";
+        let parser = Parser::new(doc);
+        let (params, p_next) = _try_parse_parameters(&parser).unwrap().unwrap();
+        assert_eq!(params.parameters.len(), 1);
+        assert_eq!(params.parameters["key"], json!("value"));
+        assert_eq!(p_next.remain(), " rest");
+
+        let full_str = "[key=value]";
+        assert_eq!(params.range.begin.offset, 0);
+        assert_eq!(params.range.end.offset, full_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_parameters_multiple() {
+        let doc = "[key1=value1, key2=\"value 2\"] rest";
+        let parser = Parser::new(doc);
+        let (params, p_next) = _try_parse_parameters(&parser).unwrap().unwrap();
+        assert_eq!(params.parameters.len(), 2);
+        assert_eq!(params.parameters["key1"], json!("value1"));
+        assert_eq!(params.parameters["key2"], json!("value 2"));
+        assert_eq!(p_next.remain(), " rest");
+
+        let full_str = "[key1=value1, key2=\"value 2\"]";
+        assert_eq!(params.range.begin.offset, 0);
+        assert_eq!(params.range.end.offset, full_str.len());
+    }
+
+    #[test]
+    fn test_try_parse_parameters_missing_comma() {
+        let doc = "[key1=value1 key2=value2]";
+        let parser = Parser::new(doc);
+        let result = _try_parse_parameters(&parser);
+        assert!(matches!(result, Err(Ast2Error::MissingCommaInParameters { .. })));
+    }
+
+    #[test]
+    fn test_try_parse_parameters_unclosed() {
+        let doc = "[key=value";
+        let parser = Parser::new(doc);
+        let result = _try_parse_parameters(&parser);
+        assert!(matches!(result, Err(Ast2Error::MissingCommaInParameters { .. }))); // Currently reports missing comma
+    }
+
+    #[test]
+    fn test_try_parse_parameters_no_opening_bracket() {
+        let doc = "key=value] rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_parameters(&parser).unwrap();
+        assert!(result.is_none());
+    }
+
+    // Tests from test_parse_kinds.rs
+    #[test]
+    fn test_try_parse_command_kind_valid() {
+        let doc = "tag rest";
+        let parser = Parser::new(doc);
+        let (kind, p_next) = _try_parse_command_kind(&parser).unwrap().unwrap();
+        assert_eq!(kind, CommandKind::Tag);
+        assert_eq!(p_next.remain(), " rest");
+
+        let doc = "include rest";
+        let parser = Parser::new(doc);
+        let (kind, p_next) = _try_parse_command_kind(&parser).unwrap().unwrap();
+        assert_eq!(kind, CommandKind::Include);
+        assert_eq!(p_next.remain(), " rest");
+
+        let doc = "answer rest";
+        let parser = Parser::new(doc);
+        let (kind, p_next) = _try_parse_command_kind(&parser).unwrap().unwrap();
+        assert_eq!(kind, CommandKind::Answer);
+        assert_eq!(p_next.remain(), " rest");
+    }
+
+    #[test]
+    fn test_try_parse_command_kind_invalid() {
+        let doc = "invalid_command rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_command_kind(&parser).unwrap();
+        assert!(result.is_none());
+        assert_eq!(parser.remain(), "invalid_command rest");
+    }
+
+    #[test]
+    fn test_try_parse_anchor_kind_valid() {
+        let doc = "begin rest";
+        let parser = Parser::new(doc);
+        let (kind, p_next) = _try_parse_anchor_kind(&parser).unwrap().unwrap();
+        assert_eq!(kind, AnchorKind::Begin);
+        assert_eq!(p_next.remain(), " rest");
+
+        let doc = "end rest";
+        let parser = Parser::new(doc);
+        let (kind, p_next) = _try_parse_anchor_kind(&parser).unwrap().unwrap();
+        assert_eq!(kind, AnchorKind::End);
+        assert_eq!(p_next.remain(), " rest");
+    }
+
+    #[test]
+    fn test_try_parse_anchor_kind_invalid() {
+        let doc = "invalid_anchor rest";
+        let parser = Parser::new(doc);
+        let result = _try_parse_anchor_kind(&parser).unwrap();
+        assert!(result.is_none());
+        assert_eq!(parser.remain(), "invalid_anchor rest");
     }
 }

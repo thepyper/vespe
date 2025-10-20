@@ -1,4 +1,4 @@
-use crate::ast2::{Parser, Ast2Error, Position};
+use crate::ast2::Parser;
 
 #[test]
 fn test_try_parse_identifier_valid() {

@@ -1,5 +1,5 @@
-use serde_json::json;
 use uuid::Uuid;
+use std::str::FromStr;
 
 use super::parser::Parser;
 use super::error::{Ast2Error, Result};
@@ -98,26 +98,31 @@ pub fn _try_parse_enclosed_string<'doc>(
     let mut current_parser = parser.clone();
 
     loop {
-        if let Some(p) = current_parser.consume_matching_string_immutable("\"") {
-            value.push('"');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\'\'") {
-            value.push('\'');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
-            value.push('\n');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
-            value.push('\r');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
-            value.push('\t');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
-            value.push('\\');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
+        if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
             return Ok(Some((value, p)));
+        } else if let Some(p_after_backslash) = current_parser.consume_matching_char_immutable('\\') {
+            // Handle escaped characters
+            if let Some((escaped_char, p_after_escaped_char)) = p_after_backslash.advance_immutable() {
+                match escaped_char {
+                    'n' => value.push('\n'),
+                    'r' => value.push('\r'),
+                    't' => value.push('\t'),
+                    '\\' => value.push('\\'),
+                    '"' => value.push('"'),
+                    '\'' => value.push('\''),
+                    _ => {
+                        // If it's an unknown escape sequence, just push the backslash and the char
+                        value.push('\\');
+                        value.push(escaped_char);
+                    }
+                }
+                current_parser = p_after_escaped_char;
+            } else {
+                // Backslash at the end of the document
+                return Err(Ast2Error::UnclosedString {
+                    position: begin_pos,
+                });
+            }
         } else if current_parser.is_eod() {
             return Err(Ast2Error::UnclosedString {
                 position: begin_pos,

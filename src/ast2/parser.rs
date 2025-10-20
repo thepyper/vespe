@@ -168,3 +168,22 @@ impl<'a> Parser<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Parser;
+
+    #[test]
+    fn test_parser_consume_many_of() {
+        let doc = "abccba";
+        let mut parser = Parser::new(doc);
+
+        assert_eq!(parser.consume_many_of("abc"), Some("abccba".to_string()));
+        assert_eq!(parser.remain(), "");
+
+        let doc2 = "123xyz";
+        let mut parser2 = Parser::new(doc2);
+        assert_eq!(parser2.consume_many_of("123"), Some("123".to_string()));
+        assert_eq!(parser2.remain(), "xyz");
+    }
+}

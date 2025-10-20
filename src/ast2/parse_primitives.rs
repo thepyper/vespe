@@ -98,10 +98,20 @@ pub(crate) fn _try_parse_enclosed_string<'doc>(
     let mut current_parser = parser.clone();
 
     loop {
-        if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
-            return Ok(Some((value, p)));
-        } else if let Some(p_after_backslash) = current_parser.consume_matching_char_immutable('\\') {
-            // Handle escaped characters
+        if current_parser.is_eod() {
+            return Err(Ast2Error::UnclosedString {
+                position: begin_pos,
+            });
+        }
+
+        // Check for the closing delimiter first (if not escaped)
+        if current_parser.remain().starts_with(closure) {
+            let p_after_closure = current_parser.consume_matching_string_immutable(closure).unwrap();
+            return Ok(Some((value, p_after_closure)));
+        }
+
+        // Check for escaped characters
+        if let Some(p_after_backslash) = current_parser.consume_matching_char_immutable('\\') {
             if let Some((escaped_char, p_after_escaped_char)) = p_after_backslash.advance_immutable() {
                 match escaped_char {
                     'n' => value.push('\n'),
@@ -123,11 +133,9 @@ pub(crate) fn _try_parse_enclosed_string<'doc>(
                     position: begin_pos,
                 });
             }
-        } else if current_parser.is_eod() {
-            return Err(Ast2Error::UnclosedString {
-                position: begin_pos,
-            });
-        } else {
+        }
+        // Otherwise, just consume the character
+        else {
             match current_parser.advance_immutable() {
                 None => unreachable!("Checked is_eod() already"),
                 Some((x, p)) => {

@@ -1059,6 +1059,10 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
 mod test_parse_anchor;
 
 #[cfg(test)]
+#[path = "./tests/test_parse_argument.rs"]
+mod test_parse_argument;
+
+#[cfg(test)]
 mod tests {
     mod utils;
     mod test_position_range;
@@ -1067,7 +1071,6 @@ mod tests {
     mod test_parse_identifier;
     mod test_parse_nude_values;
     mod test_parse_enclosed_values;
-    mod test_parse_argument;
     mod test_parse_arguments;
     mod test_parse_parameters;
     mod test_parse_kinds;

@@ -202,7 +202,7 @@ pub(crate) fn _try_parse_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(se
     if let Some(p1) = parser.consume_matching_char_immutable('"') {
         // try to parse a double-quoted string
         _try_parse_enclosed_value(&p1, "\"")
-    } else if let Some(p1) = parser.consume_matching_char_immutable("' அம்ச") {
+    } else if let Some(p1) = parser.consume_matching_char_immutable('\'') {
         // try to parse a single-quoted string
         _try_parse_enclosed_value(&p1, "'")
     } else {
@@ -242,25 +242,21 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
         use super::parser::Parser;
         use super::error::{Ast2Error, Result};
         use super::types::{CommandKind, AnchorKind, Parameters, Argument, Arguments};
-        use super::parse_primitives::{_try_parse_identifier, _try_parse_enclosed_string};
-        use super::parse_primitives::{_try_parse_nude_float, _try_parse_nude_integer, _try_parse_nude_bool, _try_parse_nude_string, _try_parse_nude_value};
+        use super::parse_primitives::{_try_parse_nude_float, _try_parse_nude_integer, _try_parse_nude_bool, _try_parse_nude_string, _try_parse_nude_value, _try_parse_identifier, _try_parse_enclosed_string};
         use serde_json::json;
     
         #[test]
         fn test_try_parse_identifier_valid() {
             let doc = "_my_identifier123 rest";
             let parser = Parser::new(doc);
-            let (identifier, p_next) = super::parse_primitives::_try_parse_identifier(&parser).unwrap().unwrap();
-    
+                            let (identifier, p_next) = _try_parse_identifier(&parser).unwrap().unwrap();    
             assert_eq!(identifier, "_my_identifier123");
             assert_eq!(p_next.remain(), " rest");
         }
     
         #[test]
         fn test_try_parse_identifier_starts_with_digit() {
-            let doc = "123identifier";
-            let parser = Parser::new(doc);
-            let result = super::parse_primitives::_try_parse_identifier(&parser).unwrap();
+            let result = _try_parse_identifier(&parser).unwrap();
     
             assert!(result.is_none());
             assert_eq!(parser.remain(), "123identifier");
@@ -270,7 +266,7 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
         fn test_try_parse_identifier_empty() {
             let doc = "";
             let parser = Parser::new(doc);
-            let result = super::parse_primitives::_try_parse_identifier(&parser).unwrap();
+            let result = _try_parse_identifier(&parser).unwrap();
     
             assert!(result.is_none());
         }
@@ -279,7 +275,7 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
             fn test_try_parse_identifier_with_invalid_char() {
                 let doc = "my-identifier";
                 let parser = Parser::new(doc);
-                let (identifier, p_next) = super::parse_primitives::_try_parse_identifier(&parser).unwrap().unwrap();
+            let (identifier, p_next) = _try_parse_identifier(&parser).unwrap().unwrap();
         
                 assert_eq!(identifier, "my");
                 assert_eq!(p_next.remain(), "-identifier");
@@ -289,74 +285,74 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
             fn test_try_parse_nude_integer() {
                 let doc = "123 rest";
                 let parser = Parser::new(doc);
-                let (value, p_next) = super::parse_primitives::_try_parse_nude_integer(&parser).unwrap().unwrap();
+                let (value, p_next) = _try_parse_nude_integer(&parser).unwrap().unwrap();
                 assert_eq!(value, 123);
                 assert_eq!(p_next.remain(), " rest");
         
                 let doc_no_int = "abc";
                 let parser_no_int = Parser::new(doc_no_int);
-                assert!(super::parse_primitives::_try_parse_nude_integer(&parser_no_int).unwrap().is_none());
+                assert!(_try_parse_nude_integer(&parser_no_int).unwrap().is_none());
         
                 let doc_empty = "";
                 let parser_empty = Parser::new(doc_empty);
-                assert!(super::parse_primitives::_try_parse_nude_integer(&parser_empty).unwrap().is_none());
+                assert!(_try_parse_nude_integer(&parser_empty).unwrap().is_none());
             }
         
             #[test]
             fn test_try_parse_nude_float() {
                 let doc = "123.45 rest";
                 let parser = Parser::new(doc);
-                let (value, p_next) = super::parse_primitives::_try_parse_nude_float(&parser).unwrap().unwrap();
+                let (value, p_next) = _try_parse_nude_float(&parser).unwrap().unwrap();
                 assert_eq!(value, 123.45);
                 assert_eq!(p_next.remain(), " rest");
         
                 let doc_no_float = "123 rest";
                 let parser_no_float = Parser::new(doc_no_float);
-                assert!(super::parse_primitives::_try_parse_nude_float(&parser_no_float).unwrap().is_none());
+                assert!(_try_parse_nude_float(&parser_no_float).unwrap().is_none());
         
                 let doc_just_dot = ". rest";
                 let parser_just_dot = Parser::new(doc_just_dot);
-                assert!(super::parse_primitives::_try_parse_nude_float(&parser_just_dot).unwrap().is_none());
+                assert!(_try_parse_nude_float(&parser_just_dot).unwrap().is_none());
         
                 let doc_empty = "";
                 let parser_empty = Parser::new(doc_empty);
-                assert!(super::parse_primitives::_try_parse_nude_float(&parser_empty).unwrap().is_none());
+                assert!(_try_parse_nude_float(&parser_empty).unwrap().is_none());
             }
         
             #[test]
             fn test_try_parse_nude_bool() {
                 let doc_true = "true rest";
                 let parser_true = Parser::new(doc_true);
-                let (value_true, p_next_true) = super::parse_primitives::_try_parse_nude_bool(&parser_true).unwrap().unwrap();
+                let (value_true, p_next_true) = _try_parse_nude_bool(&parser_true).unwrap().unwrap();
                 assert_eq!(value_true, true);
                 assert_eq!(p_next_true.remain(), " rest");
         
                 let doc_false = "false rest";
                 let parser_false = Parser::new(doc_false);
-                let (value_false, p_next_false) = super::parse_primitives::_try_parse_nude_bool(&parser_false).unwrap().unwrap();
+                let (value_false, p_next_false) = _try_parse_nude_bool(&parser_false).unwrap().unwrap();
                 assert_eq!(value_false, false);
                 assert_eq!(p_next_false.remain(), " rest");
         
                 let doc_no_bool = "other rest";
                 let parser_no_bool = Parser::new(doc_no_bool);
-                assert!(super::parse_primitives::_try_parse_nude_bool(&parser_no_bool).unwrap().is_none());
+                assert!(_try_parse_nude_bool(&parser_no_bool).unwrap().is_none());
             }
         
             #[test]
             fn test_try_parse_nude_string() {
                 let doc = "hello/world.txt_123 rest";
                 let parser = Parser::new(doc);
-                let (value, p_next) = super::parse_primitives::_try_parse_nude_string(&parser).unwrap().unwrap();
+                let (value, p_next) = _try_parse_nude_string(&parser).unwrap().unwrap();
                 assert_eq!(value, "hello/world.txt_123");
                 assert_eq!(p_next.remain(), " rest");
         
                 let doc_empty = "";
                 let parser_empty = Parser::new(doc_empty);
-                assert!(super::parse_primitives::_try_parse_nude_string(&parser_empty).unwrap().is_none());
+                assert!(_try_parse_nude_string(&parser_empty).unwrap().is_none());
         
                 let doc_with_space = "hello world";
                 let parser_with_space = Parser::new(doc_with_space);
-                let (value_space, p_next_space) = super::parse_primitives::_try_parse_nude_string(&parser_with_space).unwrap().unwrap();
+                let (value_space, p_next_space) = _try_parse_nude_string(&parser_with_space).unwrap().unwrap();
                 assert_eq!(value_space, "hello");
                 assert_eq!(p_next_space.remain(), " world");
             }
@@ -397,21 +393,21 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
         let doc = r#""hello world" rest"#;
         let parser = Parser::new(doc);
         let p_after_opening_quote = parser.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
-        let (value, p_next) = super::parse_primitives::_try_parse_enclosed_string(&p_after_opening_quote, "\"").unwrap().unwrap();
+        let (value, p_next) = _try_parse_enclosed_string(&p_after_opening_quote, "\"").unwrap().unwrap();
         assert_eq!(value, "hello world");
         assert_eq!(p_next.remain(), " rest");
 
         let doc_escaped = r#""hello \"world\"" rest"#;
         let parser_escaped = Parser::new(doc_escaped);
         let p_after_opening_quote_escaped = parser_escaped.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
-        let (value_escaped, p_next_escaped) = super::parse_primitives::_try_parse_enclosed_string(&p_after_opening_quote_escaped, "\"").unwrap().unwrap();
+        let (value_escaped, p_next_escaped) = _try_parse_enclosed_string(&p_after_opening_quote_escaped, "\"").unwrap().unwrap();
         assert_eq!(value_escaped, "hello \"world\""); // Expect unescaped
         assert_eq!(p_next_escaped.remain(), " rest");
 
         let doc_unclosed = r#""hello"#;
         let parser_unclosed = Parser::new(doc_unclosed);
         let p_after_opening_quote_unclosed = parser_unclosed.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
-        let result = super::parse_primitives::_try_parse_enclosed_string(&p_after_opening_quote_unclosed, "\"");
+        let result = _try_parse_enclosed_string(&p_after_opening_quote_unclosed, "\"");
         assert!(matches!(result, Err(Ast2Error::UnclosedString { .. })));
     }
 
@@ -420,14 +416,14 @@ pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Optio
         let doc = "'hello world' rest";
         let parser = Parser::new(doc);
         let p_after_opening_quote = parser.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
-        let (value, p_next) = super::parse_primitives::_try_parse_enclosed_string(&p_after_opening_quote, "'").unwrap().unwrap();
+        let (value, p_next) = _try_parse_enclosed_string(&p_after_opening_quote, "'").unwrap().unwrap();
         assert_eq!(value, "hello world");
         assert_eq!(p_next.remain(), " rest");
 
         let doc_escaped = "'hello \'world\'' rest";
         let parser_escaped = Parser::new(doc_escaped);
         let p_after_opening_quote_escaped = parser_escaped.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
-        let (value_escaped, p_next_escaped) = super::parse_primitives::_try_parse_enclosed_string(&p_after_opening_quote_escaped, "'").unwrap().unwrap();
+        let (value_escaped, p_next_escaped) = _try_parse_enclosed_string(&p_after_opening_quote_escaped, "'").unwrap().unwrap();
         assert_eq!(value_escaped, "hello 'world'"); // Expect unescaped
         assert_eq!(p_next_escaped.remain(), " rest");
     }

@@ -226,47 +226,44 @@ pub(crate) fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tex
     if parser.is_eod() {
         return Ok(None);
     }
-    
-    // Stop if we see a tag or anchor start
-    if parser.remain().starts_with('@') || parser.remain().starts_with("<!--") {
-        return Ok(None);
-    }
 
     let mut p_current = parser.clone();
-    let mut content = String::new();
-    
+    let mut content_len = 0; // Track content length to avoid building string until needed
+
     loop {
+        // Check if the next characters would start a tag or anchor
+        if p_current.remain().starts_with('@') || p_current.remain().starts_with("<!--") {
+            break;
+        }
+
         match p_current.advance_immutable() {
             None => break, // EOD
-            Some((c, p_next)) if c == '\n' => {
-                content.push('\n');
-                p_current = p_next;
-                break; // Consumed newline and stopped
-            }
             Some((c, p_next)) => {
-                content.push(c);
+                content_len += c.len_utf8(); // Increment byte length
                 p_current = p_next;
+                if c == '\n' {
+                    break; // Consumed newline and stopped
+                }
             }
         }
     }
 
-    if content.is_empty() {
+    if content_len == 0 {
         return Ok(None);
     }
 
     let end = p_current.get_position();
     let text = Text { range: super::types::Range { begin, end } };
-    Ok(Some((text, p_current)))}
+    Ok(Some((text, p_current)))
+}
 
 #[cfg(test)]
 mod tests {
-    use super::parser::Parser;
-    use super::error::{Ast2Error, Result};
-    use super::types::{Tag, Anchor, Text, Content, Document};
+    use crate::ast2::parser::Parser;
+    use crate::ast2::error::{Ast2Error, Result};
+    use crate::ast2::types::{Tag, Anchor, Text, Content, Document, CommandKind, AnchorKind};
     use super::{_try_parse_text, _try_parse_tag, _try_parse_anchor, parse_content};
-    use super::CommandKind;
     use serde_json::json;
-    use super::AnchorKind;
     use uuid::Uuid;
 
     #[test]

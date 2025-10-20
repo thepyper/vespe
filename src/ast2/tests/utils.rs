@@ -1,4 +1,4 @@
-use crate::ast2::{Position, Range};
+use super::{Position, Range};
 
 pub fn create_position(offset: usize, line: usize, column: usize) -> Position {
     Position { offset, line, column }

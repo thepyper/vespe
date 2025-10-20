@@ -1,0 +1,3 @@
+Refactor: Split ast2 module into smaller files
+
+Split `src/ast2/mod.rs` into `types.rs`, `parser.rs`, `parse_utils.rs`, and `parse_elements.rs` for better organization and maintainability. The public API now only exposes `parse_document` and the AST types. Test files are included using `#[path]` to maintain their logical grouping within the `ast2` module.

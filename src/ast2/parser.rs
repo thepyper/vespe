@@ -2,7 +2,7 @@ use std::str::Chars;
 use crate::ast2::types::{Position, Range};
 
 #[derive(Debug, Clone)]
-pub struct Parser<'a> {
+pub(crate) struct Parser<'a> {
     document: &'a str,
     position: Position,
     iterator: Chars<'a>,
@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
             Some(xs)
         }
     }
-    fn consume_many_of(&mut self, xs: &str) -> Option<String> {
+    pub fn consume_many_of(&mut self, xs: &str) -> Option<String> {
         self.consume_many_if(|y| xs.contains(y))
     }
     pub fn skip_many_whitespaces(&mut self) {

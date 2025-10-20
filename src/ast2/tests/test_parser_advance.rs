@@ -1,5 +1,5 @@
-use crate::ast2::Parser;
-use crate::ast2::Position;
+use super::Parser;
+use super::Position;
 
 #[test]
 fn test_parser_new() {

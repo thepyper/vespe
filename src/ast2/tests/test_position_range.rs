@@ -1,4 +1,4 @@
-use crate::ast2::{Position, Range};
+use super::{Position, Range};
 use super::utils::{create_position, create_range};
 
 #[test]

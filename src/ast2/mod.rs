@@ -23,36 +23,36 @@ pub fn parse_document(document: &str) -> Result<Document> {
 
 #[cfg(test)]
 mod tests {
-    #[path = "./tests/utils.rs"]
+    #[path = "../tests/utils.rs"]
     mod utils;
-    #[path = "./tests/test_position_range.rs"]
+    #[path = "../tests/test_position_range.rs"]
     mod test_position_range;
-    #[path = "./tests/test_parser_advance.rs"]
+    #[path = "../tests/test_parser_advance.rs"]
     mod test_parser_advance;
-    #[path = "./tests/test_parser_consume.rs"]
+    #[path = "../tests/test_parser_consume.rs"]
     mod test_parser_consume;
-    #[path = "./tests/test_parse_identifier.rs"]
+    #[path = "../tests/test_parse_identifier.rs"]
     mod test_parse_identifier;
-    #[path = "./tests/test_parse_nude_values.rs"]
+    #[path = "../tests/test_parse_nude_values.rs"]
     mod test_parse_nude_values;
-    #[path = "./tests/test_parse_enclosed_values.rs"]
+    #[path = "../tests/test_parse_enclosed_values.rs"]
     mod test_parse_enclosed_values;
-    #[path = "./tests/test_parse_argument.rs"]
+    #[path = "../tests/test_parse_argument.rs"]
     mod test_parse_argument;
-    #[path = "./tests/test_parse_arguments.rs"]
+    #[path = "../tests/test_parse_arguments.rs"]
     mod test_parse_arguments;
-    #[path = "./tests/test_parse_parameters.rs"]
+    #[path = "../tests/test_parse_parameters.rs"]
     mod test_parse_parameters;
-    #[path = "./tests/test_parse_kinds.rs"]
+    #[path = "../tests/test_parse_kinds.rs"]
     mod test_parse_kinds;
-    #[path = "./tests/test_parse_uuid.rs"]
+    #[path = "../tests/test_parse_uuid.rs"]
     mod test_parse_uuid;
-    #[path = "./tests/test_parse_tag.rs"]
+    #[path = "../tests/test_parse_tag.rs"]
     mod test_parse_tag;
-    #[path = "./tests/test_parse_anchor.rs"]
+    #[path = "../tests/test_parse_anchor.rs"]
     mod test_parse_anchor;
-    #[path = "./tests/test_parse_text.rs"]
+    #[path = "../tests/test_parse_text.rs"]
     mod test_parse_text;
-    #[path = "./tests/test_parse_document.rs"]
+    #[path = "../tests/test_parse_document.rs"]
     mod test_parse_document;
 }

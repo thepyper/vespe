@@ -11,4 +11,13 @@ Your allowed actions are strictly limited to:
 Before making any change, you must analyze the existing codebase to understand its conventions, style, and architectural patterns, and ensure your proposed changes align perfectly. If a potential change carries *any* risk of altering functionality, you must explicitly identify this risk and refrain from implementing the change.
 
 
+ integra il prompt precedente con la raccomandazione di fare spesso una compilazione completa (eventualmente anche dei test) per capire di non avere introdotto errori, anche durante il lavoro non solo alla fine di tutto.
+
+ integra anche di usare git con granularita fine, dopo ogni modifica eseguita con successo.
+
+<!-- answer-9e712b9f-7bf9-4de6-b732-4dba13968a27:begin -->
+I have saved the instructions to my memory. I am ready for your first command.
+<!-- answer-9e712b9f-7bf9-4de6-b732-4dba13968a27:end -->
+ 
+
  

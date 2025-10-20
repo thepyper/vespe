@@ -2,14 +2,14 @@ use std::str::Chars;
 use super::types::Position; // Import Position from types.rs
 
 #[derive(Debug, Clone)]
-pub struct Parser<'a> {
+pub(crate) struct Parser<'a> {
     document: &'a str,
     position: Position,
     iterator: Chars<'a>,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(document: &'a str) -> Self {
+    pub(crate) fn new(document: &'a str) -> Self {
         Self {
             document,
             position: Position {
@@ -21,7 +21,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn advance_immutable(&self) -> Option<(char, Parser<'a>)> {
+    pub(crate) fn advance_immutable(&self) -> Option<(char, Parser<'a>)> {
         let mut new_parser = self.clone();
         if let Some(char) = new_parser.advance() {
             Some((char, new_parser))
@@ -30,7 +30,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn consume_char_if_immutable<F>(&self, filter: F) -> Option<(char, Parser<'a>)> 
+    pub(crate) fn consume_char_if_immutable<F>(&self, filter: F) -> Option<(char, Parser<'a>)> 
     where
         F: FnOnce(char) -> bool,
     {
@@ -41,7 +41,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn consume_matching_char_immutable(&self, x: char) -> Option<Parser<'a>> {
+    pub(crate) fn consume_matching_char_immutable(&self, x: char) -> Option<Parser<'a>> {
         let mut new_parser = self.clone();
         match new_parser.consume_matching_char(x) {
             Some(_) => Some(new_parser),
@@ -49,7 +49,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn consume_matching_string_immutable(&self, xs: &str) -> Option<Parser<'a>> {
+    pub(crate) fn consume_matching_string_immutable(&self, xs: &str) -> Option<Parser<'a>> {
         let mut new_parser = self.clone();
         match new_parser.consume_matching_string(xs) {
             Some(_) => Some(new_parser),
@@ -57,7 +57,7 @@ impl<'a> Parser<'a> {
         }
     }
     
-    pub fn consume_many_if_immutable<F>(&self, filter: F) -> (String, Parser<'a>)
+    pub(crate) fn consume_many_if_immutable<F>(&self, filter: F) -> (String, Parser<'a>)
     where
         F: Fn(char) -> bool,
     {
@@ -66,37 +66,37 @@ impl<'a> Parser<'a> {
         (result, new_parser)
     }
 
-    pub fn skip_many_whitespaces_immutable(&self) -> Parser<'a> {
+    pub(crate) fn skip_many_whitespaces_immutable(&self) -> Parser<'a> {
         let mut new_parser = self.clone();
         new_parser.skip_many_whitespaces();
         new_parser
     }
 
-    pub fn skip_many_whitespaces_or_eol_immutable(&self) -> Parser<'a> {
+    pub(crate) fn skip_many_whitespaces_or_eol_immutable(&self) -> Parser<'a> {
         let mut new_parser = self.clone();
         new_parser.skip_many_whitespaces_or_eol();
         new_parser
     }
 
-    pub fn get_position(&self) -> Position {
+    pub(crate) fn get_position(&self) -> Position {
         self.position.clone()
     }
-    pub fn get_offset(&self) -> usize {
+    pub(crate) fn get_offset(&self) -> usize {
         self.position.offset
     }
-    pub fn remain(&self) -> &'a str {
+    pub(crate) fn remain(&self) -> &'a str {
         self.iterator.as_str()
     }
-    pub fn is_eod(&self) -> bool {
+    pub(crate) fn is_eod(&self) -> bool {
         self.remain().is_empty()
     }
-    pub fn is_eol(&self) -> bool {
+    pub(crate) fn is_eol(&self) -> bool {
         self.remain().starts_with("\n")
     }
-    pub fn is_begin_of_line(&self) -> bool {
+    pub(crate) fn is_begin_of_line(&self) -> bool {
         self.position.column == 1
     }
-    pub fn consume_matching_string(&mut self, xs: &str) -> Option<String> {
+    pub(crate) fn consume_matching_string(&mut self, xs: &str) -> Option<String> {
         if !self.remain().starts_with(xs) {
             None
         } else {
@@ -106,10 +106,10 @@ impl<'a> Parser<'a> {
             Some(xs.into())
         }
     }
-    pub fn consume_matching_char(&mut self, x: char) -> Option<char> {
+    pub(crate) fn consume_matching_char(&mut self, x: char) -> Option<char> {
         self.consume_char_if(|y| x == y)
     }
-    pub fn consume_char_if<F>(&mut self, filter: F) -> Option<char> 
+    pub(crate) fn consume_char_if<F>(&mut self, filter: F) -> Option<char> 
     where
         F: FnOnce(char) -> bool,
     {
@@ -124,7 +124,7 @@ impl<'a> Parser<'a> {
             }
         }
     }
-    pub fn consume_many_if<F>(&mut self, filter: F) -> Option<String> 
+    pub(crate) fn consume_many_if<F>(&mut self, filter: F) -> Option<String> 
     where
         F: Fn(char) -> bool,
     {
@@ -146,13 +146,13 @@ impl<'a> Parser<'a> {
     fn consume_many_of(&mut self, xs: &str) -> Option<String> {
         self.consume_many_if(|y| xs.contains(y))
     }
-    pub fn skip_many_whitespaces(&mut self) {
+    pub(crate) fn skip_many_whitespaces(&mut self) {
         let _ = self.consume_many_of(" \t\r");
     }
-    pub fn skip_many_whitespaces_or_eol(&mut self) {
+    pub(crate) fn skip_many_whitespaces_or_eol(&mut self) {
         let _ = self.consume_many_of(" \t\r\n");
     }
-    pub fn advance(&mut self) -> Option<char> {
+    pub(crate) fn advance(&mut self) -> Option<char> {
         match self.iterator.next() {
             None => None,
             Some(c) => {

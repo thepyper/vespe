@@ -18,7 +18,7 @@ pub fn parse_document(document: &str) -> Result<Document> {
     })
 }
 
-pub fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
+fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
     let mut contents = Vec::new();
     let mut p_current = parser; // Takes ownership
 
@@ -63,7 +63,7 @@ pub fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser
     Ok((contents, p_current)) // Return the final state
 }
 
-pub fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
+fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '@'
@@ -117,7 +117,7 @@ pub fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser
     Ok(Some((tag, p8)))
 }
 
-pub fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
+fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     let p1 = match parser.consume_matching_string_immutable("<!--") {
@@ -220,7 +220,7 @@ pub fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, 
     Ok(Some((anchor, p15)))
 }
 
-pub fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'doc>)>> {
+fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     if parser.is_eod() {

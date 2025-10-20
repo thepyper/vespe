@@ -5,7 +5,7 @@ use super::error::{Ast2Error, Result};
 use super::types::{CommandKind, AnchorKind, Parameters, Argument, Arguments};
 use super::parse_primitives::{_try_parse_identifier, _try_parse_enclosed_string};
 
-pub fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(CommandKind, Parser<'doc>)>> {
+pub(crate) fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(CommandKind, Parser<'doc>)>> {
     let tags_list = vec![
         ("tag", CommandKind::Tag),
         ("include", CommandKind::Include),
@@ -25,7 +25,7 @@ pub fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(Co
     Ok(None)
 }
 
-pub fn _try_parse_anchor_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(AnchorKind, Parser<'doc>)>> {
+pub(crate) fn _try_parse_anchor_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(AnchorKind, Parser<'doc>)>> {
     let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
@@ -37,7 +37,7 @@ pub fn _try_parse_anchor_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anc
     Ok(None)
 }
 
-pub fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Parameters, Parser<'doc>)>> {
+pub(crate) fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Parameters, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '['
@@ -99,7 +99,7 @@ pub fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Para
     }
 }
 
-pub fn _try_parse_parameter<'doc>(
+pub(crate) fn _try_parse_parameter<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<((String, serde_json::Value), Parser<'doc>)>> {
     let p_initial = parser.skip_many_whitespaces_or_eol_immutable();
@@ -133,7 +133,7 @@ pub fn _try_parse_parameter<'doc>(
     Ok(Some(((key, value), p5)))
 }
 
-pub fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments, Parser<'doc>)>> {
+pub(crate) fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments, Parser<'doc>)>> {
     let begin = parser.get_position();
     let mut p_current = parser.clone();
     let mut arguments = Vec::new();
@@ -170,7 +170,7 @@ pub fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argum
     )))
 }
 
-pub fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argument, Parser<'doc>)>> {
+pub(crate) fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argument, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     if let Some(p1) = parser.consume_matching_char_immutable('\'') {
@@ -198,7 +198,7 @@ pub fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argume
     Ok(None)
 }
 
-pub fn _try_parse_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
+pub(crate) fn _try_parse_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     if let Some(p1) = parser.consume_matching_char_immutable('"') {
         // try to parse a double-quoted string
         _try_parse_enclosed_value(&p1, "\"")
@@ -211,7 +211,7 @@ pub fn _try_parse_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_jso
     }
 }
 
-pub fn _try_parse_enclosed_value<'doc>(
+pub(crate) fn _try_parse_enclosed_value<'doc>(
     parser: &Parser<'doc>,
     closure: &str,
 ) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
@@ -221,7 +221,7 @@ pub fn _try_parse_enclosed_value<'doc>(
     }
 }
 
-pub fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     if let Some((x, p)) = super::parse_primitives::_try_parse_nude_float(parser)? { // Use super::parse_primitives
         return Ok(Some((json!(x), p)));
     } 

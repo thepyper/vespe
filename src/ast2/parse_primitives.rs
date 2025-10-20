@@ -4,7 +4,7 @@ use std::str::FromStr;
 use super::parser::Parser;
 use super::error::{Ast2Error, Result};
 
-pub fn _try_parse_identifier<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
+pub(crate) fn _try_parse_identifier<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
     let (first_char, parser1) =
         match parser.consume_char_if_immutable(|c| c.is_alphabetic() || c == '_') {
             Some((c, p)) => (c, p),
@@ -20,7 +20,7 @@ pub fn _try_parse_identifier<'doc>(parser: &Parser<'doc>) -> Result<Option<(Stri
     Ok(Some((identifier, parser2)))
 }
 
-pub fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Parser<'doc>)>> {
+pub(crate) fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Parser<'doc>)>> {
     let start_pos = parser.get_position();
 
     let (uuid_str, new_parser) = parser.consume_many_if_immutable(|c| c.is_ascii_hexdigit() || c == '-');
@@ -33,7 +33,7 @@ pub fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Pars
     }
 }
 
-pub fn _try_parse_nude_integer<'doc>(parser: &Parser<'doc>) -> Result<Option<(i64, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_integer<'doc>(parser: &Parser<'doc>) -> Result<Option<(i64, Parser<'doc>)>> {
     let (number_str, new_parser) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
     if number_str.is_empty() {
@@ -46,7 +46,7 @@ pub fn _try_parse_nude_integer<'doc>(parser: &Parser<'doc>) -> Result<Option<(i6
     }
 }
 
-pub fn _try_parse_nude_float<'doc>(parser: &Parser<'doc>) -> Result<Option<(f64, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_float<'doc>(parser: &Parser<'doc>) -> Result<Option<(f64, Parser<'doc>)>> {
     let (int_part, p1) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
     if let Some(p2) = p1.consume_matching_char_immutable('.') {
@@ -69,7 +69,7 @@ pub fn _try_parse_nude_float<'doc>(parser: &Parser<'doc>) -> Result<Option<(f64,
     }
 }
 
-pub fn _try_parse_nude_bool<'doc>(parser: &Parser<'doc>) -> Result<Option<(bool, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_bool<'doc>(parser: &Parser<'doc>) -> Result<Option<(bool, Parser<'doc>)>> {
     if let Some(p) = parser.consume_matching_string_immutable("true") {
         return Ok(Some((true, p)));
     } else if let Some(p) = parser.consume_matching_string_immutable("false") {
@@ -79,7 +79,7 @@ pub fn _try_parse_nude_bool<'doc>(parser: &Parser<'doc>) -> Result<Option<(bool,
     }
 }
 
-pub fn _try_parse_nude_string<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_string<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
     let (result, new_parser) = parser.consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
 
     if result.is_empty() {
@@ -89,7 +89,7 @@ pub fn _try_parse_nude_string<'doc>(parser: &Parser<'doc>) -> Result<Option<(Str
     }
 }
 
-pub fn _try_parse_enclosed_string<'doc>(
+pub(crate) fn _try_parse_enclosed_string<'doc>(
     parser: &Parser<'doc>,
     closure: &str,
 ) -> Result<Option<(String, Parser<'doc>)>> {

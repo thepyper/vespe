@@ -1,4 +1,4 @@
-use crate::ast2::Parser;
+use crate::ast2::parser::Parser;
 use crate::ast2::Position;
 
 #[test]

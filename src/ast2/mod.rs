@@ -3,7 +3,7 @@ pub(crate) mod parser;
 pub(crate) mod parse_utils;
 pub(crate) mod parse_elements;
 
-use types::{Document, Result, Position, Range};
+use types::Document;
 use parser::Parser;
 use parse_elements::parse_content;
 

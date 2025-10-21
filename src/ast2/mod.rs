@@ -1084,8 +1084,12 @@ mod test_position_range;
 mod utils;
 
 #[cfg(test)]
+#[cfg(test)]
+#[path = "./tests/test_parser_advance.rs"]
+mod test_parser_advance;
+
+#[cfg(test)]
 mod tests {
-    mod test_parser_advance;
     mod test_parser_consume;
     mod test_parse_uuid;
     mod test_parse_text;

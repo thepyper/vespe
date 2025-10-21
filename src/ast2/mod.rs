@@ -1080,7 +1080,6 @@ mod tests {
     mod test_position_range;
     mod test_parser_advance;
     mod test_parser_consume;
-    mod test_parse_identifier;
     mod test_parse_nude_values;
     mod test_parse_parameters;
     mod test_parse_kinds;
@@ -1088,4 +1087,8 @@ mod tests {
     mod test_parse_tag;
     mod test_parse_text;
 }
+
+#[cfg(test)]
+#[path = "./tests/test_parse_identifier.rs"]
+mod test_parse_identifier;
 

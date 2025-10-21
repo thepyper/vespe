@@ -1098,9 +1098,8 @@ mod test_parser_consume;
 mod test_parse_uuid;
 
 #[cfg(test)]
-mod tests {
-    mod test_parse_text;
-}
+#[path = "./tests/test_parse_text.rs"]
+mod test_parse_text;
 
 #[cfg(test)]
 #[path = "./tests/test_parse_identifier.rs"]

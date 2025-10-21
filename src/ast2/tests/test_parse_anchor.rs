@@ -1,4 +1,4 @@
-use crate::ast2::{Parser, CommandKind, AnchorKind, Ast2Error};
+use super::{Parser, CommandKind, AnchorKind, Ast2Error};
 use serde_json::json;
 use uuid::Uuid;
 

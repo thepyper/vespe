@@ -3,7 +3,10 @@ use std::str::Chars;
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::{Position, Range, Text, CommandKind, Parameters, Argument, Arguments, Tag, AnchorKind, Anchor, Content, Document, Ast2Error, Result};
+use super::{
+    Anchor, AnchorKind, Argument, Arguments, Ast2Error, CommandKind, Content, Document, Parameters,
+    Position, Range, Result, Tag, Text,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Parser<'a> {
@@ -284,7 +287,9 @@ pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag,
     Ok(Some((tag, p8)))
 }
 
-pub(crate) fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Parser<'doc>)>> {
+pub(crate) fn _try_parse_anchor<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(Anchor, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     let p1 = match parser.consume_matching_string_immutable("<!--") {
@@ -523,7 +528,9 @@ pub(crate) fn _try_parse_parameter<'doc>(
     Ok(Some(((key, value), p5)))
 }
 
-pub(crate) fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option<(Arguments, Parser<'doc>)>> {
+pub(crate) fn _try_parse_arguments<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(Arguments, Parser<'doc>)>> {
     let begin = parser.get_position();
     let mut p_current = parser.clone();
     let mut arguments = Vec::new();
@@ -560,7 +567,9 @@ pub(crate) fn _try_parse_arguments<'doc>(parser: &Parser<'doc>) -> Result<Option
     )))
 }
 
-pub(crate) fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argument, Parser<'doc>)>> {
+pub(crate) fn _try_parse_argument<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(Argument, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     if let Some(p1) = parser.consume_matching_char_immutable('\'') {
@@ -597,7 +606,9 @@ pub(crate) fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<
     Ok(None)
 }
 
-pub(crate) fn _try_parse_identifier<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
+pub(crate) fn _try_parse_identifier<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(String, Parser<'doc>)>> {
     let (first_char, parser1) =
         match parser.consume_char_if_immutable(|c| c.is_alphabetic() || c == '_') {
             Some((c, p)) => (c, p),
@@ -701,7 +712,9 @@ pub(crate) fn _try_parse_nude_value<'doc>(
     Ok(None)
 }
 
-pub(crate) fn _try_parse_nude_integer<'doc>(parser: &Parser<'doc>) -> Result<Option<(i64, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_integer<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(i64, Parser<'doc>)>> {
     let (number_str, new_parser) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
     if number_str.is_empty() {
@@ -715,7 +728,9 @@ pub(crate) fn _try_parse_nude_integer<'doc>(parser: &Parser<'doc>) -> Result<Opt
     }
 }
 
-pub(crate) fn _try_parse_nude_float<'doc>(parser: &Parser<'doc>) -> Result<Option<(f64, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_float<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(f64, Parser<'doc>)>> {
     let (int_part, p1) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
     if let Some(p2) = p1.consume_matching_char_immutable('.') {
@@ -741,7 +756,9 @@ pub(crate) fn _try_parse_nude_float<'doc>(parser: &Parser<'doc>) -> Result<Optio
     }
 }
 
-pub(crate) fn _try_parse_nude_bool<'doc>(parser: &Parser<'doc>) -> Result<Option<(bool, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_bool<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(bool, Parser<'doc>)>> {
     if let Some(p) = parser.consume_matching_string_immutable("true") {
         return Ok(Some((true, p)));
     } else if let Some(p) = parser.consume_matching_string_immutable("false") {
@@ -751,7 +768,9 @@ pub(crate) fn _try_parse_nude_bool<'doc>(parser: &Parser<'doc>) -> Result<Option
     }
 }
 
-pub(crate) fn _try_parse_nude_string<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
+pub(crate) fn _try_parse_nude_string<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(String, Parser<'doc>)>> {
     let (result, new_parser) = parser
         .consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
 

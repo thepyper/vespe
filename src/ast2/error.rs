@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use super::{Position};
+use super::Position;
 
 #[derive(Error, Debug)]
 pub enum Ast2Error {

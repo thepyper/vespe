@@ -1089,8 +1089,12 @@ mod utils;
 mod test_parser_advance;
 
 #[cfg(test)]
+#[cfg(test)]
+#[path = "./tests/test_parser_consume.rs"]
+mod test_parser_consume;
+
+#[cfg(test)]
 mod tests {
-    mod test_parser_consume;
     mod test_parse_uuid;
     mod test_parse_text;
 }

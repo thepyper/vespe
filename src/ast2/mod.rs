@@ -1075,9 +1075,16 @@ mod test_parse_document;
 mod test_parse_enclosed_values;
 
 #[cfg(test)]
+#[path = "./tests/test_position_range.rs"]
+mod test_position_range;
+
+#[cfg(test)]
+#[cfg(test)]
+#[path = "./tests/utils.rs"]
+mod utils;
+
+#[cfg(test)]
 mod tests {
-    mod utils;
-    mod test_position_range;
     mod test_parser_advance;
     mod test_parser_consume;
     mod test_parse_uuid;

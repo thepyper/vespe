@@ -1,4 +1,4 @@
-use crate::ast2::{Parser, CommandKind, AnchorKind};
+use crate::ast2::{AnchorKind, CommandKind, Parser};
 
 #[test]
 fn test_try_parse_command_kind_valid() {

@@ -1,4 +1,4 @@
-use crate::ast2::{Parser, Ast2Error};
+use crate::ast2::{Ast2Error, Parser};
 
 #[test]
 fn test_try_parse_arguments_single() {
@@ -29,7 +29,10 @@ fn test_try_parse_arguments_multiple() {
     let arg2_str = "\"arg2\" ";
     let arg3_str = "nude_arg";
     assert_eq!(args.range.begin.offset, 0);
-    assert_eq!(args.range.end.offset, arg1_str.len() + arg2_str.len() + arg3_str.len());
+    assert_eq!(
+        args.range.end.offset,
+        arg1_str.len() + arg2_str.len() + arg3_str.len()
+    );
 }
 
 #[test]

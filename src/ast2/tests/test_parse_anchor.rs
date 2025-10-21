@@ -1,4 +1,4 @@
-use super::{Parser, CommandKind, AnchorKind, Ast2Error};
+use super::{AnchorKind, Ast2Error, CommandKind, Parser};
 use serde_json::json;
 use uuid::Uuid;
 

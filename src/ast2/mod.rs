@@ -229,7 +229,7 @@ impl<'a> Parser<'a> {
             None => None,
         }
     }
-    
+
     pub fn consume_many_if_immutable<F>(&self, filter: F) -> (String, Parser<'a>)
     where
         F: Fn(char) -> bool,
@@ -345,14 +345,14 @@ impl<'a> Parser<'a> {
 fn parse_document(document: &str) -> Result<Document> {
     let parser = Parser::new(document);
     let begin = parser.get_position();
-    
+
     let (content, parser_after_content) = parse_content(parser)?;
-    
+
     let end = parser_after_content.get_position();
 
     Ok(Document {
         content: content,
-        range: Range { begin, end }, 
+        range: Range { begin, end },
     })
 }
 
@@ -390,14 +390,14 @@ fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'do
             p_current = p_next;
             continue;
         }
-        
+
         // If nothing matches, we have a problem.
         return Err(Ast2Error::ParsingError {
             position: p_current.get_position(),
             message: "Unable to parse content".to_string(),
         });
     }
-    
+
     Ok((contents, p_current)) // Return the final state
 }
 
@@ -533,7 +533,8 @@ fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Pars
     let p13 = match p12.consume_matching_string_immutable("-->") {
         Some(p) => p,
         None => {
-            return Err(Ast2Error::UnclosedString { // Using UnclosedString for a missing -->
+            return Err(Ast2Error::UnclosedString {
+                // Using UnclosedString for a missing -->
                 position: p12.get_position(),
             });
         }
@@ -558,7 +559,9 @@ fn _try_parse_anchor<'doc>(parser: &Parser<'doc>) -> Result<Option<(Anchor, Pars
     Ok(Some((anchor, p15)))
 }
 
-fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(CommandKind, Parser<'doc>)>> {
+fn _try_parse_command_kind<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(CommandKind, Parser<'doc>)>> {
     let tags_list = vec![
         ("tag", CommandKind::Tag),
         ("include", CommandKind::Include),
@@ -578,7 +581,9 @@ fn _try_parse_command_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(Comman
     Ok(None)
 }
 
-fn _try_parse_anchor_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(AnchorKind, Parser<'doc>)>> {
+fn _try_parse_anchor_kind<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(AnchorKind, Parser<'doc>)>> {
     let tags_list = vec![("begin", AnchorKind::Begin), ("end", AnchorKind::End)];
 
     for (name, kind) in tags_list {
@@ -590,7 +595,9 @@ fn _try_parse_anchor_kind<'doc>(parser: &Parser<'doc>) -> Result<Option<(AnchorK
     Ok(None)
 }
 
-fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Parameters, Parser<'doc>)>> {
+fn _try_parse_parameters<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(Parameters, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '['
@@ -645,7 +652,8 @@ fn _try_parse_parameters<'doc>(parser: &Parser<'doc>) -> Result<Option<(Paramete
             p_current = p_after_comma.skip_many_whitespaces_or_eol_immutable();
         } else {
             // Neither ']' nor ',' found after a parameter. Syntax error.
-            return Err(Ast2Error::MissingCommaInParameters { // Or missing closing brace
+            return Err(Ast2Error::MissingCommaInParameters {
+                // Or missing closing brace
                 position: p_current.get_position(),
             });
         }
@@ -729,22 +737,31 @@ fn _try_parse_argument<'doc>(parser: &Parser<'doc>) -> Result<Option<(Argument, 
     if let Some(p1) = parser.consume_matching_char_immutable('\'') {
         if let Some((value, p)) = _try_parse_enclosed_string(&p1, "'")? {
             let end = p.get_position();
-            let arg = Argument { value, range: Range { begin, end } };
+            let arg = Argument {
+                value,
+                range: Range { begin, end },
+            };
             return Ok(Some((arg, p)));
         }
     }
-    
+
     if let Some(p1) = parser.consume_matching_char_immutable('"') {
         if let Some((value, p)) = _try_parse_enclosed_string(&p1, "\"")? {
             let end = p.get_position();
-            let arg = Argument { value, range: Range { begin, end } };
+            let arg = Argument {
+                value,
+                range: Range { begin, end },
+            };
             return Ok(Some((arg, p)));
         }
     }
 
     if let Some((value, p)) = _try_parse_nude_string(parser)? {
         let end = p.get_position();
-        let arg = Argument { value, range: Range { begin, end } };
+        let arg = Argument {
+            value,
+            range: Range { begin, end },
+        };
         return Ok(Some((arg, p)));
     }
 
@@ -767,7 +784,9 @@ fn _try_parse_identifier<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, 
     Ok(Some((identifier, parser2)))
 }
 
-fn _try_parse_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
+fn _try_parse_value<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     if let Some(p1) = parser.consume_matching_char_immutable('"') {
         // try to parse a double-quoted string
         _try_parse_enclosed_value(&p1, "\"")
@@ -835,182 +854,96 @@ fn _try_parse_enclosed_string<'doc>(
     }
 }
 
-fn _try_parse_nude_value<'doc>(parser: &Parser<'doc>) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
+fn _try_parse_nude_value<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     if let Some((x, p)) = _try_parse_nude_float(parser)? {
         return Ok(Some((json!(x), p)));
-    } 
+    }
     if let Some((x, p)) = _try_parse_nude_integer(parser)? {
         return Ok(Some((json!(x), p)));
-    } 
+    }
     if let Some((x, p)) = _try_parse_nude_bool(parser)? {
         return Ok(Some((json!(x), p)));
-    } 
+    }
     if let Some((x, p)) = _try_parse_nude_string(parser)? {
         return Ok(Some((json!(x), p)));
-    } 
+    }
     Ok(None)
 }
 
 fn _try_parse_nude_integer<'doc>(parser: &Parser<'doc>) -> Result<Option<(i64, Parser<'doc>)>> {
-
     let (number_str, new_parser) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
-
-
     if number_str.is_empty() {
-
         return Ok(None);
-
     }
 
-
-
     match i64::from_str_radix(&number_str, 10) {
-
         Ok(num) => Ok(Some((num, new_parser))),
 
         Err(e) => Err(Ast2Error::ParseIntError(e)),
-
     }
-
 }
 
-
-
 fn _try_parse_nude_float<'doc>(parser: &Parser<'doc>) -> Result<Option<(f64, Parser<'doc>)>> {
-
-
-
     let (int_part, p1) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
-
-
-
-
-
-
     if let Some(p2) = p1.consume_matching_char_immutable('.') {
-
-
-
         // Found a dot.
-
-
 
         let (frac_part, p3) = p2.consume_many_if_immutable(|x| x.is_digit(10));
 
-
-
-
-
-
-
         if int_part.is_empty() && frac_part.is_empty() {
-
-
-
             return Ok(None); // Just a dot, not a number
-
-
-
         }
-
-
-
-
-
-
 
         let num_str = format!("{}.{}", int_part, frac_part);
 
-
-
         match f64::from_str(&num_str) {
-
-
-
             Ok(n) => Ok(Some((n, p3))),
 
-
-
             Err(e) => Err(Ast2Error::ParseFloatError(e)),
-
-
-
         }
-
-
-
     } else {
-
-
-
         // No dot, not a float for our purposes.
 
-
-
         Ok(None)
-
-
-
     }
-
-
-
 }
-
-
 
 fn _try_parse_nude_bool<'doc>(parser: &Parser<'doc>) -> Result<Option<(bool, Parser<'doc>)>> {
-
     if let Some(p) = parser.consume_matching_string_immutable("true") {
-
         return Ok(Some((true, p)));
-
     } else if let Some(p) = parser.consume_matching_string_immutable("false") {
-
         return Ok(Some((false, p)));
-
     } else {
-
         return Ok(None);
-
     }
-
 }
-
-
 
 fn _try_parse_nude_string<'doc>(parser: &Parser<'doc>) -> Result<Option<(String, Parser<'doc>)>> {
-
-    let (result, new_parser) = parser.consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
+    let (result, new_parser) = parser
+        .consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
 
     if result.is_empty() {
-
         Ok(None)
-
     } else {
-
-        Ok(Some((result, new_parser)))}
-
+        Ok(Some((result, new_parser)))
+    }
 }
 
-
-
 fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uuid, Parser<'doc>)>> {
-
     let start_pos = parser.get_position();
 
-    let (uuid_str, new_parser) = parser.consume_many_if_immutable(|c| c.is_ascii_hexdigit() || c == '-');
+    let (uuid_str, new_parser) =
+        parser.consume_many_if_immutable(|c| c.is_ascii_hexdigit() || c == '-');
 
     match Uuid::parse_str(&uuid_str) {
-
         Ok(uuid) => Ok(Some((uuid, new_parser))),
 
         Err(_) => Err(Ast2Error::InvalidUuid {
-
             position: start_pos,
-
         }),
     }
 }
@@ -1021,7 +954,7 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
     if parser.is_eod() {
         return Ok(None);
     }
-    
+
     // Stop if we see a tag or anchor start
     if parser.remain().starts_with('@') || parser.remain().starts_with("<!--") {
         return Ok(None);
@@ -1029,7 +962,7 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
 
     let mut p_current = parser.clone();
     let mut content = String::new();
-    
+
     loop {
         match p_current.advance_immutable() {
             None => break, // EOD
@@ -1050,7 +983,9 @@ fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'
     }
 
     let end = p_current.get_position();
-    let text = Text { range: Range { begin, end } };
+    let text = Text {
+        range: Range { begin, end },
+    };
     Ok(Some((text, p_current)))
 }
 
@@ -1079,16 +1014,13 @@ mod test_parse_enclosed_values;
 mod test_position_range;
 
 #[cfg(test)]
-#[cfg(test)]
 #[path = "./tests/utils.rs"]
 mod utils;
 
 #[cfg(test)]
-#[cfg(test)]
 #[path = "./tests/test_parser_advance.rs"]
 mod test_parser_advance;
 
-#[cfg(test)]
 #[cfg(test)]
 #[path = "./tests/test_parser_consume.rs"]
 mod test_parser_consume;
@@ -1120,4 +1052,3 @@ mod test_parse_parameters;
 #[cfg(test)]
 #[path = "./tests/test_parse_tag.rs"]
 mod test_parse_tag;
-

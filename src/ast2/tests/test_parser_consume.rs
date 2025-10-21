@@ -72,13 +72,19 @@ fn test_parser_consume_matching_string() {
     let doc = "hello world";
     let mut parser = Parser::new(doc);
 
-    assert_eq!(parser.consume_matching_string("hello"), Some("hello".to_string()));
+    assert_eq!(
+        parser.consume_matching_string("hello"),
+        Some("hello".to_string())
+    );
     assert_eq!(parser.remain(), " world");
 
     assert_eq!(parser.consume_matching_string("foo"), None);
     assert_eq!(parser.remain(), " world");
 
-    assert_eq!(parser.consume_matching_string(" world"), Some(" world".to_string()));
+    assert_eq!(
+        parser.consume_matching_string(" world"),
+        Some(" world".to_string())
+    );
     assert_eq!(parser.remain(), "");
 }
 
@@ -102,7 +108,10 @@ fn test_parser_consume_many_if() {
     let doc = "aaabbc";
     let mut parser = Parser::new(doc);
 
-    assert_eq!(parser.consume_many_if(|c| c == 'a'), Some("aaa".to_string()));
+    assert_eq!(
+        parser.consume_many_if(|c| c == 'a'),
+        Some("aaa".to_string())
+    );
     assert_eq!(parser.remain(), "bbc");
 
     assert_eq!(parser.consume_many_if(|c| c == 'b'), Some("bb".to_string()));

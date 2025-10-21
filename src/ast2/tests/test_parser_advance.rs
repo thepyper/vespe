@@ -119,11 +119,39 @@ fn test_parser_get_position() {
     let doc = "a\nbc";
     let mut parser = Parser::new(doc);
 
-    assert_eq!(parser.get_position(), Position { offset: 0, line: 1, column: 1 });
+    assert_eq!(
+        parser.get_position(),
+        Position {
+            offset: 0,
+            line: 1,
+            column: 1
+        }
+    );
     parser.advance(); // 'a'
-    assert_eq!(parser.get_position(), Position { offset: 1, line: 1, column: 2 });
+    assert_eq!(
+        parser.get_position(),
+        Position {
+            offset: 1,
+            line: 1,
+            column: 2
+        }
+    );
     parser.advance(); // '\n'
-    assert_eq!(parser.get_position(), Position { offset: 2, line: 2, column: 1 });
+    assert_eq!(
+        parser.get_position(),
+        Position {
+            offset: 2,
+            line: 2,
+            column: 1
+        }
+    );
     parser.advance(); // 'b'
-    assert_eq!(parser.get_position(), Position { offset: 3, line: 2, column: 2 });
+    assert_eq!(
+        parser.get_position(),
+        Position {
+            offset: 3,
+            line: 2,
+            column: 2
+        }
+    );
 }

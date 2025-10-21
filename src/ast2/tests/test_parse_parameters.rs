@@ -1,4 +1,4 @@
-use super::{Parser, Ast2Error};
+use super::{Ast2Error, Parser};
 use serde_json::json;
 
 #[test]
@@ -87,7 +87,10 @@ fn test_try_parse_parameters_missing_comma() {
     let doc = "[key1=value1 key2=value2]";
     let parser = Parser::new(doc);
     let result = super::_try_parse_parameters(&parser);
-    assert!(matches!(result, Err(Ast2Error::MissingCommaInParameters { .. })));
+    assert!(matches!(
+        result,
+        Err(Ast2Error::MissingCommaInParameters { .. })
+    ));
 }
 
 #[test]
@@ -95,7 +98,10 @@ fn test_try_parse_parameters_unclosed() {
     let doc = "[key=value";
     let parser = Parser::new(doc);
     let result = super::_try_parse_parameters(&parser);
-    assert!(matches!(result, Err(Ast2Error::MissingCommaInParameters { .. }))); // Currently reports missing comma
+    assert!(matches!(
+        result,
+        Err(Ast2Error::MissingCommaInParameters { .. })
+    )); // Currently reports missing comma
 }
 
 #[test]

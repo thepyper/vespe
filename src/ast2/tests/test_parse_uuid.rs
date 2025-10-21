@@ -1,4 +1,4 @@
-use super::{Parser, Ast2Error};
+use super::{Ast2Error, Parser};
 use uuid::Uuid;
 
 #[test]

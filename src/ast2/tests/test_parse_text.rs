@@ -1,4 +1,4 @@
-use super::{Parser, Ast2Error};
+use super::{Ast2Error, Parser};
 
 #[test]
 fn test_try_parse_text_simple() {
@@ -73,4 +73,3 @@ fn test_try_parse_text_starts_with_anchor() {
     let result = super::_try_parse_text(&parser).unwrap();
     assert!(result.is_none());
 }
-

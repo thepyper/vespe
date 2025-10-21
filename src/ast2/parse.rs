@@ -177,9 +177,7 @@ impl<'a> Parser<'a> {
 pub fn parse_document(document: &str) -> Result<Document> {
     let parser = Parser::new(document);
     let begin = parser.get_position();
-
     let (content, parser_after_content) = parse_content(parser)?;
-
     let end = parser_after_content.get_position();
 
     Ok(Document {
@@ -192,13 +190,9 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
     let mut contents = Vec::new();
     let mut p_current = parser; // Takes ownership
 
-    loop {
-        if p_current.is_eod() {
-            break;
-        }
+    while !p_current.is_eod() {
 
-        // TODO controlla di essere ad inizio linea. se non e' cosi, PROBLEMA perche'
-        // le subroutine devono SEMPRE fermarsi ad un inizio linea.
+        // Subroutines must always stop at end-of-line, otherwise we have a problem
         if !p_current.is_begin_of_line() {
             return Err(Ast2Error::ExpectedBeginOfLine {
                 position: p_current.get_position(),
@@ -236,8 +230,11 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
 pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();
 
+    // Tags can be indented
+    let p0 = parser.skip_many_whitespaces_immutable();
+
     // Must start with '@'
-    let p1 = match parser.consume_matching_char_immutable('@') {
+    let p1 = match p0.consume_matching_char_immutable('@') {
         Some(p) => p,
         None => return Ok(None),
     };
@@ -270,9 +267,9 @@ pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag,
         ), // No arguments found, use default and continue from p4
     };
 
-    let end = p6.get_position();
-
     let p7 = p6.skip_many_whitespaces_immutable();
+
+    let end = p7.get_position();
 
     // Consume EOL if it's there, but don't fail if it's not (e.g. end of file)
     let p8 = p7.consume_matching_char_immutable('\n').unwrap_or(p7);
@@ -292,7 +289,10 @@ pub(crate) fn _try_parse_anchor<'doc>(
 ) -> Result<Option<(Anchor, Parser<'doc>)>> {
     let begin = parser.get_position();
 
-    let p1 = match parser.consume_matching_string_immutable("<!--") {
+    // Anchors can be indented
+    let p0 = parser.skip_many_whitespaces_immutable();
+
+    let p1 = match p0.consume_matching_string_immutable("<!--") {
         Some(p) => p,
         None => return Ok(None),
     };
@@ -374,9 +374,9 @@ pub(crate) fn _try_parse_anchor<'doc>(
         }
     };
 
-    let end = p13.get_position();
-
     let p14 = p13.skip_many_whitespaces_or_eol_immutable();
+
+    let end = p14.get_position();
 
     // Consume EOL if it's there
     let p15 = p14.consume_matching_char_immutable('\n').unwrap_or(p14);
@@ -508,7 +508,7 @@ pub(crate) fn _try_parse_parameter<'doc>(
 
     let p3 = match p2.consume_matching_char_immutable('=') {
         Some(p) => p,
-        None => return Ok(None), // No colon, so not a parameter. Let the caller decide what to do.
+        None => return Ok(Some(((key, json!(true)), p2))), // No colon, so not a parameter. Treat as if key = true, continue from p2.
     };
 
     let p4 = p3.skip_many_whitespaces_or_eol_immutable();

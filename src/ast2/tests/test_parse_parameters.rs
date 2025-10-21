@@ -35,8 +35,8 @@ fn test_try_parse_parameter_missing_value() {
 fn test_try_parse_parameter_no_equal() {
     let doc = "key value rest";
     let parser = Parser::new(doc);
-    let result = super::_try_parse_parameter(&parser).unwrap();
-    assert!(result.is_none());
+    let (params, p_next) = super::_try_parse_parameter(&parser).unwrap().unwrap();
+    assert!(params.0 == "key");
 }
 
 #[test]

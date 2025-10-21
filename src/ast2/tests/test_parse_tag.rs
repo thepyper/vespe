@@ -11,7 +11,7 @@ fn test_try_parse_tag_simple() {
     assert!(tag.arguments.arguments.is_empty());
     assert_eq!(p_next.remain(), "");
 
-    let tag_str = "@tag";
+    let tag_str = "@tag ";
     assert_eq!(tag.range.begin.offset, 0);
     assert_eq!(tag.range.end.offset, tag_str.len());
 }
@@ -27,7 +27,7 @@ fn test_try_parse_tag_with_parameters() {
     assert!(tag.arguments.arguments.is_empty());
     assert_eq!(p_next.remain(), "");
 
-    let tag_str = "@include [file=\"path/to/file.txt\"]";
+    let tag_str = "@include [file=\"path/to/file.txt\"] ";
     assert_eq!(tag.range.begin.offset, 0);
     assert_eq!(tag.range.end.offset, tag_str.len());
 }
@@ -44,7 +44,7 @@ fn test_try_parse_tag_with_arguments() {
     assert_eq!(tag.arguments.arguments[1].value, "arg2");
     assert_eq!(p_next.remain(), "");
 
-    let tag_str = "@inline 'arg1' \"arg2\"";
+    let tag_str = "@inline 'arg1' \"arg2\" ";
     assert_eq!(tag.range.begin.offset, 0);
     assert_eq!(tag.range.end.offset, tag_str.len());
 }
@@ -61,7 +61,7 @@ fn test_try_parse_tag_with_parameters_and_arguments() {
     assert_eq!(tag.arguments.arguments[0].value, "arg1");
     assert_eq!(p_next.remain(), "");
 
-    let tag_str = "@answer [id=123] 'arg1'";
+    let tag_str = "@answer [id=123] 'arg1' ";
     assert_eq!(tag.range.begin.offset, 0);
     assert_eq!(tag.range.end.offset, tag_str.len());
 }

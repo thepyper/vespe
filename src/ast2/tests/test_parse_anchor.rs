@@ -15,7 +15,7 @@ fn test_try_parse_anchor_simple() {
     assert!(anchor.arguments.arguments.is_empty());
     assert_eq!(p_next.remain(), "rest");
 
-    let anchor_full_str = format!("<!-- tag-{}:begin -->", uuid_str);
+    let anchor_full_str = format!("<!-- tag-{}:begin --> ", uuid_str);
     assert_eq!(anchor.range.begin.offset, 0);
     assert_eq!(anchor.range.end.offset, anchor_full_str.len());
 }
@@ -34,7 +34,7 @@ fn test_try_parse_anchor_with_parameters() {
     assert!(anchor.arguments.arguments.is_empty());
     assert_eq!(p_next.remain(), "rest");
 
-    let anchor_full_str = format!("<!-- include-{}:end [file=\"path.txt\"] -->", uuid_str);
+    let anchor_full_str = format!("<!-- include-{}:end [file=\"path.txt\"] --> ", uuid_str);
     assert_eq!(anchor.range.begin.offset, 0);
     assert_eq!(anchor.range.end.offset, anchor_full_str.len());
 }
@@ -54,7 +54,7 @@ fn test_try_parse_anchor_with_arguments() {
     assert_eq!(anchor.arguments.arguments[1].value, "arg2");
     assert_eq!(p_next.remain(), "rest");
 
-    let anchor_full_str = format!("<!-- inline-{}:begin 'arg1' \"arg2\" -->", uuid_str);
+    let anchor_full_str = format!("<!-- inline-{}:begin 'arg1' \"arg2\" --> ", uuid_str);
     assert_eq!(anchor.range.begin.offset, 0);
     assert_eq!(anchor.range.end.offset, anchor_full_str.len());
 }

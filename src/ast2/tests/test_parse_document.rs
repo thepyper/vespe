@@ -42,11 +42,11 @@ fn test_parse_content_mixed() {
         let anchor_str = format!("<!-- include-{}:begin -->", uuid_str);
         assert_eq!(
             anchor.range.begin.offset,
-            "Some text @tag\n[param=1] 'arg1'\n".len()
+            "Some text\n@tag [param=1] 'arg1'\n".len()
         );
         assert_eq!(
             anchor.range.end.offset,
-            "Some text @tag\n[param=1] 'arg1'\n".len() + anchor_str.len()
+            "Some text\n@tag [param=1] 'arg1'\n".len() + anchor_str.len()
         );
     } else {
         panic!("Expected Anchor");

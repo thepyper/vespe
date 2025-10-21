@@ -1,6 +1,6 @@
 mod error;
-mod types;
 mod parse;
+mod types;
 
 pub use error::{Ast2Error, Result};
 pub use parse::parse_document;

@@ -191,7 +191,6 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
     let mut p_current = parser; // Takes ownership
 
     while !p_current.is_eod() {
-
         // Subroutines must always stop at end-of-line, otherwise we have a problem
         if !p_current.is_begin_of_line() {
             return Err(Ast2Error::ExpectedBeginOfLine {

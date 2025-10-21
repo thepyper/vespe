@@ -1,4 +1,4 @@
-use crate::ast2::{Parser, Ast2Error};
+use super::{Parser, Ast2Error};
 use uuid::Uuid;
 
 #[test]

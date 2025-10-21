@@ -1,5 +1,9 @@
+mod state;
+
 use crate::ast2::{parse_document, Anchor, AnchorKind, CommandKind, Document, Range, Tag};
 use anyhow::Result;
+
+use state::{AnswerState, DeriveState, InlineState, SummaryState};
 
 struct SystemContent {
     text: String,
@@ -35,16 +39,6 @@ impl ContentItem {
     }
 }
 
-enum AnchorStatus {
-    /// Just created, empty without any content nor state gathered
-    JustCreated,
-    /// Gathered info, need to process them
-    NeedProcessing,
-    /// Information has been processed, need to be injected in document
-    NeedInjection,
-    /// Completed, no further processing needed
-    Completed,
-}
 
 pub fn execute(project: &Project, context_name: &str, commit: &Commit) {}
 
@@ -164,9 +158,6 @@ impl Executor {
             (CommandKind::Inline, AnchorKind::Begin, parameters, arguments) => {
                 want_next_step |= self.pass_1_inline_begin_anchor(state, parameters, arguments)
             } // passa commit?
-            (CommandKind::Repeat, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_repeat_begin_anchor(state, parameters, arguments)
-            } // passa commit?
             (CommandKind::Summarize, AnchorKind::Begin, parameters, arguments) => {
                 want_next_step |= self.pass_1_summarize_begin_anchor(state, parameters, arguments)
             } // passa commit?
@@ -180,6 +171,7 @@ impl Executor {
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
+        let state : AnswerState = serde_json::from_value(state)?;        
         unimplemented!()
     }
 
@@ -189,6 +181,7 @@ impl Executor {
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
+        let state : DeriveState = serde_json::from_value(state)?;
         unimplemented!()
     }
 
@@ -198,15 +191,7 @@ impl Executor {
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
-        unimplemented!()
-    }
-
-    fn pass_1_repeat_begin_anchor(
-        &self,
-        state: &State,
-        parameters: &Parameters,
-        arguments: &Arguments,
-    ) -> Result<bool> {
+        let state : InlineState = serde_json::from_value(state)?;
         unimplemented!()
     }
 

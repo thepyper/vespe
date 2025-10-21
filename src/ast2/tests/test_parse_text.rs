@@ -1,4 +1,4 @@
-use crate::ast2::{Parser, Ast2Error};
+use super::{Parser, Ast2Error};
 
 #[test]
 fn test_try_parse_text_simple() {

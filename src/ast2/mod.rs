@@ -799,25 +799,41 @@ fn _try_parse_enclosed_string<'doc>(
     let mut current_parser = parser.clone();
 
     loop {
-        if let Some(p) = current_parser.consume_matching_string_immutable("\\\"") {
-            value.push('\"');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\'") {
-            value.push('\'');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
-            value.push('\n');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
-            value.push('\r');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
-            value.push('\t');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
-            value.push('\\');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
+        if current_parser.remain().starts_with("\\") {
+            // Handle escaped characters
+            if let Some(p) = current_parser.consume_matching_string_immutable("\\\"") {
+                value.push('\"');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\'") {
+                value.push('\'');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
+                value.push('\n');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
+                value.push('\r');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
+                value.push('\t');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
+                value.push('\\');
+                current_parser = p;
+            } else {
+                // Invalid escape sequence, just consume the backslash and the next char
+                value.push('\\');
+                if let Some((x, p)) = current_parser.advance_immutable() {
+                    value.push(x);
+                    current_parser = p;
+                } else {
+                    return Err(Ast2Error::UnclosedString {
+                        position: begin_pos,
+                    });
+                }
+            }
+        } else if current_parser.remain().starts_with(closure) {
+            // Found the closing delimiter
+            let p = current_parser.consume_matching_string_immutable(closure).unwrap();
             return Ok(Some((value, p)));
         } else if current_parser.is_eod() {
             return Err(Ast2Error::UnclosedString {
@@ -1075,17 +1091,45 @@ mod test_parse_document;
 mod test_parse_enclosed_values;
 
 #[cfg(test)]
-mod tests {
-    mod utils;
-    mod test_position_range;
-    mod test_parser_advance;
-    mod test_parser_consume;
-    mod test_parse_identifier;
-    mod test_parse_nude_values;
-    mod test_parse_parameters;
-    mod test_parse_kinds;
-    mod test_parse_uuid;
-    mod test_parse_tag;
-    mod test_parse_text;
-}
+#[path = "tests/utils.rs"]
+mod utils;
 
+#[cfg(test)]
+#[path = "tests/test_position_range.rs"]
+mod test_position_range;
+
+#[cfg(test)]
+#[path = "tests/test_parser_advance.rs"]
+mod test_parser_advance;
+
+#[cfg(test)]
+#[path = "tests/test_parser_consume.rs"]
+mod test_parser_consume;
+
+#[cfg(test)]
+#[path = "tests/test_parse_identifier.rs"]
+mod test_parse_identifier;
+
+#[cfg(test)]
+#[path = "tests/test_parse_nude_values.rs"]
+mod test_parse_nude_values;
+
+#[cfg(test)]
+#[path = "tests/test_parse_parameters.rs"]
+mod test_parse_parameters;
+
+#[cfg(test)]
+#[path = "tests/test_parse_kinds.rs"]
+mod test_parse_kinds;
+
+#[cfg(test)]
+#[path = "tests/test_parse_uuid.rs"]
+mod test_parse_uuid;
+
+#[cfg(test)]
+#[path = "tests/test_parse_tag.rs"]
+mod test_parse_tag;
+
+#[cfg(test)]
+#[path = "tests/test_parse_text.rs"]
+mod test_parse_text;

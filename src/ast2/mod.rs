@@ -1067,6 +1067,10 @@ mod test_parse_argument;
 mod test_parse_arguments;
 
 #[cfg(test)]
+#[path = "./tests/test_parse_document.rs"]
+mod test_parse_document;
+
+#[cfg(test)]
 mod tests {
     mod utils;
     mod test_position_range;
@@ -1080,6 +1084,5 @@ mod tests {
     mod test_parse_uuid;
     mod test_parse_tag;
     mod test_parse_text;
-    mod test_parse_document;
 }
 

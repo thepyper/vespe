@@ -1075,15 +1075,12 @@ mod test_parse_document;
 mod test_parse_enclosed_values;
 
 #[cfg(test)]
-#[path = "./test_parse_identifier.rs"]
-mod test_parse_identifier;
-
-#[cfg(test)]
 mod tests {
     mod utils;
     mod test_position_range;
     mod test_parser_advance;
     mod test_parser_consume;
+    mod test_parse_identifier;
     mod test_parse_nude_values;
     mod test_parse_parameters;
     mod test_parse_kinds;

@@ -374,7 +374,7 @@ pub(crate) fn _try_parse_anchor<'doc>(
         }
     };
 
-    let p14 = p13.skip_many_whitespaces_or_eol_immutable();
+    let p14 = p13.skip_many_whitespaces_immutable();
 
     let end = p14.get_position();
 

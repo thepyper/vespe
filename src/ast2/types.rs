@@ -48,6 +48,7 @@ impl Range {
 }
 
 pub struct Text {
+    pub content: String,
     pub range: Range,
 }
 

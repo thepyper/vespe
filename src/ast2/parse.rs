@@ -7,7 +7,6 @@ use super::{Position, Range, Text, CommandKind, Parameters, Argument, Arguments,
 
 #[derive(Debug, Clone)]
 pub(crate) struct Parser<'a> {
-    document: &'a str,
     position: Position,
     iterator: Chars<'a>,
 }
@@ -15,7 +14,6 @@ pub(crate) struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(document: &'a str) -> Self {
         Self {
-            document,
             position: Position {
                 offset: 0,
                 line: 1,
@@ -815,6 +813,7 @@ pub(crate) fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tex
 
     let end = p_current.get_position();
     let text = Text {
+        content,
         range: Range { begin, end },
     };
     Ok(Some((text, p_current)))

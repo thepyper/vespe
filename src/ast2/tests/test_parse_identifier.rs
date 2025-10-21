@@ -1,4 +1,4 @@
-use crate::ast2::Parser;
+use super::*;
 
 #[test]
 fn test_try_parse_identifier_valid() {

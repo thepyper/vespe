@@ -1,4 +1,4 @@
-use super::{Ast2Error, Parser};
+use super::*;
 
 #[test]
 fn test_try_parse_text_simple() {

@@ -1,4 +1,4 @@
-use crate::ast2::{Ast2Error, Parser};
+use super::*;
 
 #[test]
 fn test_try_parse_arguments_single() {

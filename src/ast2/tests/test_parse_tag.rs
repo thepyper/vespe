@@ -1,4 +1,4 @@
-use super::{CommandKind, Parser};
+use super::*;
 use serde_json::json;
 
 #[test]

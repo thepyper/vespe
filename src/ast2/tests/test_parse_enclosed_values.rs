@@ -1,4 +1,4 @@
-use crate::ast2::{Ast2Error, Parser};
+use super::*;
 use serde_json::json;
 
 #[test]

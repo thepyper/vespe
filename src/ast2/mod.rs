@@ -1087,15 +1087,12 @@ mod test_parse_nude_values;
 mod test_parse_parameters;
 
 #[cfg(test)]
-#[path = "./test_parse_kinds.rs"]
-mod test_parse_kinds;
-
-#[cfg(test)]
 mod tests {
     mod utils;
     mod test_position_range;
     mod test_parser_advance;
     mod test_parser_consume;
+    mod test_parse_kinds;
     mod test_parse_uuid;
     mod test_parse_tag;
     mod test_parse_text;

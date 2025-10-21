@@ -1,4 +1,4 @@
-use crate::ast2::{Parser, CommandKind};
+use super::{Parser, CommandKind};
 use serde_json::json;
 
 #[test]

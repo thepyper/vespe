@@ -1,6 +1,7 @@
 use uuid::Uuid;
+use std::cmp::Ordering;
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Position {
     /// 0-based character offset
     pub offset: usize,
@@ -29,7 +30,7 @@ impl Ord for Position {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Range {
     pub begin: Position,
     pub end: Position,
@@ -106,16 +107,25 @@ impl Parameters {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Argument {
     pub value: String,
     pub range: Range,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Arguments {
     pub arguments: Vec<Argument>,
     pub range: Range,
+}
+
+impl Arguments {
+    pub fn new() -> Self {
+        Arguments {
+            arguments: Vec::new(),
+            range: Range::null(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -143,19 +153,19 @@ pub struct Anchor {
 }
 
 impl Anchor {
-    pub fn new_couple<T>(parameters: &Parameters, arguments: &Arguments) -> (Anchor, Anchor) {
-        let uuid = Uuid::new();
+    pub fn new_couple(command: CommandKind, parameters: &Parameters, arguments: &Arguments) -> (Anchor, Anchor) {
+        let uuid = Uuid::new_v4();
         let begin = Anchor {
-            command: T,
-            uuid: uuid.clone(),
+            command,
+            uuid,
             kind: AnchorKind::Begin,
             parameters: parameters.clone(),
             arguments: arguments.clone(),
             range: Range::null(),
         };
         let end = Anchor {
-            command: T,
-            uuid: uuid,
+            command,
+            uuid,
             kind: AnchorKind::End,
             parameters: Parameters::new(),
             arguments: Arguments::new(),

@@ -1,4 +1,8 @@
 
+use anyhow::Result;
+use std::path::PathBuf;
+use uuid::Uuid;
+
 trait PathResolver {
     /// Resolve a context name to a path
     fn resolve_context(context_name: &str) -> Result<PathBuf>;

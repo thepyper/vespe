@@ -1,4 +1,6 @@
 
+use anyhow::Result;
+
 trait FileAccessor {
     /// Read whole file to a string
     fn read_file(path: &Path) -> Result<String>;

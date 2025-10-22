@@ -9,11 +9,11 @@ use std::path::Path;
 
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState, ContentItem};
 
-pub fn execute_context(file_access: &file::FileAccessor, path_res: &path::PathResolver, context_name: &str) -> Result<()> {
+pub fn execute_context(file_access: &file::FileAccessor, path_res: &path::PathResolver, context_name: &str) -> Result<Content> {
 
     let exe = Executor::new(file_access, path_res);
-    exe.execute_loop(context_name)?;
-    Ok(())
+    let content = exe.execute_loop(context_name)?;
+    Ok(content)
 }
 
 struct Executor<'a> {
@@ -34,17 +34,19 @@ impl<'a> Executor<'a> {
             context: Vec::new(),
         }
     }
-    fn execute_loop(&mut self, context_name: &str) -> Result<()> {
+    fn execute_loop(&mut self, context_name: &str) -> Result<Content> {
         let context_path_buf = self.path_res.resolve_context(context_name)?;
         let context_path = context_path_buf.to_str().unwrap_or_default();
 
         if self.visited.contains(context_path) {
-            return Ok(());
+            return Ok(Content::new());
         }
         self.visited.insert(context_path.to_string());
 
         while self.execute_step(&context_path_buf)? {}
-        Ok(())
+        Ok(
+            self.prelude.extend(self.context)
+        )
     }
     fn execute_step(&mut self, context_path: &Path) -> Result<bool> {
         // Read file, parse it, execute slow things that do not modify context
@@ -154,17 +156,15 @@ impl<'a> Executor<'a> {
         let mut state : DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.instruction_context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value.clone();
-                state.input_context_name = arguments.arguments.get(1).map(|arg| arg.value.clone());
+                state.instruction_context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value;
+                state.input_context_name = arguments.arguments.get(1).ok_or_else(|| anyhow::anohow!("Missing input context name"))?.value;
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true) 
             }
             AnchorStatus::NeedProcessing => {
-                state.instruction_context = self.execute_loop(&state.instruction_context_name).map(|_| "".to_string())?;
-                state.input_context = if let Some(input_context_name) = &state.input_context_name {
-                    Some(self.execute_loop(input_context_name).map(|_| "".to_string())?)
-                } else { None };
+                state.instruction_context = execute(&state.instruction_context_name)?;
+                state.input_context = execute(&state.input_context_name)?;
                 // call llm to derive                
                 state.output = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;

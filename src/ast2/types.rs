@@ -107,6 +107,16 @@ impl Parameters {
     }
 }
 
+impl ToString for Parameters {
+    pub fn to_string(&self) -> String {
+        if self.parameters.is_empty() {
+            String::new()
+        } else {
+            format!("[{}]", self.parameters.iter().map(|(x,y)| format!("{}={}", x, y.to_string())).collect::<Vec::<String>>().join(','))
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Argument {
     pub value: String,
@@ -192,7 +202,7 @@ impl ToString for Anchor {
             self.uuid.to_string(),
             self.kind.to_string(),
             self.parameters.to_string(),
-            self.arguments.to_string(),            
+            self.arguments.value,            
         )
     }
 }

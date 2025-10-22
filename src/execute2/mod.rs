@@ -7,47 +7,13 @@ use content::*;
 use crate::ast2::{parse_document, Anchor, AnchorKind, CommandKind, Document, Range, Tag};
 use anyhow::Result;
 
+pub fn execute(file_access: &file::FileAccessor, path_res: &path::PathResolver, context_name: &str) -> Result<()> {
 
-pub fn execute(file_access: &file::FileAccessor, path_res: &path::PathResolver, context_name: &str, commit: &Commit) {
-
+    let exe = Executor::new(file_access, path_res);
+    let _ = exe.execute_loop(context_name)?;
 }
-
-/*
-impl Tag {
-    pub fn get_argument_as_context(&self, i: usize, project: &Project) -> Result<PathBuf> {
-        let context_name = self.arguments.arguments.get(i).ok_or_else(/* TODO errore */).value;
-        let context_path = project.resolve_context(context_name);
-        Ok(context_path)
-    }
-    pub fn validate_argument_as_context(&self, i: usize, project: &Project) -> Result<PathBuf> {
-        let context_path = self.get_argument_as_context(i, project);
-        match std::fs::exists(context_path) {
-            true => Ok(context_path),
-            false => Err(_), // TODO inesistente
-        }
-    }
-}
-*/
 
 type State = serde_json::Value;
-
-/*
-impl Anchor {
-    fn state_file_name(&self, project: &Project) -> Result<PathBuf> {
-        let meta_path = project.resolve_metadata(self.kind, self.uuid)?;
-        let state_file = meta_path.join("state.json")?;
-        Ok(state_file)
-    }
-    pub fn load_state(&self, project: &Project) -> Result<State> {
-        let state_file = self.state_file_name(project)?;
-        // TODO load json
-    }
-    pub fn save_state(&self, project: &Project, state: &State) {
-        let state_file = self.state_file_name(project)?;
-        // TODO save json
-    }
-}
-*/
 
 struct Executor {
     file_access: &file::FileAccessor, 
@@ -58,6 +24,15 @@ struct Executor {
 }
 
 impl Executor {
+    fn new(file_access: &file::FileAccessor, path_res: &path::PathResolver) -> Self {
+        Executor {
+            file_access,
+            path_res,
+            visited: HashSet::new(),
+            prelude: Vec::new(),
+            context: Vec::new(),
+        }
+    }
     fn execute_loop(&self, context_name: &str) -> Result<Content> {
         let context_path = self.path_res.resolve_context(context_name);
 

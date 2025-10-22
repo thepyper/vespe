@@ -173,7 +173,7 @@ impl<'a> Executor<'a> {
                 state.instruction_context = execute_context(self.file_access, self.path_res, &state.instruction_context_name)?;
                 state.input_context = execute_context(self.file_access, self.path_res, &state.input_context_name)?;
                 // call llm to derive                
-                state.output = "rispostone!! TODO ".into();
+                state.derived = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(true) 

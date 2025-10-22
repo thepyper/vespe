@@ -2,6 +2,10 @@ use serde::{Deserialize, Serialize};
 
 use super::ModelContent;
 
+pub trait State {
+    fn output(&self) -> String;
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AnchorStatus {
     /// Just created, empty without any content nor state gathered
@@ -21,6 +25,11 @@ pub struct InlineState {
     pub context: String,
 }
 
+impl State for InlineState {
+    fn output(&self) -> String {
+        self.context.clone()
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
@@ -29,6 +38,11 @@ pub struct AnswerState {
     pub reply: String,
 }
 
+impl State for AnswerState {
+    fn output(&self) -> String {
+        self.reply.clone()
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeriveState {
@@ -37,6 +51,11 @@ pub struct DeriveState {
     pub instruction_context: ModelContent,
     pub input_context_name: String,
     pub input_context: ModelContent,
-    pub output: String,
+    pub derived: String,
 }
 
+impl State for DeriveState {
+    fn output(&self) -> String {
+        self.derived.clone()
+    }
+}

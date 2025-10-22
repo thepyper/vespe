@@ -26,7 +26,7 @@ impl Position {
 
 impl Ord for Position {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.offset.cmp(other.offset)
+        self.offset.cmp(&other.offset)
     }
 }
 
@@ -38,8 +38,8 @@ pub struct Range {
 
 impl Ord for Range {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.begin.cmp(other.begin) {
-            Ordering::Equal => self.end.cmp(other.end),
+        match self.begin.cmp(&other.begin) {
+            Ordering::Equal => self.end.cmp(&other.end),
             x => x                
         }
     }
@@ -112,7 +112,7 @@ impl ToString for Parameters {
         if self.parameters.is_empty() {
             String::new()
         } else {
-            format!("[{}]", self.parameters.iter().map(|(x,y)| format!("{}={}", x, y.to_string())).collect::<Vec::<String>>().join(','))
+            format!("[{}]", self.parameters.iter().map(|(x,y)| format!("{}={}", x, y.to_string())).collect::<Vec::<String>>().join(","))
         }
     }
 }
@@ -140,7 +140,7 @@ impl Arguments {
 
 impl ToString for Arguments {
     pub fn to_string(&self) -> String {
-        self.arguments.iter().map(|x| x.value).collect::<Vec::<String>>().join(",")
+        self.arguments.iter().map(|x| x.value.clone()).collect::<Vec::<String>>().join(",")
     }
 }
 

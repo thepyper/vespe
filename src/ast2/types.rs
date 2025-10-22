@@ -136,6 +136,16 @@ pub struct Tag {
     pub range: Range,
 }
 
+impl ToString for Tag {
+    pub to_string(&self) -> String {
+        format!("@{} {} {}",
+            tag.command.to_string(),
+            tag.parameters.to_string(),
+            tag.arguments.to_string(),
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AnchorKind {
     Begin,
@@ -173,7 +183,18 @@ impl Anchor {
         };
         (begin, end)
     }
-    
+}
+
+impl ToString for Anchor {
+    pub fn to_string(&self) -> String {
+        format!("<!-- {}-{}:{} {} {} -->",
+            self.command.to_string(),
+            self.uuid.to_string(),
+            self.kind.to_string(),
+            self.parameters.to_string(),
+            self.arguments.to_string(),            
+        )
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

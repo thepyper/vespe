@@ -79,7 +79,9 @@ impl<'a> Executor<'a> {
         
         for item in &ast.content {
             match item {
-                crate::ast2::Content::Text(text) => self.pass_1_text(text)?,
+                crate::ast2::Content::Text(text) => {
+                    self.pass_1_text(text)?
+                }
                 crate::ast2::Content::Tag(tag) => {
                     if self.pass_1_tag(tag)? {
                         return Ok(true);
@@ -109,8 +111,7 @@ impl<'a> Executor<'a> {
     }
 
     fn pass_1_include_tag(&mut self, tag: &Tag) -> Result<bool> {
-        let included_context_arg = tag.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?;
-        let included_context_name = &included_context_arg.value;
+        let included_context_name = tag.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?.value;
         self.execute_loop(included_context_name)?;
         Ok(true)
     }

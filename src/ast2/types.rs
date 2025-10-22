@@ -23,10 +23,25 @@ impl Position {
     }
 }
 
+impl Ord for Position {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.offset.cmp(other.offset)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Range {
     pub begin: Position,
     pub end: Position,
+}
+
+impl Ord for Range {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.begin.cmp(other.begin) {
+            Ordering::Equal => self.end.cmp(other.end),
+            x => x                
+        }
+    }
 }
 
 impl Range {
@@ -109,20 +124,20 @@ pub struct Anchor {
 }
 
 impl Anchor {
-    pub fn new_couple<T>() -> (Anchor, Anchor) {
+    pub fn new_couple<T>(parameters: &Parameters, arguments: &Arguments) -> (Anchor, Anchor) {
         let uuid = Uuid::new();
         let begin = Anchor {
             command: T,
             uuid: uuid.clone(),
             kind: AnchorKind::Begin,
-            parameters: Parameters::new(),
-            arguments: Arguments::new(),
+            parameters: parameters.clone(),
+            arguments: arguments.clone(),
             range: Range::null(),
         };
         let end = Anchor {
             command: T,
             uuid: uuid,
-            kind: AnchorKind::Begin,
+            kind: AnchorKind::End,
             parameters: Parameters::new(),
             arguments: Arguments::new(),
             range: Range::null(),

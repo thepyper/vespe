@@ -1,6 +1,9 @@
 use crate::semantic;
 use std::collections::HashMap;
+use std::collections::BTreeMap;
 use uuid::Uuid;
+
+use crate::ast2::Range;
 
 pub struct AnchorIndex {
     begin: HashMap<Uuid, usize>, // uid -> line index

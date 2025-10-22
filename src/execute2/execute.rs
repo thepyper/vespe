@@ -1,12 +1,13 @@
 
 use crate::file;
 use crate::path;
-use crate::execute::execute;
 use crate::utils;
 use crate::ast2::{parse_document, Anchor, AnchorKind, CommandKind, Document, Range, Tag, Text, Parameters, Arguments, Content};
 use anyhow::Result;
 use std::collections::HashSet;
 use std::path::Path;
+
+use super::*;
 
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::content::ContentItem;

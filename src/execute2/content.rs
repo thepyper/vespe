@@ -19,13 +19,13 @@ pub enum ModelContentItem {
 
 impl ModelContentItem {
     pub fn user(text: &str) -> Self {
-        ContentItem::User(UserModelContent { text: text.into() })
+        ModelContentItem::User(UserModelContent { text: text.into() })
     }
     fn system(text: &str) -> Self {
-        ContentItem::System(SystemModelContent { text: text.into() })
+        ModelContentItem::System(SystemModelContent { text: text.into() })
     }
     fn agent(author: &str, text: &str) -> Self {
-        ContentItem::Agent(AgentModelContent {
+        ModelContentItem::Agent(AgentModelContent {
             author: author.into(),
             text: text.into(),
         })

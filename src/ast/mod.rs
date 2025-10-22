@@ -797,15 +797,8 @@ pub fn parse_anchor(parser: &mut Parser) -> Result<Option<Anchor>, ParsingError>
         parser.advance_position_by_str("-->");
         parser.skip_whitespace();
 
-        let mut parameters = HashMap::new();
-        let mut arguments = Vec::new();
-
-        // Parse parameters and arguments using the main parser
-        let (p, _) = parse_parameters(parser)?;
-        parameters = p;
-
-        let (a, _) = parse_arguments(parser)?;
-        arguments = a;
+        let (parameters, _) = parse_parameters(parser)?;
+        let (arguments, _) = parse_arguments(parser)?;
         let end_pos = parser.current_pos;
         Ok(Some(Anchor {
             command,

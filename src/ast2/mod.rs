@@ -9,4 +9,3 @@ pub use types::{
     Range, Tag, Text,
 };
 
-use parse::*;

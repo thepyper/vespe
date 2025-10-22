@@ -86,17 +86,11 @@ impl<'a> Parser<'a> {
     pub fn get_position(&self) -> Position {
         self.position.clone()
     }
-    pub fn get_offset(&self) -> usize {
-        self.position.offset
-    }
     pub fn remain(&self) -> &'a str {
         self.iterator.as_str()
     }
     pub fn is_eod(&self) -> bool {
         self.remain().is_empty()
-    }
-    pub fn is_eol(&self) -> bool {
-        self.remain().starts_with("\n")
     }
     pub fn is_begin_of_line(&self) -> bool {
         self.position.column == 1
@@ -105,7 +99,7 @@ impl<'a> Parser<'a> {
         if !self.remain().starts_with(xs) {
             None
         } else {
-            for x in xs.chars() {
+            for _x in xs.chars() {
                 self.advance();
             }
             Some(xs.into())

@@ -153,7 +153,7 @@ pub struct Tag {
 }
 
 impl ToString for Tag {
-    pub to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         format!("@{} {} {}",
             tag.command.to_string(),
             tag.parameters.to_string(),
@@ -169,7 +169,7 @@ pub enum AnchorKind {
 }
 
 impl ToString for AnchorKind {
-    pub to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match self {
             AnchorKind::Begin => "begin",
             AnchorKind::End => "end",

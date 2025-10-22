@@ -5,7 +5,7 @@ use crate::utils;
 use crate::ast2::{Anchor, AnchorKind, CommandKind, Document, Range, Tag, Text, Parameters, Arguments};
 use anyhow::Result;
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::*;
 
@@ -22,7 +22,7 @@ pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path
 struct Executor<'a> {
     file_access: &'a dyn file::FileAccessor, 
     path_res: &'a dyn path::PathResolver,
-    visited: HashSet<String>,
+    visited: HashSet<PathBuf>,
     prelude: ModelContent,
     context: ModelContent,
 }
@@ -38,15 +38,15 @@ impl<'a> Executor<'a> {
         }
     }
     fn execute_loop(&mut self, context_name: &str) -> Result<ModelContent> {
-        let context_path_buf = self.path_res.resolve_context(context_name)?;
-        let context_path = context_path_buf.to_str().unwrap_or_default();
+        let context_path = self.path_res.resolve_context(context_name)?;
 
-        if self.visited.contains(context_path) {
+        if self.visited.contains(&context_path) {
             return Ok(ModelContent::new());
         }
-        self.visited.insert(context_path.to_string());
 
-        while self.execute_step(&context_path_buf)? {}
+        self.visited.insert(context_path.clone());
+
+        while self.execute_step(&context_path)? {}
         Ok({
             let mut content = ModelContent::new();
             content.extend(self.prelude.clone());

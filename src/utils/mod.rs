@@ -1,29 +1,36 @@
-use crate::semantic;
 use std::collections::HashMap;
 use std::collections::BTreeMap;
 use uuid::Uuid;
 use anyhow::Result;
 use std::path::PathBuf;
 
-use crate::ast2::Range;
+use crate::ast2::*;
 use crate::file;
 use crate::path;
 
 pub struct AnchorIndex {
-    begin: HashMap<Uuid, usize>, // uid -> line index
-    end: HashMap<Uuid, usize>,   // uid -> line index
+    begin: HashMap<Uuid, usize>, // uid -> content index
+    end: HashMap<Uuid, usize>,   // uid -> content index
 }
 
 impl AnchorIndex {
-    pub fn new(lines: &[semantic::Line]) -> Self {
+    pub fn new(content: &[Content]) -> Self {
         let mut begin = HashMap::new();
         let mut end = HashMap::new();
 
-        for (i, line) in lines.iter().enumerate() {
-            if line.is_begin_anchor() {
-                begin.insert(line.get_uid(), i);
-            } else if line.is_end_anchor() {
-                end.insert(line.get_uid(), i);
+        for (i, line) in content.iter().enumerate() {
+            match line {
+                Content::Anchor(anchor) => {
+                    match anchor.kind {
+                        AnchorKind::Begin => {
+                            let _ = begin.insert(anchor.uuid, i);
+                        }
+                        AnchorKind::End => {
+                            let _ = end.insert(anchor.uuid, i);
+                        }                      
+                    }
+                }
+                _ => {}
             }
         }
 

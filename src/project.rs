@@ -1,10 +1,5 @@
 use crate::agent::ShellAgentCall;
-use crate::execute;
-use crate::execute::states::{AnswerState, DeriveState, InlineState, SummaryState};
 use crate::git::Commit;
-use crate::semantic::Line;
-use crate::semantic::SemanticError;
-use crate::syntax::types::AnchorKind;
 
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
@@ -20,26 +15,6 @@ use crate::editor::{
     lockfile::FileBasedEditorCommunicator, DummyEditorCommunicator, EditorCommunicator,
 };
 
-/*
-#[derive(Debug)]
-pub struct Context {
-    pub name: String,
-    pub content: Vec<Line>,
-    pub includes: BTreeMap<usize, Context>, // line index to Context
-    pub inlines: BTreeMap<usize, Snippet>,  // line index to Snippet
-    pub summaries: BTreeMap<usize, Context>, // line index to Context
-    pub answers: BTreeSet<usize>,           // line index
-}
-*/
-
-#[derive(Debug)]
-pub struct Snippet {
-    pub name: String,
-    pub content: Vec<Line>,
-}
-
-// ... (rest of the file)
-
 const CTX_DIR_NAME: &str = ".ctx";
 const CTX_ROOT_FILE_NAME: &str = ".ctx_root";
 const METADATA_DIR_NAME: &str = ".meta";
@@ -48,12 +23,6 @@ const SNIPPETS_DIR_NAME: &str = "snippets";
 
 #[derive(Debug)] // Add Debug trait for easy printing
 pub struct ContextInfo {
-    pub name: String,
-    pub path: PathBuf,
-}
-
-#[derive(Debug)] // Add Debug trait for easy printing
-pub struct SnippetInfo {
     pub name: String,
     pub path: PathBuf,
 }
@@ -144,18 +113,23 @@ impl Project {
         self.project_home().join(CONTEXTS_DIR_NAME)
     }
 
+    /*
     pub fn snippets_root(&self) -> PathBuf {
         self.project_home().join(SNIPPETS_DIR_NAME)
     }
+    */
 
     pub fn resolve_context(&self, name: &str) -> PathBuf {
         self.contexts_root().join(format!("{}.md", name))
     }
 
+    /*
     pub fn resolve_snippet(&self, name: &str) -> PathBuf {
         self.snippets_root().join(format!("{}.md", name))
     }
+    */
 
+    /*
     pub fn resolve_metadata(&self, anchor_kind: &str, uid: &Uuid) -> Result<PathBuf> {
         let anchor_metadata_dir =
             self.metadata_home()
@@ -168,6 +142,7 @@ impl Project {
         ))?;
         Ok(anchor_metadata_dir)
     }
+    */
 
     pub fn project_config_path(&self) -> PathBuf {
         self.metadata_home().join("project_config.json")
@@ -199,6 +174,7 @@ impl Project {
         Ok(file_path)
     }
 
+    /*
     pub fn create_snippet_file(
         &self,
         name: &str,
@@ -224,6 +200,7 @@ impl Project {
 
         Ok(file_path)
     }
+    */
 
     pub fn list_contexts(&self) -> Result<Vec<ContextInfo>> {
         let mut contexts = Vec::new();
@@ -251,6 +228,7 @@ impl Project {
         Ok(contexts)
     }
 
+    /*
     pub fn list_snippets(&self) -> Result<Vec<SnippetInfo>> {
         let mut snippets = Vec::new();
         let snippets_root = self.snippets_root();
@@ -292,6 +270,7 @@ impl Project {
             content: lines,
         })
     }
+    */
 
     pub fn save_project_config(&self) -> Result<()> {
         let config_path = self.project_config_path();
@@ -312,6 +291,7 @@ impl Project {
         }
     }
 
+    /*
     fn save_state_to_metadata<T>(
         &self,
         anchor_kind: AnchorKind,
@@ -436,6 +416,7 @@ impl Project {
         }
         Ok(())
     }
+*/
 
     fn collect_md_files_recursively(
         root: &Path,
@@ -459,6 +440,7 @@ impl Project {
         Ok(())
     }
 }
+
 
 /*
 fn format_lines_to_string(lines: &Vec<Line>) -> String {

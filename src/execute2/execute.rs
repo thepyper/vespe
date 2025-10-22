@@ -209,6 +209,8 @@ impl<'a> Executor<'a> {
 
     fn pass_2(&mut self, patches: &mut utils::Patches, ast: &Document) -> Result<bool> {
         
+        let anchor_index = utils::AnchorIndex::new(&ast.content);
+    
         for item in &ast.content {
             match item {
                 crate::ast2::Content::Tag(tag) => {
@@ -216,9 +218,24 @@ impl<'a> Executor<'a> {
                         return Ok(true);
                     }
                 }
-                crate::ast2::Content::Anchor(anchor) => {
-                    if self.pass_2_anchor(patches, anchor)? {
-                        return Ok(true);
+                crate::ast2::Content::Anchor(a0) => {
+                    return match a0.kind {
+                        AnchorKind::Begin => {
+                            let j  = anchor_index.get_end(&a0.uuid).ok_or_else(|| anyhow::anyhow!("Anchor not closed!"))?;
+                            let a1 = ast.content.get(j).ok_or_else(|| anyhow::anyhow!("Bad index!?!?"))?;
+                            match a1 {
+                                crate::ast2::Content::Anchor(a1) => {
+                                    match a1.kind {
+                                        AnchorKind::End => {
+                                            self.pass_2_anchors(patches, a0, a1)
+                                        }
+                                        _ => { return Err(anyhow::anyhow!("Bad end anchor!")) }
+                                    }
+                                }
+                                _ => { return Err(anyhow::anyhow!("Bad end content!")) }
+                            }
+                        }
+                        _ => Ok(false)
                     }
                 }
                 _ => {}
@@ -259,20 +276,6 @@ impl<'a> Executor<'a> {
         Ok(true)
     }
     
-    fn pass_2_anchor(&mut self, patches: &mut utils::Patches, anchor: &Anchor) -> Result<bool> {
-        match anchor.kind {
-            AnchorKind::Begin => self.pass_2_begin_anchor(patches, anchor),
-            _ => Ok(false)
-        }
-    }
-
-    fn pass_2_begin_anchor(&mut self, _patches: &mut utils::Patches, _a0: &Anchor) -> Result<bool> {
-        // TODO find a1
-        // For now, returning false as a placeholder to allow compilation.
-        // This is a logical gap that needs further attention beyond type fixing.
-        Ok(false)
-    }
-
     fn pass_2_anchors(&mut self, patches: &mut utils::Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
         let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
         match a0.command {

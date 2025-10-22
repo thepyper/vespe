@@ -1,14 +1,10 @@
 pub mod agent;
-pub mod ast;
 pub mod ast2;
 pub mod config;
 pub mod editor;
-pub mod execute;
 pub mod execute2;
 pub mod git;
 pub mod project;
-pub mod semantic;
-pub mod syntax;
 pub mod utils;
 pub mod file;
 pub mod path;

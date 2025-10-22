@@ -233,7 +233,7 @@ impl Executor {
                     }
                 }
                 Anchor(anchor) => {
-                    if self.pass_2_anchor(patches, tag)? {
+                    if self.pass_2_anchor(patches, anchor)? {
                         return Ok(true);
                     }
                 }
@@ -262,18 +262,27 @@ impl Executor {
         let ast = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
         ast.save_state(T::new());
     }
-
-    fn pass_2_anchor(&self, patches: &mut Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
-        match ( // TODO dividi in due funzioni !?
-            a0.command,
-            a0.kind,          
-        ) {
-            (CommandKind::Answer, AnchorKind::Begin) => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),    
-            (CommandKind::Derive, AnchorKind::Begin) => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),
-            (CommandKind::Inline, AnchorKind::Begin) => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),            
-            _ => Ok(false),
+    
+    fn pass_2_anchor(&self, patches: &mut Patches, anchor: &Anchor) -> Result<bool> {
+        match anchor.kind {
+            AnchorKind::Begin => self.pass_2_begin_anchor(patches, anchor),
+            _ => Ok(false)
         }
+    }
+
+    fn pass_2_begin_anchor(&self, patches: &mut Patches, a0: &Anchor) -> Result<bool> {
+        let a1 = // TODO find
+        self.pass_2_anchors(patches, anchor, a1)
+    }
+
+    fn pass_2_anchors(&self, patches: &mut Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
+        match a0.command => {
+            CommandKind::Answer => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),    
+            CommandKind::Derive => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),
+            CommandKind::Inline => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),            
+            _ => Ok(false),
+        }                
     }
 
     fn pass_2_normal_begin_anchor<S, T>(

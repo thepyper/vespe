@@ -171,8 +171,8 @@ fn main() -> Result<()> {
                 project.project_home().display()
             );
 
-            let ctx_dir = project.project_home();
-            let ctx_root_file = ctx_dir.join(".ctx_root");
+            let _ctx_dir = project.project_home();
+
         }
         Commands::Context { command } => {
             let project = Project::find(&project_path)?;

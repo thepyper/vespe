@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ast2::{Text, Range};
 use super::ModelContent;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -22,15 +21,6 @@ pub struct InlineState {
     pub context: String,
 }
 
-impl InlineState {
-    pub fn new() -> Self {
-        InlineState {
-            status: AnchorStatus::JustCreated,
-            context_name: String::new(),
-            context: String::new(),
-        }
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
@@ -39,15 +29,6 @@ pub struct AnswerState {
     pub reply: String,
 }
 
-impl AnswerState {
-    pub fn new() -> Self {
-        AnswerState {
-            status: AnchorStatus::JustCreated,
-            query: ModelContent::new(),
-            reply: String::new(),
-        }
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeriveState {
@@ -59,15 +40,3 @@ pub struct DeriveState {
     pub output: String,
 }
 
-impl DeriveState {
-    pub fn new() -> Self {
-        DeriveState {
-            status: AnchorStatus::JustCreated,
-            instruction_context_name: String::new(),
-            instruction_context: ModelContent::new(),
-            input_context_name: String::new(),
-            input_context: ModelContent::new(),
-            output: String::new(),
-        }
-    }
-}

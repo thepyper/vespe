@@ -100,7 +100,7 @@ impl ExecuteWorker {
             self._handle_tags_and_anchors(project, &mut context, agent, visited_contexts, commit)?;
 
         // Handle repeat tag
-        let mut need_next_step = self._hanled_repeat_tag(project, &mut context, commit)?;
+        need_next_step |= self._hanled_repeat_tag(project, &mut context, commit)?;
 
         // Execute document injection and mutate states
         need_next_step |= self._handle_anchor_states(project, &mut context, commit)?;
@@ -224,7 +224,7 @@ impl ExecuteWorker {
                         let k = anchor_index
                             .get_end(uuid)
                             .ok_or_else(|| ExecuteError::MissingEndAnchor(*uuid))?;
-                        inject_lines(&mut patches, j + 1, k, vec![]);
+                        inject_lines(&mut patches, j + 1, k, vec![])?;
                         match anchor_begin_line {
                             Line::InlineBeginAnchor { uuid } => {
                                 let state = project.load_inline_state(uuid)?;

@@ -2,17 +2,17 @@
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct SystemModelContent {
+pub struct SystemModelContent {
     text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct UserModelContent {
+pub struct UserModelContent {
     text: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct AgentModelContent {
+pub struct AgentModelContent {
     author: String,
     text: String,
 }
@@ -27,16 +27,6 @@ pub enum ModelContentItem {
 impl ModelContentItem {
     pub fn user(text: &str) -> Self {
         ModelContentItem::User(UserModelContent { text: text.into() })
-    }
-    fn system(text: &str) -> Self {
-        ModelContentItem::System(SystemModelContent { text: text.into() })
-    }
-    fn agent(author: &str, text: &str) -> Self {
-        ModelContentItem::Agent(AgentModelContent {
-            author: author.into(),
-            text: text.into(),
-        })
-    }
-}
+    }}
 
 pub type ModelContent = Vec<ModelContentItem>;

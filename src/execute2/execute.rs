@@ -2,7 +2,7 @@
 use crate::file;
 use crate::path;
 use crate::utils;
-use crate::ast2::{parse_document, Anchor, AnchorKind, CommandKind, Document, Range, Tag, Text, Parameters, Arguments, Content};
+use crate::ast2::{Anchor, AnchorKind, CommandKind, Document, Range, Tag, Text, Parameters, Arguments};
 use anyhow::Result;
 use std::collections::HashSet;
 use std::path::Path;
@@ -131,8 +131,8 @@ impl<'a> Executor<'a> {
     fn pass_1_answer_begin_anchor(
         &mut self,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        arguments: &Arguments,
+        _parameters: &Parameters,
+        _arguments: &Arguments,
     ) -> Result<bool> {
         let mut state : AnswerState = asm.load_state()?;
         match state.status {
@@ -156,7 +156,7 @@ impl<'a> Executor<'a> {
     fn pass_1_derive_begin_anchor(
         &mut self,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
+        _parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
         let mut state : DeriveState = asm.load_state()?;
@@ -184,7 +184,7 @@ impl<'a> Executor<'a> {
     fn pass_1_inline_begin_anchor(
         &mut self,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
+        _parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
         let mut state : InlineState = asm.load_state()?;
@@ -249,7 +249,7 @@ impl<'a> Executor<'a> {
             range,
             &format!("{} \n {}", a0.to_string(), a1.to_string()),
         );
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, &a0);
+        let _asm = utils::AnchorStateManager::new(self.file_access, self.path_res, &a0);
         // This part needs to be generic over the state type, which is not directly possible with current information.
         // For now, I'll use a placeholder that compiles but might not be logically correct.
         // The original code had `ast.save_state(T::new());` which implies a generic `T` with a `new()` method.
@@ -265,45 +265,12 @@ impl<'a> Executor<'a> {
         }
     }
 
-    fn pass_2_begin_anchor(&mut self, patches: &mut utils::Patches, a0: &Anchor) -> Result<bool> {
+    fn pass_2_begin_anchor(&mut self, _patches: &mut utils::Patches, _a0: &Anchor) -> Result<bool> {
         // TODO find a1
         // For now, returning false as a placeholder to allow compilation.
         // This is a logical gap that needs further attention beyond type fixing.
         Ok(false)
     }
 
-    fn pass_2_anchors(&mut self, patches: &mut utils::Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
-        match a0.command {
-            CommandKind::Answer => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),    
-            CommandKind::Derive => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),
-            CommandKind::Inline => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),            
-            _ => Ok(false),
-        }                
-    }
 
-    fn pass_2_normal_begin_anchor(
-        &mut self,
-        patches: &mut utils::Patches,
-        asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        range_begin: &Range,
-        range_end: &Range,
-    ) -> Result<bool> {
-        let mut state : AnswerState = asm.load_state()?;
-        match state.status {
-            AnchorStatus::NeedInjection => {
-                let range = Range {
-                    begin: range_begin.end.clone(),
-                    end: range_end.begin.clone(),
-                };
-                patches.add_patch(&range, &state.reply);
-                state.status = AnchorStatus::Completed;
-                asm.save_state(&state, None)?;
-                Ok(true)
-            }
-            _ => Ok(false),
-        }
-    }
 }

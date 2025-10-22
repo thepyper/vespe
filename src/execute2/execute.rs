@@ -11,9 +11,9 @@ use std::path::Path;
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::content::ContentItem;
 
-pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<Content> {
+pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
 
-    let exe = Executor::new(file_access, path_res);
+    let mut exe = Executor::new(file_access, path_res);
     let content = exe.execute_loop(context_name)?;
     Ok(content)
 }
@@ -22,8 +22,8 @@ struct Executor<'a> {
     file_access: &'a dyn file::FileAccessor, 
     path_res: &'a dyn path::PathResolver,
     visited: HashSet<String>,
-    prelude: Vec<ContentItem>,
-    context: Vec<ContentItem>,
+    prelude: ModelContent,
+    context: ModelContent,
 }
 
 impl<'a> Executor<'a> {
@@ -133,7 +133,7 @@ impl<'a> Executor<'a> {
         let mut state : AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.query = self.context.iter().map(|item| item.to_string()).collect();
+                state.query = self.context.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true) 
@@ -158,15 +158,15 @@ impl<'a> Executor<'a> {
         let mut state : DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.instruction_context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value;
-                state.input_context_name = arguments.arguments.get(1).ok_or_else(|| anyhow::anyhow!("Missing input context name"))?.value;
+                state.instruction_context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value.clone();
+                state.input_context_name = arguments.arguments.get(1).ok_or_else(|| anyhow::anyhow!("Missing input context name"))?.value.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true) 
             }
             AnchorStatus::NeedProcessing => {
-                state.instruction_context = execute(&state.instruction_context_name)?;
-                state.input_context = execute(&state.input_context_name)?;
+                state.instruction_context = execute_context(self.file_access, self.path_res, &state.instruction_context_name)?;
+                state.input_context = execute_context(self.file_access, self.path_res, &state.input_context_name)?;
                 // call llm to derive                
                 state.output = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;

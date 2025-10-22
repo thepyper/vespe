@@ -78,7 +78,6 @@ pub enum CommandKind {
     Answer,
     Derive,
     Repeat,
-    Summarize,
 }
 
 impl ToString for CommandKind {

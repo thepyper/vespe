@@ -1,35 +1,35 @@
-struct SystemContent {
+struct SystemModelContent {
     text: String,
 }
 
-struct UserContent {
+struct UserModelContent {
     text: String,
 }
 
-struct AgentContent {
+struct AgentModelContent {
     author: String,
     text: String,
 }
 
-pub enum ContentItem {
-    System(SystemContent),
-    User(UserContent),
-    Agent(AgentContent),
+pub enum ModelContentItem {
+    System(SystemModelContent),
+    User(UserModelContent),
+    Agent(AgentModelContent),
 }
 
-impl ContentItem {
+impl ModelContentItem {
     pub fn user(text: &str) -> Self {
-        ContentItem::User(UserContent { text: text.into() })
+        ContentItem::User(UserModelContent { text: text.into() })
     }
     fn system(text: &str) -> Self {
-        ContentItem::System(SystemContent { text: text.into() })
+        ContentItem::System(SystemModelContent { text: text.into() })
     }
     fn agent(author: &str, text: &str) -> Self {
-        ContentItem::Agent(AgentContent {
+        ContentItem::Agent(AgentModelContent {
             author: author.into(),
             text: text.into(),
         })
     }
 }
 
-type Vec<ContentItem> = Content;
+type Vec<ModelContentItem> = ModelContent;

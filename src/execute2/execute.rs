@@ -47,12 +47,12 @@ impl<'a> Executor<'a> {
         self.visited.insert(context_path.to_string());
 
         while self.execute_step(&context_path_buf)? {}
-        Ok(
+        Ok({
             let mut content = ModelContent::new();
-            content.extend(self.prelude);
-            content.extend(self.context);
+            content.extend(self.prelude.clone());
+            content.extend(self.context.clone());
             content
-        )
+        })
     }
     fn execute_step(&mut self, context_path: &Path) -> Result<bool> {
         // Read file, parse it, execute slow things that do not modify context

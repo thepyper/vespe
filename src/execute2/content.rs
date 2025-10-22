@@ -1,21 +1,23 @@
 
-#[derive(Clone, Serialize, Deserialize)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct SystemModelContent {
     text: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct UserModelContent {
     text: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct AgentModelContent {
     author: String,
     text: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModelContentItem {
     System(SystemModelContent),
     User(UserModelContent),

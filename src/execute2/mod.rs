@@ -129,18 +129,16 @@ impl Executor {
         let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         match (
             anchor.command,
-            anchor.kind,
-            anchor.parameters,
-            anchor.arguments,
+            anchor.kind,            
         ) {
-            (CommandKind::Answer, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_answer_begin_anchor(asm, parameters, arguments)
+            (CommandKind::Answer, AnchorKind::Begins) => {
+                want_next_step |= self.pass_1_answer_begin_anchor(asm, anchor.parameters, anchor.arguments)
             } // passa commit?
-            (CommandKind::Derive, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_derive_begin_anchor(asm, parameters, arguments)
+            (CommandKind::Derive, AnchorKind::Begins) => {
+                want_next_step |= self.pass_1_derive_begin_anchor(asm, anchor.parameters, anchor.arguments)
             } // passa commit?
-            (CommandKind::Inline, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_inline_begin_anchor(asm, parameters, arguments)
+            (CommandKind::Inline, AnchorKind::Begin) => {
+                want_next_step |= self.pass_1_inline_begin_anchor(asm, anchor.parameters, anchor.arguments)
             } // passa commit?          
             _ => {}
         }
@@ -211,30 +209,31 @@ impl Executor {
                 state.context_name = arguments.arguments.get(0)?; // TODO err?
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(state);
-                true
+                Ok(true)
             }
             AnchorStatus::NeedProcessing => {
                 let context_path = self.path_res.resolve_context(state.context_name);
                 state.context = self.file_access.read_file(context_path)?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(state);
-                true 
+                Ok(true)
             }
             _ => {}
         }
+        Ok(false)
     }
 
-    fn pass_2(&self, context: &str, ast: &Document) {
+    fn pass_2(&self, patches: &mut Patches, ast: &Document) {
         
         for item in ast.content {
             match item {
                 Tag(tag) => {
-                    if self.pass_2_tag(tag)? {
+                    if self.pass_2_tag(patches, tag)? {
                         return Ok(true);
                     }
                 }
                 Anchor(anchor) => {
-                    if self.pass_2_anchor(tag)? {
+                    if self.pass_2_anchor(patches, tag)? {
                         return Ok(true);
                     }
                 }
@@ -245,71 +244,60 @@ impl Executor {
         Ok(false)
     }
 
-    fn pass_2_tag(&self, tag: &Tag) -> Result<bool> {
+    fn pass_2_tag(&self, patches: &mut Patches, tag: &Tag) -> Result<bool> {
         match tag.command {
-            CommandKind::  
+            CommandKind::Answer => self.pass_2_normal_tag<CommandKind::Answer, AnswerState>(patches, tag.parameters, tag.arguments, tag.range),            
+            CommandKind::Derive => self.pass_2_normal_tag<CommandKind::Derive, DeriveState>(patches, tag.parameters, tag.arguments, tag.range),            
+            CommandKind::Inline => self.pass_2_normal_tag<CommandKind::Inline, InlineState>(patches, tag.parameters, tag.arguments, tag.range),            
             _ => Ok(false),
         }
     }
 
-    fn pass_2_anchor(&self, anchor: &Anchor) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
-        match (
-            anchor.command,
-            anchor.kind,
-            anchor.parameters,
-            anchor.arguments,
+    fn pass_2_normal_tag<S, T>(&self, patches: &mut Patches, parameters: &Parameters, arguments: &Arguments, range: &Range) -> Result<bool> {
+        let (a0, a1) = Anchor::new_couple<S>(parameters, arguments);
+        patches.add_patch(
+            range,
+            vec![a0.to_string(), a1.to_string()].join('\n'),
+        );
+        let ast = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
+        ast.save_state(T::new());
+    }
+
+    fn pass_2_anchor(&self, patches: &mut Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
+        match ( // TODO dividi in due funzioni !?
+            a0.command,
+            a0.kind,          
         ) {
-            (CommandKind::Answer, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_2_answer_begin_anchor(asm, parameters, arguments)
-            } // passa commit?
-            (CommandKind::Derive, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_2_derive_begin_anchor(asm, parameters, arguments)
-            } // passa commit?
-            (CommandKind::Inline, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_2_inline_begin_anchor(asm, parameters, arguments)
-            } // passa commit?          
-            _ => {}
+            (CommandKind::Answer, AnchorKind::Begin) => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),    
+            (CommandKind::Derive, AnchorKind::Begin) => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),
+            (CommandKind::Inline, AnchorKind::Begin) => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),            
+            _ => Ok(false),
         }
     }
 
-    fn pass_2_answer_begin_anchor(
+    fn pass_2_normal_begin_anchor<S, T>(
         &self,
+        patches: &mut Patches,
         asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
+        range_begin: &Range,
+        range_end: &Range,
     ) -> Result<bool> {
         let mut state : AnswerState = asm.load_state();
         match state.status {
-            AnchorStatus::
-            _ => {}
+            AnchorStatus::NeedInjection => {
+                let range = Range {
+                    begin: range_begin.end,
+                    end: range_end.begin,
+                };
+                patches.add_patch(range, state.output());
+                state.status = AnchorStatus::Completed;
+                asm.save_state(state);
+                Ok(true)
+            }
+            _ => Ok(false),
         }
     }
-
-    fn pass_2_derive_begin_anchor(
-        &self,
-        asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        arguments: &Arguments,
-    ) -> Result<bool> {
-        let state : DeriveState = asm.load_state();
-        match state.status {
-            AnchorStatus::
-            _ => {}
-        }
-    }
-
-    fn pass_2_inline_begin_anchor(
-        &self,
-        asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        arguments: &Arguments,
-    ) -> Result<bool> {
-        let state : InlineState = asm.load_state();
-        match state.status {
-            AnchorStatus::
-            _ => {}
-        }
-    }
-
 }

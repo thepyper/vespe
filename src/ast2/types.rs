@@ -108,6 +108,30 @@ pub struct Anchor {
     pub range: Range,
 }
 
+impl Anchor {
+    pub fn new_couple<T>() -> (Anchor, Anchor) {
+        let uuid = Uuid::new();
+        let begin = Anchor {
+            command: T,
+            uuid: uuid.clone(),
+            kind: AnchorKind::Begin,
+            parameters: Parameters::new(),
+            arguments: Arguments::new(),
+            range: Range::null(),
+        };
+        let end = Anchor {
+            command: T,
+            uuid: uuid,
+            kind: AnchorKind::Begin,
+            parameters: Parameters::new(),
+            arguments: Arguments::new(),
+            range: Range::null(),
+        };
+        (begin, end)
+    }
+    
+}
+
 pub enum Content {
     Text(Text),
     Tag(Tag),

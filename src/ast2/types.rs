@@ -69,7 +69,7 @@ pub struct Text {
     pub range: Range,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum CommandKind {
     Tag, // for debug purpose
     Include,
@@ -136,7 +136,7 @@ pub struct Tag {
     pub range: Range,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AnchorKind {
     Begin,
     End,

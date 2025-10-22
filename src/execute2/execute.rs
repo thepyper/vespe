@@ -104,16 +104,10 @@ impl Executor {
             anchor.command,
             anchor.kind,            
         ) {
-            (CommandKind::Answer, AnchorKind::Begins) => {
-                want_next_step |= self.pass_1_answer_begin_anchor(asm, anchor.parameters, anchor.arguments)
-            } // passa commit?
-            (CommandKind::Derive, AnchorKind::Begins) => {
-                want_next_step |= self.pass_1_derive_begin_anchor(asm, anchor.parameters, anchor.arguments)
-            } // passa commit?
-            (CommandKind::Inline, AnchorKind::Begin) => {
-                want_next_step |= self.pass_1_inline_begin_anchor(asm, anchor.parameters, anchor.arguments)
-            } // passa commit?          
-            _ => {}
+            (CommandKind::Answer, AnchorKind::Begins) => self.pass_1_answer_begin_anchor(asm, anchor.parameters, anchor.arguments),
+            (CommandKind::Derive, AnchorKind::Begins) => self.pass_1_derive_begin_anchor(asm, anchor.parameters, anchor.arguments),
+            (CommandKind::Inline, AnchorKind::Begin) => self.pass_1_inline_begin_anchor(asm, anchor.parameters, anchor.arguments),
+            _ => Ok(false)
         }
     }
 
@@ -129,16 +123,16 @@ impl Executor {
                 state.query = self.context.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(state);
-                true
+                Ok(true) 
             }
             AnchorStatus::NeedProcessing => {
                 // TODO call llm 
                 state.reply = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(state);
-                true 
+                Ok(true) 
             }
-            _ => {}
+            _ => Ok(false)
         }
     }
 
@@ -155,7 +149,7 @@ impl Executor {
                 state.input_context_name = arguments.arguments.get(1); // TODO err?
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(state);
-                true
+                Ok(true) 
             }
             AnchorStatus::NeedProcessing => {
                 state.instruction_context = self.execute_loop(state.instruction_context_name);
@@ -164,9 +158,9 @@ impl Executor {
                 state.output = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(state);
-                true 
+                Ok(true) 
             }
-            _ => {}
+            _ => O(false)
         }
     }
 
@@ -191,9 +185,8 @@ impl Executor {
                 asm.save_state(state);
                 Ok(true)
             }
-            _ => {}
+            _ => Ok(false)
         }
-        Ok(false)
     }
 
     fn pass_2(&self, patches: &mut Patches, ast: &Document) {
@@ -219,9 +212,9 @@ impl Executor {
 
     fn pass_2_tag(&self, patches: &mut Patches, tag: &Tag) -> Result<bool> {
         match tag.command {
-            CommandKind::Answer => self.pass_2_normal_tag<CommandKind::Answer, AnswerState>(patches, tag.parameters, tag.arguments, tag.range),            
-            CommandKind::Derive => self.pass_2_normal_tag<CommandKind::Derive, DeriveState>(patches, tag.parameters, tag.arguments, tag.range),            
-            CommandKind::Inline => self.pass_2_normal_tag<CommandKind::Inline, InlineState>(patches, tag.parameters, tag.arguments, tag.range),            
+            CommandKind::Answer => self.pass_2_normal_tag::<CommandKind::Answer, AnswerState>(patches, tag.parameters, tag.arguments, tag.range),            
+            CommandKind::Derive => self.pass_2_normal_tag::<CommandKind::Derive, DeriveState>(patches, tag.parameters, tag.arguments, tag.range),            
+            CommandKind::Inline => self.pass_2_normal_tag::<CommandKind::Inline, InlineState>(patches, tag.parameters, tag.arguments, tag.range),            
             _ => Ok(false),
         }
     }
@@ -251,9 +244,9 @@ impl Executor {
     fn pass_2_anchors(&self, patches: &mut Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
         let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
         match a0.command => {
-            CommandKind::Answer => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),    
-            CommandKind::Derive => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),
-            CommandKind::Inline => self.pass_2_normal_begin_anchor<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),            
+            CommandKind::Answer => self.pass_2_normal_begin_anchor::<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),    
+            CommandKind::Derive => self.pass_2_normal_begin_anchor::<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),
+            CommandKind::Inline => self.pass_2_normal_begin_anchor::<CommandKind::Answer, AnswerState>(patches, asm, a0.parameters, a0.arguments, a0.range, a1.range),            
             _ => Ok(false),
         }                
     }

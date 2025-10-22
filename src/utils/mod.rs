@@ -59,7 +59,7 @@ impl AnchorStateManager {
     fn load_state<T>(&self) -> Result<T> {
         let state_path = self.get_state_path();
         let state = self.file_access.read_file(state_path)?;
-        let state: T = serde_json::from_str(state);
+        let state: T = serde_json::from_str(state)?;
         Ok(state)
     }
     fn save_state<T>(&self, state: &T, comment: Option<&str>) -> Result<()> {
@@ -78,11 +78,11 @@ impl Patches {
     pub fn new(document: &str) -> Self {
         Patches {
             document,
-            patches: BTreeMap<Range, String>,
+            patches: BTreeMap::new(),
         }
     }
     pub fn add_patch(&mut self, range: &Range, replace: &str) {
-        self.patches.insert(range, replace);
+        self.patches.insert(range.clone(), replace.to_string());
     }
     pub fn is_empty(&self) -> bool {
         self.patches.is_empty()

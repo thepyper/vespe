@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Position {
     /// 0-based character offset
     pub offset: usize,
@@ -29,7 +29,7 @@ impl Ord for Position {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Range {
     pub begin: Position,
     pub end: Position,
@@ -62,12 +62,13 @@ impl Range {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Text {
     pub content: String,
     pub range: Range,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum CommandKind {
     Tag, // for debug purpose
     Include,
@@ -77,6 +78,20 @@ pub enum CommandKind {
     Repeat,
 }
 
+impl ToString for CommandKind {
+    fn to_string(&self) -> String {
+        match self {
+            CommandKind::Tag => "tag",
+            CommandKind::Include => "include",
+            CommandKind::Inline => "inline",
+            CommandKind::Answer => "answer",
+            CommandKind::Derive => "derive",
+            CommandKind::Repeat => "repeat",            
+        }.to_string()
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Parameters {
     pub parameters: serde_json::Map<String, serde_json::Value>,
     pub range: Range,
@@ -91,16 +106,19 @@ impl Parameters {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Argument {
     pub value: String,
     pub range: Range,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Arguments {
     pub arguments: Vec<Argument>,
     pub range: Range,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tag {
     pub command: CommandKind,
     pub parameters: Parameters,
@@ -108,12 +126,13 @@ pub struct Tag {
     pub range: Range,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum AnchorKind {
     Begin,
     End,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Anchor {
     pub command: CommandKind,
     pub uuid: Uuid,
@@ -147,12 +166,14 @@ impl Anchor {
     
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Content {
     Text(Text),
     Tag(Tag),
     Anchor(Anchor),
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Document {
     pub content: Vec<Content>,
     pub range: Range,

@@ -66,4 +66,27 @@ impl AnchorStateManager {
     }
 }
 
+pub struct Patches {
+    document: &str,
+    patches: BTreeMap<Range, String>,
+}
+
+impl Patches {
+    pub fn new(document: &str) -> Self {
+        Patches {
+            document,
+            patches: BTreeMap<Range, String>,
+        }
+    }
+    pub fn add_patch(&mut self, range: &Range, replace: &str) {
+        self.patches.insert(range, replace);
+    }
+    pub fn is_empty(&self) -> bool {
+        self.patches.is_empty()
+    }
+    pub fn apply_patches(&self) -> Result<String> {
+        // TODO apply
+    }
+}
+
 

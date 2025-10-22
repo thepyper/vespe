@@ -58,7 +58,6 @@ pub enum CommandKind {
     Include,
     Inline,
     Answer,
-    Summarize,
     Derive,
     Repeat,
 }

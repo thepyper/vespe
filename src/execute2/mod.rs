@@ -74,14 +74,16 @@ impl Executor {
         let want_next_step_1 = pass_1(ast);
 
         // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        // TODO lock
+        self.file_access.lock_file(context_path)?;
         let context = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(context)?;
-        let (want_next_step_2, patches) = pass_2(context, ast);
-        if patches.apply(context) {
-            // save file
+        let mut patches = utils::Patches::new(context);
+        let want_next_step_2 = pass_2(ast, patches);
+        if !patches.is_empty() {
+            let context = patches.apply_patches();
+            self.file_access.write_file(context_path, context, None)?; // TODO comment?
         }
-        // TODO unlock
+        self.file_access.unlock_file(context_path)?;
 
         Ok(want_next_step_1 | want_next_step_2)
     }
@@ -222,5 +224,92 @@ impl Executor {
         }
     }
 
-    fn pass_2() {}
+    fn pass_2(&self, context: &str, ast: &Document) {
+        
+        for item in ast.content {
+            match item {
+                Tag(tag) => {
+                    if self.pass_2_tag(tag)? {
+                        return Ok(true);
+                    }
+                }
+                Anchor(anchor) => {
+                    if self.pass_2_anchor(tag)? {
+                        return Ok(true);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Ok(false)
+    }
+
+    fn pass_2_tag(&self, tag: &Tag) -> Result<bool> {
+        match tag.command {
+            CommandKind::  
+            _ => Ok(false),
+        }
+    }
+
+    fn pass_2_anchor(&self, anchor: &Anchor) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
+        match (
+            anchor.command,
+            anchor.kind,
+            anchor.parameters,
+            anchor.arguments,
+        ) {
+            (CommandKind::Answer, AnchorKind::Begin, parameters, arguments) => {
+                want_next_step |= self.pass_2_answer_begin_anchor(asm, parameters, arguments)
+            } // passa commit?
+            (CommandKind::Derive, AnchorKind::Begin, parameters, arguments) => {
+                want_next_step |= self.pass_2_derive_begin_anchor(asm, parameters, arguments)
+            } // passa commit?
+            (CommandKind::Inline, AnchorKind::Begin, parameters, arguments) => {
+                want_next_step |= self.pass_2_inline_begin_anchor(asm, parameters, arguments)
+            } // passa commit?          
+            _ => {}
+        }
+    }
+
+    fn pass_2_answer_begin_anchor(
+        &self,
+        asm: &utils::AnchorStateManager,
+        parameters: &Parameters,
+        arguments: &Arguments,
+    ) -> Result<bool> {
+        let mut state : AnswerState = asm.load_state();
+        match state.status {
+            AnchorStatus::
+            _ => {}
+        }
+    }
+
+    fn pass_2_derive_begin_anchor(
+        &self,
+        asm: &utils::AnchorStateManager,
+        parameters: &Parameters,
+        arguments: &Arguments,
+    ) -> Result<bool> {
+        let state : DeriveState = asm.load_state();
+        match state.status {
+            AnchorStatus::
+            _ => {}
+        }
+    }
+
+    fn pass_2_inline_begin_anchor(
+        &self,
+        asm: &utils::AnchorStateManager,
+        parameters: &Parameters,
+        arguments: &Arguments,
+    ) -> Result<bool> {
+        let state : InlineState = asm.load_state();
+        match state.status {
+            AnchorStatus::
+            _ => {}
+        }
+    }
+
 }

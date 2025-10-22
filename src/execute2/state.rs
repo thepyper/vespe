@@ -17,35 +17,16 @@ enum AnchorStatus {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InlineState {
     pub status: AnchorStatus,
-    pub snippet_name: String,
+    pub context_name: String,
+    pub context: String,
 }
 
 impl InlineState {
-    pub fn new(snippet_name: &str) -> Self {
+    pub fn new() -> Self {
         InlineState {
             status: AnchorStatus::JustCreated,
-            snippet_name: snippet_name.into(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SummaryState {
-    pub status: AnchorStatus,
-    pub context_name: String,
-    pub context: String,
-    pub context_hash: String,
-    pub summary: String,
-}
-
-impl SummaryState {
-    pub fn new(context_name: &str) -> Self {
-        SummaryState {
-            status: AnchorStatus::JustCreated,
-            context_name: context_name.into(),
+            context_name: String::new(),
             context: String::new(),
-            context_hash: String::new(),
-            summary: String::new(),
         }
     }
 }
@@ -54,7 +35,7 @@ impl SummaryState {
 pub struct AnswerState {
     pub status: AnchorStatus,
     pub query: Content,
-    pub reply: Content,
+    pub reply: String,
 }
 
 impl AnswerState {
@@ -62,7 +43,7 @@ impl AnswerState {
         AnswerState {
             status: AnchorStatus::JustCreated,
             query: Content::new(),
-            reply: Content::new(),
+            reply: String::new(),
         }
     }
 }
@@ -74,7 +55,7 @@ pub struct DeriveState {
     pub instruction_context: Content,
     pub input_context_name: String,
     pub input_context: Content,
-    pub output: Content,
+    pub output: String,
 }
 
 impl DeriveState {
@@ -85,7 +66,7 @@ impl DeriveState {
             instruction_context: Content::new(),
             input_context_name: String::new(),
             input_context: Content::new(),
-            output: Content::new(),
+            output: String::new(),
         }
     }
 }

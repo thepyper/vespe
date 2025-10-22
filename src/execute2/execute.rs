@@ -37,18 +37,21 @@ impl<'a> Executor<'a> {
             context: Vec::new(),
         }
     }
-    fn execute_loop(&mut self, context_name: &str) -> Result<Content> {
+    fn execute_loop(&mut self, context_name: &str) -> Result<ModelContent> {
         let context_path_buf = self.path_res.resolve_context(context_name)?;
         let context_path = context_path_buf.to_str().unwrap_or_default();
 
         if self.visited.contains(context_path) {
-            return Ok(Content::Text(Text { content: String::new(), range: Range::null() }));
+            return Ok(ModelContent::new());
         }
         self.visited.insert(context_path.to_string());
 
         while self.execute_step(&context_path_buf)? {}
         Ok(
-            self.prelude.extend(self.context)
+            let mut content = ModelContent::new();
+            content.extend(self.prelude);
+            content.extend(self.context);
+            content
         )
     }
     fn execute_step(&mut self, context_path: &Path) -> Result<bool> {

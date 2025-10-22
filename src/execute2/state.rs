@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ast2::Content;
 use crate::ast2::{Text, Range};
+use super::ModelContent;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AnchorStatus {
@@ -35,7 +35,7 @@ impl InlineState {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
     pub status: AnchorStatus,
-    pub query: Content,
+    pub query: ModelContent,
     pub reply: String,
 }
 
@@ -43,7 +43,7 @@ impl AnswerState {
     pub fn new() -> Self {
         AnswerState {
             status: AnchorStatus::JustCreated,
-            query: Content::Text(Text { content: String::new(), range: Range::null() }),
+            query: ModelContent::new(),
             reply: String::new(),
         }
     }
@@ -53,9 +53,9 @@ impl AnswerState {
 pub struct DeriveState {
     pub status: AnchorStatus,
     pub instruction_context_name: String,
-    pub instruction_context: Content,
+    pub instruction_context: ModelContent,
     pub input_context_name: String,
-    pub input_context: Content,
+    pub input_context: ModelContent,
     pub output: String,
 }
 
@@ -64,9 +64,9 @@ impl DeriveState {
         DeriveState {
             status: AnchorStatus::JustCreated,
             instruction_context_name: String::new(),
-            instruction_context: Content::Text(Text { content: String::new(), range: Range::null() }),
+            instruction_context: ModelContent::new(),
             input_context_name: String::new(),
-            input_context: Content::Text(Text { content: String::new(), range: Range::null() }),
+            input_context: ModelContent::new(),
             output: String::new(),
         }
     }

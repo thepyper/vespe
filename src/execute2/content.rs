@@ -1,17 +1,21 @@
+
+#[derive(Clone, Serialize, Deserialize)]
 struct SystemModelContent {
     text: String,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 struct UserModelContent {
     text: String,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 struct AgentModelContent {
     author: String,
     text: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum ModelContentItem {
     System(SystemModelContent),
     User(UserModelContent),

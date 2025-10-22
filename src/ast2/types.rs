@@ -92,7 +92,7 @@ impl ToString for CommandKind {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Parameters {
     pub parameters: serde_json::Map<String, serde_json::Value>,
     pub range: Range,
@@ -138,7 +138,13 @@ impl Arguments {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+impl ToString for Arguments {
+    pub fn to_string(&self) -> String {
+        self.arguments.iter().map(|x| x.value).collect::<Vec::<String>>().join(",")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tag {
     pub command: CommandKind,
     pub parameters: Parameters,
@@ -162,7 +168,16 @@ pub enum AnchorKind {
     End,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+impl ToString for AnchorKind {
+    pub to_string(&self) -> String {
+        match self {
+            AnchorKind::Begin => "begin",
+            AnchorKind::End => "end",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Anchor {
     pub command: CommandKind,
     pub uuid: Uuid,
@@ -202,7 +217,7 @@ impl ToString for Anchor {
             self.uuid.to_string(),
             self.kind.to_string(),
             self.parameters.to_string(),
-            self.arguments.value,            
+            self.arguments.to_string(),            
         )
     }
 }

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::Content;
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 enum AnchorStatus {
     /// Just created, empty without any content nor state gathered
@@ -51,16 +53,16 @@ impl SummaryState {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
     pub status: AnchorStatus,
-    pub query: String,
-    pub reply: String,
+    pub query: Content,
+    pub reply: Content,
 }
 
 impl AnswerState {
     pub fn new() -> Self {
         AnswerState {
             status: AnchorStatus::JustCreated,
-            query: String::new(),
-            reply: String::new(),
+            query: Content::new(),
+            reply: Content::new(),
         }
     }
 }
@@ -68,22 +70,22 @@ impl AnswerState {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeriveState {
     pub status: AnchorStatus,
-    pub snippet_name: String,
-    pub snippet: String,
-    pub context_name: String,
-    pub context: String,
-    pub derived: String,
+    pub instruction_context_name: String,
+    pub instruction_context: Content,
+    pub input_context_name: String,
+    pub input_context: Content,
+    pub output: Content,
 }
 
 impl DeriveState {
-    pub fn new(snippet_name: &str, context_name: &str) -> Self {
+    pub fn new() -> Self {
         DeriveState {
             status: AnchorStatus::JustCreated,
-            snippet_name: snippet_name.into(),
-            snippet: String::new(),
-            context_name: context_name.into(),
-            context: String::new(),
-            derived: String::new(),
+            instruction_context_name: String::new(),
+            instruction_context: Content::new(),
+            input_context_name: String::new(),
+            input_context: Content::new(),
+            output: Content::new(),
         }
     }
 }

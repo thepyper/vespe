@@ -1,47 +1,18 @@
 mod state;
+mod content;
+
+use state::*;
+use content::*;
 
 use crate::ast2::{parse_document, Anchor, AnchorKind, CommandKind, Document, Range, Tag};
 use anyhow::Result;
 
-use state::{AnswerState, DeriveState, InlineState, SummaryState};
 
-struct SystemContent {
-    text: String,
+pub fn execute(file_access: &file::FileAccessor, path_res: &path::PathResolver, context_name: &str, commit: &Commit) {
+
 }
 
-struct UserContent {
-    text: String,
-}
-
-struct AgentContent {
-    author: String,
-    text: String,
-}
-
-enum ContentItem {
-    System(SystemContent),
-    User(UserContent),
-    Agent(AgentContent),
-}
-
-impl ContentItem {
-    fn user(text: &str) -> Self {
-        ContentItem::User(UserContent { text: text.into() })
-    }
-    fn system(text: &str) -> Self {
-        ContentItem::System(SystemContent { text: text.into() })
-    }
-    fn agent(author: &str, text: &str) -> Self {
-        ContentItem::Agent(AgentContent {
-            author: author.into(),
-            text: text.into(),
-        })
-    }
-}
-
-
-pub fn execute(project: &Project, context_name: &str, commit: &Commit) {}
-
+/*
 impl Tag {
     pub fn get_argument_as_context(&self, i: usize, project: &Project) -> Result<PathBuf> {
         let context_name = self.arguments.arguments.get(i).ok_or_else(/* TODO errore */).value;
@@ -56,9 +27,11 @@ impl Tag {
         }
     }
 }
+*/
 
 type State = serde_json::Value;
 
+/*
 impl Anchor {
     fn state_file_name(&self, project: &Project) -> Result<PathBuf> {
         let meta_path = project.resolve_metadata(self.kind, self.uuid)?;
@@ -74,17 +47,19 @@ impl Anchor {
         // TODO save json
     }
 }
+*/
 
 struct Executor {
-    project: &Project,
+    file_access: &file::FileAccessor, 
+    path_res: &path::PathResolver,
     visited: HashSet<String>,
     prelude: Vec<ContentItem>,
     context: Vec<ContentItem>,
 }
 
 impl Executor {
-    fn execute_loop(&self, context_name: &str) {
-        let context_path = self.project.resolve_context(context_name);
+    fn execute_loop(&self, context_name: &str) -> Result<Content> {
+        let context_path = self.path_res.resolve_context(context_name);
 
         if self.visited.contains(context_path) {
             return;
@@ -94,13 +69,13 @@ impl Executor {
     }
     fn execute_step(&self, context_path: &Path) -> Result<bool> {
         // Read file, parse it, execute slow things that do not modify context
-        let context = std::fs::read_to_string(context_path)?;
+        let context = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(context)?;
         let want_next_step_1 = pass_1(ast);
 
         // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
         // TODO lock
-        let context = std::fs::read_to_string(context_path)?;
+        let context = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(context)?;
         let (want_next_step_2, patches) = pass_2(context, ast);
         if patches.apply(context) {
@@ -112,17 +87,24 @@ impl Executor {
     }
 
     fn pass_1(&self, ast: &Document) -> Result<bool> {
-        let mut want_next_step = false;
-
+        
         for item in ast.content {
             match item {
                 Text(text) => self.pass_1_text(text)?,
-                Tag(tag) => want_next_step |= self.pass_1_tag(tag)?,
-                Anchor(anchor) => want_next_step |= self.pass_1_anchor(tag)?,
+                Tag(tag) => {
+                    if self.pass_1_tag(tag)? {
+                        return Ok(true);
+                    }
+                }
+                Anchor(anchor) => {
+                    if self.pass_1_anchor(tag)? {
+                        return Ok(true);
+                    }
+                }
             }
         }
 
-        Ok(want_next_step)
+        Ok(false)
     }
 
     fn pass_1_text(&self, text: &Text) -> Result<()> {
@@ -142,7 +124,7 @@ impl Executor {
     }
 
     fn pass_1_anchor(&self, anchor: &Anchor) -> Result<bool> {
-        let state = anchor.load_state(self.project)?;
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         match (
             anchor.command,
             anchor.kind,
@@ -150,58 +132,94 @@ impl Executor {
             anchor.arguments,
         ) {
             (CommandKind::Answer, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_answer_begin_anchor(state, parameters, arguments)
+                want_next_step |= self.pass_1_answer_begin_anchor(asm, parameters, arguments)
             } // passa commit?
             (CommandKind::Derive, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_derive_begin_anchor(state, parameters, arguments)
+                want_next_step |= self.pass_1_derive_begin_anchor(asm, parameters, arguments)
             } // passa commit?
             (CommandKind::Inline, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_inline_begin_anchor(state, parameters, arguments)
-            } // passa commit?
-            (CommandKind::Summarize, AnchorKind::Begin, parameters, arguments) => {
-                want_next_step |= self.pass_1_summarize_begin_anchor(state, parameters, arguments)
-            } // passa commit?
+                want_next_step |= self.pass_1_inline_begin_anchor(asm, parameters, arguments)
+            } // passa commit?          
             _ => {}
         }
     }
 
     fn pass_1_answer_begin_anchor(
         &self,
-        state: &State,
+        asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
-        let state : AnswerState = serde_json::from_value(state)?;        
-        unimplemented!()
+        let mut state : AnswerState = asm.load_state();
+        match state.status {
+            AnchorStatus::JustCreated => {
+                state.query = self.context.clone();
+                state.status = AnchorStatus::NeedProcessing;
+                asm.save_state(state);
+                true
+            }
+            AnchorStatus::NeedProcessing => {
+                // TODO call llm 
+                state.reply = "rispostone!! TODO ".into();
+                state.status = AnchorStatus::NeedInjection;
+                asm.save_state(state);
+                true 
+            }
+            _ => {}
+        }
     }
 
     fn pass_1_derive_begin_anchor(
         &self,
-        state: &State,
+        asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
-        let state : DeriveState = serde_json::from_value(state)?;
-        unimplemented!()
+        let state : DeriveState = asm.load_state();
+        match state.status {
+            AnchorStatus::JustCreated => {
+                state.instruction_context_name = arguments.arguments.get(0)?; // TODO err?
+                state.input_context_name = arguments.arguments.get(1); // TODO err?
+                state.status = AnchorStatus::NeedProcessing;
+                asm.save_state(state);
+                true
+            }
+            AnchorStatus::NeedProcessing => {
+                state.instruction_context = self.execute_loop(state.instruction_context_name);
+                state.input_context = self.execute_loop(state.input_context_name);
+                // call llm to derive                
+                state.output = "rispostone!! TODO ".into();
+                state.status = AnchorStatus::NeedInjection;
+                asm.save_state(state);
+                true 
+            }
+            _ => {}
+        }
     }
 
     fn pass_1_inline_begin_anchor(
         &self,
-        state: &State,
+        asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
-        let state : InlineState = serde_json::from_value(state)?;
-        unimplemented!()
-    }
-
-    fn pass_1_summarize_begin_anchor(
-        &self,
-        state: &State,
-        parameters: &Parameters,
-        arguments: &Arguments,
-    ) -> Result<bool> {
-        unimplemented!()
+        let state : InlineState = asm.load_state();
+        match state.status {
+            AnchorStatus::JustCreated => {
+                state.context_name = arguments.arguments.get(0)?; // TODO err?
+                state.status = AnchorStatus::NeedProcessing;
+                asm.save_state(state);
+                true
+            }
+            AnchorStatus::NeedProcessing => {
+                let context_path = self.path_res.resolve_context(state.context_name);
+                state.context = self.file_access.read_file(context_path)?;
+                state.status = AnchorStatus::NeedInjection;
+                asm.save_state(state);
+                true 
+            }
+            _ => {}
+        }
     }
 
     fn pass_2() {}

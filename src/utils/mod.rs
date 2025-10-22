@@ -31,3 +31,39 @@ impl AnchorIndex {
         self.end.get(uid).copied()
     }
 }
+
+pub struct AnchorStateManager {
+    file_access: &file::FileAccessor, 
+    path_res: &path::PathResolver,
+    command: crate::ast2::CommandKind,
+    uuid: Uuid,
+}
+
+impl AnchorStateManager {
+    pub fn new(file_access: &file::FileAccessor, path_res: &path::PathResolver, anchor: crate::ast2::Anchor&) -> Self {
+        AnchorStateManager {
+            file_access,
+            path_res,
+            command: anchor.command,
+            uuid: anchor.uuid,
+        }
+    }
+    fn get_state_path(&self) -> PathBuf {
+        let meta_path = self.path_res.resolve_metadata(self.command.to_string(), self.uuid);
+        let state_path = meta_path.join("state.json");
+        state_path
+    }
+    fn load_state<T>(&self) -> Result<T> {
+        let state_path = self.get_state_path();
+        let state = self.file_access.read_file(state_path)?;
+        let state: T = serde_json::from_str(state);
+        Ok(state)
+    }
+    fn save_state<T>(&self, state: &T, comment: Option<&str>) -> Result<()> {
+        let state_path = self.get_state_path();
+        self.file_access.write_file(state_path, state, comment)?;
+        Ok(())
+    }
+}
+
+

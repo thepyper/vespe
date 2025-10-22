@@ -111,8 +111,8 @@ impl<'a> Executor<'a> {
     }
 
     fn pass_1_include_tag(&mut self, tag: &Tag) -> Result<bool> {
-        let included_context_name = tag.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?.value;
-        self.execute_loop(included_context_name)?;
+        let included_context_name = tag.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?.value.clone();
+        self.execute_loop(&included_context_name)?;
         Ok(true)
     }
 
@@ -273,5 +273,38 @@ impl<'a> Executor<'a> {
         Ok(false)
     }
 
+    fn pass_2_anchors(&mut self, patches: &mut utils::Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
+        match a0.command {
+            CommandKind::Answer => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),    
+            CommandKind::Derive => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),
+            CommandKind::Inline => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),            
+            _ => Ok(false),
+        }                
+    }
 
+    fn pass_2_normal_begin_anchor(
+        &mut self,
+        patches: &mut utils::Patches,
+        asm: &utils::AnchorStateManager,
+        parameters: &Parameters,
+        arguments: &Arguments,
+        range_begin: &Range,
+        range_end: &Range,
+    ) -> Result<bool> {
+        let mut state : AnswerState = asm.load_state()?;
+        match state.status {
+            AnchorStatus::NeedInjection => {
+                let range = Range {
+                    begin: range_begin.end.clone(),
+                    end: range_end.begin.clone(),
+                };
+                patches.add_patch(&range, &state.output());
+                state.status = AnchorStatus::Completed;
+                asm.save_state(&state, None)?;
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    }
 }

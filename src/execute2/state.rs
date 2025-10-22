@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ast2::Content;
+use crate::ast2::{Text, Range};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AnchorStatus {

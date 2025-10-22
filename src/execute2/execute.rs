@@ -10,7 +10,7 @@ use std::path::Path;
 use super::*;
 
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
-use crate::execute2::content::ContentItem;
+use crate::execute2::content::ModelContentItem;
 
 pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
 
@@ -94,7 +94,7 @@ impl<'a> Executor<'a> {
     }
 
     fn pass_1_text(&mut self, text: &Text) -> Result<()> {
-        self.context.push(ContentItem::user(&text.content));
+        self.context.push(ModelContentItem::user(&text.content));
         Ok(())
     }
 

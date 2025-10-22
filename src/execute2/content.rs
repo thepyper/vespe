@@ -11,6 +11,7 @@ struct AgentModelContent {
     text: String,
 }
 
+#[derive(Clone)]
 pub enum ModelContentItem {
     System(SystemModelContent),
     User(UserModelContent),
@@ -32,4 +33,4 @@ impl ModelContentItem {
     }
 }
 
-type Vec<ModelContentItem> = ModelContent;
+pub type ModelContent = Vec<ModelContentItem>;

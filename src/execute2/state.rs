@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use super::Content;
+use crate::ast2::Content;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-enum AnchorStatus {
+pub enum AnchorStatus {
     /// Just created, empty without any content nor state gathered
     JustCreated,
     /// Gathered info, need to process them
@@ -42,7 +42,7 @@ impl AnswerState {
     pub fn new() -> Self {
         AnswerState {
             status: AnchorStatus::JustCreated,
-            query: Content::new(),
+            query: Content::Text(Text { content: String::new(), range: Range::null() }),
             reply: String::new(),
         }
     }
@@ -63,9 +63,9 @@ impl DeriveState {
         DeriveState {
             status: AnchorStatus::JustCreated,
             instruction_context_name: String::new(),
-            instruction_context: Content::new(),
+            instruction_context: Content::Text(Text { content: String::new(), range: Range::null() }),
             input_context_name: String::new(),
-            input_context: Content::new(),
+            input_context: Content::Text(Text { content: String::new(), range: Range::null() }),
             output: String::new(),
         }
     }

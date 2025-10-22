@@ -1,15 +1,17 @@
 
 use crate::file;
 use crate::path;
+use crate::execute::execute;
 use crate::utils;
-use crate::ast2::{parse_document, Anchor, AnchorKind, CommandKind, Document, Range, Tag, Text, Parameters, Arguments};
+use crate::ast2::{parse_document, Anchor, AnchorKind, CommandKind, Document, Range, Tag, Text, Parameters, Arguments, Content};
 use anyhow::Result;
 use std::collections::HashSet;
 use std::path::Path;
 
-use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState, ContentItem};
+use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
+use crate::execute2::content::ContentItem;
 
-pub fn execute_context(file_access: &file::FileAccessor, path_res: &path::PathResolver, context_name: &str) -> Result<Content> {
+pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<Content> {
 
     let exe = Executor::new(file_access, path_res);
     let content = exe.execute_loop(context_name)?;
@@ -39,7 +41,7 @@ impl<'a> Executor<'a> {
         let context_path = context_path_buf.to_str().unwrap_or_default();
 
         if self.visited.contains(context_path) {
-            return Ok(Content::new());
+            return Ok(Content::Text(Text { content: String::new(), range: Range::null() }));
         }
         self.visited.insert(context_path.to_string());
 
@@ -91,7 +93,7 @@ impl<'a> Executor<'a> {
     }
 
     fn pass_1_text(&mut self, text: &Text) -> Result<()> {
-        self.context.push(ContentItem::user(text.content.clone()));
+        self.context.push(ContentItem::user(&text.content));
         Ok(())
     }
 
@@ -157,7 +159,7 @@ impl<'a> Executor<'a> {
         match state.status {
             AnchorStatus::JustCreated => {
                 state.instruction_context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value;
-                state.input_context_name = arguments.arguments.get(1).ok_or_else(|| anyhow::anohow!("Missing input context name"))?.value;
+                state.input_context_name = arguments.arguments.get(1).ok_or_else(|| anyhow::anyhow!("Missing input context name"))?.value;
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true) 

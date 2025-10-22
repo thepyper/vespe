@@ -11,14 +11,14 @@ struct AgentContent {
     text: String,
 }
 
-enum ContentItem {
+pub enum ContentItem {
     System(SystemContent),
     User(UserContent),
     Agent(AgentContent),
 }
 
 impl ContentItem {
-    fn user(text: &str) -> Self {
+    pub fn user(text: &str) -> Self {
         ContentItem::User(UserContent { text: text.into() })
     }
     fn system(text: &str) -> Self {

@@ -1,5 +1,6 @@
 use uuid::Uuid;
 use std::cmp::Ordering;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Position {
@@ -77,6 +78,7 @@ pub enum CommandKind {
     Answer,
     Derive,
     Repeat,
+    Summarize,
 }
 
 impl ToString for CommandKind {
@@ -108,7 +110,7 @@ impl Parameters {
 }
 
 impl ToString for Parameters {
-    pub fn to_string(&self) -> String {
+    fn to_string(&self) -> String {
         if self.parameters.is_empty() {
             String::new()
         } else {
@@ -139,7 +141,7 @@ impl Arguments {
 }
 
 impl ToString for Arguments {
-    pub fn to_string(&self) -> String {
+    fn to_string(&self) -> String {
         self.arguments.iter().map(|x| x.value.clone()).collect::<Vec::<String>>().join(",")
     }
 }
@@ -153,11 +155,11 @@ pub struct Tag {
 }
 
 impl ToString for Tag {
-    pub fn to_string(&self) -> String {
+    fn to_string(&self) -> String {
         format!("@{} {} {}",
-            tag.command.to_string(),
-            tag.parameters.to_string(),
-            tag.arguments.to_string(),
+            self.command.to_string(),
+            self.parameters.to_string(),
+            self.arguments.to_string(),
         )
     }
 }
@@ -169,10 +171,10 @@ pub enum AnchorKind {
 }
 
 impl ToString for AnchorKind {
-    pub fn to_string(&self) -> String {
+    fn to_string(&self) -> String {
         match self {
-            AnchorKind::Begin => "begin",
-            AnchorKind::End => "end",
+            AnchorKind::Begin => "begin".to_string(),
+            AnchorKind::End => "end".to_string(),
         }
     }
 }
@@ -211,7 +213,7 @@ impl Anchor {
 }
 
 impl ToString for Anchor {
-    pub fn to_string(&self) -> String {
+    fn to_string(&self) -> String {
         format!("<!-- {}-{}:{} {} {} -->",
             self.command.to_string(),
             self.uuid.to_string(),
@@ -222,7 +224,7 @@ impl ToString for Anchor {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub enum Content {
     Text(Text),
     Tag(Tag),

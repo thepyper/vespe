@@ -1,9 +1,9 @@
 use crate::ast2::{
     Anchor, AnchorKind, Arguments, CommandKind, Document, Parameters, Range, Tag, Text,
 };
-use crate::{agent, file};
 use crate::path;
 use crate::utils;
+use crate::{agent, file};
 use anyhow::Result;
 use std::collections::{self, HashSet};
 use std::path::{Path, PathBuf};
@@ -146,7 +146,8 @@ impl Worker {
             Some(collector) => {
                 let mut collector = collector;
                 loop {
-                    if let Some(new_collector) = self.execute_step(collector.clone(), &context_path)?
+                    if let Some(new_collector) =
+                        self.execute_step(collector.clone(), &context_path)?
                     {
                         tracing::debug!(
                             "Worker::execute returning collected for context: {}",
@@ -161,13 +162,9 @@ impl Worker {
     }
 
     /// Execute a single step: pass_2 to modify context as needed, then pass_1 to collect data.
-    /// If pass_1 can collect everything without requiring further passes, returns Some(Collector), 
+    /// If pass_1 can collect everything without requiring further passes, returns Some(Collector),
     /// else returns None to signal need for further processing.
-    fn execute_step(
-        &self,
-        collector: Collector,
-        context_path: &Path,
-    ) -> Result<Option<Collector>> {
+    fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
         // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
@@ -204,15 +201,8 @@ impl Worker {
         agent::shell::shell_call(&collector.variables.provider, &query)
     }
 
-    fn pass_1(
-        &self,
-        collector: Collector,
-        context_path: &Path,
-    ) -> Result<Option<Collector>> {
-        tracing::debug!(
-            "Worker::pass_1 for path: {:?}",
-            context_path,
-        );
+    fn pass_1(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
+        tracing::debug!("Worker::pass_1 for path: {:?}", context_path,);
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
 
@@ -226,7 +216,7 @@ impl Worker {
                 crate::ast2::Content::Tag(tag) => {
                     current_collector = self.pass_1_tag(current_collector, tag)?;
                 }
-                crate::ast2::Content::Anchor(anchor) => {                    
+                crate::ast2::Content::Anchor(anchor) => {
                     match self.pass_1_anchor(current_collector, anchor)? {
                         Some(c) => current_collector = c,
                         None => {
@@ -271,11 +261,7 @@ impl Worker {
     }
 
     /// Process anchors that can trigger slow tasks that modify state
-    fn pass_1_anchor(
-        &self,
-        collector: Collector,
-        anchor: &Anchor,
-    ) -> Result<Option<Collector>> {
+    fn pass_1_anchor(&self, collector: Collector, anchor: &Anchor) -> Result<Option<Collector>> {
         tracing::debug!(
             "Worker::pass_1_anchor processing command: {:?}, kind: {:?}",
             anchor.command,
@@ -449,8 +435,8 @@ impl Worker {
         let lock_id = self.file_access.lock_file(context_path)?;
         let result = self.pass_2_internal_x(context_path);
         self.file_access.unlock_file(&lock_id)?;
-        tracing::debug!("Worker::pass_2 finished for path: {:?}", context_path);   
-        result    
+        tracing::debug!("Worker::pass_2 finished for path: {:?}", context_path);
+        result
     }
 
     fn pass_2_internal_x(&self, context_path: &Path) -> Result<()> {
@@ -479,37 +465,33 @@ impl Worker {
                         break;
                     }
                 }
-                crate::ast2::Content::Anchor(a0) => {
-                    match a0.kind {
-                        AnchorKind::Begin => {
-                            let j = anchor_index
-                                .get_end(&a0.uuid)
-                                .ok_or_else(|| anyhow::anyhow!("Anchor not closed!"))?;
-                            let a1 = ast
-                                .content
-                                .get(j)
-                                .ok_or_else(|| anyhow::anyhow!("Bad index!?!?"))?;
-                            match a1 {
-                                crate::ast2::Content::Anchor(a1) => {
-                                    match a1.kind {
-                                        AnchorKind::End => {
-                                            if self.pass_2_anchors(patches, a0, a1)? {
-                                                break;
-                                            }
-                                        }
-                                        _ => return Err(anyhow::anyhow!("Bad end anchor!")),
+                crate::ast2::Content::Anchor(a0) => match a0.kind {
+                    AnchorKind::Begin => {
+                        let j = anchor_index
+                            .get_end(&a0.uuid)
+                            .ok_or_else(|| anyhow::anyhow!("Anchor not closed!"))?;
+                        let a1 = ast
+                            .content
+                            .get(j)
+                            .ok_or_else(|| anyhow::anyhow!("Bad index!?!?"))?;
+                        match a1 {
+                            crate::ast2::Content::Anchor(a1) => match a1.kind {
+                                AnchorKind::End => {
+                                    if self.pass_2_anchors(patches, a0, a1)? {
+                                        break;
                                     }
                                 }
-                                _ => return Err(anyhow::anyhow!("Bad end content!")),
-                            }
+                                _ => return Err(anyhow::anyhow!("Bad end anchor!")),
+                            },
+                            _ => return Err(anyhow::anyhow!("Bad end content!")),
                         }
-                        _ => {},
                     }
-                }
+                    _ => {}
+                },
                 _ => {}
             }
         }
-        Ok(())        
+        Ok(())
     }
 
     fn pass_2_tag(&self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
@@ -561,12 +543,17 @@ impl Worker {
         a0: &Anchor,
         a1: &Anchor,
     ) -> Result<bool> {
-        tracing::debug!("Worker::pass_2_anchors processing command: {:?}", a0.command);
+        tracing::debug!(
+            "Worker::pass_2_anchors processing command: {:?}",
+            a0.command
+        );
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), a0);
         match a0.command {
             CommandKind::Answer => {
-                tracing::debug!("Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Answer");
+                tracing::debug!(
+                    "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Answer"
+                );
                 self.pass_2_normal_begin_anchor::<AnswerState>(
                     patches,
                     &asm,
@@ -577,7 +564,9 @@ impl Worker {
                 )
             }
             CommandKind::Derive => {
-                tracing::debug!("Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Derive");
+                tracing::debug!(
+                    "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Derive"
+                );
                 self.pass_2_normal_begin_anchor::<DeriveState>(
                     patches,
                     &asm,
@@ -588,7 +577,9 @@ impl Worker {
                 )
             }
             CommandKind::Inline => {
-                tracing::debug!("Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Inline");
+                tracing::debug!(
+                    "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Inline"
+                );
                 self.pass_2_normal_begin_anchor::<InlineState>(
                     patches,
                     &asm,

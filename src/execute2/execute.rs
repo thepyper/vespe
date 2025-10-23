@@ -26,7 +26,7 @@ pub fn execute_context(
     tracing::debug!("Executing context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    let collector = exe.execute(Collector::new(), context_name)?;
+    let collector = exe.execute(Collector::new(true), context_name)?;
 
     tracing::debug!("Finished executing context: {}", context_name);
     Ok(collector.context)
@@ -40,7 +40,7 @@ pub fn collect_context(
     tracing::debug!("Collecting context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    let collector = exe.collect(Collector::new(), context_name)?;
+    let collector = exe.collect(Collector::new(false), context_name)?;
 
     tracing::debug!("Finished collecting context: {}", context_name);
     Ok(collector.context)
@@ -51,14 +51,16 @@ struct Collector {
     visit_stack: Vec<PathBuf>,
     context: ModelContent,
     variables: Variables,
+    can_execute: bool,
 }
 
 impl Collector {
-    fn new() -> Self {
+    fn new(can_execute: bool) -> Self {
         Collector {
             visit_stack: Vec::new(),
             context: ModelContent::new(),
             variables: Variables::new(),
+            can_execute,
         }
     }
     fn descent(&self, context_path: &Path) -> Option<Self> {
@@ -72,6 +74,7 @@ impl Collector {
             visit_stack,
             context: ModelContent::new(),
             variables: self.variables.clone(),
+            can_execute: self.can_execute,
         })
     }
 }
@@ -92,6 +95,7 @@ impl Worker {
         }
     }
 
+    /// Collect context without executing anchors that modify state, can be executed only on final contexts
     fn collect(&self, collector: Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::collect for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
@@ -106,7 +110,7 @@ impl Worker {
             }
             Some(collector) => {
                 // Read file, parse it, collect without allowing execution
-                match self.pass_1(collector, &context_path, false)? {
+                match self.pass_1(collector, &context_path)? {
                     Some(collector) => {
                         // Successfully collected everything without needing further processing
                         tracing::debug!(
@@ -126,6 +130,7 @@ impl Worker {
         }
     }
 
+    /// Execute context, processing anchors that modify state as needed and modifying context accordingly until completion
     fn execute(&self, collector: Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
@@ -155,6 +160,9 @@ impl Worker {
         }
     }
 
+    /// Execute a single step: pass_2 to modify context as needed, then pass_1 to collect data.
+    /// If pass_1 can collect everything without requiring further passes, returns Some(Collector), 
+    /// else returns None to signal need for further processing.
     fn execute_step(
         &self,
         collector: Collector,
@@ -166,7 +174,7 @@ impl Worker {
         self.pass_2(context_path)?;
 
         // Re-read file, parse it, execute slow things that do not modify context, collect data
-        match self.pass_1(collector, context_path, true)? {
+        match self.pass_1(collector, context_path)? {
             Some(collector) => {
                 // Successfully collected everything without needing further processing
                 tracing::debug!(
@@ -200,12 +208,10 @@ impl Worker {
         &self,
         collector: Collector,
         context_path: &Path,
-        can_execute: bool,
     ) -> Result<Option<Collector>> {
         tracing::debug!(
-            "Worker::pass_1 for path: {:?}, can_execute: {}",
+            "Worker::pass_1 for path: {:?}",
             context_path,
-            can_execute
         );
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -220,14 +226,7 @@ impl Worker {
                 crate::ast2::Content::Tag(tag) => {
                     current_collector = self.pass_1_tag(current_collector, tag)?;
                 }
-                crate::ast2::Content::Anchor(anchor) => {
-                    if !can_execute {
-                        tracing::debug!(
-                            "Execution not allowed in Worker::pass_1 for anchor in path: {:?}",
-                            context_path
-                        );
-                        return Err(anyhow::anyhow!("Execution not allowed"));
-                    }
+                crate::ast2::Content::Anchor(anchor) => {                    
                     match self.pass_1_anchor(current_collector, anchor)? {
                         Some(c) => current_collector = c,
                         None => {
@@ -333,12 +332,18 @@ impl Worker {
         let mut state: AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
                 state.query = collector.context.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(None)
             }
             AnchorStatus::NeedProcessing => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
                 // TODO prelude, secondo agent!!
                 state.reply = self.call_model(&collector, vec![state.query.clone()])?;
                 state.status = AnchorStatus::NeedInjection;
@@ -359,6 +364,9 @@ impl Worker {
         let mut state: DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
                 state.instruction_context_name = arguments
                     .arguments
                     .get(0)
@@ -376,12 +384,15 @@ impl Worker {
                 Ok(None)
             }
             AnchorStatus::NeedProcessing => {
-                state.instruction_context = execute_context(
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
+                state.instruction_context = collect_context(
                     self.file_access.clone(),
                     self.path_res.clone(),
                     &state.instruction_context_name,
                 )?;
-                state.input_context = execute_context(
+                state.input_context = collect_context(
                     self.file_access.clone(),
                     self.path_res.clone(),
                     &state.input_context_name,
@@ -406,6 +417,9 @@ impl Worker {
         let mut state: InlineState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
                 state.context_name = arguments
                     .arguments
                     .get(0)
@@ -417,6 +431,9 @@ impl Worker {
                 Ok(None)
             }
             AnchorStatus::NeedProcessing => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
                 let context_path = self.path_res.resolve_context(&state.context_name)?;
                 state.context = self.file_access.read_file(&context_path)?;
                 state.status = AnchorStatus::NeedInjection;

@@ -1,6 +1,6 @@
 Dimmi, che verso fa il coccodrillo?
 
-<!-- answer-50d3dbea-b80d-4054-8860-50fdda6a9de6:begin   -->
-Il coccodrillo non ha un verso specifico come molti altri animali. Emette sibili, soffi e a volte un brontolio profondo, specialmente durante la stagione degli amori.
-<!-- answer-50d3dbea-b80d-4054-8860-50fdda6a9de6:end   -->
+<!-- answer-a9a36f9d-c2ac-46ce-a3d0-12d550664934:begin   -->
+I am a CLI agent specializing in software engineering tasks. I can help you with coding, debugging, refactoring, and other development-related activities. I cannot answer general knowledge questions.
+<!-- answer-a9a36f9d-c2ac-46ce-a3d0-12d550664934:end   -->
 

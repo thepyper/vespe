@@ -16,7 +16,7 @@ use super::*;
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::content::ModelContentItem;
 
-pub fn execute_context(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
+pub fn execute_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
 
     let visit_stack = Vec::new();
 
@@ -31,7 +31,7 @@ pub fn execute_context(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res
     })
 }
 
-pub fn collect_context(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
+pub fn collect_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
 
     let visit_stack = Vec::new();
     
@@ -50,14 +50,14 @@ pub fn collect_context(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res
 }
 
 struct Worker {
-    file_access: Arc<dyn file::FileAccessor>, 
-    path_res: Arc<dyn path::PathResolver>,
+    file_access: Arc<Box<dyn file::FileAccessor>>, 
+    path_res: Arc<Box<dyn path::PathResolver>>,
     prelude: ModelContent,
     context: ModelContent,    
 }
 
 impl Worker {
-    fn new(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res: Arc<dyn path::PathResolver>) -> Self {
+    fn new(file_access: Arc<Box<dyn file::FileAccessor>>, path_res: Arc<Box<dyn path::PathResolver>>) -> Self {
         Worker {
             file_access,
             path_res,
@@ -243,7 +243,7 @@ impl Worker {
             }
             AnchorStatus::NeedProcessing => {
                 let context_path = self.path_res.resolve_context(&state.context_name)?;
-                state.context = self.file_access.lock().unwrap().read_file(&context_path)?;
+                state.context = self.file_access.read_file(&context_path)?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(true)

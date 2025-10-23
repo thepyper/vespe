@@ -5,7 +5,7 @@ use crate::{agent, file};
 use crate::path;
 use crate::utils;
 use anyhow::Result;
-use std::collections::HashSet;
+use std::collections::{self, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -24,15 +24,15 @@ pub fn execute_context(
     context_name: &str,
 ) -> Result<ModelContent> {
     tracing::debug!("Executing context: {}", context_name);
-    let visit_stack = Vec::new();
-
-    let mut exe = Worker::new(file_access, path_res);
-    exe.execute(&visit_stack, context_name)?;
+    
+    let exe = Worker::new(file_access, path_res);
+    let collector = Collector::new();
+    let collector = exe.execute(&collector, context_name)?;
 
     let content = {
         let mut content = ModelContent::new();
-        content.extend(exe.prelude.clone());
-        content.extend(exe.context.clone());
+        content.extend(collector.prelude.clone());
+        content.extend(collector.context.clone());
         content
     };
     tracing::debug!("Finished executing context: {}", context_name);
@@ -45,31 +45,58 @@ pub fn collect_context(
     context_name: &str,
 ) -> Result<ModelContent> {
     tracing::debug!("Collecting context: {}", context_name);
-    let visit_stack = Vec::new();
 
-    let mut exe = Worker::new(file_access, path_res);
-    exe.collect(&visit_stack, context_name)?;
+    let exe = Worker::new(file_access, path_res);
+    let collector = Collector::new();
+    let collector = exe.collect(&collector, context_name)?;
 
-    if !exe.prelude.is_empty() {
+    if !collector.prelude.is_empty() {
         tracing::debug!("Prelude not allowed in collect_context for: {}", context_name);
         return Err(anyhow::anyhow!("Prelude not allowed there"));
     }
 
     let content = {
         let mut content = ModelContent::new();
-        content.extend(exe.context.clone());
+        content.extend(collector.context.clone());
         content
     };
+
     tracing::debug!("Finished collecting context: {}", context_name);
     Ok(content)
+}
+
+struct Collector {
+    visit_stack: Vec<PathBuf>,
+    context: ModelContent,
+    variables: Variables,
+}
+
+impl Collector {
+    fn new() -> Self {
+        Collector {
+            visit_stack: Vec::new(),
+            context: ModelContent::new(),
+            variables: Variables::new(),
+        }
+    }    
+    fn descent(&self, context_path: &Path) -> Option<Self> {
+        if self.visit_stack.contains(&context_path.to_path_buf()) {
+            return None;
+        }
+
+        let mut visit_stack = self.visit_stack.clone();
+        visit_stack.push(context_path.to_path_buf());
+        Some(Collector {
+            visit_stack,
+            context: ModelContent::new(),
+            variables: Variables::new(),
+        })
+    }
 }
 
 struct Worker {
     file_access: Arc<dyn file::FileAccessor>,
     path_res: Arc<dyn path::PathResolver>,
-    prelude: ModelContent,
-    context: ModelContent,
-    variables: Variables,
 }
 
 impl Worker {
@@ -80,90 +107,106 @@ impl Worker {
         Worker {
             file_access,
             path_res,
-            prelude: Vec::new(),
-            context: Vec::new(),
-            variables: Variables::new(),
         }
     }
 
-    fn collect(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<()> {
+    fn collect(&mut self, collector: &Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::collect for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
-        if visit_stack.contains(&context_path) {
-            tracing::debug!("Context {} already in visit stack, skipping collection.", context_name);
-            return Ok(());
-        }
-
-        let mut visit_stack = visit_stack.clone();
-        visit_stack.push(context_path.clone());
-
-        // Read file, parse it, collect without allowing execution
-        let want_next_step_1 = self.pass_1(&visit_stack, &context_path, false)?;
-
-        if want_next_step_1 {
-            tracing::debug!("Next step not allowed in Worker::collect for context: {}", context_name);
-            return Err(anyhow::anyhow!("Next step not allowed"));
-        }
-        tracing::debug!("Worker::collect finished for context: {}", context_name);
-        Ok(())
+        match collector.descent(&context_path) {
+            None => {
+                tracing::debug!("Context {} already in visit stack, skipping collection.", context_name);
+                return Ok(collector);
+            }
+            Some(collector) => {
+                // Read file, parse it, collect without allowing execution
+                match self.pass_1(collector, context_path, false)? {
+                    Some(collector) => {
+                        // Successfully collected everything without needing further processing
+                        tracing::debug!("Worker::execute_step collected from pass_1 for path: {:?}", context_path);
+                        return Ok(collector);
+                    }
+                    None => {
+                        return Err(anyhow::anyhow!("Collection incomplete, execution needed for context: {}", context_name));
+                    }
+                };
+            },
+        };
     }
 
-    fn execute(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<()> {
+    fn execute(&mut self, collector: &Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
-        if visit_stack.contains(&context_path) {
-            tracing::debug!("Context {} already in visit stack, skipping execution.", context_name);
-            return Ok(());
-        }
-
-        let mut visit_stack = visit_stack.clone();
-        visit_stack.push(context_path.clone());
-
-        while self.execute_step(&visit_stack, &context_path)? {}
-        tracing::debug!("Worker::execute finished for context: {}", context_name);
-        Ok(())
+        match collector.descent(&context_path) {
+            None => {
+                tracing::debug!("Context {} already in visit stack, skipping execution.", context_name);
+                return Ok(collector);
+            }
+            Some(collector) => {
+                loop {
+                    if let Some(collector) = self.execute_step(collector, &context_path)? {
+                        tracing::debug!("Worker::execute returning collected for context: {}", context_name);
+                        return Ok(collector);
+                    }
+                    tracing::debug!("Worker::execute continuing for context: {}", context_name);
+                }
+            },
+        };
     }
 
-    fn execute_step(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path) -> Result<bool> {
+    fn execute_step(&mut self, collector: &Collector, context_path: &Path) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
-        // Read file, parse it, execute slow things that do not modify context
-        let want_next_step_1 = self.pass_1(&visit_stack, context_path, true)?;
 
-        // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        let want_next_step_2 = self.pass_2(context_path)?;
-        tracing::debug!("Worker::execute_step finished for path: {:?}, want_next_step_1: {}, want_next_step_2: {}", context_path, want_next_step_1, want_next_step_2);
-        Ok(want_next_step_1 | want_next_step_2)
+        // Read file, parse it, execute slow things that do not modify context, collect data
+        match self.pass_1(collector, context_path, true)? {
+            Some(collector) => {
+                // Successfully collected everything without needing further processing
+                tracing::debug!("Worker::execute_step collected from pass_1 for path: {:?}", context_path);
+                return Ok(Some(collector));
+            }
+            None => {
+                // Could not collect everything in pass_1, need to do pass_2 to modify context and trigger another pass_1
+                tracing::debug!("Worker::execute_step could not collect from pass_1 for path: {:?}", context_path);
+                // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
+                self.pass_2(context_path)?;
+                return Ok(None);
+            }
+        };
     }
 
-    fn call_model(&self, contents: Vec<ModelContent>) -> Result<String> {
+    fn call_model(&self, collector: Collector, contents: Vec<ModelContent>) -> Result<String> {
         let query = contents
             .into_iter()
             .flatten()
             .map(|item| item.to_string())
             .collect::<Vec<String>>()
-            .join("\n---\n");
-        agent::shell::shell_call(&self.variables.provider, &query)
+            .join("\n");
+        agent::shell::shell_call(&collector.variables.provider, &query)
     }
 
     fn pass_1(
         &mut self,
-        visit_stack: &Vec<PathBuf>,
+        collector: &Collector,
         context_path: &Path,
         can_execute: bool,
-    ) -> Result<bool> {
+    ) -> Result<Option<Collector>> {
         tracing::debug!("Worker::pass_1 for path: {:?}, can_execute: {}", context_path, can_execute);
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
 
+        let mut collector = collector.clone();
+
         for item in &ast.content {
             match item {
-                crate::ast2::Content::Text(text) => self.pass_1_text(text)?,
+                crate::ast2::Content::Text(text) => {
+                    self.pass_1_text(&mut collector, text)?
+                }
                 crate::ast2::Content::Tag(tag) => {
-                    if self.pass_1_tag(visit_stack, tag)? {
+                    if self.pass_1_tag(&mut collector, tag)? {
                         tracing::debug!("Worker::pass_1 returning true after processing tag for path: {:?}", context_path);
-                        return Ok(true);
+                        return Ok(None);
                     }
                 }
                 crate::ast2::Content::Anchor(anchor) => {
@@ -171,31 +214,36 @@ impl Worker {
                         tracing::debug!("Execution not allowed in Worker::pass_1 for anchor in path: {:?}", context_path);
                         return Err(anyhow::anyhow!("Execution not allowed"));
                     }
-                    if self.pass_1_anchor(anchor)? {
+                    if self.pass_1_anchor(&mut collector, anchor)? {
                         tracing::debug!("Worker::pass_1 returning true after processing anchor for path: {:?}", context_path);
-                        return Ok(true);
+                        return Ok(None);
                     }
                 }
             }
         }
         tracing::debug!("Worker::pass_1 finished for path: {:?}", context_path);
-        Ok(false)
+        Ok(Some(collector))
     }
 
-    fn pass_1_text(&mut self, text: &Text) -> Result<()> {
-        self.context.push(ModelContentItem::user(&text.content));
+    fn pass_1_text(&mut self, collector: &mut Collector, text: &Text) -> Result<()> {
+        collector.context.push(ModelContentItem::user(&text.content));
         Ok(())
     }
 
     /// Process tags that do NOT modify context, so tags that do NOT spawn anchors
-    fn pass_1_tag(&mut self, visit_stack: &Vec<PathBuf>, tag: &Tag) -> Result<bool> {
+    fn pass_1_tag(&mut self, collector: &mut Collector, tag: &Tag) -> Result<bool> {
         match tag.command {
-            CommandKind::Include => self.pass_1_include_tag(visit_stack, tag),
-            _ => Ok(false),
+            CommandKind::Include => {
+                if self.pass_1_include_tag(collector, tag) {
+                    return Ok(true)
+                }
+            }
+            _ => {}
         }
+        Ok(false)
     }
 
-    fn pass_1_include_tag(&mut self, visit_stack: &Vec<PathBuf>, tag: &Tag) -> Result<bool> {
+    fn pass_1_include_tag(&mut self, collector: &mut Collector, tag: &Tag) -> Result<bool> {
         let included_context_name = tag
             .arguments
             .arguments
@@ -203,12 +251,12 @@ impl Worker {
             .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
             .value
             .clone();
-        self.collect(visit_stack, &included_context_name)?;
+        collector = self.collect(collector, &included_context_name)?;
         Ok(true)
     }
 
     /// Process anchors that can trigger slow tasks that modify state
-    fn pass_1_anchor(&mut self, anchor: &Anchor) -> Result<bool> {
+    fn pass_1_anchor(&mut self, collector: &mut Collector, anchor: &Anchor) -> Result<bool> {
         tracing::debug!("Worker::pass_1_anchor processing command: {:?}, kind: {:?}", anchor.command, anchor.kind);
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
@@ -333,21 +381,20 @@ impl Worker {
         }
     }
 
-    fn pass_2(&mut self, context_path: &Path) -> Result<bool> {
+    fn pass_2(&mut self, context_path: &Path) -> Result<()> {
         tracing::debug!("Worker::pass_2 for path: {:?}", context_path);
         let lock_id = self.file_access.lock_file(context_path)?;
         let result = self.pass_2_internal_x(context_path);
         self.file_access.unlock_file(&lock_id)?;
-        tracing::debug!("Worker::pass_2 finished for path: {:?}", context_path);
-        result
+        tracing::debug!("Worker::pass_2 finished for path: {:?}", context_path);        
     }
 
-    fn pass_2_internal_x(&mut self, context_path: &Path) -> Result<bool> {
+    fn pass_2_internal_x(&mut self, context_path: &Path) -> Result<()> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
 
-        let want_next_step = self.pass_2_internal_y(&mut patches, &ast)?;
+        self.pass_2_internal_y(&mut patches, &ast)?;
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
@@ -355,21 +402,21 @@ impl Worker {
                 .write_file(context_path, &new_context_content, None)?; // TODO comment?
         }
 
-        Ok(want_next_step)
+        Ok(()))
     }
 
-    fn pass_2_internal_y(&mut self, patches: &mut utils::Patches, ast: &Document) -> Result<bool> {
+    fn pass_2_internal_y(&mut self, patches: &mut utils::Patches, ast: &Document) -> Result<()> {
         let anchor_index = utils::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
             match item {
                 crate::ast2::Content::Tag(tag) => {
                     if self.pass_2_tag(patches, tag)? {
-                        return Ok(true);
+                        break;
                     }
                 }
                 crate::ast2::Content::Anchor(a0) => {
-                    return match a0.kind {
+                    match a0.kind {
                         AnchorKind::Begin => {
                             let j = anchor_index
                                 .get_end(&a0.uuid)
@@ -379,21 +426,26 @@ impl Worker {
                                 .get(j)
                                 .ok_or_else(|| anyhow::anyhow!("Bad index!?!?"))?;
                             match a1 {
-                                crate::ast2::Content::Anchor(a1) => match a1.kind {
-                                    AnchorKind::End => self.pass_2_anchors(patches, a0, a1),
-                                    _ => return Err(anyhow::anyhow!("Bad end anchor!")),
-                                },
+                                crate::ast2::Content::Anchor(a1) => {
+                                    match a1.kind {
+                                        AnchorKind::End => {
+                                            if self.pass_2_anchors(patches, a0, a1)? {
+                                                break;
+                                            }
+                                        }
+                                        _ => return Err(anyhow::anyhow!("Bad end anchor!")),
+                                    }
+                                }
                                 _ => return Err(anyhow::anyhow!("Bad end content!")),
                             }
                         }
-                        _ => Ok(false),
+                        _ => {},
                     }
                 }
                 _ => {}
             }
         }
-
-        Ok(false)
+        Ok(())        
     }
 
     fn pass_2_tag(&mut self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
@@ -432,7 +484,7 @@ impl Worker {
         range: &Range,
     ) -> Result<bool> {
         let (a0, a1) = Anchor::new_couple(command_kind, parameters, arguments);
-        patches.add_patch(range, &format!("{}\n{}", a0.to_string(), a1.to_string()));
+        patches.add_patch(range, &format!("{}\n{}\n", a0.to_string(), a1.to_string()));
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
         asm.save_state(&S::new(), None)?;

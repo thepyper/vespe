@@ -15,8 +15,10 @@ use super::*;
 
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::content::ModelContentItem;
+use tracing::debug;
 
 pub fn execute_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
+    debug!("Executing context: {}", context_name);
 
     let visit_stack = Vec::new();
 
@@ -32,6 +34,7 @@ pub fn execute_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<d
 }
 
 pub fn collect_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
+    debug!("Collecting context: {}", context_name);
 
     let visit_stack = Vec::new();
     
@@ -58,6 +61,7 @@ struct Worker {
 
 impl Worker {
     fn new(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>) -> Self {
+        debug!("Creating new Worker");
         Worker {
             file_access,
             path_res,
@@ -67,6 +71,7 @@ impl Worker {
     }
 
     fn collect(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<()> {
+        debug!("Worker collecting context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
         if visit_stack.contains(&context_path) {
@@ -87,6 +92,7 @@ impl Worker {
     }
 
     fn execute(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<()> {
+        debug!("Worker executing context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
         if visit_stack.contains(&context_path) {
@@ -102,6 +108,7 @@ impl Worker {
     }
 
     fn execute_step(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path) -> Result<bool> {
+        debug!("Executing step for context: {:?}", context_path);
         // Read file, parse it, execute slow things that do not modify context
         let want_next_step_1 = self.pass_1(&visit_stack, context_path, true)?;
 
@@ -112,6 +119,7 @@ impl Worker {
     }
 
     fn pass_1(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path, can_execute: bool) -> Result<bool> {
+        debug!("Worker pass_1 for context: {:?}, can_execute: {}", context_path, can_execute);
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -141,12 +149,14 @@ impl Worker {
     }
 
     fn pass_1_text(&mut self, text: &Text) -> Result<()> {
+        debug!("Worker pass_1_text: {}", text.content);
         self.context.push(ModelContentItem::user(&text.content));
         Ok(())
     }
 
     /// Process tags that do NOT modify context, so tags that do NOT spawn anchors
     fn pass_1_tag(&mut self, visit_stack: &Vec<PathBuf>, tag: &Tag) -> Result<bool> {
+        debug!("Worker pass_1_tag: {:?}", tag.command);
         match tag.command {
             CommandKind::Include => self.pass_1_include_tag(visit_stack, tag),
             _ => Ok(false),
@@ -154,6 +164,7 @@ impl Worker {
     }
 
     fn pass_1_include_tag(&mut self, visit_stack: &Vec<PathBuf>, tag: &Tag) -> Result<bool> {
+        debug!("Worker pass_1_include_tag: {:?}", tag.arguments);
         let included_context_name = tag.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?.value.clone();
         self.collect(visit_stack, &included_context_name)?;
         Ok(true)
@@ -161,6 +172,7 @@ impl Worker {
 
     /// Process anchors that can trigger slow tasks that modify state
     fn pass_1_anchor(&mut self, anchor: &Anchor) -> Result<bool> {
+        debug!("Worker pass_1_anchor: {:?}", anchor.command);
         let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
         match (
             &anchor.command,
@@ -179,6 +191,7 @@ impl Worker {
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
+        debug!("Worker pass_1_answer_begin_anchor");
         let mut state : AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -204,6 +217,7 @@ impl Worker {
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
+        debug!("Worker pass_1_derive_begin_anchor");
         let mut state : DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -232,6 +246,7 @@ impl Worker {
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
+        debug!("Worker pass_1_inline_begin_anchor");
         let mut state : InlineState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -252,6 +267,7 @@ impl Worker {
     }
 
     fn pass_2(&mut self, context_path: &Path) -> Result<bool> {
+        debug!("Worker pass_2 for context: {:?}", context_path);
 
         let lock_id = self.file_access.lock_file(context_path)?;        
         let result = self.pass_2_internal_x(context_path);
@@ -261,6 +277,7 @@ impl Worker {
     }
 
      fn pass_2_internal_x(&mut self, context_path: &Path) -> Result<bool> {
+        debug!("Worker pass_2_internal_x for context: {:?}", context_path);
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -277,6 +294,7 @@ impl Worker {
     }
 
     fn pass_2_internal_y(&mut self, patches: &mut utils::Patches, ast: &Document) -> Result<bool> {
+        debug!("Worker pass_2_internal_y");
         
         let anchor_index = utils::AnchorIndex::new(&ast.content);
     
@@ -315,6 +333,7 @@ impl Worker {
     }
 
     fn pass_2_tag(&mut self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
+        debug!("Worker pass_2_tag: {:?}", tag.command);
         match tag.command {
             CommandKind::Answer => self.pass_2_normal_tag(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
             CommandKind::Derive => self.pass_2_normal_tag(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
@@ -331,6 +350,7 @@ impl Worker {
         arguments: &Arguments,
         range: &Range,
     ) -> Result<bool> {
+        debug!("Worker pass_2_normal_tag: {:?}", command_kind);
         let (a0, a1) = Anchor::new_couple(command_kind, parameters, arguments);
         patches.add_patch(
             range,
@@ -346,6 +366,7 @@ impl Worker {
     }
     
     fn pass_2_anchors(&mut self, patches: &mut utils::Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
+        debug!("Worker pass_2_anchors: {:?}", a0.command);
         let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), a0);
         match a0.command {
             CommandKind::Answer => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),    
@@ -364,6 +385,7 @@ impl Worker {
         range_begin: &Range,
         range_end: &Range,
     ) -> Result<bool> {
+        debug!("Worker pass_2_normal_begin_anchor");
         let mut state : AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::NeedInjection => {

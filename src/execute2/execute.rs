@@ -204,7 +204,6 @@ impl Worker {
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         let mut state : DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -215,8 +214,8 @@ impl Worker {
                 Ok(true) 
             }
             AnchorStatus::NeedProcessing => {
-                state.instruction_context = execute_context(self.file_access, self.path_res, &state.instruction_context_name)?;
-                state.input_context = execute_context(self.file_access, self.path_res, &state.input_context_name)?;
+                state.instruction_context = execute_context(self.file_access.clone(), self.path_res.clone(), &state.instruction_context_name)?;
+                state.input_context = execute_context(self.file_access.clone(), self.path_res.clone(), &state.input_context_name)?;
                 // call llm to derive                
                 state.derived = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;
@@ -271,7 +270,7 @@ impl Worker {
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
-            self.file_access..write_file(context_path, &new_context_content, None)?; // TODO comment?
+            self.file_access.write_file(context_path, &new_context_content, None)?; // TODO comment?
         }
 
         Ok(want_next_step)

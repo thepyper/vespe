@@ -1,5 +1,6 @@
 use crate::agent::ShellAgentCall;
 use crate::git::Commit;
+use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME, CONTEXTS_DIR_NAME};
 
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;

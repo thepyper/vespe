@@ -8,11 +8,7 @@ pub mod project;
 pub mod utils;
 pub mod file;
 pub mod path;
-
-const CTX_DIR_NAME: &str = ".ctx";
-const CTX_ROOT_FILE_NAME: &str = ".ctx_root";
-const METADATA_DIR_NAME: &str = ".meta";
-const CONTEXTS_DIR_NAME: &str = "contexts";
+pub mod constants;
 
 pub fn init_telemetry() {
     tracing_subscriber::fmt()

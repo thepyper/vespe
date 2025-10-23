@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
+use std::sync::Mutex;
 
 use super::editor::EditorCommunicator;
 

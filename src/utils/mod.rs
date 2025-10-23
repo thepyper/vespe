@@ -50,14 +50,14 @@ impl AnchorIndex {
     }
 }
 
-pub struct AnchorStateManager<'a> {
+pub struct AnchorStateManager {
     file_access: Arc<Box<dyn file::FileAccessor>>, 
     path_res: Arc<Box<dyn path::PathResolver>>,
     command: crate::ast2::CommandKind,
     uuid: Uuid,
 }
 
-impl<'a> AnchorStateManager<'a> {
+impl AnchorStateManager {
     pub fn new(file_access: Arc<Box<dyn file::FileAccessor>>, path_res: Arc<Box<dyn path::PathResolver>>, anchor: &crate::ast2::Anchor) -> Self {
         AnchorStateManager {
             file_access,

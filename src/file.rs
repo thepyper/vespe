@@ -1,10 +1,12 @@
-
 use anyhow::Result;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::collections::HashSet;
+
+use super::editor::EditorCommunicator;
 
 pub trait FileAccessor {
     /// Read whole file to a string
-    fn read_file(&mut self, path: &Path) -> Result<String>;
+    fn read_file(&self, path: &Path) -> Result<String>;
     /// Require exclusive access to a file
     fn lock_file(&mut self, path: &Path) -> Result<()>;
     /// Release excludive access to a file
@@ -13,7 +15,7 @@ pub trait FileAccessor {
     fn write_file(&mut self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>; 
 }
 
-pub ProjectFileAccessor {
+pub struct ProjectFileAccessor {
     editor_interface: Option<Box<dyn EditorCommunicator>>,
     modified_files: HashSet<PathBuf>,
     modified_files_comments: Vec<String>,
@@ -37,7 +39,7 @@ impl ProjectFileAccessor {
 
 impl FileAccessor for ProjectFileAccessor {
     /// Read whole file to a string
-    fn read_file(&mut self, path: &Path) -> Result<String>
+    fn read_file(&self, path: &Path) -> Result<String>
     {
         std::fs::read_to_string(path)
     }
@@ -63,7 +65,7 @@ impl FileAccessor for ProjectFileAccessor {
         std::fs::write(path, content)?;
         self.modified_files.insert(path);
         if let Some(comment) = comment {
-            self.modified_files_comments.push(comment);
+            self.modified_files_comments.push(comment.into());
         }         
         Ok(())
     }

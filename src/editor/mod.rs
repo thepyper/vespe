@@ -29,17 +29,3 @@ pub trait EditorCommunicator {
 }
 
 pub mod lockfile;
-
-pub struct DummyEditorCommunicator;
-
-impl EditorCommunicator for DummyEditorCommunicator {
-    fn request_file_modification(&self, _file_path: &Path) -> Result<Uuid> {
-        // For the dummy communicator, we just return a new UUID without doing anything.
-        Ok(Uuid::new_v4())
-    }
-
-    fn notify_file_modified(&self, _file_path: &Path, _request_id: Uuid) -> Result<()> {
-        // For the dummy communicator, we do nothing.
-        Ok(())
-    }
-}

@@ -46,14 +46,14 @@ pub fn collect_context(file_access: &dyn file::FileAccessor, path_res: &dyn path
 }
 
 struct Worker<'a> {
-    file_access: &'a dyn file::FileAccessor, 
+    file_access: &'a mut dyn file::FileAccessor, 
     path_res: &'a dyn path::PathResolver,
     prelude: ModelContent,
     context: ModelContent,    
 }
 
 impl<'a> Worker<'a> {
-    fn new(file_access: &'a dyn file::FileAccessor, path_res: &'a dyn path::PathResolver) -> Self {
+    fn new(file_access: &'a mut dyn file::FileAccessor, path_res: &'a dyn path::PathResolver) -> Self {
         Worker {
             file_access,
             path_res,
@@ -157,24 +157,22 @@ impl<'a> Worker<'a> {
 
     /// Process anchors that can trigger slow tasks that modify state
     fn pass_1_anchor(&mut self, anchor: &Anchor) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         match (
             &anchor.command,
             &anchor.kind,            
         ) {
-            (CommandKind::Answer, AnchorKind::Begin) => self.pass_1_answer_begin_anchor(&asm, &anchor.parameters, &anchor.arguments),
-            (CommandKind::Derive, AnchorKind::Begin) => self.pass_1_derive_begin_anchor(&asm, &anchor.parameters, &anchor.arguments),
-            (CommandKind::Inline, AnchorKind::Begin) => self.pass_1_inline_begin_anchor(&asm, &anchor.parameters, &anchor.arguments),
+            (CommandKind::Answer, AnchorKind::Begin) => self.pass_1_answer_begin_anchor(&anchor),
+            (CommandKind::Derive, AnchorKind::Begin) => self.pass_1_derive_begin_anchor(&anchor),
+            (CommandKind::Inline, AnchorKind::Begin) => self.pass_1_inline_begin_anchor(&anchor),
             _ => Ok(false)
         }
     }
 
     fn pass_1_answer_begin_anchor(
         &mut self,
-        asm: &utils::AnchorStateManager,
-        _parameters: &Parameters,
-        _arguments: &Arguments,
+        anchor: &Anchor,
     ) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         let mut state : AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -196,15 +194,14 @@ impl<'a> Worker<'a> {
 
     fn pass_1_derive_begin_anchor(
         &mut self,
-        asm: &utils::AnchorStateManager,
-        _parameters: &Parameters,
-        arguments: &Arguments,
+        anchor: &Anchor,
     ) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         let mut state : DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.instruction_context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value.clone();
-                state.input_context_name = arguments.arguments.get(1).ok_or_else(|| anyhow::anyhow!("Missing input context name"))?.value.clone();
+                state.instruction_context_name = anchor.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value.clone();
+                state.input_context_name = anchor.arguments.arguments.get(1).ok_or_else(|| anyhow::anyhow!("Missing input context name"))?.value.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true) 
@@ -224,14 +221,13 @@ impl<'a> Worker<'a> {
 
     fn pass_1_inline_begin_anchor(
         &mut self,
-        asm: &utils::AnchorStateManager,
-        _parameters: &Parameters,
-        arguments: &Arguments,
+        anchor: &Anchor,
     ) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         let mut state : InlineState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing context name"))?.value.clone();
+                state.context_name = anchor.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing context name"))?.value.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true)
@@ -354,7 +350,7 @@ impl<'a> Worker<'a> {
     fn pass_2_normal_begin_anchor(
         &mut self,
         patches: &mut utils::Patches,
-        asm: &utils::AnchorStateManager,
+        asm: &mut utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
         range_begin: &Range,

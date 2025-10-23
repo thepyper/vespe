@@ -47,14 +47,14 @@ impl AnchorIndex {
 }
 
 pub struct AnchorStateManager<'a> {
-    file_access: &'a dyn file::FileAccessor, 
+    file_access: &'a mut dyn file::FileAccessor, 
     path_res: &'a dyn path::PathResolver,
     command: crate::ast2::CommandKind,
     uuid: Uuid,
 }
 
 impl<'a> AnchorStateManager<'a> {
-    pub fn new(file_access: &'a dyn file::FileAccessor, path_res: &'a dyn path::PathResolver, anchor: &crate::ast2::Anchor) -> Self {
+    pub fn new(file_access: &'a mut dyn file::FileAccessor, path_res: &'a dyn path::PathResolver, anchor: &crate::ast2::Anchor) -> Self {
         AnchorStateManager {
             file_access,
             path_res,
@@ -67,13 +67,13 @@ impl<'a> AnchorStateManager<'a> {
         let state_path = meta_path.join("state.json");
         Ok(state_path)
     }
-    pub fn load_state<T: serde::de::DeserializeOwned>(&self) -> Result<T> {
+    pub fn load_state<T: serde::de::DeserializeOwned>(&mut self) -> Result<T> {
         let state_path = self.get_state_path()?;
         let state = self.file_access.read_file(&state_path)?;
         let state: T = serde_json::from_str(&state)?;
         Ok(state)
     }
-    pub fn save_state<T: serde::Serialize>(&self, state: &T, comment: Option<&str>) -> Result<()> {
+    pub fn save_state<T: serde::Serialize>(&mut self, state: &T, comment: Option<&str>) -> Result<()> {
         let state_path = self.get_state_path()?;
         let state_str = serde_json::to_string_pretty(state)?;
         self.file_access.write_file(&state_path, &state_str, comment)?;

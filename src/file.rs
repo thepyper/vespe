@@ -27,6 +27,12 @@ impl ProjectFileAccessor {
             modified_files_comments: Vec::new(),
         }
     }
+    pub fn modified_files(&self) -> Vec<PathBuf> {
+        self.modified_files.iter().cloned().collect::<Vec<PathBuf>>()
+    }
+    pub fn modified_files_comments(&self) -> String {
+        self.modified_files_comments.join("\n")
+    }
 }
 
 impl FileAccessor for ProjectFileAccessor {

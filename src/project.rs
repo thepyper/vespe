@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::config::{EditorInterface, ProjectConfig};
 use crate::editor::{
-    lockfile::FileBasedEditorCommunicator, DummyEditorCommunicator, EditorCommunicator,
+    lockfile::FileBasedEditorCommunicator, EditorCommunicator,
 };
 
 const CTX_DIR_NAME: &str = ".ctx";
@@ -29,7 +29,7 @@ pub struct ContextInfo {
 
 pub struct Project {
     root_path: PathBuf,
-    editor_communicator: Box<dyn EditorCommunicator>,
+    editor_communicator: Option<Box<dyn EditorCommunicator>>,
     project_config: ProjectConfig,
 }
 
@@ -49,7 +49,7 @@ impl Project {
 
         let project = Project {
             root_path: path.canonicalize()?,
-            editor_communicator: Box::new(DummyEditorCommunicator),
+            editor_communicator: None,
             project_config: ProjectConfig::default(),
         };
 
@@ -81,9 +81,9 @@ impl Project {
                 let editor_communicator: Box<dyn EditorCommunicator> =
                     match project_config.editor_interface {
                         EditorInterface::VSCode => {
-                            Box::new(FileBasedEditorCommunicator::new(&editor_path)?)
+                            Some(Box::new(FileBasedEditorCommunicator::new(&editor_path)?))
                         }
-                        _ => Box::new(DummyEditorCommunicator),
+                        _ => None,
                     };
 
                 return Ok(Project {
@@ -441,6 +441,37 @@ impl Project {
     }
 }
 
+impl FileAccessor for Project {
+    /// Read whole file to a string
+    fn read_file(&self, path: &Path) -> Result<String>
+    {
+        std::fs::read_to_string(path)
+    }
+    /// Require exclusive access to a file
+    fn lock_file(&self, path: &Path) -> Result<()>
+    {
+        match self.editor_interface {
+            None => Ok(()),
+            Some(x) => x.request_file_modification(path),
+        }
+    }
+    /// Release excludive access to a file
+    fn unlock_file(&self, path: &Path) -> Result<()>
+    {
+        match self.editor_interface {
+            None => Ok(()),
+            Some(x) => x.notify_file_modified(path),
+        }
+    }
+    /// Write whole file, optional comment to the operation
+    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>
+    {
+        std::fs::write(path, content)?;
+        match self.git_integration_enabled {
+            // TODO logica per commit, faccio 1 solo?
+        }
+    }   
+}
 
 /*
 fn format_lines_to_string(lines: &Vec<Line>) -> String {

@@ -32,10 +32,17 @@ impl ModelContentItem {
 impl ToString for ModelContentItem {
     fn to_string(&self) -> String {
         match self {
+            /*
             ModelContentItem::System(content) => format!("System: {}", content.text),
             ModelContentItem::User(content) => format!("User: {}", content.text),
             ModelContentItem::Agent(content) => {
                 format!("Agent ({}): {}", content.author, content.text)
+            }
+            */
+            ModelContentItem::System(content) => format!("{}", content.text),
+            ModelContentItem::User(content) => format!("{}", content.text),
+            ModelContentItem::Agent(content) => {
+                format!("{}", content.text)
             }
         }
     }

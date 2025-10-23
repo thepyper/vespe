@@ -37,7 +37,7 @@ pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String>
         )
     })?;
 
-    debug!("Writing query to stdin.");
+    debug!("Writing query to stdin: '{}'.", input);
     child.stdin.as_mut().unwrap().write_all(input.as_bytes())?;
 
     let stdout = child.stdout.take().context("Failed to take stdout")?;

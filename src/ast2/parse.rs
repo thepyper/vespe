@@ -795,11 +795,6 @@ pub(crate) fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tex
         return Ok(None);
     }
 
-    // Stop if we see a tag or anchor start
-    if parser.remain().starts_with('@') || parser.remain().starts_with("<!--") {
-        return Ok(None);
-    }
-
     let mut p_current = parser.clone();
     let mut content = String::new();
 

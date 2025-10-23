@@ -1,0 +1,41 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "ciao, abbaia!\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "ciao, abbaia!\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    }
+  ],
+  "reply": "Ciao! Come posso aiutarti oggi?\n"
+}

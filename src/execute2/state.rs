@@ -2,25 +2,39 @@ use serde::{Deserialize, Serialize};
 
 use super::ModelContent;
 
+/// A trait for objects that represent the persistent state of an anchor command.
+///
+/// This trait provides a common interface for creating, serializing/deserializing,
+/// and managing the status of different state machines used by commands like
+/// `@answer`, `@derive`, etc.
 pub trait State: serde::Serialize + serde::de::DeserializeOwned {
+    /// Creates a new instance of the state, typically in its initial status.
     fn new() -> Self;
+    /// Generates the final string output to be injected into the document.
     fn output(&self) -> String;
+    /// Gets the current status of the anchor's state machine.
     fn get_status(&self) -> &AnchorStatus;
+    /// Sets the status of the anchor's state machine.
     fn set_status(&mut self, status: AnchorStatus);
 }
 
+/// Defines the lifecycle stages of an anchor-based command.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum AnchorStatus {
-    /// Just created, empty without any content nor state gathered
+    /// The anchor has just been created. The state is empty and needs to be initialized.
     JustCreated,
-    /// Gathered info, need to process them
+    /// The necessary information has been gathered (e.g., context collected).
+    /// The state is ready for the main processing step (e.g., calling a model).
     NeedProcessing,
-    /// Information has been processed, need to be injected in document
+    /// The main processing is complete (e.g., a reply was received from a model).
+    /// The resulting output is ready to be injected into the document.
     NeedInjection,
-    /// Completed, no further processing needed
+    /// The command has been fully processed, and its output has been injected.
+    /// No further action is needed.
     Completed,
 }
 
+/// The persistent state for an `@inline` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InlineState {
     pub status: AnchorStatus,
@@ -47,6 +61,7 @@ impl State for InlineState {
     }
 }
 
+/// The persistent state for an `@answer` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
     pub status: AnchorStatus,
@@ -73,6 +88,7 @@ impl State for AnswerState {
     }
 }
 
+/// The persistent state for a `@derive` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeriveState {
     pub status: AnchorStatus,

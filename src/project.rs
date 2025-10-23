@@ -199,6 +199,7 @@ impl Project {
     */
 
     pub fn list_contexts(&self) -> Result<Vec<ContextInfo>> {
+        /* TODO REDO
         let mut contexts = Vec::new();
         let contexts_root = self.contexts_root();
 
@@ -222,6 +223,8 @@ impl Project {
             }
         }
         Ok(contexts)
+        */
+        Ok(vec![])
     }
 
     /*
@@ -286,134 +289,4 @@ impl Project {
             Err(e) => Err(anyhow::Error::new(e).context("Failed to read project config file")),
         }
     }
-
-    /*
-    fn save_state_to_metadata<T>(
-        &self,
-        anchor_kind: AnchorKind,
-        uuid: &Uuid,
-        state: &T,
-        commit: &mut Commit,
-    ) -> std::result::Result<(), SemanticError>
-    where
-        T: serde::Serialize,
-    {
-        let metadata_dir = self
-            .resolve_metadata(anchor_kind.to_string().as_str(), uuid)
-            .map_err(SemanticError::AnyhowError)?;
-        std::fs::create_dir_all(&metadata_dir)?;
-        let state_path = metadata_dir.join("state.json");
-        let serialized = serde_json::to_string_pretty(state)?;
-        std::fs::write(&state_path, serialized)?;
-        commit.files.insert(state_path);
-        Ok(())
-    }
-
-    fn load_state_from_metadata<T>(
-        &self,
-        anchor_kind: &AnchorKind,
-        uid: &Uuid,
-    ) -> std::result::Result<T, SemanticError>
-    where
-        T: for<'de> serde::Deserialize<'de>,
-    {
-        let metadata_dir = self
-            .resolve_metadata(anchor_kind.to_string().as_str(), uid)
-            .map_err(SemanticError::AnyhowError)?;
-        let state_path = metadata_dir.join("state.json");
-
-        match std::fs::read_to_string(&state_path) {
-            Ok(content) => Ok(serde_json::from_str(&content)?),
-            Err(e) if e.kind() == ErrorKind::NotFound => Err(SemanticError::Generic(format!(
-                "State file not found for anchor {}-{}",
-                anchor_kind, uid
-            ))),
-            Err(e) => Err(SemanticError::IoError(e)),
-        }
-    }
-
-    pub fn save_inline_state(
-        &self,
-        uid: &Uuid,
-        state: &InlineState,
-        commit: &mut Commit,
-    ) -> Result<()> {
-        self.save_state_to_metadata(AnchorKind::Inline, uid, state, commit)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn load_inline_state(&self, uid: &Uuid) -> Result<InlineState> {
-        self.load_state_from_metadata(&AnchorKind::Inline, uid)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn save_summary_state(
-        &self,
-        uid: &Uuid,
-        state: &SummaryState,
-        commit: &mut Commit,
-    ) -> Result<()> {
-        self.save_state_to_metadata(AnchorKind::Summary, uid, state, commit)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn load_summary_state(&self, uid: &Uuid) -> Result<SummaryState> {
-        self.load_state_from_metadata(&AnchorKind::Summary, uid)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn save_answer_state(
-        &self,
-        uid: &Uuid,
-        state: &AnswerState,
-        commit: &mut Commit,
-    ) -> Result<()> {
-        self.save_state_to_metadata(AnchorKind::Answer, uid, state, commit)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn load_answer_state(&self, uid: &Uuid) -> Result<AnswerState> {
-        self.load_state_from_metadata(&AnchorKind::Answer, uid)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn save_derive_state(
-        &self,
-        uid: &Uuid,
-        state: &DeriveState,
-        commit: &mut Commit,
-    ) -> Result<()> {
-        self.save_state_to_metadata(AnchorKind::Derive, uid, state, commit)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn load_derive_state(&self, uid: &Uuid) -> Result<DeriveState> {
-        self.load_state_from_metadata(&AnchorKind::Derive, uid)
-            .map_err(|e| anyhow::Error::new(e))
-    }
-
-    pub fn request_file_modification(&self, file_path: &Path) -> Result<Uuid> {
-        self.editor_communicator
-            .as_ref()
-            .context("Editor communicator not initialized")?
-            .request_file_modification(file_path)
-    }
-
-    pub fn notify_file_modified(&self, request_id: Uuid) -> Result<()> {
-        self.editor_communicator
-            .as_ref()
-            .context("Editor communicator not initialized")?
-            .notify_file_modified(request_id)
-    }
-
-
-
-/*
-fn format_lines_to_string(lines: &Vec<Line>) -> String {
-    lines
-        .iter()
-        .map(|line| line.to_string())
-        .collect::<Vec<String>>()
-        .join("\n")
 }
-*/

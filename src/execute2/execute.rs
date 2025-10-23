@@ -141,7 +141,10 @@ impl Worker {
     fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
-        // Read file, parse it, execute slow things that do not modify context, collect data
+        // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
+        self.pass_2(context_path)?;
+
+        // Re-read file, parse it, execute slow things that do not modify context, collect data
         match self.pass_1(collector, context_path, true)? {
             Some(collector) => {
                 // Successfully collected everything without needing further processing
@@ -151,8 +154,6 @@ impl Worker {
             None => {
                 // Could not collect everything in pass_1, need to do pass_2 to modify context and trigger another pass_1
                 tracing::debug!("Worker::execute_step could not collect from pass_1 for path: {:?}", context_path);
-                // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
-                self.pass_2(context_path)?;
                 return Ok(None);
             }
         };

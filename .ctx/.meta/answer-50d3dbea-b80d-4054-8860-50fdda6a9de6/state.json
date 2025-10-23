@@ -1,0 +1,16 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "Dimmi, che verso fa il coccodrillo?\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    }
+  ],
+  "reply": "Il coccodrillo non ha un verso specifico come molti altri animali. Emette sibili, soffi e a volte un brontolio profondo, specialmente durante la stagione degli amori.\n"
+}

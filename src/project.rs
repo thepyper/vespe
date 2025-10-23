@@ -441,37 +441,7 @@ impl Project {
     }
 }
 
-impl FileAccessor for Project {
-    /// Read whole file to a string
-    fn read_file(&self, path: &Path) -> Result<String>
-    {
-        std::fs::read_to_string(path)
-    }
-    /// Require exclusive access to a file
-    fn lock_file(&self, path: &Path) -> Result<()>
-    {
-        match self.editor_interface {
-            None => Ok(()),
-            Some(x) => x.request_file_modification(path),
-        }
-    }
-    /// Release excludive access to a file
-    fn unlock_file(&self, path: &Path) -> Result<()>
-    {
-        match self.editor_interface {
-            None => Ok(()),
-            Some(x) => x.notify_file_modified(path),
-        }
-    }
-    /// Write whole file, optional comment to the operation
-    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>
-    {
-        std::fs::write(path, content)?;
-        match self.git_integration_enabled {
-            // TODO logica per commit, faccio 1 solo?
-        }
-    }   
-}
+
 
 /*
 fn format_lines_to_string(lines: &Vec<Line>) -> String {

@@ -168,7 +168,21 @@ impl Worker {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
         // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        self.pass_2(context_path)?;
+        match self.pass_2(context_path)? {
+            true => {
+                tracing::debug!(
+                    "Worker::execute_step pass_2 needs another pass for path: {:?}",
+                    context_path
+                );
+                return None;
+            }
+            false => {
+                tracing::debug!(
+                    "Worker::execute_step no changes in pass_2 for path: {:?}",
+                    context_path
+                );
+            }
+        }
 
         // Re-read file, parse it, execute slow things that do not modify context, collect data
         match self.pass_1(collector, context_path)? {
@@ -430,7 +444,7 @@ impl Worker {
         }
     }
 
-    fn pass_2(&self, context_path: &Path) -> Result<()> {
+    fn pass_2(&self, context_path: &Path) -> Result<bool> {
         tracing::debug!("Worker::pass_2 for path: {:?}", context_path);
         let lock_id = self.file_access.lock_file(context_path)?;
         let result = self.pass_2_internal_x(context_path);
@@ -439,12 +453,12 @@ impl Worker {
         result
     }
 
-    fn pass_2_internal_x(&self, context_path: &Path) -> Result<()> {
+    fn pass_2_internal_x(&self, context_path: &Path) -> Result<bool> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
 
-        self.pass_2_internal_y(&mut patches, &ast)?;
+        let result = self.pass_2_internal_y(&mut patches, &ast)?;
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
@@ -452,17 +466,17 @@ impl Worker {
                 .write_file(context_path, &new_context_content, None)?; // TODO comment?
         }
 
-        Ok(())
+        Ok(result)
     }
 
-    fn pass_2_internal_y(&self, patches: &mut utils::Patches, ast: &Document) -> Result<()> {
+    fn pass_2_internal_y(&self, patches: &mut utils::Patches, ast: &Document) -> Result<bool> {
         let anchor_index = utils::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
             match item {
                 crate::ast2::Content::Tag(tag) => {
                     if self.pass_2_tag(patches, tag)? {
-                        break;
+                        return Ok(true);
                     }
                 }
                 crate::ast2::Content::Anchor(a0) => match a0.kind {
@@ -478,7 +492,7 @@ impl Worker {
                             crate::ast2::Content::Anchor(a1) => match a1.kind {
                                 AnchorKind::End => {
                                     if self.pass_2_anchors(patches, a0, a1)? {
-                                        break;
+                                        return Ok(true);
                                     }
                                 }
                                 _ => return Err(anyhow::anyhow!("Bad end anchor!")),
@@ -491,7 +505,7 @@ impl Worker {
                 _ => {}
             }
         }
-        Ok(())
+        Ok(false)
     }
 
     fn pass_2_tag(&self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {

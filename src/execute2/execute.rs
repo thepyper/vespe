@@ -14,8 +14,10 @@ use crate::execute2::content::ModelContentItem;
 
 pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
 
+    let visit_stack = Vec::new();
+
     let mut exe = Worker::new(file_access, path_res);
-    exe.execute(context_name)?;
+    exe.execute(&visit_stack, context_name)?;
 
     Ok({
         let mut content = ModelContent::new();
@@ -27,8 +29,10 @@ pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path
 
 pub fn collect_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
 
+    let visit_stack = Vec::new();
+    
     let mut exe = Worker::new(file_access, path_res);
-    exe.collect(context_name)?;
+    exe.collect(&visit_stack, context_name)?;
 
     if !exe.prelude.is_empty() {
         return Err(anyhow::anyhow!("Prelude not allowed there"));
@@ -58,21 +62,21 @@ impl<'a> Worker<'a> {
         }
     }
 
-    fn collect(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<ModelContent> {
+    fn collect(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<()> {
         let context_path = self.path_res.resolve_context(context_name)?;
 
         if visit_stack.contains(&context_path) {
-            return Ok(ModelContent::new());
+            return Ok(());
         }
 
-        let visit_stack = visit_stack.clone();
-        visit_stack.push(context_path);
+        let mut visit_stack = visit_stack.clone();
+        visit_stack.push(context_path.clone());
 
         // Read file, parse it, collect without allowing execution
-        let want_next_step_1 = self.pass_1(visit_stack, context_path, false)?;
+        let want_next_step_1 = self.pass_1(&visit_stack, &context_path, false)?;
         
         if want_next_step_1 {
-            return anyhow::anyhow!("Next step not allowed");
+            return Err(anyhow::anyhow!("Next step not allowed"));
         }
 
         Ok(())
@@ -82,28 +86,28 @@ impl<'a> Worker<'a> {
         let context_path = self.path_res.resolve_context(context_name)?;
 
         if visit_stack.contains(&context_path) {
-            return Ok(ModelContent::new());
+            return Ok(());
         }
 
-        let visit_stack = visit_stack.clone();
-        visit_stack.push(context_path);
+        let mut visit_stack = visit_stack.clone();
+        visit_stack.push(context_path.clone());
 
-        while self.execute_step(visit_stack, &context_path)? {}
+        while self.execute_step(&visit_stack, &context_path)? {}
 
         Ok(())
     }
 
     fn execute_step(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path) -> Result<bool> {
         // Read file, parse it, execute slow things that do not modify context
-        let want_next_step_1 = self.pass_1(visit_stack, context_path, true)?;
+        let want_next_step_1 = self.pass_1(&visit_stack, context_path, true)?;
 
         // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        let want_next_step_2 = self.pass_2(&mut patches, &ast)?;
+        let want_next_step_2 = self.pass_2(context_path)?;
         
         Ok(want_next_step_1 | want_next_step_2)
     }
 
-    fn pass_1(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path, visit_stack: &Vec<PathBuf>, can_execute: bool) -> Result<bool> {
+    fn pass_1(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path, can_execute: bool) -> Result<bool> {
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -243,7 +247,7 @@ impl<'a> Worker<'a> {
         }
     }
 
-    fn pass_2(context_path: &Path) -> Result<bool> {
+    fn pass_2(&mut self, context_path: &Path) -> Result<bool> {
 
         self.file_access.lock_file(context_path)?;        
         let result = self.pass_2_internal_x(context_path);
@@ -252,13 +256,13 @@ impl<'a> Worker<'a> {
         result 
     }
 
-     fn pass_2_internal_x(context_path: &Path) -> Result<bool> {
+     fn pass_2_internal_x(&mut self, context_path: &Path) -> Result<bool> {
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
 
-        let want_next_step = self.pass_2_internal_y(patches, ast)?;
+        let want_next_step = self.pass_2_internal_y(&mut patches, &ast)?;
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
@@ -268,7 +272,7 @@ impl<'a> Worker<'a> {
         Ok(want_next_step)
     }
 
-    fn pass_2_internal_y(&mut self, patches: &mut Patches, ast: &Document) -> Result<bool> {
+    fn pass_2_internal_y(&mut self, patches: &mut utils::Patches, ast: &Document) -> Result<bool> {
         
         let anchor_index = utils::AnchorIndex::new(&ast.content);
     

@@ -8,32 +8,46 @@ pub trait FileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String>;
     /// Require exclusive access to a file
-    fn lock_file(&mut self, path: &Path) -> Result<()>;
+    fn lock_file(&self, path: &Path) -> Result<()>;
     /// Release excludive access to a file
-    fn unlock_file(&mut self, path: &Path) -> Result<()>;
+    fn unlock_file(&self, path: &Path) -> Result<()>;
     /// Write whole file, optional comment to the operation
-    fn write_file(&mut self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>; 
+    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>; 
+}
+
+/// Mutable part of ProjectFileAccessor struct
+struct ProjectFileAccessorMutable 
+{
+    /// Set of modified files
+    modified_files: HashSet<PathBuf>,
+    /// List of commit messages for file modification
+    modified_files_comments: Vec<String>,
 }
 
 pub struct ProjectFileAccessor {
+    /// Editor interface to use
     editor_interface: Option<Box<dyn EditorCommunicator>>,
-    modified_files: HashSet<PathBuf>,
-    modified_files_comments: Vec<String>,
+    /// Mutable part of the struct to allow fine-grained lock strategy, only lock when needed
+    mutable: Mutex<ProjectFileAccessorMutable>,
 }
 
 impl ProjectFileAccessor {
     pub fn new(editor_interface: Option<Box<dyn EditorCommunicator>>) -> Self {
         ProjectFileAccessor {
             editor_interface,
-            modified_files: HashSet::new(),
-            modified_files_comments: Vec::new(),
+            mutable: Mutex::new(
+                ProjectFileAccessorMutable {
+                    modified_files: HashSet::new(),
+                    modified_files_comments: Vec::new(),
+                }
+            )
         }
     }
     pub fn modified_files(&self) -> Vec<PathBuf> {
-        self.modified_files.iter().cloned().collect::<Vec<PathBuf>>()
+        self.mutable.lock().unwrap().modified_files.iter().cloned().collect::<Vec<PathBuf>>()
     }
     pub fn modified_files_comments(&self) -> String {
-        self.modified_files_comments.join("\n")
+        self.mutable.lock().unwrap().modified_files_comments.join("\n")
     }
 }
 
@@ -44,7 +58,7 @@ impl FileAccessor for ProjectFileAccessor {
         Ok(std::fs::read_to_string(path)?)
     }
     /// Require exclusive access to a file
-    fn lock_file(&mut self, path: &Path) -> Result<()>
+    fn lock_file(&self, path: &Path) -> Result<()>
     {
         match &self.editor_interface {
             None => Ok(()),
@@ -52,7 +66,7 @@ impl FileAccessor for ProjectFileAccessor {
         }
     }
     /// Release excludive access to a file
-    fn unlock_file(&mut self, path: &Path) -> Result<()>
+    fn unlock_file(&self, path: &Path) -> Result<()>
     {
         match &self.editor_interface {
             None => Ok(()),
@@ -60,12 +74,13 @@ impl FileAccessor for ProjectFileAccessor {
         }
     }
     /// Write whole file, optional comment to the operation
-    fn write_file(&mut self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>
+    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>
     {
         std::fs::write(path, content)?;
-        self.modified_files.insert(path.into());
+        let mut mutable = self.mutable.lock().unwrap();
+        mutable.modified_files.insert(path.into());
         if let Some(comment) = comment {
-            self.modified_files_comments.push(comment.into());
+            mutable.modified_files_comments.push(comment.into());
         }         
         Ok(())
     }

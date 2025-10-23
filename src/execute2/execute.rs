@@ -50,7 +50,7 @@ pub fn collect_context(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res
 }
 
 struct Worker {
-    file_access: Arc<Mutex<dyn file::FileAccessor>>, 
+    file_access: Arc<dyn file::FileAccessor>, 
     path_res: Arc<dyn path::PathResolver>,
     prelude: ModelContent,
     context: ModelContent,    
@@ -243,7 +243,7 @@ impl Worker {
             }
             AnchorStatus::NeedProcessing => {
                 let context_path = self.path_res.resolve_context(&state.context_name)?;
-                state.context = self.file_access.read_file(&context_path)?;
+                state.context = self.file_access.lock().unwrap().read_file(&context_path)?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(true)
@@ -254,16 +254,16 @@ impl Worker {
 
     fn pass_2(&mut self, context_path: &Path) -> Result<bool> {
 
-        self.file_access.lock().unwrap().lock_file(context_path)?;        
+        self.file_access.lock_file(context_path)?;        
         let result = self.pass_2_internal_x(context_path);
-        self.file_access.lock().unwrap().unlock_file(context_path)?;
+        self.file_access.unlock_file(context_path)?;
 
         result 
     }
 
      fn pass_2_internal_x(&mut self, context_path: &Path) -> Result<bool> {
 
-        let context_content = self.file_access.lock().unwrap().read_file(context_path)?;
+        let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
 
@@ -271,7 +271,7 @@ impl Worker {
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
-            self.file_access.lock().unwrap().write_file(context_path, &new_context_content, None)?; // TODO comment?
+            self.file_access..write_file(context_path, &new_context_content, None)?; // TODO comment?
         }
 
         Ok(want_next_step)

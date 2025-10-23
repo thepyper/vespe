@@ -18,6 +18,19 @@ use crate::execute2::content::ModelContentItem;
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::variables::Variables;
 
+/// Executes a context and all its dependencies, processing all commands.
+///
+/// This function orchestrates the full, multi-pass execution of a context file.
+/// It will resolve includes, execute model calls (`@answer`, `@derive`), and inject
+/// the results back into the document by modifying the source files.
+///
+/// # Arguments
+/// * `file_access` - A thread-safe file accessor.
+/// * `path_res` - A thread-safe path resolver.
+/// * `context_name` - The name of the root context to execute.
+///
+/// # Returns
+/// The final, collected `ModelContent` after full execution.
 pub fn execute_context(
     file_access: Arc<dyn file::FileAccessor>,
     path_res: Arc<dyn path::PathResolver>,
@@ -32,6 +45,19 @@ pub fn execute_context(
     Ok(collector.context)
 }
 
+/// Collects a context's content without executing any commands that modify state or call models.
+///
+/// This function performs a single pass to gather all text content, resolving `@include`
+/// tags, but it will not process `@answer`, `@derive`, or other state-changing anchors.
+/// It is a 'read-only' version of `execute_context`.
+///
+/// # Arguments
+/// * `file_access` - A thread-safe file accessor.
+/// * `path_res` - A thread-safe path resolver.
+/// * `context_name` - The name of the root context to collect.
+///
+/// # Returns
+/// The collected `ModelContent`.
 pub fn collect_context(
     file_access: Arc<dyn file::FileAccessor>,
     path_res: Arc<dyn path::PathResolver>,
@@ -46,15 +72,29 @@ pub fn collect_context(
     Ok(collector.context)
 }
 
+/// Central state object for the execution engine.
+///
+/// The `Collector` accumulates the final `ModelContent` and tracks execution-time
+/// variables and the call stack to prevent infinite recursion.
+/// It is passed by value through the execution flow, ensuring a functional-style,
+/// predictable state management.
 #[derive(Clone)]
 struct Collector {
+    /// A stack of visited context file paths to detect and prevent circular includes.
     visit_stack: Vec<PathBuf>,
+    /// The accumulated content that will be sent to the model.
     context: ModelContent,
+    /// Execution-time variables and settings.
     variables: Variables,
+    /// A flag indicating whether the engine is in `execute` (true) or `collect` (false) mode.
     can_execute: bool,
 }
 
 impl Collector {
+    /// Creates a new, empty `Collector`.
+    ///
+    /// # Arguments
+    /// * `can_execute` - Sets the execution mode. `true` for full execution, `false` for collect-only.
     fn new(can_execute: bool) -> Self {
         Collector {
             visit_stack: Vec::new(),
@@ -63,6 +103,12 @@ impl Collector {
             can_execute,
         }
     }
+
+    /// Prepares the collector for descending into a new context file.
+    ///
+    /// It checks for circular dependencies. If the path is already in the `visit_stack`,
+    /// it returns `None`. Otherwise, it returns a new `Collector` with the given path
+    /// added to its stack and a cleared context, ready for the new file.
     fn descent(&self, context_path: &Path) -> Option<Self> {
         if self.visit_stack.contains(&context_path.to_path_buf()) {
             return None;
@@ -79,12 +125,18 @@ impl Collector {
     }
 }
 
+/// The stateless engine that drives the context execution.
+///
+/// The `Worker` holds thread-safe handles to the tools needed for execution,
+/// such as the file accessor and path resolver. It contains the core logic
+/// for the multi-pass execution strategy.
 struct Worker {
     file_access: Arc<dyn file::FileAccessor>,
     path_res: Arc<dyn path::PathResolver>,
 }
 
 impl Worker {
+    /// Creates a new `Worker` with the necessary tools.
     fn new(
         file_access: Arc<dyn file::FileAccessor>,
         path_res: Arc<dyn path::PathResolver>,
@@ -95,7 +147,8 @@ impl Worker {
         }
     }
 
-    /// Collect context without executing anchors that modify state, can be executed only on final contexts
+    /// Collects context from a file, resolving includes but not executing stateful anchors.
+    /// This represents the entry point for a read-only collection pass.
     fn collect(&self, collector: Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::collect for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
@@ -130,7 +183,10 @@ impl Worker {
         }
     }
 
-    /// Execute context, processing anchors that modify state as needed and modifying context accordingly until completion
+    /// Executes a context fully, running a loop of `execute_step` until the state converges.
+    ///
+    /// This is the main entry point for a full execution, which can modify files.
+    /// It orchestrates the two-pass strategy until all anchors are `Completed`.
     fn execute(&self, collector: Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
@@ -161,9 +217,17 @@ impl Worker {
         }
     }
 
-    /// Execute a single step: pass_2 to modify context as needed, then pass_1 to collect data.
-    /// If pass_1 can collect everything without requiring further passes, returns Some(Collector),
-    /// else returns None to signal need for further processing.
+    /// Executes a single step of the two-pass strategy.
+    ///
+    /// 1.  **Pass 2**: Scans the document for anchors that are ready for injection (`NeedInjection`)
+    ///     and patches the file on disk. This is a fast, synchronous operation.
+    /// 2.  **Pass 1**: Re-reads the document and collects content. If it encounters anchors
+    ///     that need processing (`JustCreated` or `NeedProcessing`), it triggers the slow
+    ///     tasks (like model calls) and returns `Ok(None)` to signal that the `execute`
+    ///     loop needs to run again.
+    ///
+    /// If `pass_1` completes without starting any new tasks, it returns `Ok(Some(Collector))`,
+    /// signaling that the execution has converged and is complete.
     fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
@@ -215,6 +279,16 @@ impl Worker {
         agent::shell::shell_call(&collector.variables.provider, &query)
     }
 
+    /// **Pass 1**: Collects content and triggers slow/asynchronous tasks.
+    ///
+    /// This pass reads the AST and builds up the `ModelContent` by processing
+    /// text and tags. When it encounters an anchor that is in a state that requires
+    /// processing (e.g., `JustCreated`), it initiates the required action (like a
+    /// model call) and returns `Ok(None)`. This signals to the `execute_step` loop
+    /// that a long-running task has started and a new cycle will be needed later.
+    ///
+    /// If the entire document is parsed without initiating any new tasks, it returns
+    /// `Ok(Some(Collector))`, indicating this pass is complete and the state is stable.
     fn pass_1(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
         tracing::debug!("Worker::pass_1 for path: {:?}", context_path,);
         let context_content = self.file_access.read_file(context_path)?;
@@ -255,7 +329,7 @@ impl Worker {
         Ok(collector)
     }
 
-    /// Process tags that do NOT modify context, so tags that do NOT spawn anchors
+    /// Processes tags that do not modify context, such as `@include`.
     fn pass_1_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {
         match tag.command {
             CommandKind::Include => self.pass_1_include_tag(collector, tag),
@@ -263,6 +337,7 @@ impl Worker {
         }
     }
 
+    /// Handles the `@include` tag by recursively calling the main `collect` method.
     fn pass_1_include_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {
         let included_context_name = tag
             .arguments
@@ -274,7 +349,8 @@ impl Worker {
         self.collect(collector, &included_context_name)
     }
 
-    /// Process anchors that can trigger slow tasks that modify state
+    /// Processes anchors and dispatches them to the appropriate handler based on their command.
+    /// This is the entry point for triggering the state machines for `@answer`, `@derive`, etc.
     fn pass_1_anchor(&self, collector: Collector, anchor: &Anchor) -> Result<Option<Collector>> {
         tracing::debug!(
             "Worker::pass_1_anchor processing command: {:?}, kind: {:?}",
@@ -443,7 +519,18 @@ impl Worker {
             _ => Ok(Some(collector)),
         }
     }
-
+    /// **Pass 2**: Injects completed content into files.
+    ///
+    /// This pass is responsible for the fast, synchronous part of the execution.
+    /// It acquires a lock on the context file, scans the AST for anchors whose state
+    /// is `NeedInjection`, and applies the generated content from their state objects
+    /// as patches to the file. It also handles the initial creation of anchor pairs for
+    /// simple tags (e.g., turning `@answer` into a full anchor block).
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if any patches were applied, signaling that the document
+    /// has changed. Returns `Ok(false)` if no changes were made.
     fn pass_2(&self, context_path: &Path) -> Result<bool> {
         tracing::debug!("Worker::pass_2 for path: {:?}", context_path);
         let lock_id = self.file_access.lock_file(context_path)?;
@@ -453,6 +540,7 @@ impl Worker {
         result
     }
 
+    /// Inner logic for `pass_2`, holding the file lock.
     fn pass_2_internal_x(&self, context_path: &Path) -> Result<bool> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -469,6 +557,7 @@ impl Worker {
         Ok(result)
     }
 
+    /// Scans the document AST to find and apply patches.
     fn pass_2_internal_y(&self, patches: &mut utils::Patches, ast: &Document) -> Result<bool> {
         let anchor_index = utils::AnchorIndex::new(&ast.content);
 

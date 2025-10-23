@@ -25,7 +25,7 @@ pub trait EditorCommunicator {
     ///
     /// # Returns
     /// `Ok(())` if the notification was successful, `Err` otherwise.
-    fn notify_file_modified(&self, request_id: &Uuid) -> Result<()>;
+    fn notify_file_modified(&self, request_id: Uuid) -> Result<()>;
 }
 
 pub mod lockfile;

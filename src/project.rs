@@ -392,50 +392,19 @@ impl Project {
             .map_err(|e| anyhow::Error::new(e))
     }
 
-    pub fn request_file_modification(&self, file_path: &PathBuf) -> Result<Uuid> {
+    pub fn request_file_modification(&self, file_path: &Path) -> Result<Uuid> {
         self.editor_communicator
+            .as_ref()
+            .context("Editor communicator not initialized")?
             .request_file_modification(file_path)
     }
 
-    pub fn notify_file_modified(&self, file_path: &PathBuf, uid: Uuid) -> Result<()> {
+    pub fn notify_file_modified(&self, request_id: Uuid) -> Result<()> {
         self.editor_communicator
-            .notify_file_modified(file_path, uid)
+            .as_ref()
+            .context("Editor communicator not initialized")?
+            .notify_file_modified(request_id)
     }
-
-    pub fn execute_context(&self, context_name: &str, agent: &ShellAgentCall) -> Result<()> {
-        debug!("Project::execute_context called for: {}", context_name);
-        let mut commit = Commit::new();
-        execute::execute(self, context_name, agent, &mut commit)?;
-        if self.project_config.git_integration_enabled {
-            debug!("Attempting to commit for context: {}", context_name);
-            commit.commit(&format!("feat: Executed context '{}'", context_name))?;
-        }
-        Ok(())
-    }
-*/
-
-    fn collect_md_files_recursively(
-        root: &Path,
-        current_dir: &Path,
-        files: &mut Vec<PathBuf>,
-    ) -> Result<()> {
-        for entry in std::fs::read_dir(current_dir)? {
-            let entry = entry?;
-            let path = entry.path();
-
-            if path.is_dir() {
-                Self::collect_md_files_recursively(root, &path, files)?;
-            } else if path.is_file() {
-                if let Some(extension) = path.extension() {
-                    if extension == "md" {
-                        files.push(path);
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-}
 
 
 

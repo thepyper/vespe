@@ -74,7 +74,7 @@ impl FileAccessor for ProjectFileAccessor {
     {
         match &self.editor_interface {
             None => Ok(()),
-            Some(x) => x.notify_file_modified(uuid),
+            Some(x) => x.notify_file_modified(*uuid),
         }
     }
     /// Write whole file, optional comment to the operation

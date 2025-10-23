@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -46,6 +49,7 @@ pub enum ResponseState {
 pub struct FileBasedEditorCommunicator {
     request_file_path: PathBuf,
     response_file_path: PathBuf,
+    active_locks: Mutex<HashMap<Uuid, PathBuf>>,
 }
 
 impl FileBasedEditorCommunicator {
@@ -82,6 +86,7 @@ impl FileBasedEditorCommunicator {
         Ok(Self {
             request_file_path: request_file,
             response_file_path: response_file,
+            active_locks: Mutex::new(HashMap::new()),
         })
     }
 
@@ -137,7 +142,10 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         // Wait for the editor's response
         let response = self._read_response(request_id)?;
         match response {
-            ResponseState::FileLocked { .. } => Ok(request_id),
+            ResponseState::FileLocked { .. } => {
+                self.active_locks.lock().unwrap().insert(request_id, file_path.to_path_buf());
+                Ok(request_id)
+            },
             ResponseState::Error { message, .. } => {
                 Err(anyhow::anyhow!("Editor error: {}", message))
             }
@@ -147,7 +155,10 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         }
     }
 
-    fn notify_file_modified(&self, file_path: &Path, request_id: Uuid) -> anyhow::Result<()> {
+    fn notify_file_modified(&self, request_id: Uuid) -> anyhow::Result<()> {
+        let file_path = self.active_locks.lock().unwrap().remove(&request_id)
+            .ok_or_else(|| anyhow::anyhow!("Unknown request_id for file modification: {}", request_id))?;
+
         let request = RequestState::ModificationComplete {
             file_path: file_path.to_path_buf(),
             request_id,

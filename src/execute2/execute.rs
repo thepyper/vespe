@@ -16,6 +16,7 @@ use super::*;
 
 use crate::execute2::content::ModelContentItem;
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
+use crate::execute2::variables::Variables;  
 
 pub fn execute_context(
     file_access: Arc<dyn file::FileAccessor>,
@@ -81,7 +82,7 @@ impl Worker {
             path_res,
             prelude: Vec::new(),
             context: Vec::new(),
-            variables:: Variables::new(),
+            variables: Variables::new(),
         }
     }
 
@@ -143,7 +144,7 @@ impl Worker {
             .map(|item| item.to_string())
             .collect::<Vec<String>>()
             .join("\n---\n");
-        agent::shell::shell_call(self.variables.provider, &query)
+        agent::shell::shell_call(&self.variables.provider, &query)
     }
 
     fn pass_1(

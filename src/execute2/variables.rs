@@ -1,5 +1,5 @@
-struct Variables {
-    provider: String,
+pub struct Variables {
+    pub provider: String,
 }
 
 impl Variables {

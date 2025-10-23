@@ -15,12 +15,6 @@ use crate::editor::{
     lockfile::FileBasedEditorCommunicator, EditorCommunicator,
 };
 
-const CTX_DIR_NAME: &str = ".ctx";
-const CTX_ROOT_FILE_NAME: &str = ".ctx_root";
-const METADATA_DIR_NAME: &str = ".meta";
-const CONTEXTS_DIR_NAME: &str = "contexts";
-const SNIPPETS_DIR_NAME: &str = "snippets";
-
 #[derive(Debug)] // Add Debug trait for easy printing
 pub struct ContextInfo {
     pub name: String,
@@ -101,6 +95,7 @@ impl Project {
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
+    // TODO remove
     pub fn project_home(&self) -> PathBuf {
         self.root_path.join(CTX_DIR_NAME)
     }

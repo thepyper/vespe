@@ -16,7 +16,7 @@ use super::*;
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::content::ModelContentItem;
 
-pub fn execute_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
+pub fn execute_context(file_access: Arc<Box<dyn file::FileAccessor>>, path_res: Arc<Box<dyn path::PathResolver>>, context_name: &str) -> Result<ModelContent> {
 
     let visit_stack = Vec::new();
 
@@ -31,7 +31,7 @@ pub fn execute_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<d
     })
 }
 
-pub fn collect_context(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
+pub fn collect_context(file_access: Arc<Box<dyn file::FileAccessor>>, path_res: Arc<Box<dyn path::PathResolver>>, context_name: &str) -> Result<ModelContent> {
 
     let visit_stack = Vec::new();
     
@@ -215,8 +215,8 @@ impl Worker {
                 Ok(true) 
             }
             AnchorStatus::NeedProcessing => {
-                state.instruction_context = execute_context(self.file_access.clone(), self.path_res.clone(), &state.instruction_context_name)?;
-                state.input_context = execute_context(self.file_access.clone(), self.path_res.clone(), &state.input_context_name)?;
+                state.instruction_context = execute_context(self.file_access, self.path_res, &state.instruction_context_name)?;
+                state.input_context = execute_context(self.file_access, self.path_res, &state.input_context_name)?;
                 // call llm to derive                
                 state.derived = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;

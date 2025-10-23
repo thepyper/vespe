@@ -1,5 +1,5 @@
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use std::path::PathBuf;
 use uuid::Uuid;
 
@@ -11,11 +11,11 @@ pub trait PathResolver {
 }
 
 pub struct ProjectPathResolver {
-    root_path: String,
+    root_path: PathBuf,
 }
 
 impl ProjectPathResolver {
-    fn new(root_path: String) -> Self {
+    fn new(root_path: PathBuf) -> Self {
         ProjectPathResolver {
             root_path
         }
@@ -41,7 +41,7 @@ impl PathResolver for ProjectPathResolver {
         let metadata_dir =
             self.metadata_home()
                 .join(format!("{}-{}", meta_kind, meta_uuid.to_string()));
-        std::fs::create_dir_all(&metadata_dir).context(format!(
+        std::fs::create_dir_all(&metadata_dir).with_context(|| format!(
             "Failed to create metadata directory for {}-{}: {}",
             meta_kind,
             meta_uuid,

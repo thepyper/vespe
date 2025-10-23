@@ -23,14 +23,16 @@ pub struct ContextInfo {
 }
 
 pub struct Project {
-    root_path: PathBuf,
-    editor_communicator: Option<Box<dyn EditorCommunicator>>,
+    //root_path: PathBuf,
+    editor_interface: Option<Box<dyn EditorCommunicator>>,
+    file_access: Arc<Box<ProjectFileAccessor>>,
+    path_res: Arx<Box<ProjectFileAccessor>>,
     project_config: ProjectConfig,
 }
 
 #[allow(dead_code)]
 impl Project {
-    pub fn init(path: &Path) -> Result<Project> {
+    pub fn init(path: &Path) -> Result<()> {
         let ctx_dir = path.join(CTX_DIR_NAME);
         if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
             anyhow::bail!("ctx project already initialized in this directory.");
@@ -42,21 +44,16 @@ impl Project {
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
             .context("Failed to write .ctx_root file")?;
 
-        let project = Project {
-            root_path: path.canonicalize()?,
-            editor_communicator: None,
-            project_config: ProjectConfig::default(),
-        };
-
+        /* TODO ???
         if project.project_config.git_integration_enabled {
             let mut commit = Commit::new();
             commit.files.insert(ctx_root_file);
             commit.commit("feat: Initialize .ctx project\nInitial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.")?;
         }
+        */
 
-        project.save_project_config()?;
-
-        Ok(project)
+        // TODO project.save_project_config()?;
+        Ok(())
     }
 
     pub fn find(path: &Path) -> Result<Project> {
@@ -73,7 +70,7 @@ impl Project {
                 let project_config = Self::load_project_config(&project_config_path)?;
 
                 let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
-                let editor_communicator : Option<Box<dyn EditorCommunicator>> =
+                let editor_interface : Option<Box<dyn EditorCommunicator>> =
                     match project_config.editor_interface {
                         EditorInterface::VSCode => {
                             Some(Box::new(FileBasedEditorCommunicator::new(&editor_path)?))
@@ -81,9 +78,13 @@ impl Project {
                         _ => None,
                     };
 
+                let file_access = Arc::new(Box::new(file::ProjectFileAccessor::new(editor_interface.clone())));
+                let path_res = Arc::new(Box::new(path::ProjectPathResolver::new(root_path.clone())));
+
                 return Ok(Project {
-                    root_path: root_path,
-                    editor_communicator,
+                    editor_interface,
+                    file_access,
+                    path_res,
                     project_config,
                 });
             }
@@ -97,6 +98,7 @@ impl Project {
     }
 
     // TODO remove
+    /*
     pub fn project_home(&self) -> PathBuf {
         self.root_path.join(CTX_DIR_NAME)
     }
@@ -108,17 +110,17 @@ impl Project {
     pub fn contexts_root(&self) -> PathBuf {
         self.project_home().join(CONTEXTS_DIR_NAME)
     }
-
+        */
     /*
     pub fn snippets_root(&self) -> PathBuf {
         self.project_home().join(SNIPPETS_DIR_NAME)
     }
     */
-
+/*
     pub fn resolve_context(&self, name: &str) -> PathBuf {
         self.contexts_root().join(format!("{}.md", name))
     }
-
+*/
     /*
     pub fn resolve_snippet(&self, name: &str) -> PathBuf {
         self.snippets_root().join(format!("{}.md", name))
@@ -141,7 +143,7 @@ impl Project {
     */
 
     pub fn project_config_path(&self) -> PathBuf {
-        self.metadata_home().join("project_config.json")
+        self.path_res.metadata_home().join("project_config.json")
     }
 
     pub fn create_context_file(
@@ -149,7 +151,7 @@ impl Project {
         name: &str,
         initial_content: Option<String>,
     ) -> Result<PathBuf> {
-        let file_path = self.contexts_root().join(format!("{}.md", name));
+        let file_path = self.path_res.resolve_context(name);
         if file_path.exists() {
             anyhow::bail!("Context file already exists: {}", file_path.display());
         }

@@ -1006,3 +1006,97 @@ Tips for getting started:
 
   In sintesi: Dimentica l'idea di usare Arc su dati allocati nello stack di un'altra funzione. Arc è
   l'alternativa che usi invece di prestare dallo stack, quando hai bisogno di condividere il possesso.
+
+╭───────────────────────────────────────────────────────────────────╮
+│  > Quindi Arc<Box<T>> non ha nessun senso, e' ridondante giusto?  │
+╰───────────────────────────────────────────────────────────────────╯
+
+✦ Sì, il tuo ragionamento è corretto al 99%. Nella stragrande maggioranza dei casi, Arc<Box<T>> è ridondante e
+   indica che probabilmente si sta facendo un'allocazione di troppo.
+
+  Il motivo è esattamente quello che hai capito:
+
+
+   * Box::new(valore): Alloca memoria sulla heap e ci sposta valore. Ritorna un puntatore Box<T>.
+  Entrambi mettono il dato sulla heap. Fare Arc::new(Box::new(valore)) significa:
+  1.  Allocare sulla heap per il Box.
+  2.  Allocare di nuovo sulla heap per l'Arc che conterrà il Box.
+
+  È uno spreco di un'allocazione e di un'indirezione (un puntatore che punta a un altro puntatore).
+
+  L'approccio idiomatico e corretto è quasi sempre:
+
+
+  `rust
+  // Crea il valore
+  let mio_file_accessor = LocalFileAccessor::new();
+
+  // Mettilo direttamente in un Arc. Una sola allocazione sulla heap.
+  let shared_accessor = Arc::new(mio_file_accessor);
+  `
+
+  ### Il Caso dell'1%: Quando Arc<Box<T>> Potrebbe Apparire
+
+
+  Ci sono un paio di casi rari e avanzati in cui potresti incontrare questo pattern. Non è qualcosa che
+  dovresti scrivere di routine, ma è utile riconoscerlo.
+
+  #### Caso 1: Interagire con API Esistenti (Il più comune)
+
+
+  Questo è il motivo più probabile per cui vedrai questo codice. Immagina di usare una libreria o una
+  funzione che ti restituisce un `Box<T>`, e tu non hai controllo su questo.
+
+  Se a quel punto hai bisogno di condividere il possesso di quel Box, non hai altra scelta che metterlo
+  dentro un Arc.
+
+
+  `rust
+  use std::sync::Arc;
+
+  trait Widget {
+      fn draw(&self);
+  }
+
+  // Immagina che questa funzione venga da una libreria esterna.
+  // Non puoi cambiarla. Ritorna un Box.
+  fn get_widget_from_plugin() -> Box<dyn Widget> {
+      // ... logica complessa ...
+      struct Button;
+      impl Widget for Button { fn draw(&self) { println!("Drawing a button!"); } }
+      Box::new(Button)
+  }
+
+  fn main() {
+      // 1. Ottieni un Box da un'API. Non hai il valore originale, solo il Box.
+      let widget_box: Box<dyn Widget> = get_widget_from_plugin();
+
+      // 2. Ora hai bisogno di condividere questo widget tra più "proprietari".
+      //    L'unico modo è mettere il Box esistente in un Arc.
+      let shared_widget: Arc<Box<dyn Widget>> = Arc::new(widget_box);
+
+      let shared_clone = shared_widget.clone();
+
+      shared_widget.draw();
+      shared_clone.draw();
+  }
+  `
+
+  In questo scenario, Arc<Box<dyn Widget>> non è ridondante, è una necessità pragmatica per lavorare con
+  un'API preesistente.
+
+  #### Caso 2: Gestione di Tipi e Trait Object (Avanzato)
+
+
+  A volte, per complesse interazioni con il sistema dei tipi, specialmente quando si convertono tipi
+  concreti in trait object (dyn Trait) in contesti generici, può essere più semplice passare attraverso un
+  Box prima di arrivare a un Arc. La conversione da Box<MyStruct> a Box<dyn MyTrait> è un'operazione
+  fondamentale in Rust. Una volta ottenuto un Box<dyn Trait>, potresti volerlo condividere, portando a
+  Arc<Box<dyn Trait>>.
+
+  ### In Pratica: La Regola da Seguire
+
+
+   * Regola Generale: Evita Arc<Box<T>>. Se hai il valore, usa direttamente Arc::new(valore).
+  Quindi, la tua intuizione è ottima. Considera Arc<Box<T>> un "code smell" finché non puoi giustificarlo
+  con il "Caso 1".

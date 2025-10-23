@@ -1,10 +1,10 @@
+use crate::Project;
 use anyhow::Result;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 use tracing::{debug, error, info};
-use crate::Project;
 
 pub fn watch(project: &Project) -> Result<()> {
     println!("Starting watch mode...");

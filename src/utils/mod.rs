@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::collections::BTreeMap;
-use uuid::Uuid;
 use anyhow::Result;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
+use uuid::Uuid;
 
-use crate::path::PathResolver;
 use crate::file::FileAccessor;
+use crate::path::PathResolver;
 
 use crate::ast2::*;
 use crate::file;
@@ -24,16 +24,14 @@ impl AnchorIndex {
 
         for (i, line) in content.iter().enumerate() {
             match line {
-                Content::Anchor(anchor) => {
-                    match anchor.kind {
-                        AnchorKind::Begin => {
-                            let _ = begin.insert(anchor.uuid, i);
-                        }
-                        AnchorKind::End => {
-                            let _ = end.insert(anchor.uuid, i);
-                        }                      
+                Content::Anchor(anchor) => match anchor.kind {
+                    AnchorKind::Begin => {
+                        let _ = begin.insert(anchor.uuid, i);
                     }
-                }
+                    AnchorKind::End => {
+                        let _ = end.insert(anchor.uuid, i);
+                    }
+                },
                 _ => {}
             }
         }
@@ -51,14 +49,18 @@ impl AnchorIndex {
 }
 
 pub struct AnchorStateManager {
-    file_access: Arc<dyn file::FileAccessor>, 
+    file_access: Arc<dyn file::FileAccessor>,
     path_res: Arc<dyn path::PathResolver>,
     command: crate::ast2::CommandKind,
     uuid: Uuid,
 }
 
 impl AnchorStateManager {
-    pub fn new(file_access: Arc<dyn file::FileAccessor>, path_res: Arc<dyn path::PathResolver>, anchor: &crate::ast2::Anchor) -> Self {
+    pub fn new(
+        file_access: Arc<dyn file::FileAccessor>,
+        path_res: Arc<dyn path::PathResolver>,
+        anchor: &crate::ast2::Anchor,
+    ) -> Self {
         AnchorStateManager {
             file_access,
             path_res,
@@ -67,7 +69,9 @@ impl AnchorStateManager {
         }
     }
     pub fn get_state_path(&self) -> Result<PathBuf> {
-        let meta_path = self.path_res.resolve_metadata(&self.command.to_string(), &self.uuid)?;
+        let meta_path = self
+            .path_res
+            .resolve_metadata(&self.command.to_string(), &self.uuid)?;
         let state_path = meta_path.join("state.json");
         Ok(state_path)
     }
@@ -80,7 +84,8 @@ impl AnchorStateManager {
     pub fn save_state<T: serde::Serialize>(&self, state: &T, comment: Option<&str>) -> Result<()> {
         let state_path = self.get_state_path()?;
         let state_str = serde_json::to_string_pretty(state)?;
-        self.file_access.write_file(&state_path, &state_str, comment)?;
+        self.file_access
+            .write_file(&state_path, &state_str, comment)?;
         Ok(())
     }
 }
@@ -111,5 +116,3 @@ impl<'a> Patches<'a> {
         Ok(result)
     }
 }
-
-

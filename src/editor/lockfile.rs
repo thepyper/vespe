@@ -143,9 +143,12 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         let response = self._read_response(request_id)?;
         match response {
             ResponseState::FileLocked { .. } => {
-                self.active_locks.lock().unwrap().insert(request_id, file_path.to_path_buf());
+                self.active_locks
+                    .lock()
+                    .unwrap()
+                    .insert(request_id, file_path.to_path_buf());
                 Ok(request_id)
-            },
+            }
             ResponseState::Error { message, .. } => {
                 Err(anyhow::anyhow!("Editor error: {}", message))
             }
@@ -156,8 +159,14 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
     }
 
     fn notify_file_modified(&self, request_id: Uuid) -> anyhow::Result<()> {
-        let file_path = self.active_locks.lock().unwrap().remove(&request_id)
-            .ok_or_else(|| anyhow::anyhow!("Unknown request_id for file modification: {}", request_id))?;
+        let file_path = self
+            .active_locks
+            .lock()
+            .unwrap()
+            .remove(&request_id)
+            .ok_or_else(|| {
+                anyhow::anyhow!("Unknown request_id for file modification: {}", request_id)
+            })?;
 
         let request = RequestState::ModificationComplete {
             file_path: file_path.to_path_buf(),

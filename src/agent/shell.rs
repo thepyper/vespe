@@ -5,7 +5,6 @@ use std::thread;
 use tracing::{debug, error};
 
 pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String> {
-    
     let mut command_parts = command_template.split_whitespace();
     let program = command_parts
         .next()

@@ -8,4 +8,3 @@ pub use types::{
     Anchor, AnchorKind, Argument, Arguments, CommandKind, Content, Document, Parameters, Position,
     Range, Tag, Text,
 };
-

@@ -1,8 +1,7 @@
-
-use anyhow::{Result, Context};
+use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
+use anyhow::{Context, Result};
 use std::path::PathBuf;
 use uuid::Uuid;
-use crate::constants::{CTX_DIR_NAME, METADATA_DIR_NAME, CONTEXTS_DIR_NAME};
 
 pub trait PathResolver {
     /// Resolve a context name to a path
@@ -17,9 +16,7 @@ pub struct ProjectPathResolver {
 
 impl ProjectPathResolver {
     pub fn new(root_path: PathBuf) -> Self {
-        ProjectPathResolver {
-            root_path
-        }
+        ProjectPathResolver { root_path }
     }
     pub fn project_home(&self) -> PathBuf {
         self.root_path.join(CTX_DIR_NAME)
@@ -29,7 +26,7 @@ impl ProjectPathResolver {
     }
     pub fn contexts_root(&self) -> PathBuf {
         self.project_home().join(CONTEXTS_DIR_NAME)
-    }    
+    }
 }
 
 impl PathResolver for ProjectPathResolver {
@@ -42,13 +39,14 @@ impl PathResolver for ProjectPathResolver {
         let metadata_dir =
             self.metadata_home()
                 .join(format!("{}-{}", meta_kind, meta_uuid.to_string()));
-        std::fs::create_dir_all(&metadata_dir).with_context(|| format!(
-            "Failed to create metadata directory for {}-{}: {}",
-            meta_kind,
-            meta_uuid,
-            metadata_dir.display()
-        ))?;
+        std::fs::create_dir_all(&metadata_dir).with_context(|| {
+            format!(
+                "Failed to create metadata directory for {}-{}: {}",
+                meta_kind,
+                meta_uuid,
+                metadata_dir.display()
+            )
+        })?;
         Ok(metadata_dir)
     }
 }
-

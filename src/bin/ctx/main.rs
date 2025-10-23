@@ -194,7 +194,7 @@ fn main() -> Result<()> {
                 }
                 ContextCommands::Execute { name, today } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
-                    println!("Executing context '{}'...", context_name);                    
+                    println!("Executing context '{}'...", context_name);
                     project.execute_context(&context_name)?;
                     println!("Context '{}' executed successfully.", context_name);
                 }

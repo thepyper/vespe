@@ -1,7 +1,7 @@
-use crate::git::Commit;
-use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME, CONTEXTS_DIR_NAME};
+use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
 use crate::file::ProjectFileAccessor;
-use crate::path::{ProjectPathResolver, PathResolver};
+use crate::git::Commit;
+use crate::path::{PathResolver, ProjectPathResolver};
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -14,9 +14,7 @@ use tracing::debug;
 use uuid::Uuid;
 
 use crate::config::{EditorInterface, ProjectConfig};
-use crate::editor::{
-    lockfile::FileBasedEditorCommunicator, EditorCommunicator,
-};
+use crate::editor::{lockfile::FileBasedEditorCommunicator, EditorCommunicator};
 
 #[derive(Debug)] // Add Debug trait for easy printing
 pub struct ContextInfo {
@@ -72,10 +70,11 @@ impl Project {
                 let project_config = Self::load_project_config(&project_config_path)?;
 
                 let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
-                let editor_interface : Option<Arc<dyn EditorCommunicator>> =
+                let editor_interface: Option<Arc<dyn EditorCommunicator>> =
                     match project_config.editor_interface {
                         EditorInterface::VSCode => {
-                            Some(Arc::new(FileBasedEditorCommunicator::new(&editor_path)?) as Arc<dyn EditorCommunicator>)
+                            Some(Arc::new(FileBasedEditorCommunicator::new(&editor_path)?)
+                                as Arc<dyn EditorCommunicator>)
                         }
                         _ => None,
                     };
@@ -99,8 +98,12 @@ impl Project {
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    pub fn execute_context(&self, context_name: &str) -> Result<()> {        
-        crate::execute2::execute_context(self.file_access.clone(), self.path_res.clone(), context_name)?;
+    pub fn execute_context(&self, context_name: &str) -> Result<()> {
+        crate::execute2::execute_context(
+            self.file_access.clone(),
+            self.path_res.clone(),
+            context_name,
+        )?;
         Ok(())
     }
 
@@ -131,11 +134,11 @@ impl Project {
         self.project_home().join(SNIPPETS_DIR_NAME)
     }
     */
-/*
-    pub fn resolve_context(&self, name: &str) -> PathBuf {
-        self.contexts_root().join(format!("{}.md", name))
-    }
-*/
+    /*
+        pub fn resolve_context(&self, name: &str) -> PathBuf {
+            self.contexts_root().join(format!("{}.md", name))
+        }
+    */
     /*
     pub fn resolve_snippet(&self, name: &str) -> PathBuf {
         self.snippets_root().join(format!("{}.md", name))

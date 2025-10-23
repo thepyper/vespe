@@ -1,5 +1,4 @@
-
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemModelContent {
@@ -27,6 +26,7 @@ pub enum ModelContentItem {
 impl ModelContentItem {
     pub fn user(text: &str) -> Self {
         ModelContentItem::User(UserModelContent { text: text.into() })
-    }}
+    }
+}
 
 pub type ModelContent = Vec<ModelContentItem>;

@@ -1,6 +1,6 @@
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use serde::{Serialize, Deserialize};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Position {
@@ -41,7 +41,7 @@ impl Ord for Range {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.begin.cmp(&other.begin) {
             Ordering::Equal => self.end.cmp(&other.end),
-            x => x                
+            x => x,
         }
     }
 }
@@ -88,8 +88,9 @@ impl ToString for CommandKind {
             CommandKind::Inline => "inline",
             CommandKind::Answer => "answer",
             CommandKind::Derive => "derive",
-            CommandKind::Repeat => "repeat",            
-        }.to_string()
+            CommandKind::Repeat => "repeat",
+        }
+        .to_string()
     }
 }
 
@@ -113,7 +114,14 @@ impl ToString for Parameters {
         if self.parameters.is_empty() {
             String::new()
         } else {
-            format!("[{}]", self.parameters.iter().map(|(x,y)| format!("{}={}", x, y.to_string())).collect::<Vec::<String>>().join(","))
+            format!(
+                "[{}]",
+                self.parameters
+                    .iter()
+                    .map(|(x, y)| format!("{}={}", x, y.to_string()))
+                    .collect::<Vec::<String>>()
+                    .join(",")
+            )
         }
     }
 }
@@ -141,7 +149,11 @@ impl Arguments {
 
 impl ToString for Arguments {
     fn to_string(&self) -> String {
-        self.arguments.iter().map(|x| x.value.clone()).collect::<Vec::<String>>().join(",")
+        self.arguments
+            .iter()
+            .map(|x| x.value.clone())
+            .collect::<Vec<String>>()
+            .join(",")
     }
 }
 
@@ -155,7 +167,8 @@ pub struct Tag {
 
 impl ToString for Tag {
     fn to_string(&self) -> String {
-        format!("@{} {} {}",
+        format!(
+            "@{} {} {}",
             self.command.to_string(),
             self.parameters.to_string(),
             self.arguments.to_string(),
@@ -189,7 +202,11 @@ pub struct Anchor {
 }
 
 impl Anchor {
-    pub fn new_couple(command: CommandKind, parameters: &Parameters, arguments: &Arguments) -> (Anchor, Anchor) {
+    pub fn new_couple(
+        command: CommandKind,
+        parameters: &Parameters,
+        arguments: &Arguments,
+    ) -> (Anchor, Anchor) {
         let uuid = Uuid::new_v4();
         let begin = Anchor {
             command,
@@ -213,12 +230,13 @@ impl Anchor {
 
 impl ToString for Anchor {
     fn to_string(&self) -> String {
-        format!("<!-- {}-{}:{} {} {} -->",
+        format!(
+            "<!-- {}-{}:{} {} {} -->",
             self.command.to_string(),
             self.uuid.to_string(),
             self.kind.to_string(),
             self.parameters.to_string(),
-            self.arguments.to_string(),            
+            self.arguments.to_string(),
         )
     }
 }

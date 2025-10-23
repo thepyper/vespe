@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::ModelContent;
 
 pub trait State {
+    fn new() -> Self;
     fn output(&self) -> String;
 }
 
@@ -26,6 +27,13 @@ pub struct InlineState {
 }
 
 impl State for InlineState {
+    fn new() -> Self {
+        InlineState {
+            status: AnchorStatus::JustCreated,
+            context_name: String::new(),
+            context: String::new(),
+        }
+    }
     fn output(&self) -> String {
         self.context.clone()
     }
@@ -39,6 +47,13 @@ pub struct AnswerState {
 }
 
 impl State for AnswerState {
+    fn new() -> Self {
+        AnswerState {
+            status: AnchorStatus::JustCreated,
+            query: ModelContent::new(),
+            reply: String::new(),
+        }
+    }
     fn output(&self) -> String {
         self.reply.clone()
     }
@@ -55,6 +70,16 @@ pub struct DeriveState {
 }
 
 impl State for DeriveState {
+    fn new() -> Self {
+        DeriveState {
+            status: AnchorStatus::JustCreated,
+            instruction_context_name: String::new(),
+            instruction_context: ModelContent::new(),
+            input_context_name: String::new(),
+            input_context: ModelContent::new(),
+            derived: String::new(),
+        }
+    }
     fn output(&self) -> String {
         self.derived.clone()
     }

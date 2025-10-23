@@ -337,7 +337,7 @@ impl Worker {
             &format!("{}\n{}", a0.to_string(), a1.to_string()),
         );
         let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
-        asm.save_state(AnswerState::new(), None)?;
+        asm.save_state(&AnswerState::new(), None)?;
         Ok(true)
     }
 
@@ -355,7 +355,7 @@ impl Worker {
             &format!("{}\n{}", a0.to_string(), a1.to_string()),
         );
         let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
-        asm.save_state(DeriveState::new(), None)?;
+        asm.save_state(&DeriveState::new(), None)?;
         Ok(true)
     }
 
@@ -373,7 +373,7 @@ impl Worker {
             &format!("{}\n{}", a0.to_string(), a1.to_string()),
         );
         let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
-        asm.save_state(InlineState::new(), None)?;
+        asm.save_state(&InlineState::new(), None)?;
         Ok(true)
     }
 

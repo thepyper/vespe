@@ -104,8 +104,11 @@ impl<'a> Patches<'a> {
         self.patches.is_empty()
     }
     pub fn apply_patches(&self) -> Result<String> {
-        // TODO apply
-        Ok(self.document.to_string())
+        let mut result = self.document.to_string();
+        for (range, replace) in self.patches.iter().rev() {
+            result.replace_range(range.begin.offset..range.end.offset, replace);
+        }
+        Ok(result)
     }
 }
 

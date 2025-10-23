@@ -22,7 +22,6 @@ pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path
 struct Worker<'a> {
     file_access: &'a dyn file::FileAccessor, 
     path_res: &'a dyn path::PathResolver,
-    visited: HashSet<PathBuf>,
     prelude: ModelContent,
     context: ModelContent,    
 }
@@ -32,19 +31,23 @@ impl<'a> Worker<'a> {
         Worker {
             file_access,
             path_res,
-            visited: HashSet::new(),
             prelude: Vec::new(),
             context: Vec::new(),
         }
     }
-    fn execute(&mut self, context_name: &str) -> Result<ModelContent> {
+
+    fn collect(&mut self, context_name: &str) -> Result<ModelContent> {
+    }
+
+    fn execute(&mut self, context_name: &str, visit_stack: &Vec<PathBuf>) -> Result<ModelContent> {
         let context_path = self.path_res.resolve_context(context_name)?;
 
-        if self.visited.contains(&context_path) {
+        if visit_stack.contains(&context_path) {
             return Ok(ModelContent::new());
         }
 
-        self.visited.insert(context_path.clone());
+        let visit_stack = visit_stack.clone();
+        visit_stack.push(context_path);
 
         while self.execute_step(&context_path)? {}
         Ok({
@@ -54,28 +57,21 @@ impl<'a> Worker<'a> {
             content
         })
     }
-    fn execute_step(&mut self, context_path: &Path) -> Result<bool> {
+
+    fn execute_step(&mut self, context_path: &Path, visit_stack: &Vec<PathBuf>) -> Result<bool> {
         // Read file, parse it, execute slow things that do not modify context
-        let context_content = self.file_access.read_file(context_path)?;
-        let ast = crate::ast2::parse_document(&context_content)?;
-        let want_next_step_1 = self.pass_1(&ast)?;
+        let want_next_step_1 = self.pass_1(context_path, true)?;
 
         // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        self.file_access.lock_file(context_path)?;
-        let context_content = self.file_access.read_file(context_path)?;
-        let ast = crate::ast2::parse_document(&context_content)?;
-        let mut patches = utils::Patches::new(&context_content);
         let want_next_step_2 = self.pass_2(&mut patches, &ast)?;
-        if !patches.is_empty() {
-            let new_context_content = patches.apply_patches()?;
-            self.file_access.write_file(context_path, &new_context_content, None)?; // TODO comment?
-        }
-        self.file_access.unlock_file(context_path)?;
-
+        
         Ok(want_next_step_1 | want_next_step_2)
     }
 
-    fn pass_1(&mut self, ast: &Document) -> Result<bool> {
+    fn pass_1(&mut self, context_path: &Path, visit_stack: &Vec<PathBuf>, can_execute: bool) -> Result<bool> {
+
+        let context_content = self.file_access.read_file(context_path)?;
+        let ast = crate::ast2::parse_document(&context_content)?;
         
         for item in &ast.content {
             match item {
@@ -88,6 +84,9 @@ impl<'a> Worker<'a> {
                     }
                 }
                 crate::ast2::Content::Anchor(anchor) => {
+                    if !can_execute {
+                        return Err(anyhow::anyhow!("Execution not allowed"));
+                    }
                     if self.pass_1_anchor(anchor)? {
                         return Ok(true);
                     }
@@ -103,6 +102,7 @@ impl<'a> Worker<'a> {
         Ok(())
     }
 
+    /// Process tags that do NOT modify context, so tags that do NOT spawn anchors
     fn pass_1_tag(&mut self, tag: &Tag) -> Result<bool> {
         match tag.command {
             CommandKind::Include => self.pass_1_include_tag(tag),
@@ -116,6 +116,7 @@ impl<'a> Worker<'a> {
         Ok(true)
     }
 
+    /// Process anchors that can trigger slow tasks that modify state
     fn pass_1_anchor(&mut self, anchor: &Anchor) -> Result<bool> {
         let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         match (
@@ -207,7 +208,32 @@ impl<'a> Worker<'a> {
         }
     }
 
-    fn pass_2(&mut self, patches: &mut utils::Patches, ast: &Document) -> Result<bool> {
+    fn pass_2(context_path: &Path) -> Result<bool> {
+
+        self.file_access.lock_file(context_path)?;        
+        let result = self.pass_2_internal_x(context_path);
+        self.file_access.unlock_file(context_path)?;
+
+        result 
+    }
+
+     fn pass_2_internal_x(context_path: &Path) -> Result<bool> {
+
+        let context_content = self.file_access.read_file(context_path)?;
+        let ast = crate::ast2::parse_document(&context_content)?;
+        let mut patches = utils::Patches::new(&context_content);
+
+        let want_next_step = self.pass_2_internal_y(patches, ast)?;
+
+        if !patches.is_empty() {
+            let new_context_content = patches.apply_patches()?;
+            self.file_access.write_file(context_path, &new_context_content, None)?; // TODO comment?
+        }
+
+        Ok(want_next_step)
+    }
+
+    fn pass_2_internal_y(&mut self, patches: &mut Patches, ast: &Document) -> Result<bool> {
         
         let anchor_index = utils::AnchorIndex::new(&ast.content);
     

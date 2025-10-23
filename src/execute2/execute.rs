@@ -15,8 +15,30 @@ use crate::execute2::content::ModelContentItem;
 pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
 
     let mut exe = Worker::new(file_access, path_res);
-    let content = exe.execute(context_name)?;
-    Ok(content)
+    exe.execute(context_name)?;
+
+    Ok({
+        let mut content = ModelContent::new();
+        content.extend(exe.prelude.clone());
+        content.extend(exe.context.clone());
+        content
+    })
+}
+
+pub fn collect_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
+
+    let mut exe = Worker::new(file_access, path_res);
+    exe.collect(context_name)?;
+
+    if !exe.prelude.is_empty() {
+        return Err(anyhow::anyhow!("Prelude not allowed there"));
+    }
+
+    Ok({
+        let mut content = ModelContent::new();
+        content.extend(exe.context.clone());
+        content
+    })
 }
 
 struct Worker<'a> {
@@ -36,10 +58,7 @@ impl<'a> Worker<'a> {
         }
     }
 
-    fn collect(&mut self, context_name: &str) -> Result<ModelContent> {
-    }
-
-    fn execute(&mut self, context_name: &str, visit_stack: &Vec<PathBuf>) -> Result<ModelContent> {
+    fn collect(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<ModelContent> {
         let context_path = self.path_res.resolve_context(context_name)?;
 
         if visit_stack.contains(&context_path) {
@@ -49,18 +68,34 @@ impl<'a> Worker<'a> {
         let visit_stack = visit_stack.clone();
         visit_stack.push(context_path);
 
-        while self.execute_step(&context_path)? {}
-        Ok({
-            let mut content = ModelContent::new();
-            content.extend(self.prelude.clone());
-            content.extend(self.context.clone());
-            content
-        })
+        // Read file, parse it, collect without allowing execution
+        let want_next_step_1 = self.pass_1(visit_stack, context_path, false)?;
+        
+        if want_next_step_1 {
+            return anyhow::anyhow!("Next step not allowed");
+        }
+
+        Ok(())
     }
 
-    fn execute_step(&mut self, context_path: &Path, visit_stack: &Vec<PathBuf>) -> Result<bool> {
+    fn execute(&mut self, visit_stack: &Vec<PathBuf>, context_name: &str) -> Result<()> {
+        let context_path = self.path_res.resolve_context(context_name)?;
+
+        if visit_stack.contains(&context_path) {
+            return Ok(ModelContent::new());
+        }
+
+        let visit_stack = visit_stack.clone();
+        visit_stack.push(context_path);
+
+        while self.execute_step(visit_stack, &context_path)? {}
+
+        Ok(())
+    }
+
+    fn execute_step(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path) -> Result<bool> {
         // Read file, parse it, execute slow things that do not modify context
-        let want_next_step_1 = self.pass_1(context_path, true)?;
+        let want_next_step_1 = self.pass_1(visit_stack, context_path, true)?;
 
         // Lock file, re-read it (could be edited outside), parse it, execute fast things that may modify context and save it
         let want_next_step_2 = self.pass_2(&mut patches, &ast)?;
@@ -68,7 +103,7 @@ impl<'a> Worker<'a> {
         Ok(want_next_step_1 | want_next_step_2)
     }
 
-    fn pass_1(&mut self, context_path: &Path, visit_stack: &Vec<PathBuf>, can_execute: bool) -> Result<bool> {
+    fn pass_1(&mut self, visit_stack: &Vec<PathBuf>, context_path: &Path, visit_stack: &Vec<PathBuf>, can_execute: bool) -> Result<bool> {
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -79,7 +114,7 @@ impl<'a> Worker<'a> {
                     self.pass_1_text(text)?
                 }
                 crate::ast2::Content::Tag(tag) => {
-                    if self.pass_1_tag(tag)? {
+                    if self.pass_1_tag(visit_stack, tag)? {
                         return Ok(true);
                     }
                 }
@@ -103,16 +138,16 @@ impl<'a> Worker<'a> {
     }
 
     /// Process tags that do NOT modify context, so tags that do NOT spawn anchors
-    fn pass_1_tag(&mut self, tag: &Tag) -> Result<bool> {
+    fn pass_1_tag(&mut self, visit_stack: &Vec<PathBuf>, tag: &Tag) -> Result<bool> {
         match tag.command {
-            CommandKind::Include => self.pass_1_include_tag(tag),
+            CommandKind::Include => self.pass_1_include_tag(visit_stack, tag),
             _ => Ok(false),
         }
     }
 
-    fn pass_1_include_tag(&mut self, tag: &Tag) -> Result<bool> {
+    fn pass_1_include_tag(&mut self, visit_stack: &Vec<PathBuf>, tag: &Tag) -> Result<bool> {
         let included_context_name = tag.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?.value.clone();
-        self.execute(&included_context_name)?;
+        self.collect(visit_stack, &included_context_name)?;
         Ok(true)
     }
 

@@ -2,9 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use super::ModelContent;
 
-pub trait State {
+pub trait State: serde::Serialize + serde::de::DeserializeOwned {
     fn new() -> Self;
     fn output(&self) -> String;
+    fn get_status(&self) -> &AnchorStatus;
+    fn set_status(&mut self, status: AnchorStatus);
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -37,6 +39,12 @@ impl State for InlineState {
     fn output(&self) -> String {
         self.context.clone()
     }
+    fn get_status(&self) -> &AnchorStatus {
+        &self.status
+    }
+    fn set_status(&mut self, status: AnchorStatus) {
+        self.status = status;
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -56,6 +64,12 @@ impl State for AnswerState {
     }
     fn output(&self) -> String {
         self.reply.clone()
+    }
+    fn get_status(&self) -> &AnchorStatus {
+        &self.status
+    }
+    fn set_status(&mut self, status: AnchorStatus) {
+        self.status = status;
     }
 }
 
@@ -82,5 +96,11 @@ impl State for DeriveState {
     }
     fn output(&self) -> String {
         self.derived.clone()
+    }
+    fn get_status(&self) -> &AnchorStatus {
+        &self.status
+    }
+    fn set_status(&mut self, status: AnchorStatus) {
+        self.status = status;
     }
 }

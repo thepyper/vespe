@@ -16,7 +16,7 @@ use super::*;
 
 use crate::execute2::content::ModelContentItem;
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
-use crate::execute2::variables::Variables;  
+use crate::execute2::variables::Variables;
 
 pub fn execute_context(
     file_access: Arc<dyn file::FileAccessor>,
@@ -24,7 +24,7 @@ pub fn execute_context(
     context_name: &str,
 ) -> Result<ModelContent> {
     tracing::debug!("Executing context: {}", context_name);
-    
+
     let exe = Worker::new(file_access, path_res);
     let collector = exe.execute(Collector::new(), context_name)?;
 
@@ -60,7 +60,7 @@ impl Collector {
             context: ModelContent::new(),
             variables: Variables::new(),
         }
-    }    
+    }
     fn descent(&self, context_path: &Path) -> Option<Self> {
         if self.visit_stack.contains(&context_path.to_path_buf()) {
             return None;
@@ -71,7 +71,7 @@ impl Collector {
         Some(Collector {
             visit_stack,
             context: ModelContent::new(),
-            variables: Variables::new(),
+            variables: self.variables.clone(),
         })
     }
 }
@@ -98,7 +98,10 @@ impl Worker {
 
         match collector.descent(&context_path) {
             None => {
-                tracing::debug!("Context {} already in visit stack, skipping collection.", context_name);
+                tracing::debug!(
+                    "Context {} already in visit stack, skipping collection.",
+                    context_name
+                );
                 return Ok(collector);
             }
             Some(collector) => {
@@ -106,15 +109,21 @@ impl Worker {
                 match self.pass_1(collector, &context_path, false)? {
                     Some(collector) => {
                         // Successfully collected everything without needing further processing
-                        tracing::debug!("Worker::execute_step collected from pass_1 for path: {:?}", context_path);
+                        tracing::debug!(
+                            "Worker::execute_step collected from pass_1 for path: {:?}",
+                            context_path
+                        );
                         return Ok(collector);
                     }
                     None => {
-                        return Err(anyhow::anyhow!("Collection incomplete, execution needed for context: {}", context_name));
+                        return Err(anyhow::anyhow!(
+                            "Collection incomplete, execution needed for context: {}",
+                            context_name
+                        ));
                     }
                 };
-            },
-        };
+            }
+        }
     }
 
     fn execute(&self, collector: Collector, context_name: &str) -> Result<Collector> {
@@ -123,22 +132,34 @@ impl Worker {
 
         match collector.descent(&context_path) {
             None => {
-                tracing::debug!("Context {} already in visit stack, skipping execution.", context_name);
+                tracing::debug!(
+                    "Context {} already in visit stack, skipping execution.",
+                    context_name
+                );
                 return Ok(collector);
             }
             Some(collector) => {
+                let mut collector = collector;
                 loop {
-                    if let Some(collector) = self.execute_step(collector.clone(), &context_path)? {
-                        tracing::debug!("Worker::execute returning collected for context: {}", context_name);
-                        return Ok(collector);
+                    if let Some(new_collector) = self.execute_step(collector.clone(), &context_path)?
+                    {
+                        tracing::debug!(
+                            "Worker::execute returning collected for context: {}",
+                            context_name
+                        );
+                        return Ok(new_collector);
                     }
                     tracing::debug!("Worker::execute continuing for context: {}", context_name);
                 }
-            },
-        };
+            }
+        }
     }
 
-    fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
+    fn execute_step(
+        &self,
+        collector: Collector,
+        context_path: &Path,
+    ) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
         // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
@@ -148,12 +169,18 @@ impl Worker {
         match self.pass_1(collector, context_path, true)? {
             Some(collector) => {
                 // Successfully collected everything without needing further processing
-                tracing::debug!("Worker::execute_step collected from pass_1 for path: {:?}", context_path);
+                tracing::debug!(
+                    "Worker::execute_step collected from pass_1 for path: {:?}",
+                    context_path
+                );
                 return Ok(Some(collector));
             }
             None => {
                 // Could not collect everything in pass_1, need to do pass_2 to modify context and trigger another pass_1
-                tracing::debug!("Worker::execute_step could not collect from pass_1 for path: {:?}", context_path);
+                tracing::debug!(
+                    "Worker::execute_step could not collect from pass_1 for path: {:?}",
+                    context_path
+                );
                 return Ok(None);
             }
         };
@@ -171,60 +198,69 @@ impl Worker {
 
     fn pass_1(
         &self,
-        mut collector: Collector,
+        collector: Collector,
         context_path: &Path,
         can_execute: bool,
     ) -> Result<Option<Collector>> {
-        tracing::debug!("Worker::pass_1 for path: {:?}, can_execute: {}", context_path, can_execute);
+        tracing::debug!(
+            "Worker::pass_1 for path: {:?}, can_execute: {}",
+            context_path,
+            can_execute
+        );
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
+
+        let mut current_collector = collector;
 
         for item in &ast.content {
             match item {
                 crate::ast2::Content::Text(text) => {
-                    self.pass_1_text(&mut collector, text)?
+                    current_collector = self.pass_1_text(current_collector, text)?;
                 }
                 crate::ast2::Content::Tag(tag) => {
-                    if self.pass_1_tag(&mut collector, tag)? {
-                        tracing::debug!("Worker::pass_1 returning true after processing tag for path: {:?}", context_path);
-                        return Ok(None);
-                    }
+                    current_collector = self.pass_1_tag(current_collector, tag)?;
                 }
                 crate::ast2::Content::Anchor(anchor) => {
                     if !can_execute {
-                        tracing::debug!("Execution not allowed in Worker::pass_1 for anchor in path: {:?}", context_path);
+                        tracing::debug!(
+                            "Execution not allowed in Worker::pass_1 for anchor in path: {:?}",
+                            context_path
+                        );
                         return Err(anyhow::anyhow!("Execution not allowed"));
                     }
-                    if self.pass_1_anchor(&mut collector, anchor)? {
-                        tracing::debug!("Worker::pass_1 returning true after processing anchor for path: {:?}", context_path);
-                        return Ok(None);
+                    match self.pass_1_anchor(current_collector, anchor)? {
+                        Some(c) => current_collector = c,
+                        None => {
+                            tracing::debug!(
+                                "Worker::pass_1 returning None after processing anchor for path: {:?}",
+                                context_path
+                            );
+                            return Ok(None);
+                        }
                     }
                 }
             }
         }
         tracing::debug!("Worker::pass_1 finished for path: {:?}", context_path);
-        Ok(Some(collector))
+        Ok(Some(current_collector))
     }
 
-    fn pass_1_text(&self, collector: &mut Collector, text: &Text) -> Result<()> {
-        collector.context.push(ModelContentItem::user(&text.content));
-        Ok(())
+    fn pass_1_text(&self, mut collector: Collector, text: &Text) -> Result<Collector> {
+        collector
+            .context
+            .push(ModelContentItem::user(&text.content));
+        Ok(collector)
     }
 
     /// Process tags that do NOT modify context, so tags that do NOT spawn anchors
-    fn pass_1_tag(&self, collector: &mut Collector, tag: &Tag) -> Result<bool> {
+    fn pass_1_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {
         match tag.command {
-            CommandKind::Include => {
-                if self.pass_1_include_tag(collector, tag)? {
-                    return Ok(true)
-                }
-            }
-            _ => {}
+            CommandKind::Include => self.pass_1_include_tag(collector, tag),
+            _ => Ok(collector),
         }
-        Ok(false)
     }
 
-    fn pass_1_include_tag(&self, collector: &mut Collector, tag: &Tag) -> Result<bool> {
+    fn pass_1_include_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {
         let included_context_name = tag
             .arguments
             .arguments
@@ -232,77 +268,94 @@ impl Worker {
             .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
             .value
             .clone();
-        
-        // Take ownership of the value pointed to by `collector`, replacing it with an empty one temporarily.
-        let temp_collector = std::mem::replace(collector, Collector::new());
-
-        // Call `collect` with the collector of which you have taken possession.
-        let new_collector = self.collect(temp_collector, &included_context_name)?;
-
-        // Put the new collector back in its place.
-        *collector = new_collector;
-
-        Ok(false)
+        self.collect(collector, &included_context_name)
     }
 
     /// Process anchors that can trigger slow tasks that modify state
-    fn pass_1_anchor(&self, collector: &mut Collector, anchor: &Anchor) -> Result<bool> {
-        tracing::debug!("Worker::pass_1_anchor processing command: {:?}, kind: {:?}", anchor.command, anchor.kind);
+    fn pass_1_anchor(
+        &self,
+        collector: Collector,
+        anchor: &Anchor,
+    ) -> Result<Option<Collector>> {
+        tracing::debug!(
+            "Worker::pass_1_anchor processing command: {:?}, kind: {:?}",
+            anchor.command,
+            anchor.kind
+        );
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
         match (&anchor.command, &anchor.kind) {
             (CommandKind::Answer, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_answer_begin_anchor");
-                self.pass_1_answer_begin_anchor(collector,&asm,  &anchor.parameters, &anchor.arguments)
+                self.pass_1_answer_begin_anchor(
+                    collector,
+                    &asm,
+                    &anchor.parameters,
+                    &anchor.arguments,
+                )
             }
             (CommandKind::Derive, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_derive_begin_anchor");
-                self.pass_1_derive_begin_anchor(collector,&asm, &anchor.parameters, &anchor.arguments)
+                self.pass_1_derive_begin_anchor(
+                    collector,
+                    &asm,
+                    &anchor.parameters,
+                    &anchor.arguments,
+                )
             }
             (CommandKind::Inline, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_inline_begin_anchor");
-                self.pass_1_inline_begin_anchor(collector,&asm, &anchor.parameters, &anchor.arguments)
+                self.pass_1_inline_begin_anchor(
+                    collector,
+                    &asm,
+                    &anchor.parameters,
+                    &anchor.arguments,
+                )
             }
             _ => {
-                tracing::debug!("Worker::pass_1_anchor not handling command: {:?}, kind: {:?}", anchor.command, anchor.kind);
-                Ok(false)
+                tracing::debug!(
+                    "Worker::pass_1_anchor not handling command: {:?}, kind: {:?}",
+                    anchor.command,
+                    anchor.kind
+                );
+                Ok(Some(collector))
             }
         }
     }
 
     fn pass_1_answer_begin_anchor(
         &self,
-        collector: &mut Collector,
+        collector: Collector,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        arguments: &Arguments,
-    ) -> Result<bool> {
+        _parameters: &Parameters,
+        _arguments: &Arguments,
+    ) -> Result<Option<Collector>> {
         let mut state: AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
                 state.query = collector.context.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
-                Ok(true)
+                Ok(None)
             }
             AnchorStatus::NeedProcessing => {
                 // TODO prelude, secondo agent!!
                 state.reply = self.call_model(&collector, vec![state.query.clone()])?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
-                Ok(true)
+                Ok(None)
             }
-            _ => Ok(false),
+            _ => Ok(Some(collector)),
         }
     }
 
     fn pass_1_derive_begin_anchor(
         &self,
-        collector: &mut Collector,
+        collector: Collector,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
+        _parameters: &Parameters,
         arguments: &Arguments,
-    ) -> Result<bool> {
+    ) -> Result<Option<Collector>> {
         let mut state: DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -320,7 +373,7 @@ impl Worker {
                     .clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
-                Ok(true)
+                Ok(None)
             }
             AnchorStatus::NeedProcessing => {
                 state.instruction_context = execute_context(
@@ -337,19 +390,19 @@ impl Worker {
                 state.derived = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
-                Ok(true)
+                Ok(None)
             }
-            _ => Ok(false),
+            _ => Ok(Some(collector)),
         }
     }
 
     fn pass_1_inline_begin_anchor(
         &self,
-        collector: &mut Collector,
+        collector: Collector,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
+        _parameters: &Parameters,
         arguments: &Arguments,
-    ) -> Result<bool> {
+    ) -> Result<Option<Collector>> {
         let mut state: InlineState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -361,16 +414,16 @@ impl Worker {
                     .clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
-                Ok(true)
+                Ok(None)
             }
             AnchorStatus::NeedProcessing => {
                 let context_path = self.path_res.resolve_context(&state.context_name)?;
                 state.context = self.file_access.read_file(&context_path)?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
-                Ok(true)
+                Ok(None)
             }
-            _ => Ok(false),
+            _ => Ok(Some(collector)),
         }
     }
 
@@ -497,7 +550,7 @@ impl Worker {
         match a0.command {
             CommandKind::Answer => {
                 tracing::debug!("Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Answer");
-                self.pass_2_normal_begin_anchor(
+                self.pass_2_normal_begin_anchor::<AnswerState>(
                     patches,
                     &asm,
                     &a0.parameters,
@@ -508,7 +561,7 @@ impl Worker {
             }
             CommandKind::Derive => {
                 tracing::debug!("Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Derive");
-                self.pass_2_normal_begin_anchor(
+                self.pass_2_normal_begin_anchor::<DeriveState>(
                     patches,
                     &asm,
                     &a0.parameters,
@@ -519,7 +572,7 @@ impl Worker {
             }
             CommandKind::Inline => {
                 tracing::debug!("Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Inline");
-                self.pass_2_normal_begin_anchor(
+                self.pass_2_normal_begin_anchor::<InlineState>(
                     patches,
                     &asm,
                     &a0.parameters,
@@ -529,30 +582,33 @@ impl Worker {
                 )
             }
             _ => {
-                tracing::debug!("Worker::pass_2_anchors not handling command: {:?}", a0.command);
+                tracing::debug!(
+                    "Worker::pass_2_anchors not handling command: {:?}",
+                    a0.command
+                );
                 Ok(false)
             }
         }
     }
 
-    fn pass_2_normal_begin_anchor(
+    fn pass_2_normal_begin_anchor<S: State + 'static>(
         &self,
         patches: &mut utils::Patches,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        arguments: &Arguments,
+        _parameters: &Parameters,
+        _arguments: &Arguments,
         range_begin: &Range,
         range_end: &Range,
     ) -> Result<bool> {
-        let mut state: AnswerState = asm.load_state()?;
-        match state.status {
+        let mut state: S = asm.load_state()?;
+        match state.get_status() {
             AnchorStatus::NeedInjection => {
                 let range = Range {
                     begin: range_begin.end.clone(),
                     end: range_end.begin.clone(),
                 };
                 patches.add_patch(&range, &state.output());
-                state.status = AnchorStatus::Completed;
+                state.set_status(AnchorStatus::Completed);
                 asm.save_state(&state, None)?;
                 Ok(true)
             }

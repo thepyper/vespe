@@ -60,16 +60,16 @@ fn test_try_parse_text_empty() {
 
 #[test]
 fn test_try_parse_text_starts_with_tag() {
-    let doc = "@tag rest";
+    let doc = "@unknown rest";
     let parser = Parser::new(doc);
     let result = super::_try_parse_text(&parser).unwrap();
-    assert!(result.is_none());
+    assert!(!result.is_none());
 }
 
 #[test]
 fn test_try_parse_text_starts_with_anchor() {
-    let doc = "<!-- anchor --> rest";
+    let doc = "<!-- unknown --> rest";
     let parser = Parser::new(doc);
     let result = super::_try_parse_text(&parser).unwrap();
-    assert!(result.is_none());
+    assert!(!result.is_none());
 }

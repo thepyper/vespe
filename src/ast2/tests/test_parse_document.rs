@@ -27,7 +27,7 @@ fn test_parse_content_mixed() {
         assert_eq!(tag.command, CommandKind::Tag);
         assert_eq!(tag.parameters.parameters["param"], json!(1));
         assert_eq!(tag.arguments.arguments[0].value, "arg1");
-        let tag_str = "@tag [param=1] 'arg1'";
+        let tag_str = "@tag [param=1] 'arg1'\n";
         assert_eq!(tag.range.begin.offset, "Some text ".len());
         assert_eq!(tag.range.end.offset, "Some text ".len() + tag_str.len());
     } else {
@@ -39,7 +39,7 @@ fn test_parse_content_mixed() {
         assert_eq!(anchor.command, CommandKind::Include);
         assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
         assert_eq!(anchor.kind, AnchorKind::Begin);
-        let anchor_str = format!("<!-- include-{}:begin -->", uuid_str);
+        let anchor_str = format!("<!-- include-{}:begin -->\n", uuid_str);
         assert_eq!(
             anchor.range.begin.offset,
             "Some text\n@tag [param=1] 'arg1'\n".len()

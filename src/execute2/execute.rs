@@ -29,14 +29,8 @@ pub fn execute_context(
     let collector = Collector::new();
     let collector = exe.execute(&collector, context_name)?;
 
-    let content = {
-        let mut content = ModelContent::new();
-        content.extend(collector.prelude.clone());
-        content.extend(collector.context.clone());
-        content
-    };
     tracing::debug!("Finished executing context: {}", context_name);
-    Ok(content)
+    Ok(collector.context)
 }
 
 pub fn collect_context(
@@ -50,19 +44,8 @@ pub fn collect_context(
     let collector = Collector::new();
     let collector = exe.collect(&collector, context_name)?;
 
-    if !collector.prelude.is_empty() {
-        tracing::debug!("Prelude not allowed in collect_context for: {}", context_name);
-        return Err(anyhow::anyhow!("Prelude not allowed there"));
-    }
-
-    let content = {
-        let mut content = ModelContent::new();
-        content.extend(collector.context.clone());
-        content
-    };
-
     tracing::debug!("Finished collecting context: {}", context_name);
-    Ok(content)
+    Ok(collector.context)
 }
 
 struct Collector {
@@ -110,7 +93,7 @@ impl Worker {
         }
     }
 
-    fn collect(&mut self, collector: &Collector, context_name: &str) -> Result<Collector> {
+    fn collect(&self, collector: &Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::collect for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -135,7 +118,7 @@ impl Worker {
         };
     }
 
-    fn execute(&mut self, collector: &Collector, context_name: &str) -> Result<Collector> {
+    fn execute(&self, collector: &Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -402,7 +385,7 @@ impl Worker {
                 .write_file(context_path, &new_context_content, None)?; // TODO comment?
         }
 
-        Ok(()))
+        Ok(())
     }
 
     fn pass_2_internal_y(&mut self, patches: &mut utils::Patches, ast: &Document) -> Result<()> {

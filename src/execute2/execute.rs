@@ -1,7 +1,7 @@
 use crate::ast2::{
     Anchor, AnchorKind, Arguments, CommandKind, Document, Parameters, Range, Tag, Text,
 };
-use crate::file;
+use crate::{agent, file};
 use crate::path;
 use crate::utils;
 use anyhow::Result;
@@ -68,6 +68,7 @@ struct Worker {
     path_res: Arc<dyn path::PathResolver>,
     prelude: ModelContent,
     context: ModelContent,
+    variables: Variables,
 }
 
 impl Worker {
@@ -80,6 +81,7 @@ impl Worker {
             path_res,
             prelude: Vec::new(),
             context: Vec::new(),
+            variables:: Variables::new(),
         }
     }
 
@@ -132,6 +134,16 @@ impl Worker {
         let want_next_step_2 = self.pass_2(context_path)?;
         tracing::debug!("Worker::execute_step finished for path: {:?}, want_next_step_1: {}, want_next_step_2: {}", context_path, want_next_step_1, want_next_step_2);
         Ok(want_next_step_1 | want_next_step_2)
+    }
+
+    fn call_model(&self, contents: Vec<ModelContent>) -> Result<String> {
+        let query = contents
+            .into_iter()
+            .flatten()
+            .map(|item| item.to_string())
+            .collect::<Vec<String>>()
+            .join("\n---\n");
+        agent::shell::shell_call(self.variables.provider, &query)
     }
 
     fn pass_1(
@@ -234,8 +246,8 @@ impl Worker {
                 Ok(true)
             }
             AnchorStatus::NeedProcessing => {
-                // TODO call llm
-                state.reply = "rispostone!! TODO ".into();
+                // TODO prelude, secondo agent!!
+                state.reply = self.call_model(vec![state.query.clone()])?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(true)

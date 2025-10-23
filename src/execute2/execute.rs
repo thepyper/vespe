@@ -316,14 +316,14 @@ impl Worker {
 
     fn pass_2_tag(&mut self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
         match tag.command {
-            CommandKind::Answer => self.pass_2_answer_tag(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
-            CommandKind::Derive => self.pass_2_derive_tag(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
-            CommandKind::Inline => self.pass_2_inline_tag(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
+            CommandKind::Answer => self.pass_2_normal_tag::<AnswerState>(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
+            CommandKind::Derive => self.pass_2_normal_tag::<DeriveState>(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
+            CommandKind::Inline => self.pass_2_normal_tag::<InlineState>(tag.command, patches, &tag.parameters, &tag.arguments, &tag.range),            
             _ => Ok(false),
         }
     }
 
-    fn pass_2_answer_tag(
+    fn pass_2_normal_tag<S: State + 'static>(
         &mut self,
         command_kind: CommandKind,
         patches: &mut utils::Patches,
@@ -337,43 +337,7 @@ impl Worker {
             &format!("{}\n{}", a0.to_string(), a1.to_string()),
         );
         let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
-        asm.save_state(&AnswerState::new(), None)?;
-        Ok(true)
-    }
-
-    fn pass_2_derive_tag(
-        &mut self,
-        command_kind: CommandKind,
-        patches: &mut utils::Patches,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        range: &Range,
-    ) -> Result<bool> {
-        let (a0, a1) = Anchor::new_couple(command_kind, parameters, arguments);
-        patches.add_patch(
-            range,
-            &format!("{}\n{}", a0.to_string(), a1.to_string()),
-        );
-        let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
-        asm.save_state(&DeriveState::new(), None)?;
-        Ok(true)
-    }
-
-    fn pass_2_inline_tag(
-        &mut self,
-        command_kind: CommandKind,
-        patches: &mut utils::Patches,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        range: &Range,
-    ) -> Result<bool> {
-        let (a0, a1) = Anchor::new_couple(command_kind, parameters, arguments);
-        patches.add_patch(
-            range,
-            &format!("{}\n{}", a0.to_string(), a1.to_string()),
-        );
-        let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
-        asm.save_state(&InlineState::new(), None)?;
+        asm.save_state(&S::new(), None)?;
         Ok(true)
     }
 

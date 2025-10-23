@@ -8,6 +8,11 @@ use super::{
     Position, Range, Result, Tag, Text,
 };
 
+/// A stateful parser that consumes a string slice and tracks the current position.
+///
+/// The parser is designed to be mostly immutable, where parsing functions take a parser
+/// and return a new, advanced parser state. This functional approach makes the parsing
+/// logic easier to reason about and test.
 #[derive(Debug, Clone)]
 pub(crate) struct Parser<'a> {
     position: Position,
@@ -15,6 +20,7 @@ pub(crate) struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    /// Creates a new `Parser` for the given document string.
     pub fn new(document: &'a str) -> Self {
         Self {
             position: Position {
@@ -168,6 +174,17 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// Parses a string slice into a `Document` AST.
+///
+/// This is the main entry point for the parser.
+///
+/// # Arguments
+///
+/// * `document` - A string slice representing the source document to be parsed.
+///
+/// # Returns
+///
+/// A `Result` containing the parsed `Document` or an `Ast2Error` on failure.
 pub fn parse_document(document: &str) -> Result<Document> {
     let parser = Parser::new(document);
     let begin = parser.get_position();
@@ -184,6 +201,10 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
     let mut contents = Vec::new();
     let mut p_current = parser; // Takes ownership
 
+    // The core parsing loop. It processes the document line by line.
+    // Each line must start at column 1 and is attempted to be parsed as a Tag,
+    // an Anchor, or plain Text, in that order of precedence.
+    // If none of these match, and the line is not empty, it's a parsing error.
     while !p_current.is_eod() {
         // Subroutines must always stop at end-of-line, otherwise we have a problem
         if !p_current.is_begin_of_line() {

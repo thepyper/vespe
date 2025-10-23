@@ -231,8 +231,17 @@ impl Worker {
             .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
             .value
             .clone();
-        *collector = self.collect(*collector.clone(), &included_context_name)?;
-        Ok(true)
+        
+        // Take ownership of the value pointed to by `collector`, replacing it with an empty one temporarily.
+        let temp_collector = std::mem::replace(collector, Collector::new());
+
+        // Call `collect` with the collector of which you have taken possession.
+        let new_collector = self.collect(temp_collector, &included_context_name)?;
+
+        // Put the new collector back in its place.
+        *collector = new_collector;
+
+        Ok(false)
     }
 
     /// Process anchors that can trigger slow tasks that modify state

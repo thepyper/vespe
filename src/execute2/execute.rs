@@ -14,22 +14,22 @@ use crate::execute2::content::ModelContentItem;
 
 pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
 
-    let mut exe = Executor::new(file_access, path_res);
-    let content = exe.execute_loop(context_name)?;
+    let mut exe = Worker::new(file_access, path_res);
+    let content = exe.execute(context_name)?;
     Ok(content)
 }
 
-struct Executor<'a> {
+struct Worker<'a> {
     file_access: &'a dyn file::FileAccessor, 
     path_res: &'a dyn path::PathResolver,
     visited: HashSet<PathBuf>,
     prelude: ModelContent,
-    context: ModelContent,
+    context: ModelContent,    
 }
 
-impl<'a> Executor<'a> {
+impl<'a> Worker<'a> {
     fn new(file_access: &'a dyn file::FileAccessor, path_res: &'a dyn path::PathResolver) -> Self {
-        Executor {
+        Worker {
             file_access,
             path_res,
             visited: HashSet::new(),
@@ -37,7 +37,7 @@ impl<'a> Executor<'a> {
             context: Vec::new(),
         }
     }
-    fn execute_loop(&mut self, context_name: &str) -> Result<ModelContent> {
+    fn execute(&mut self, context_name: &str) -> Result<ModelContent> {
         let context_path = self.path_res.resolve_context(context_name)?;
 
         if self.visited.contains(&context_path) {
@@ -112,7 +112,7 @@ impl<'a> Executor<'a> {
 
     fn pass_1_include_tag(&mut self, tag: &Tag) -> Result<bool> {
         let included_context_name = tag.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?.value.clone();
-        self.execute_loop(&included_context_name)?;
+        self.execute(&included_context_name)?;
         Ok(true)
     }
 

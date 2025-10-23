@@ -39,11 +39,6 @@ enum Commands {
         #[command(subcommand)]
         command: ContextCommands,
     },
-    /// Manages snippets within the project.
-    Snippet {
-        #[command(subcommand)]
-        command: SnippetCommands,
-    },
     /// Watches for changes in context files and re-executes them.
     Watch {},
 }
@@ -225,26 +220,6 @@ fn main() -> Result<()> {
                 ContextCommands::Tree { name: _name } => {
                     // TODO redo let context_tree = project.get_context_tree(&name)?;
                     //print_context_tree(&context_tree, 0);
-                }
-            }
-        }
-        Commands::Snippet { command } => {
-            let project = Project::find(&project_path)?;
-            match command {
-                SnippetCommands::New { name, content } => {
-                    let file_path = project.create_snippet_file(&name, content)?;
-                    println!("Created new snippet file: {}", file_path.display());
-                }
-                SnippetCommands::List {} => {
-                    let snippets = project.list_snippets()?;
-                    if snippets.is_empty() {
-                        println!("No snippets found.");
-                    } else {
-                        println!("Available snippets:");
-                        for snippet in snippets {
-                            println!("  - {} ({})", snippet.name, snippet.path.display());
-                        }
-                    }
                 }
             }
         }

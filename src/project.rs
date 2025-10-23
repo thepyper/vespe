@@ -78,7 +78,7 @@ impl Project {
                 let project_config = Self::load_project_config(&project_config_path)?;
 
                 let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
-                let editor_communicator: Box<dyn EditorCommunicator> =
+                let editor_communicator : Option<Box<dyn EditorCommunicator>> =
                     match project_config.editor_interface {
                         EditorInterface::VSCode => {
                             Some(Box::new(FileBasedEditorCommunicator::new(&editor_path)?))

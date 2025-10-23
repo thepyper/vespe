@@ -6,13 +6,17 @@ use crate::ast2::{Anchor, AnchorKind, CommandKind, Document, Range, Tag, Text, P
 use anyhow::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+
+use crate::file::FileAccessor;
+use crate::path::PathResolver;
 
 use super::*;
 
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::content::ModelContentItem;
 
-pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
+pub fn execute_context(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
 
     let visit_stack = Vec::new();
 
@@ -27,7 +31,7 @@ pub fn execute_context(file_access: &dyn file::FileAccessor, path_res: &dyn path
     })
 }
 
-pub fn collect_context(file_access: &dyn file::FileAccessor, path_res: &dyn path::PathResolver, context_name: &str) -> Result<ModelContent> {
+pub fn collect_context(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res: Arc<dyn path::PathResolver>, context_name: &str) -> Result<ModelContent> {
 
     let visit_stack = Vec::new();
     
@@ -45,15 +49,15 @@ pub fn collect_context(file_access: &dyn file::FileAccessor, path_res: &dyn path
     })
 }
 
-struct Worker<'a> {
-    file_access: &'a mut dyn file::FileAccessor, 
-    path_res: &'a dyn path::PathResolver,
+struct Worker {
+    file_access: Arc<Mutex<dyn file::FileAccessor>>, 
+    path_res: Arc<dyn path::PathResolver>,
     prelude: ModelContent,
     context: ModelContent,    
 }
 
-impl<'a> Worker<'a> {
-    fn new(file_access: &'a mut dyn file::FileAccessor, path_res: &'a dyn path::PathResolver) -> Self {
+impl Worker {
+    fn new(file_access: Arc<Mutex<dyn file::FileAccessor>>, path_res: Arc<dyn path::PathResolver>) -> Self {
         Worker {
             file_access,
             path_res,
@@ -157,22 +161,24 @@ impl<'a> Worker<'a> {
 
     /// Process anchors that can trigger slow tasks that modify state
     fn pass_1_anchor(&mut self, anchor: &Anchor) -> Result<bool> {
+        let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
         match (
             &anchor.command,
             &anchor.kind,            
         ) {
-            (CommandKind::Answer, AnchorKind::Begin) => self.pass_1_answer_begin_anchor(&anchor),
-            (CommandKind::Derive, AnchorKind::Begin) => self.pass_1_derive_begin_anchor(&anchor),
-            (CommandKind::Inline, AnchorKind::Begin) => self.pass_1_inline_begin_anchor(&anchor),
+            (CommandKind::Answer, AnchorKind::Begin) => self.pass_1_answer_begin_anchor(&asm, &anchor.parameters, &anchor.arguments),
+            (CommandKind::Derive, AnchorKind::Begin) => self.pass_1_derive_begin_anchor(&asm, &anchor.parameters, &anchor.arguments),
+            (CommandKind::Inline, AnchorKind::Begin) => self.pass_1_inline_begin_anchor(&asm, &anchor.parameters, &anchor.arguments),
             _ => Ok(false)
         }
     }
 
     fn pass_1_answer_begin_anchor(
         &mut self,
-        anchor: &Anchor,
+        asm: &utils::AnchorStateManager,
+        parameters: &Parameters,
+        arguments: &Arguments,
     ) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         let mut state : AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
@@ -194,21 +200,23 @@ impl<'a> Worker<'a> {
 
     fn pass_1_derive_begin_anchor(
         &mut self,
-        anchor: &Anchor,
+        asm: &utils::AnchorStateManager,
+        parameters: &Parameters,
+        arguments: &Arguments,
     ) -> Result<bool> {
         let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         let mut state : DeriveState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.instruction_context_name = anchor.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value.clone();
-                state.input_context_name = anchor.arguments.arguments.get(1).ok_or_else(|| anyhow::anyhow!("Missing input context name"))?.value.clone();
+                state.instruction_context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?.value.clone();
+                state.input_context_name = arguments.arguments.get(1).ok_or_else(|| anyhow::anyhow!("Missing input context name"))?.value.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true) 
             }
             AnchorStatus::NeedProcessing => {
-                state.instruction_context = execute_context(self.file_access, self.path_res, &state.instruction_context_name)?;
-                state.input_context = execute_context(self.file_access, self.path_res, &state.input_context_name)?;
+                state.instruction_context = execute_context(self.file_access.clone(), self.path_res.clone(), &state.instruction_context_name)?;
+                state.input_context = execute_context(self.file_access.clone(), self.path_res.clone(), &state.input_context_name)?;
                 // call llm to derive                
                 state.derived = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;
@@ -221,13 +229,14 @@ impl<'a> Worker<'a> {
 
     fn pass_1_inline_begin_anchor(
         &mut self,
-        anchor: &Anchor,
+        asm: &utils::AnchorStateManager,
+        parameters: &Parameters,
+        arguments: &Arguments,
     ) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, anchor);
         let mut state : InlineState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.context_name = anchor.arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing context name"))?.value.clone();
+                state.context_name = arguments.arguments.get(0).ok_or_else(|| anyhow::anyhow!("Missing context name"))?.value.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true)
@@ -245,16 +254,16 @@ impl<'a> Worker<'a> {
 
     fn pass_2(&mut self, context_path: &Path) -> Result<bool> {
 
-        self.file_access.lock_file(context_path)?;        
+        self.file_access.lock().unwrap().lock_file(context_path)?;        
         let result = self.pass_2_internal_x(context_path);
-        self.file_access.unlock_file(context_path)?;
+        self.file_access.lock().unwrap().unlock_file(context_path)?;
 
         result 
     }
 
      fn pass_2_internal_x(&mut self, context_path: &Path) -> Result<bool> {
 
-        let context_content = self.file_access.read_file(context_path)?;
+        let context_content = self.file_access.lock().unwrap().read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
 
@@ -262,7 +271,7 @@ impl<'a> Worker<'a> {
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
-            self.file_access.write_file(context_path, &new_context_content, None)?; // TODO comment?
+            self.file_access.lock().unwrap().write_file(context_path, &new_context_content, None)?; // TODO comment?
         }
 
         Ok(want_next_step)
@@ -328,7 +337,7 @@ impl<'a> Worker<'a> {
             range,
             &format!("{} \n {}", a0.to_string(), a1.to_string()),
         );
-        let _asm = utils::AnchorStateManager::new(self.file_access, self.path_res, &a0);
+        let _asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
         // This part needs to be generic over the state type, which is not directly possible with current information.
         // For now, I'll use a placeholder that compiles but might not be logically correct.
         // The original code had `ast.save_state(T::new());` which implies a generic `T` with a `new()` method.
@@ -338,7 +347,7 @@ impl<'a> Worker<'a> {
     }
     
     fn pass_2_anchors(&mut self, patches: &mut utils::Patches, a0: &Anchor, a1: &Anchor) -> Result<bool> {
-        let asm = utils::AnchorStateManager::new(self.file_access, self.path_res, a0);
+        let asm = utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), a0);
         match a0.command {
             CommandKind::Answer => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),    
             CommandKind::Derive => self.pass_2_normal_begin_anchor(patches, &asm, &a0.parameters, &a0.arguments, &a0.range, &a1.range),
@@ -350,7 +359,7 @@ impl<'a> Worker<'a> {
     fn pass_2_normal_begin_anchor(
         &mut self,
         patches: &mut utils::Patches,
-        asm: &mut utils::AnchorStateManager,
+        asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
         range_begin: &Range,

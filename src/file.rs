@@ -41,12 +41,12 @@ impl FileAccessor for ProjectFileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String>
     {
-        std::fs::read_to_string(path)
+        Ok(std::fs::read_to_string(path)?)
     }
     /// Require exclusive access to a file
     fn lock_file(&mut self, path: &Path) -> Result<()>
     {
-        match self.editor_interface {
+        match &self.editor_interface {
             None => Ok(()),
             Some(x) => x.request_file_modification(path),
         }
@@ -54,7 +54,7 @@ impl FileAccessor for ProjectFileAccessor {
     /// Release excludive access to a file
     fn unlock_file(&mut self, path: &Path) -> Result<()>
     {
-        match self.editor_interface {
+        match &self.editor_interface {
             None => Ok(()),
             Some(x) => x.notify_file_modified(path),
         }
@@ -63,7 +63,7 @@ impl FileAccessor for ProjectFileAccessor {
     fn write_file(&mut self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>
     {
         std::fs::write(path, content)?;
-        self.modified_files.insert(path);
+        self.modified_files.insert(path.into());
         if let Some(comment) = comment {
             self.modified_files_comments.push(comment.into());
         }         

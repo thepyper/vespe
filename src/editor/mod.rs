@@ -14,7 +14,7 @@ pub trait EditorCommunicator {
     ///
     /// # Returns
     /// `Ok(Uuid)` with a request ID if the request was successful, `Err` otherwise.
-    fn request_file_modification(&self, file_path: &Path) -> Result<()>;
+    fn request_file_modification(&self, file_path: &Path) -> Result<Uuid>;
 
     /// Notifies the editor that a file has been modified by the program.
     /// If the file is open, the editor should reload it and unlock it.
@@ -25,7 +25,7 @@ pub trait EditorCommunicator {
     ///
     /// # Returns
     /// `Ok(())` if the notification was successful, `Err` otherwise.
-    fn notify_file_modified(&self, file_path: &Path) -> Result<()>;
+    fn notify_file_modified(&self, request_id: &Uuid) -> Result<()>;
 }
 
 pub mod lockfile;

@@ -253,9 +253,9 @@ impl Worker {
 
     fn pass_2(&mut self, context_path: &Path) -> Result<bool> {
 
-        self.file_access.lock_file(context_path)?;        
+        let lock_id = self.file_access.lock_file(context_path)?;        
         let result = self.pass_2_internal_x(context_path);
-        self.file_access.unlock_file(context_path)?;
+        self.file_access.unlock_file(&lock_id)?;
 
         result 
     }

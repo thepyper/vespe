@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
 use std::sync::Mutex;
+use uuid::{uuid, Uuid};
 
 use super::editor::EditorCommunicator;
 
@@ -9,9 +10,9 @@ pub trait FileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String>;
     /// Require exclusive access to a file
-    fn lock_file(&self, path: &Path) -> Result<()>;
+    fn lock_file(&self, path: &Path) -> Result<Uuid>;
     /// Release excludive access to a file
-    fn unlock_file(&self, path: &Path) -> Result<()>;
+    fn unlock_file(&self, uuid: &Uuid) -> Result<()>;
     /// Write whole file, optional comment to the operation
     fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>; 
 }
@@ -52,6 +53,8 @@ impl ProjectFileAccessor {
     }
 }
 
+const DUMMY_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000000");
+
 impl FileAccessor for ProjectFileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String>
@@ -59,19 +62,19 @@ impl FileAccessor for ProjectFileAccessor {
         Ok(std::fs::read_to_string(path)?)
     }
     /// Require exclusive access to a file
-    fn lock_file(&self, path: &Path) -> Result<()>
+    fn lock_file(&self, path: &Path) -> Result<Uuid>
     {
         match &self.editor_interface {
-            None => Ok(()),
+            None => Ok(DUMMY_ID),
             Some(x) => x.request_file_modification(path),
         }
     }
     /// Release excludive access to a file
-    fn unlock_file(&self, path: &Path) -> Result<()>
+    fn unlock_file(&self, uuid: &Uuid) -> Result<()>
     {
         match &self.editor_interface {
             None => Ok(()),
-            Some(x) => x.notify_file_modified(path),
+            Some(x) => x.notify_file_modified(uuid),
         }
     }
     /// Write whole file, optional comment to the operation

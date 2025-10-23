@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Variables {
     pub provider: String,
 }

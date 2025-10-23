@@ -26,8 +26,7 @@ pub fn execute_context(
     tracing::debug!("Executing context: {}", context_name);
     
     let exe = Worker::new(file_access, path_res);
-    let collector = Collector::new();
-    let collector = exe.execute(&collector, context_name)?;
+    let collector = exe.execute(Collector::new(), context_name)?;
 
     tracing::debug!("Finished executing context: {}", context_name);
     Ok(collector.context)
@@ -41,13 +40,13 @@ pub fn collect_context(
     tracing::debug!("Collecting context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    let collector = Collector::new();
-    let collector = exe.collect(&collector, context_name)?;
+    let collector = exe.collect(Collector::new(), context_name)?;
 
     tracing::debug!("Finished collecting context: {}", context_name);
     Ok(collector.context)
 }
 
+#[derive(Clone)]
 struct Collector {
     visit_stack: Vec<PathBuf>,
     context: ModelContent,
@@ -93,7 +92,7 @@ impl Worker {
         }
     }
 
-    fn collect(&self, collector: &Collector, context_name: &str) -> Result<Collector> {
+    fn collect(&self, collector: Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::collect for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -104,7 +103,7 @@ impl Worker {
             }
             Some(collector) => {
                 // Read file, parse it, collect without allowing execution
-                match self.pass_1(collector, context_path, false)? {
+                match self.pass_1(collector, &context_path, false)? {
                     Some(collector) => {
                         // Successfully collected everything without needing further processing
                         tracing::debug!("Worker::execute_step collected from pass_1 for path: {:?}", context_path);
@@ -118,7 +117,7 @@ impl Worker {
         };
     }
 
-    fn execute(&self, collector: &Collector, context_name: &str) -> Result<Collector> {
+    fn execute(&self, collector: Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -129,7 +128,7 @@ impl Worker {
             }
             Some(collector) => {
                 loop {
-                    if let Some(collector) = self.execute_step(collector, &context_path)? {
+                    if let Some(collector) = self.execute_step(collector.clone(), &context_path)? {
                         tracing::debug!("Worker::execute returning collected for context: {}", context_name);
                         return Ok(collector);
                     }
@@ -139,7 +138,7 @@ impl Worker {
         };
     }
 
-    fn execute_step(&mut self, collector: &Collector, context_path: &Path) -> Result<Option<Collector>> {
+    fn execute_step(&mut self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
         // Read file, parse it, execute slow things that do not modify context, collect data
@@ -159,7 +158,7 @@ impl Worker {
         };
     }
 
-    fn call_model(&self, collector: Collector, contents: Vec<ModelContent>) -> Result<String> {
+    fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
         let query = contents
             .into_iter()
             .flatten()
@@ -171,15 +170,13 @@ impl Worker {
 
     fn pass_1(
         &mut self,
-        collector: &Collector,
+        mut collector: Collector,
         context_path: &Path,
         can_execute: bool,
     ) -> Result<Option<Collector>> {
         tracing::debug!("Worker::pass_1 for path: {:?}, can_execute: {}", context_path, can_execute);
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
-
-        let mut collector = collector.clone();
 
         for item in &ast.content {
             match item {
@@ -217,7 +214,7 @@ impl Worker {
     fn pass_1_tag(&mut self, collector: &mut Collector, tag: &Tag) -> Result<bool> {
         match tag.command {
             CommandKind::Include => {
-                if self.pass_1_include_tag(collector, tag) {
+                if self.pass_1_include_tag(collector, tag)? {
                     return Ok(true)
                 }
             }
@@ -234,7 +231,7 @@ impl Worker {
             .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
             .value
             .clone();
-        collector = self.collect(collector, &included_context_name)?;
+        *collector = self.collect(*collector.clone(), &included_context_name)?;
         Ok(true)
     }
 
@@ -246,15 +243,15 @@ impl Worker {
         match (&anchor.command, &anchor.kind) {
             (CommandKind::Answer, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_answer_begin_anchor");
-                self.pass_1_answer_begin_anchor(&asm, &anchor.parameters, &anchor.arguments)
+                self.pass_1_answer_begin_anchor(collector,&asm,  &anchor.parameters, &anchor.arguments)
             }
             (CommandKind::Derive, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_derive_begin_anchor");
-                self.pass_1_derive_begin_anchor(&asm, &anchor.parameters, &anchor.arguments)
+                self.pass_1_derive_begin_anchor(collector,&asm, &anchor.parameters, &anchor.arguments)
             }
             (CommandKind::Inline, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_inline_begin_anchor");
-                self.pass_1_inline_begin_anchor(&asm, &anchor.parameters, &anchor.arguments)
+                self.pass_1_inline_begin_anchor(collector,&asm, &anchor.parameters, &anchor.arguments)
             }
             _ => {
                 tracing::debug!("Worker::pass_1_anchor not handling command: {:?}, kind: {:?}", anchor.command, anchor.kind);
@@ -265,6 +262,7 @@ impl Worker {
 
     fn pass_1_answer_begin_anchor(
         &mut self,
+        collector: &mut Collector,
         asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
@@ -272,14 +270,14 @@ impl Worker {
         let mut state: AnswerState = asm.load_state()?;
         match state.status {
             AnchorStatus::JustCreated => {
-                state.query = self.context.clone();
+                state.query = collector.context.clone();
                 state.status = AnchorStatus::NeedProcessing;
                 asm.save_state(&state, None)?;
                 Ok(true)
             }
             AnchorStatus::NeedProcessing => {
                 // TODO prelude, secondo agent!!
-                state.reply = self.call_model(vec![state.query.clone()])?;
+                state.reply = self.call_model(&collector, vec![state.query.clone()])?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(true)
@@ -290,6 +288,7 @@ impl Worker {
 
     fn pass_1_derive_begin_anchor(
         &mut self,
+        collector: &mut Collector,
         asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,
@@ -336,6 +335,7 @@ impl Worker {
 
     fn pass_1_inline_begin_anchor(
         &mut self,
+        collector: &mut Collector,
         asm: &utils::AnchorStateManager,
         parameters: &Parameters,
         arguments: &Arguments,

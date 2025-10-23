@@ -259,7 +259,7 @@ impl Worker {
                 return Ok(Some(collector));
             }
             None => {
-                // Could not collect everything in pass_1, need to do pass_2 to modify context and trigger another pass_1
+                // Could not collect everything in pass_1, need to trigger another step
                 tracing::debug!(
                     "Worker::execute_step could not collect from pass_1 for path: {:?}",
                     context_path

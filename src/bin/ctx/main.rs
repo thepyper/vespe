@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use vespe::project::Project;
 mod watch;
 use tracing::debug;
-use vespe::project::Project;
 
 use handlebars::Handlebars;
 use serde_json::json;
@@ -163,11 +162,8 @@ fn main() -> Result<()> {
             let project = Project::init(&project_path)?;
             println!(
                 "Initialized new .ctx project at: {}",
-                project.path_res.project_home().display()
+                project_path.display()
             );
-
-            let _ctx_dir = project.path_res.project_home();
-
         }
         Commands::Context { command } => {
             let project = Project::find(&project_path)?;
@@ -198,12 +194,8 @@ fn main() -> Result<()> {
                 }
                 ContextCommands::Execute { name, today } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
-                    println!("Executing context '{}'...", context_name);
-                    let agent = ShellAgentCall::new(
-                        "gemini -p -y -m gemini-2.5-flash".to_string(),
-                        &project,
-                    )?;
-                    project.execute_context(&context_name, &agent)?;
+                    println!("Executing context '{}'...", context_name);                    
+                    project.execute_context(&context_name)?;
                     println!("Context '{}' executed successfully.", context_name);
                 }
                 ContextCommands::List {} => {
@@ -225,9 +217,7 @@ fn main() -> Result<()> {
         }
         Commands::Watch {} => {
             let project = Project::find(&project_path)?;
-            let agent =
-                ShellAgentCall::new("gemini -p -y -m gemini-2.5-flash".to_string(), &project)?;
-            watch::watch(&project, &agent)?;
+            watch::watch(&project)?;
         }
     }
 

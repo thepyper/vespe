@@ -27,8 +27,8 @@ pub struct ContextInfo {
 pub struct Project {
     //root_path: PathBuf,
     editor_interface: Option<Arc<dyn EditorCommunicator>>,
-    file_access: Arc<Box<ProjectFileAccessor>>,
-    path_res: Arc<Box<ProjectPathResolver>>,
+    file_access: Arc<ProjectFileAccessor>,
+    path_res: Arc<ProjectPathResolver>,
     project_config: ProjectConfig,
 }
 
@@ -80,8 +80,8 @@ impl Project {
                         _ => None,
                     };
 
-                let file_access = Arc::new(Box::new(ProjectFileAccessor::new(editor_interface.clone().map(|e| e.clone()))));
-                let path_res = Arc::new(Box::new(ProjectPathResolver::new(root_path.clone())));
+                let file_access = Arc::new(ProjectFileAccessor::new(editor_interface.clone()));
+                let path_res = Arc::new(ProjectPathResolver::new(root_path.clone()));
 
                 return Ok(Project {
                     editor_interface,
@@ -97,6 +97,19 @@ impl Project {
         }
 
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
+    }
+
+    pub fn execute_context(&self, context_name: &str) -> Result<()> {        
+        crate::execute2::execute_context(self.file_access.clone(), self.path_res.clone(), context_name)?;
+        Ok(())
+    }
+
+    pub fn project_home(&self) -> PathBuf {
+        self.path_res.project_home()
+    }
+
+    pub fn contexts_root(&self) -> PathBuf {
+        self.path_res.contexts_root()
     }
 
     // TODO remove

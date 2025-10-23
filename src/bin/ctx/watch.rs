@@ -1,20 +1,21 @@
 use anyhow::Result;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 use tracing::{debug, error, info};
+use crate::Project;
 
-pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
+pub fn watch(project: &Project) -> Result<()> {
     println!("Starting watch mode...");
 
     // Initial execution on all context files
-    initial_execute_all_contexts(project, agent)?;
+    initial_execute_all_contexts(project)?;
 
     // Setup file watcher
     let (tx, rx) = channel();
     let mut watcher = RecommendedWatcher::new(tx, notify::Config::default())?;
-    let contexts_dir = project.path_res.contexts_root();
+    let contexts_dir = project.contexts_root();
     watcher.watch(contexts_dir.as_ref(), RecursiveMode::Recursive)?;
 
     println!("Watching for changes in: {}", contexts_dir.display());
@@ -47,7 +48,7 @@ pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
                                 "Change detected in context file: {}. Re-executing...",
                                 context_name
                             );
-                            if let Err(e) = project.execute_context(&context_name, agent) {
+                            if let Err(e) = project.execute_context(&context_name) {
                                 eprintln!("Error executing context {}: {}", context_name, e);
                             }
                         }
@@ -68,15 +69,9 @@ pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
     Ok(())
 }
 
-fn initial_execute_all_contexts(project: &Project, agent: &ShellAgentCall) -> Result<()> {
-    println!("Performing initial execution on all context files...");
-    let contexts = project.list_contexts()?;
-    for context in contexts {
-        println!("  Executing initial context: {}", context.name);
-        if let Err(e) = project.execute_context(&context.name, agent) {
-            eprintln!("Error executing initial context {}: {}", context.name, e);
-        }
-    }
+fn initial_execute_all_contexts(project: &Project) -> Result<()> {
+    // TODO redo!!!
+    println!("TODOOOOOOOOOOOOOOOOO...");
     Ok(())
 }
 

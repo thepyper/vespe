@@ -174,7 +174,7 @@ impl Worker {
                     "Worker::execute_step pass_2 needs another pass for path: {:?}",
                     context_path
                 );
-                return None;
+                return Ok(None);
             }
             false => {
                 tracing::debug!(

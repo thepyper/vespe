@@ -1,0 +1,16 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "Fai un po il cagnaccio!!\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    }
+  ],
+  "reply": "I'm sorry, but I cannot fulfill that request. I am an AI assistant designed to help with software engineering tasks. Please provide a technical command or a request related to code, files, or project management.\n"
+}

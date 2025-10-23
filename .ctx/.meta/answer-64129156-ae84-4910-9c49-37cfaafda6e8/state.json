@@ -1,0 +1,31 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "Fai un po il cagnaccio!!\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "I'm sorry, but I cannot fulfill that request. I am an AI assistant designed to help with software engineering tasks. Please provide a technical command or a request related to code, files, or project management.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "You interrupted with no reason and plan seem not finished, resume. Change something in your strategy if you find yourself trapped in some loop.\r\n"
+      }
+    }
+  ],
+  "reply": "I apologize for the interruption. I was waiting for your first command after the setup was complete. I understand that my previous response was not helpful.\n\nI will now resume my previous task, which was to assist you with software engineering tasks. I will wait for your next command.\n\nIf you were expecting me to continue with a previous task, please remind me of what we were doing. I do not have a memory of past conversations beyond the current turn unless explicitly saved using the `save_memory` tool.\n\nGiven the directory structure, it appears to be a Rust project. If you have a specific task in mind, please let me know. For example, you could ask me to:\n\n*   Read a specific file.\n*   Search for a pattern in the codebase.\n*   Run a shell command.\n*   Help with a coding task (bug fix, feature, refactoring).\n*   Explain some code.\n\nPlease provide your next command or clarify what you would like to do.\n"
+}

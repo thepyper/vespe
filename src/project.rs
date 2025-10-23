@@ -1,6 +1,8 @@
-use crate::agent::ShellAgentCall;
 use crate::git::Commit;
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME, CONTEXTS_DIR_NAME};
+use crate::file::ProjectFileAccessor;
+use crate::path::{ProjectPathResolver, PathResolver};
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
@@ -24,9 +26,9 @@ pub struct ContextInfo {
 
 pub struct Project {
     //root_path: PathBuf,
-    editor_interface: Option<Box<dyn EditorCommunicator>>,
+    editor_interface: Option<Arc<dyn EditorCommunicator>>,
     file_access: Arc<Box<ProjectFileAccessor>>,
-    path_res: Arx<Box<ProjectFileAccessor>>,
+    path_res: Arc<Box<ProjectPathResolver>>,
     project_config: ProjectConfig,
 }
 
@@ -70,16 +72,16 @@ impl Project {
                 let project_config = Self::load_project_config(&project_config_path)?;
 
                 let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
-                let editor_interface : Option<Box<dyn EditorCommunicator>> =
+                let editor_interface : Option<Arc<dyn EditorCommunicator>> =
                     match project_config.editor_interface {
                         EditorInterface::VSCode => {
-                            Some(Box::new(FileBasedEditorCommunicator::new(&editor_path)?))
+                            Some(Arc::new(FileBasedEditorCommunicator::new(&editor_path)?) as Arc<dyn EditorCommunicator>)
                         }
                         _ => None,
                     };
 
-                let file_access = Arc::new(Box::new(file::ProjectFileAccessor::new(editor_interface.clone())));
-                let path_res = Arc::new(Box::new(path::ProjectPathResolver::new(root_path.clone())));
+                let file_access = Arc::new(Box::new(ProjectFileAccessor::new(editor_interface.clone().map(|e| e.clone()))));
+                let path_res = Arc::new(Box::new(ProjectPathResolver::new(root_path.clone())));
 
                 return Ok(Project {
                     editor_interface,
@@ -151,7 +153,7 @@ impl Project {
         name: &str,
         initial_content: Option<String>,
     ) -> Result<PathBuf> {
-        let file_path = self.path_res.resolve_context(name);
+        let file_path = self.path_res.resolve_context(name)?;
         if file_path.exists() {
             anyhow::bail!("Context file already exists: {}", file_path.display());
         }

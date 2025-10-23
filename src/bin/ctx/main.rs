@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use vespe::project::Project;
 mod watch;
 use tracing::debug;
-use vespe::agent::ShellAgentCall;
+use vespe::project::Project;
 
 use handlebars::Handlebars;
 use serde_json::json;
@@ -163,10 +163,10 @@ fn main() -> Result<()> {
             let project = Project::init(&project_path)?;
             println!(
                 "Initialized new .ctx project at: {}",
-                project.project_home().display()
+                project.path_res.project_home().display()
             );
 
-            let _ctx_dir = project.project_home();
+            let _ctx_dir = project.path_res.project_home();
 
         }
         Commands::Context { command } => {

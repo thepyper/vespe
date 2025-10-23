@@ -16,7 +16,7 @@ pub struct ProjectPathResolver {
 }
 
 impl ProjectPathResolver {
-    fn new(root_path: PathBuf) -> Self {
+    pub fn new(root_path: PathBuf) -> Self {
         ProjectPathResolver {
             root_path
         }

@@ -4,9 +4,9 @@ use std::process::{Command, Stdio};
 use std::thread;
 use tracing::{debug, error};
 
-pub fn shell_call(command: &str, input: &str) -> anyhow::Result<String> {
+pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String> {
     
-    let mut command_parts = command.command_template.split_whitespace();
+    let mut command_parts = command_template.split_whitespace();
     let program = command_parts
         .next()
         .context("Command template cannot be empty")?;
@@ -34,7 +34,7 @@ pub fn shell_call(command: &str, input: &str) -> anyhow::Result<String> {
     let mut child = command.spawn().with_context(|| {
         format!(
             "Failed to spawn command: '{}'. Is it in your PATH?",
-            self.command_template
+            command_template
         )
     })?;
 
@@ -103,12 +103,12 @@ pub fn shell_call(command: &str, input: &str) -> anyhow::Result<String> {
     if !status.success() {
         error!(
             "Command '{}' failed: {:?}",
-            self.command_template,
+            command_template,
             String::from_utf8_lossy(&full_stderr)
         );
         anyhow::bail!(
             "Command '{}' failed: {:?}",
-            self.command_template,
+            command_template,
             String::from_utf8_lossy(&full_stderr)
         );
     }

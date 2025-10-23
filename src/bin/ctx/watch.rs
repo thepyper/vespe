@@ -1,12 +1,9 @@
 use anyhow::Result;
-use ctrlc;
-use notify::{RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::Path;
+use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
+use std::path::PathBuf;
 use std::sync::mpsc::channel;
 use std::time::Duration;
-
-use vespe::agent::ShellAgentCall;
-use vespe::project::Project;
+use tracing::{debug, error, info};
 
 pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
     println!("Starting watch mode...");
@@ -17,7 +14,7 @@ pub fn watch(project: &Project, agent: &ShellAgentCall) -> Result<()> {
     // Setup file watcher
     let (tx, rx) = channel();
     let mut watcher = RecommendedWatcher::new(tx, notify::Config::default())?;
-    let contexts_dir = project.contexts_root();
+    let contexts_dir = project.path_res.contexts_root();
     watcher.watch(contexts_dir.as_ref(), RecursiveMode::Recursive)?;
 
     println!("Watching for changes in: {}", contexts_dir.display());

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 use std::collections::HashSet;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use uuid::{uuid, Uuid};
 
 use super::editor::EditorCommunicator;
@@ -28,13 +28,13 @@ struct ProjectFileAccessorMutable
 
 pub struct ProjectFileAccessor {
     /// Editor interface to use
-    editor_interface: Option<Box<dyn EditorCommunicator>>,
+    editor_interface: Option<Arc<dyn EditorCommunicator>>,
     /// Mutable part of the struct to allow fine-grained lock strategy, only lock when needed
     mutable: Mutex<ProjectFileAccessorMutable>,
 }
 
 impl ProjectFileAccessor {
-    pub fn new(editor_interface: Option<Box<dyn EditorCommunicator>>) -> Self {
+    pub fn new(editor_interface: Option<Arc<dyn EditorCommunicator>>) -> Self {
         ProjectFileAccessor {
             editor_interface,
             mutable: Mutex::new(

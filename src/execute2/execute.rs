@@ -323,7 +323,7 @@ impl Worker {
         }
     }
 
-    fn pass_2_normal_tag<S: State + 'static>(
+    fn pass_2_normal_tag<S: State + 'static + serde::Serialize>(
         &mut self,
         command_kind: CommandKind,
         patches: &mut utils::Patches,

@@ -17,7 +17,7 @@ use crate::path::PathResolver;
 use super::*;
 
 use crate::execute2::content::ModelContentItem;
-use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
+use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState, ChooseState, DecideState};
 use crate::execute2::variables::Variables;
 
 /// Executes a context and all its dependencies, processing all commands.
@@ -404,6 +404,22 @@ impl Worker {
                     anchor,
                 )
             }
+            (CommandKind::Decide, AnchorKind::Begin) => {
+                tracing::debug!("Worker::pass_1_anchor calling pass_1_decide_begin_anchor");
+                self.pass_1_decide_begin_anchor(
+                    collector,
+                    &asm,
+                    anchor,
+                )
+            }
+            (CommandKind::Choose, AnchorKind::Begin) => {
+                tracing::debug!("Worker::pass_1_anchor calling pass_1_choose_begin_anchor");
+                self.pass_1_choose_begin_anchor(
+                    collector,
+                    &asm,
+                    anchor,
+                )
+            }
             (CommandKind::Derive, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_derive_begin_anchor");
                 self.pass_1_derive_begin_anchor(
@@ -483,6 +499,72 @@ impl Worker {
                 // Update variables locally for this answer
                 let collector = collector.update(&anchor.parameters);
                 state.reply = self.call_model(&collector, vec![state.query.clone()])?;
+                state.status = AnchorStatus::NeedInjection;
+                asm.save_state(&state, None)?;
+                Ok(None)
+            }
+            _ => Ok(Some(collector)),
+        }
+    }
+    
+    fn pass_1_decide_begin_anchor(
+        &self,
+        collector: Collector,
+        asm: &utils::AnchorStateManager,
+        anchor: &Anchor,
+    ) -> Result<Option<Collector>> {
+        let mut state: DecideState = asm.load_state()?;
+        match state.status {
+            AnchorStatus::JustCreated => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
+                state.query = collector.context.clone();
+                state.status = AnchorStatus::NeedProcessing;
+                asm.save_state(&state, None)?;
+                Ok(None)
+            }
+            AnchorStatus::NeedProcessing => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
+                // Update variables locally for this answer
+                let collector = collector.update(&anchor.parameters);
+                // TODO append decision-specific prompt
+                state.reply = self.call_model(&collector, vec![state.query.clone()])?;
+                state.status = AnchorStatus::NeedInjection;
+                asm.save_state(&state, None)?;
+                Ok(None)
+            }
+            _ => Ok(Some(collector)),
+        }
+    }
+    
+    fn pass_1_choose_begin_anchor(
+        &self,
+        collector: Collector,
+        asm: &utils::AnchorStateManager,
+        anchor: &Anchor,
+    ) -> Result<Option<Collector>> {
+        let mut state: ChooseState = asm.load_state()?;
+        match state.status {
+            AnchorStatus::JustCreated => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
+                state.query = collector.context.clone();
+                state.status = AnchorStatus::NeedProcessing;
+                asm.save_state(&state, None)?;
+                Ok(None)
+            }
+            AnchorStatus::NeedProcessing => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
+                // Update variables locally for this answer
+                let collector = collector.update(&anchor.parameters);
+                state.reply = self.call_model(&collector, vec![state.query.clone()])?;
+                // TODO append decision-specific prompt
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(None)

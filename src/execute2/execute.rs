@@ -8,6 +8,7 @@ use anyhow::Result;
 use std::collections::{self, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use uuid::Uuid;
 
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
@@ -82,6 +83,8 @@ pub fn collect_context(
 struct Collector {
     /// A stack of visited context file paths to detect and prevent circular includes.
     visit_stack: Vec<PathBuf>,
+    /// A stack of entered anchors in current context file
+    anchor_stack: Vec<Uuid>,
     /// The accumulated content that will be sent to the model.
     context: ModelContent,
     /// Execution-time variables and settings.
@@ -98,6 +101,7 @@ impl Collector {
     fn new(can_execute: bool) -> Self {
         Collector {
             visit_stack: Vec::new(),
+            anchor_stack: Vec::new(),
             context: ModelContent::new(),
             variables: Variables::new(),
             can_execute,
@@ -118,6 +122,7 @@ impl Collector {
         visit_stack.push(context_path.to_path_buf());
         Some(Collector {
             visit_stack,
+            anchor_stack: Vec::new(),
             context: ModelContent::new(),
             variables: self.variables.clone(),
             can_execute: self.can_execute,
@@ -133,7 +138,20 @@ impl Collector {
         collector.variables = collector.variables.update(parameters);
         collector
     }
-   
+ 
+    // TODO doc (entra in anchor)
+    fn enter(&self, uuid: &Uuid) -> Self {
+        let mut collector = self.clone();
+        collector.anchor_stack.push(*uuid);
+        collector
+    }
+
+    // TODO doc (esci da anchor)
+    fn exit(&self) -> Result<Self> {
+        let mut collector = self.clone();
+        collector.anchor_stack.pop().ok_or_else(|| anyhow::anyhow!("Pop on empty stack!?"))?;
+        Ok(collector)
+    }
 }
 
 /// The stateless engine that drives the context execution.
@@ -374,6 +392,11 @@ impl Worker {
             anchor.command,
             anchor.kind
         );
+        // Update collector anchor stack
+        let collector = match anchor.kind {
+            AnchorKind::Begin => collector.enter(&anchor.uuid),
+            AnchorKind::End => collector.exit()?,
+        };
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
         match (&anchor.command, &anchor.kind) {

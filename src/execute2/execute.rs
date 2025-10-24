@@ -601,7 +601,7 @@ impl Worker {
         for item in &ast.content {
             match item {
                 crate::ast2::Content::Tag(tag) => {
-                    if self.pass_2_tag(patches, tag)? {
+                    if self.pass_2_tag(patches, &anchor_index, tag)? {
                         return Ok(true);
                     }
                 }
@@ -634,7 +634,7 @@ impl Worker {
         Ok(false)
     }
 
-    fn pass_2_tag(&self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
+    fn pass_2_tag(&self, patches: &mut utils::Patches, anchor_index: &utils::AnchorIndex, tag: &Tag) -> Result<bool> {
         match tag.command {
             CommandKind::Answer => self.pass_2_normal_tag::<AnswerState>(
                 patches,
@@ -646,6 +646,11 @@ impl Worker {
             ),
             CommandKind::Inline => self.pass_2_normal_tag::<InlineState>(
                 patches,
+                tag,
+            ),
+            CommandKind::Repeat => self.pass_2_repeat_tag(
+                patches,
+                anchor_index,
                 tag,
             ),
             _ => Ok(false),
@@ -663,6 +668,15 @@ impl Worker {
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
         asm.save_state(&S::new(), None)?;
         Ok(true)
+    }
+
+     fn pass_2_repeat_tag(
+        &self,
+        patches: &mut utils::Patches,
+        anchor_index: &utils::AnchorIndex,
+        tag: &Tag,
+    ) -> Result<bool> {
+        unimplemented!(); // TODO
     }
 
     fn pass_2_anchors(

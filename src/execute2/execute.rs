@@ -635,7 +635,7 @@ impl Worker {
         for item in &ast.content {
             match item {
                 crate::ast2::Content::Tag(tag) => {
-                    if self.pass_2_tag(patches, &anchor_index, tag)? {
+                    if self.pass_2_tag(patches, tag)? {
                         return Ok(true);
                     }
                 }
@@ -668,7 +668,7 @@ impl Worker {
         Ok(false)
     }
 
-    fn pass_2_tag(&self, patches: &mut utils::Patches, anchor_index: &utils::AnchorIndex, tag: &Tag) -> Result<bool> {
+    fn pass_2_tag(&self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
         match tag.command {
             CommandKind::Answer => self.pass_2_normal_tag::<AnswerState>(
                 patches,

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::ModelContent;
+
 
 /// A trait for objects that represent the persistent state of an anchor command.
 ///
@@ -119,4 +121,11 @@ impl State for DeriveState {
     fn set_status(&mut self, status: AnchorStatus) {
         self.status = status;
     }
+}
+
+/// The persistent state for a `@repeat` command.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RepeatState {
+    pub status: AnchorStatus,
+    pub wrapper_uuid: Uuid,
 }

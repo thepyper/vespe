@@ -365,6 +365,7 @@ impl Worker {
     fn pass1_set_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {        
         Ok(collector.update(&tag.parameters))
     }
+
     /// Processes anchors and dispatches them to the appropriate handler based on their command.
     /// This is the entry point for triggering the state machines for `@answer`, `@derive`, etc.
     fn pass_1_anchor(&self, collector: Collector, anchor: &Anchor) -> Result<Option<Collector>> {
@@ -381,8 +382,7 @@ impl Worker {
                 self.pass_1_answer_begin_anchor(
                     collector,
                     &asm,
-                    &anchor.parameters,
-                    &anchor.arguments,
+                    anchor,
                 )
             }
             (CommandKind::Derive, AnchorKind::Begin) => {
@@ -390,8 +390,7 @@ impl Worker {
                 self.pass_1_derive_begin_anchor(
                     collector,
                     &asm,
-                    &anchor.parameters,
-                    &anchor.arguments,
+                    anchor,
                 )
             }
             (CommandKind::Inline, AnchorKind::Begin) => {
@@ -399,8 +398,7 @@ impl Worker {
                 self.pass_1_inline_begin_anchor(
                     collector,
                     &asm,
-                    &anchor.parameters,
-                    &anchor.arguments,
+                    anchor,
                 )
             }
             _ => {
@@ -418,8 +416,7 @@ impl Worker {
         &self,
         collector: Collector,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        _arguments: &Arguments,
+        anchor: &Anchor,
     ) -> Result<Option<Collector>> {
         let mut state: AnswerState = asm.load_state()?;
         match state.status {
@@ -437,7 +434,7 @@ impl Worker {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
                 // Update variables locally for this answer
-                let collector = collector.update(parameters);
+                let collector = collector.update(&anchor.parameters);
                 state.reply = self.call_model(&collector, vec![state.query.clone()])?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
@@ -451,8 +448,7 @@ impl Worker {
         &self,
         collector: Collector,
         asm: &utils::AnchorStateManager,
-        parameters: &Parameters,
-        arguments: &Arguments,
+        anchor: &Anchor,
     ) -> Result<Option<Collector>> {
         let mut state: DeriveState = asm.load_state()?;
         match state.status {
@@ -460,13 +456,13 @@ impl Worker {
                 if !collector.can_execute {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
-                state.instruction_context_name = arguments
+                state.instruction_context_name = anchor.arguments
                     .arguments
                     .get(0)
                     .ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?
                     .value
                     .clone();
-                state.input_context_name = arguments
+                state.input_context_name = anchor.arguments
                     .arguments
                     .get(1)
                     .ok_or_else(|| anyhow::anyhow!("Missing input context name"))?
@@ -491,7 +487,7 @@ impl Worker {
                     &state.input_context_name,
                 )?;
                 // Update variables locally for this derive
-                let collector = collector.update(parameters);
+                let collector = collector.update(&anchor.parameters);
                 // call llm to derive
                 state.derived = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;
@@ -506,8 +502,7 @@ impl Worker {
         &self,
         collector: Collector,
         asm: &utils::AnchorStateManager,
-        _parameters: &Parameters,
-        arguments: &Arguments,
+        anchor: &Anchor,
     ) -> Result<Option<Collector>> {
         let mut state: InlineState = asm.load_state()?;
         match state.status {
@@ -515,7 +510,7 @@ impl Worker {
                 if !collector.can_execute {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
-                state.context_name = arguments
+                state.context_name = anchor.arguments
                     .arguments
                     .get(0)
                     .ok_or_else(|| anyhow::anyhow!("Missing context name"))?
@@ -619,25 +614,16 @@ impl Worker {
     fn pass_2_tag(&self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
         match tag.command {
             CommandKind::Answer => self.pass_2_normal_tag::<AnswerState>(
-                tag.command,
                 patches,
-                &tag.parameters,
-                &tag.arguments,
-                &tag.range,
+                tag,
             ),
             CommandKind::Derive => self.pass_2_normal_tag::<DeriveState>(
-                tag.command,
                 patches,
-                &tag.parameters,
-                &tag.arguments,
-                &tag.range,
+                tag,
             ),
             CommandKind::Inline => self.pass_2_normal_tag::<InlineState>(
-                tag.command,
                 patches,
-                &tag.parameters,
-                &tag.arguments,
-                &tag.range,
+                tag,
             ),
             _ => Ok(false),
         }
@@ -645,14 +631,11 @@ impl Worker {
 
     fn pass_2_normal_tag<S: State + 'static + serde::Serialize>(
         &self,
-        command_kind: CommandKind,
         patches: &mut utils::Patches,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        range: &Range,
+        tag: &Tag,
     ) -> Result<bool> {
-        let (a0, a1) = Anchor::new_couple(command_kind, parameters, arguments);
-        patches.add_patch(range, &format!("{}\n{}\n", a0.to_string(), a1.to_string()));
+        let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
+        patches.add_patch(&tag.range, &format!("{}\n{}\n", a0.to_string(), a1.to_string()));
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
         asm.save_state(&S::new(), None)?;
@@ -679,10 +662,8 @@ impl Worker {
                 self.pass_2_normal_begin_anchor::<AnswerState>(
                     patches,
                     &asm,
-                    &a0.parameters,
-                    &a0.arguments,
-                    &a0.range,
-                    &a1.range,
+                    a0,
+                    a1,
                 )
             }
             CommandKind::Derive => {
@@ -692,10 +673,8 @@ impl Worker {
                 self.pass_2_normal_begin_anchor::<DeriveState>(
                     patches,
                     &asm,
-                    &a0.parameters,
-                    &a0.arguments,
-                    &a0.range,
-                    &a1.range,
+                    a0,
+                    a1,
                 )
             }
             CommandKind::Inline => {
@@ -705,10 +684,8 @@ impl Worker {
                 self.pass_2_normal_begin_anchor::<InlineState>(
                     patches,
                     &asm,
-                    &a0.parameters,
-                    &a0.arguments,
-                    &a0.range,
-                    &a1.range,
+                    a0,
+                    a1,
                 )
             }
             _ => {
@@ -725,17 +702,15 @@ impl Worker {
         &self,
         patches: &mut utils::Patches,
         asm: &utils::AnchorStateManager,
-        _parameters: &Parameters,
-        _arguments: &Arguments,
-        range_begin: &Range,
-        range_end: &Range,
+        a0: &Anchor, 
+        a1: &Anchor,
     ) -> Result<bool> {
         let mut state: S = asm.load_state()?;
         match state.get_status() {
             AnchorStatus::NeedInjection => {
                 let range = Range {
-                    begin: range_begin.end.clone(),
-                    end: range_end.begin.clone(),
+                    begin: a0.range.end.clone(),
+                    end: a1.range.begin.clone(),
                 };
                 patches.add_patch(&range, &state.output());
                 state.set_status(AnchorStatus::Completed);

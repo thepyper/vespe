@@ -295,6 +295,17 @@ impl Anchor {
             range: Range::null(),
         }
     }
+    /// Create a new anchor from an existing one taking values from Parameters
+    pub fn update(&self, parameters: &Parameters) -> Self {
+        let mut anchor = self.clone();
+        for parameter in parameters.parameters.iter() {
+            anchor
+                .parameters
+                .parameters
+                .insert(parameter.0.clone(), parameter.1.clone());
+        }
+        anchor
+    }
 }
 
 impl ToString for Anchor {

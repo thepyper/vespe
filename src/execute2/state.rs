@@ -134,14 +134,14 @@ impl State for DeriveState {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepeatState {
     pub status: AnchorStatus,
-    pub wrapper: Anchor,
+    pub wrapper: Uuid,
 }
 
 impl State for RepeatState {
     fn new() -> Self {
         RepeatState {
             status: AnchorStatus::JustCreated,
-            wrapper: Anchor::invalid(),
+            wrapper: uuid::uuid!("00000000-0000-0000-0000-000000000000"),
         }
     }
     fn get_status(&self) -> &AnchorStatus {

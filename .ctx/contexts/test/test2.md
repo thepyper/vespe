@@ -1,13 +1,8 @@
 
-<!-- inline-94caa27a-08a2-4277-990c-f68abd40067a:begin  go_on -->
-You interrupted with no reason and plan seem not finished, resume. Change something in your strategy if you find yourself trapped in some loop.
-<!-- answer-0aba065f-6fb0-4c43-9ab8-67dcbc396775:begin   -->
-<!-- answer-0aba065f-6fb0-4c43-9ab8-67dcbc396775:end   -->
-<!-- inline-94caa27a-08a2-4277-990c-f68abd40067a:end   -->
-
 Fai un po il cagnaccio!!
 
-<!-- answer-1385d8a0-c35a-4eea-b279-ee8b79439dd0:begin   -->
+<!-- answer-1385d8a0-c35a-4eea-b279-ee8b79439dd0:begin [cane="hahaha",output="test/test2_outut"]  -->
+Setup complete. I'm ready for your first command.
 <!-- answer-1385d8a0-c35a-4eea-b279-ee8b79439dd0:end   -->
 
 E se il grillo salta?

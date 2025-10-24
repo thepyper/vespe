@@ -1,5 +1,5 @@
 use crate::ast2::{
-    Anchor, AnchorKind, Arguments, CommandKind, Document, Parameters, Range, Tag, Text,
+    Content, Anchor, AnchorKind, Arguments, CommandKind, Document, Parameters, Range, Tag, Text,
 };
 use crate::path;
 use crate::utils;
@@ -593,43 +593,18 @@ impl Worker {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
                 if let Some(x) = collector.anchor_stack.last() {
-                    state.wrapper = x.clone();
+                    // Mutate wrapper anchor
+                    state.wrapper = x.uuid;
                 } else {
                     return Err(anyhow::anyhow!("@repeat not wrapped by an existing anchor"));
                 } 
-                // Update wrapper's status
-                match state.wrapper.command {
-                    CommandKind::Answer => {
-                        self.pass_1_set_anchor_to_repeat_state::<AnswerState>(&state.wrapper)?;
-                    }
-                    CommandKind::Derive => {
-                        self.pass_1_set_anchor_to_repeat_state::<DeriveState>(&state.wrapper)?;
-                    }
-                    CommandKind::Inline => {
-                        self.pass_1_set_anchor_to_repeat_state::<InlineState>(&state.wrapper)?;
-                    }
-                    _ => {
-                        return Err(anyhow::anyhow!("@repeat is wrapped by non-repeatable anchor"));
-                    }
-                }
-                state.status = AnchorStatus::Completed;
+                
+                state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(None)
             }
             _ => Ok(Some(collector)),
         }
-    }
-
-    fn pass_1_set_anchor_to_repeat_state<S: State + 'static>(
-        &self,
-        anchor: &Anchor,
-    ) -> Result<()> {
-        let asm =
-            utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
-        let mut state: S = asm.load_state()?;
-        state.set_status(AnchorStatus::NeedRepeat);
-        asm.save_state(&state, None)?;
-        Ok(())
     }
 
     /// **Pass 2**: Injects completed content into files.
@@ -693,7 +668,7 @@ impl Worker {
                         match a1 {
                             crate::ast2::Content::Anchor(a1) => match a1.kind {
                                 AnchorKind::End => {
-                                    if self.pass_2_anchors(patches, a0, a1)? {
+                                    if self.pass_2_anchors(patches, ast, &anchor_index, a0, a1)? {
                                         return Ok(true);
                                     }
                                 }
@@ -748,6 +723,8 @@ impl Worker {
     fn pass_2_anchors(
         &self,
         patches: &mut utils::Patches,
+        ast: &Document,
+        anchor_index: &utils::AnchorIndex,
         a0: &Anchor,
         a1: &Anchor,
     ) -> Result<bool> {
@@ -791,6 +768,19 @@ impl Worker {
                     a1,
                 )
             }           
+            CommandKind::Repeat => {
+                tracing::debug!(
+                    "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Repeat"
+                );
+                self.pass_2_repeat_begin_anchor(
+                    patches,
+                    &asm,
+                    ast,
+                    anchor_index,
+                    a0,
+                    a1,
+                )
+            }
             _ => {
                 tracing::debug!(
                     "Worker::pass_2_anchors not handling command: {:?}",
@@ -832,5 +822,63 @@ impl Worker {
             }
             _ => Ok(false),
         }
-    }    
+    }   
+
+    fn pass_2_repeat_begin_anchor(
+        &self,
+        patches: &mut utils::Patches,
+        asm: &utils::AnchorStateManager,
+        ast: &Document,
+        anchor_index: &utils::AnchorIndex,
+        a0: &Anchor, 
+        a1: &Anchor,
+    ) -> Result<bool> {
+        let mut state: RepeatState = asm.load_state()?;
+        match state.status {
+            AnchorStatus::NeedInjection => {
+                let wrapper = anchor_index.get_begin(&state.wrapper)
+                    .ok_or_else(|| anyhow::anyhow!("@repeat wrapper begin anchor not found"))?;
+                let wrapper = ast.content
+                    .get(wrapper)
+                    .ok_or_else(|| anyhow::anyhow!("@repeat wrapper begin anchor bad index"))?;
+                let Content::Anchor(wrapper) = wrapper else {
+                    return Err(anyhow::anyhow!("@repeat wrapper begin anchor bad content"));
+                };
+                let wrapper_mutated = wrapper.update(&a0.parameters);
+                patches.add_patch(&wrapper_mutated.range, &format!("{}\n", &wrapper_mutated.to_string()));
+                // Update wrapper's status
+                match wrapper.command {
+                    CommandKind::Answer => {
+                        self.pass_2_set_anchor_to_repeat_state::<AnswerState>(&wrapper)?;
+                    }
+                    CommandKind::Derive => {
+                        self.pass_2_set_anchor_to_repeat_state::<DeriveState>(&wrapper)?;
+                    }
+                    CommandKind::Inline => {
+                        self.pass_2_set_anchor_to_repeat_state::<InlineState>(&wrapper)?;
+                    }
+                    _ => {
+                        return Err(anyhow::anyhow!("@repeat is wrapped by non-repeatable anchor"));
+                    }
+                }
+                // Mark repeat as completed
+                state.status = AnchorStatus::Completed;
+                asm.save_state(&state, None)?;
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    } 
+    
+    fn pass_2_set_anchor_to_repeat_state<S: State + 'static>(
+        &self,
+        anchor: &Anchor,
+    ) -> Result<()> {
+        let asm =
+            utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
+        let mut state: S = asm.load_state()?;
+        state.set_status(AnchorStatus::NeedRepeat);
+        asm.save_state(&state, None)?;
+        Ok(())
+    }
 }

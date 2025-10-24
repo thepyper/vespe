@@ -13,7 +13,15 @@ pub enum OutputMode {
 }
 
 impl FromStr for OutputMode {
-    // TODO
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "here" => Ok(OutputMode::Here),
+            "append" => Ok(OutputMode::Append),
+            "overwrite" => Ok(OutputMode::Overwrite),
+            _ => Err(()),
+        }
+    }
 }
 
 /// Holds variables and configuration settings available during the execution of a context.
@@ -47,10 +55,10 @@ impl Variables {
             variables.provider = x.to_string();
         }
         if let Some(x) = parameters.parameters.get("output_mode") {
-            variables.output_mode = x.to_string().into();
+            variables.output_mode = x.to_string().parse::<OutputMode>().unwrap_or(OutputMode::Here);
         }
         if let Some(x) = parameters.parameters.get("output") {
-            variables.provider = x.to_string();
+            variables.output = x.to_string();
         }
         variables
     }

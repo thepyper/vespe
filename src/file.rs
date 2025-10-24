@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use uuid::{uuid, Uuid};
+use tracing::error;
 
 use super::editor::EditorCommunicator;
 
@@ -90,5 +91,34 @@ impl FileAccessor for ProjectFileAccessor {
             mutable.modified_files_comments.push(comment.into());
         }
         Ok(())
+    }
+}
+
+
+/// A RAII guard to ensure a file lock is released.
+pub struct FileLock {
+    file_access: Arc<dyn FileAccessor>,
+    lock_id: Option<Uuid>,
+}
+
+impl FileLock {
+    /// Creates a new `FileLock`, acquiring a lock on the given path.
+    pub fn new(file_access: Arc<dyn FileAccessor>, path: &Path) -> Result<Self> {
+        let lock_id = file_access.lock_file(path)?;
+        Ok(Self {
+            file_access,
+            lock_id: Some(lock_id),
+        })
+    }
+}
+
+impl Drop for FileLock {
+    /// Releases the file lock when the `FileLock` goes out of scope.
+    fn drop(&mut self) {
+        if let Some(lock_id) = self.lock_id.take() {
+            if let Err(e) = self.file_access.unlock_file(&lock_id) {
+                tracing::error!("Failed to unlock file with id {}: {}", lock_id, e);
+            }
+        }
     }
 }

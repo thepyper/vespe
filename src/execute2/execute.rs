@@ -20,34 +20,6 @@ use crate::execute2::content::ModelContentItem;
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState};
 use crate::execute2::variables::Variables;
 
-/// A RAII guard to ensure a file lock is released.
-struct FileLock {
-    file_access: Arc<dyn file::FileAccessor>,
-    lock_id: Option<Uuid>,
-}
-
-impl FileLock {
-    /// Creates a new `FileLock`, acquiring a lock on the given path.
-    fn new(file_access: Arc<dyn file::FileAccessor>, path: &Path) -> Result<Self> {
-        let lock_id = file_access.lock_file(path)?;
-        Ok(Self {
-            file_access,
-            lock_id: Some(lock_id),
-        })
-    }
-}
-
-impl Drop for FileLock {
-    /// Releases the file lock when the `FileLock` goes out of scope.
-    fn drop(&mut self) {
-        if let Some(lock_id) = self.lock_id.take() {
-            if let Err(e) = self.file_access.unlock_file(&lock_id) {
-                tracing::error!("Failed to unlock file with id {}: {}", lock_id, e);
-            }
-        }
-    }
-}
-
 /// Executes a context and all its dependencies, processing all commands.
 ///
 /// This function orchestrates the full, multi-pass execution of a context file.
@@ -650,7 +622,7 @@ impl Worker {
     /// has changed. Returns `Ok(false)` if no changes were made.
     fn pass_2(&self, context_path: &Path) -> Result<bool> {
         tracing::debug!("Worker::pass_2 for path: {:?}", context_path);
-        let _lock = FileLock::new(self.file_access.clone(), context_path)?;
+        let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;

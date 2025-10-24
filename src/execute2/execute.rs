@@ -11,6 +11,9 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 use std::ops::Drop;
 
+use std::fs::OpenOptions;
+use std::io::Write;
+
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
 
@@ -891,7 +894,7 @@ impl Worker {
                 let range = Range {
                     begin: a0.range.end.clone(),
                     end: a1.range.begin.clone(),
-                };
+                };                
                 patches.add_patch(&range, &state.output());
                 state.set_status(AnchorStatus::Completed);
                 asm.save_state(&state, None)?;
@@ -957,5 +960,39 @@ impl Worker {
         state.set_status(AnchorStatus::NeedRepeat);
         asm.save_state(&state, None)?;
         Ok(())
+    }
+
+    fn output(&self, variables: &Variables, patches: &mut utils::Patches, range: &Range, output: &str) -> Result<bool> {
+        match variables.output_mode {
+            OutputMode::Here => {
+                patches.add_patch(range, output);
+                Ok(true)
+            }
+            OutputMode::Append | OutputMode::Overwrite => {
+                let path = if let Some(file) = variables.output.strip_prefix("file://") {
+                    file.parse::<PathBuf>()
+                        .map_err(|_| anyhow::anyhow!("Invalid output file path"))?
+                } else {
+                    self.path_res.resolve_context(&variables.output)?
+                };
+                
+                let _lock = crate::file::FileLock::new(self.file_access.clone(), &path)?;
+                let mut file = match variables.output_mode {
+                    OutputMode::Append => OpenOptions::new()
+                        .append(true)
+                        .create(true) // Optionally create the file if it doesn't exist
+                        .open(&path)?,
+                    OutputMode::Overwrite => OpenOptions::new()
+                        .write(true)
+                        .create(true) // Optionally create the file if it doesn't exist
+                        .truncate(true)
+                        .open(&path)?,
+                    _ => unreachable!(),
+                };
+                file.write_all(output.as_bytes())?;
+                Ok(false)
+                        
+            }
+        }
     }
 }

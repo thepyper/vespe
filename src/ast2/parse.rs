@@ -788,7 +788,7 @@ pub(crate) fn _try_parse_nude_string<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(String, Parser<'doc>)>> {
     let (result, new_parser) = parser
-        .consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_');
+        .consume_many_if_immutable(|x| x.is_alphanumeric() || x == '/' || x == '.' || x == '_' || x == '-');
 
     if result.is_empty() {
         Ok(None)

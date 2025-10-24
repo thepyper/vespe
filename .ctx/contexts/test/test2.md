@@ -1,6 +1,10 @@
 
 Fai un po il cagnaccio!!
 
+@set [bau="miao"]
+
+@answer
+
 <!-- answer-1385d8a0-c35a-4eea-b279-ee8b79439dd0:begin [cane="hahaha",output="test/test2_outut"]  -->
 Setup complete. I'm ready for your first command.
 <!-- answer-1385d8a0-c35a-4eea-b279-ee8b79439dd0:end   -->

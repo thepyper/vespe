@@ -415,6 +415,8 @@ pub(crate) fn _try_parse_command_kind<'doc>(
         ("include", CommandKind::Include),
         ("inline", CommandKind::Inline),
         ("answer", CommandKind::Answer),
+        ("decide", CommandKind::Decide),
+        ("choose", CommandKind::Choose),
         ("derive", CommandKind::Derive),
         ("repeat", CommandKind::Repeat),
         ("set", CommandKind::Set),

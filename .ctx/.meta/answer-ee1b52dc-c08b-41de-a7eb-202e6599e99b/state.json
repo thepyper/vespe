@@ -1,0 +1,26 @@
+{
+  "status": "NeedProcessing",
+  "query": [
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Fai un po il cagnaccio!!\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    }
+  ],
+  "reply": ""
+}

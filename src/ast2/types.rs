@@ -95,6 +95,10 @@ pub enum CommandKind {
     Inline,
     /// Triggers a call to an external model to get an "answer".
     Answer,
+    /// Triggers a call to an external model to get a "decision", a Yes/No answer.
+    Decide,
+    /// Triggers a call to an external model to get a "choice", either 1/2/3/4/.. or None.
+    Choose,
     /// Derives new content by processing other contexts through a model.
     Derive,
     /// A command to repeat a section (not fully implemented).
@@ -110,6 +114,8 @@ impl ToString for CommandKind {
             CommandKind::Include => "include",
             CommandKind::Inline => "inline",
             CommandKind::Answer => "answer",
+            CommandKind::Decide => "decide",
+            CommandKind::Choose => "choose",
             CommandKind::Derive => "derive",
             CommandKind::Repeat => "repeat",
             CommandKind::Set => "set",

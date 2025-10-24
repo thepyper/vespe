@@ -2,7 +2,7 @@ use crate::ast2::{Parameters};
 
 use std::str::FromStr;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum OutputMode {
     /// Output into current document, default mode
     Here,   
@@ -28,7 +28,7 @@ impl FromStr for OutputMode {
 ///
 /// This struct can be extended to include more dynamic settings, such as
 /// model choices, timeouts, or other parameters loaded from configuration files.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Variables {
     /// The command-line string used to invoke the external model provider (e.g., an LLM agent).
     pub provider: String,

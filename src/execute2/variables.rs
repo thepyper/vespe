@@ -1,3 +1,5 @@
+use crate::ast2::{Parameters};
+
 /// Holds variables and configuration settings available during the execution of a context.
 ///
 /// This struct can be extended to include more dynamic settings, such as
@@ -15,5 +17,13 @@ impl Variables {
             // TODO: This should be loaded from a project or user configuration file.
             provider: "gemini -p -y -m gemini-2.5-flash".to_string(),
         }
+    }
+    /// Create a new 'Variables' instance from an existing one taking values from Parameters
+    pub fn update(&self, parameters: &Parameters) -> Self {
+        let mut variables = self.clone();
+        if let Some(x) = parameters.parameters.get("provider") {
+            variables.provider = x.to_string();
+        }
+        variables
     }
 }

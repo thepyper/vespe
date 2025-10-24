@@ -123,6 +123,17 @@ impl Collector {
             can_execute: self.can_execute,
         })
     }
+
+    /// Creates a new `Collector` with updated variables values, taken from Parameters
+    ///
+    /// # Arguments
+    /// * `parameters` - Parameters to take variable values from
+    fn update(&self, parameters: &Parameters) -> Self {
+        let mut collector = self.clone();
+        collector.variables = collector.variables.update(parameters);
+        collector
+    }
+   
 }
 
 /// The stateless engine that drives the context execution.
@@ -402,7 +413,7 @@ impl Worker {
         &self,
         collector: Collector,
         asm: &utils::AnchorStateManager,
-        _parameters: &Parameters,
+        parameters: &Parameters,
         _arguments: &Arguments,
     ) -> Result<Option<Collector>> {
         let mut state: AnswerState = asm.load_state()?;
@@ -420,7 +431,8 @@ impl Worker {
                 if !collector.can_execute {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
-                // TODO prelude, secondo agent!!
+                // Update variables locally for this answer
+                let collector = collector.update(parameters);
                 state.reply = self.call_model(&collector, vec![state.query.clone()])?;
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
@@ -434,7 +446,7 @@ impl Worker {
         &self,
         collector: Collector,
         asm: &utils::AnchorStateManager,
-        _parameters: &Parameters,
+        parameters: &Parameters,
         arguments: &Arguments,
     ) -> Result<Option<Collector>> {
         let mut state: DeriveState = asm.load_state()?;
@@ -473,6 +485,8 @@ impl Worker {
                     self.path_res.clone(),
                     &state.input_context_name,
                 )?;
+                // Update variables locally for this derive
+                let collector = collector.update(parameters);
                 // call llm to derive
                 state.derived = "rispostone!! TODO ".into();
                 state.status = AnchorStatus::NeedInjection;

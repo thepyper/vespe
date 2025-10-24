@@ -99,6 +99,8 @@ pub enum CommandKind {
     Derive,
     /// A command to repeat a section (not fully implemented).
     Repeat,
+    /// Set variables from there on
+    Set,
 }
 
 impl ToString for CommandKind {
@@ -110,6 +112,7 @@ impl ToString for CommandKind {
             CommandKind::Answer => "answer",
             CommandKind::Derive => "derive",
             CommandKind::Repeat => "repeat",
+            CommandKind::Set => "set",
         }
         .to_string()
     }

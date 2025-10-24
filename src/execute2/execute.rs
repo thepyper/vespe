@@ -344,6 +344,7 @@ impl Worker {
     fn pass_1_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {
         match tag.command {
             CommandKind::Include => self.pass_1_include_tag(collector, tag),
+            CommandKind::Set => self.pass1_set_tag(collector, tag),
             _ => Ok(collector),
         }
     }
@@ -360,6 +361,10 @@ impl Worker {
         self.collect(collector, &included_context_name)
     }
 
+     /// Handles the `@set` tag by updating collector's variabiles
+    fn pass1_set_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {        
+        Ok(collector.update(&tag.parameters))
+    }
     /// Processes anchors and dispatches them to the appropriate handler based on their command.
     /// This is the entry point for triggering the state machines for `@answer`, `@derive`, etc.
     fn pass_1_anchor(&self, collector: Collector, anchor: &Anchor) -> Result<Option<Collector>> {

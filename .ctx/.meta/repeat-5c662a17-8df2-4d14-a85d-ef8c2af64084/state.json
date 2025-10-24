@@ -1,0 +1,50 @@
+{
+  "status": "Completed",
+  "wrapper": {
+    "command": "Answer",
+    "uuid": "1385d8a0-c35a-4eea-b279-ee8b79439dd0",
+    "kind": "Begin",
+    "parameters": {
+      "parameters": {},
+      "range": {
+        "begin": {
+          "offset": 0,
+          "line": 0,
+          "column": 0
+        },
+        "end": {
+          "offset": 0,
+          "line": 0,
+          "column": 0
+        }
+      }
+    },
+    "arguments": {
+      "arguments": [],
+      "range": {
+        "begin": {
+          "offset": 0,
+          "line": 0,
+          "column": 0
+        },
+        "end": {
+          "offset": 0,
+          "line": 0,
+          "column": 0
+        }
+      }
+    },
+    "range": {
+      "begin": {
+        "offset": 28,
+        "line": 3,
+        "column": 1
+      },
+      "end": {
+        "offset": 90,
+        "line": 4,
+        "column": 1
+      }
+    }
+  }
+}

@@ -424,6 +424,14 @@ impl Worker {
                     anchor,
                 )
             }
+            (CommandKind::Repeat, AnchorKind::Begin) => {
+                tracing::debug!("Worker::pass_1_anchor calling pass_1_repeat_begin_anchor");
+                self.pass_1_repeat_begin_anchor(
+                    collector,
+                    &asm,
+                    anchor,
+                )
+            }
             _ => {
                 tracing::debug!(
                     "Worker::pass_1_anchor not handling command: {:?}, kind: {:?}",
@@ -556,6 +564,32 @@ impl Worker {
             _ => Ok(Some(collector)),
         }
     }
+
+    fn pass_1_repeat_begin_anchor(
+        &self,
+        collector: Collector,
+        asm: &utils::AnchorStateManager,
+        anchor: &Anchor,
+    ) -> Result<Option<Collector>> {
+        let mut state: RepeatState = asm.load_state()?;
+        match state.status {
+            AnchorStatus::JustCreated => {
+                if !collector.can_execute {
+                    return Err(anyhow::anyhow!("Execution not allowed"));
+                }
+                if let Some(x) = collector.anchor_stack.last() {
+                    state.wrapper_uuid = *x;
+                } else {
+                    return Err(anyhow::anyhow!("@repeat not wrapped by an existing anchor"));
+                } 
+                state.status = AnchorStatus::NeedInjection;
+                asm.save_state(&state, None)?;
+                Ok(None)
+            }
+            _ => Ok(Some(collector)),
+        }
+    }
+
     /// **Pass 2**: Injects completed content into files.
     ///
     /// This pass is responsible for the fast, synchronous part of the execution.
@@ -648,9 +682,8 @@ impl Worker {
                 patches,
                 tag,
             ),
-            CommandKind::Repeat => self.pass_2_repeat_tag(
+            CommandKind::Repeat => self.pass_2_normal_tag::<RepeatState>(
                 patches,
-                anchor_index,
                 tag,
             ),
             _ => Ok(false),
@@ -668,15 +701,6 @@ impl Worker {
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
         asm.save_state(&S::new(), None)?;
         Ok(true)
-    }
-
-     fn pass_2_repeat_tag(
-        &self,
-        patches: &mut utils::Patches,
-        anchor_index: &utils::AnchorIndex,
-        tag: &Tag,
-    ) -> Result<bool> {
-        unimplemented!(); // TODO
     }
 
     fn pass_2_anchors(
@@ -725,6 +749,17 @@ impl Worker {
                     a1,
                 )
             }
+            CommandKind::Repeat => {
+                 tracing::debug!(
+                    "Worker::pass_2_anchors calling pass_2_repeat_begin_anchor for Repeat"
+                );
+                self.pass_2_repeat_begin_anchor(
+                    patches,
+                    &asm,
+                    a0,
+                    a1,
+                )
+            }
             _ => {
                 tracing::debug!(
                     "Worker::pass_2_anchors not handling command: {:?}",
@@ -752,6 +787,31 @@ impl Worker {
                 patches.add_patch(&range, &state.output());
                 state.set_status(AnchorStatus::Completed);
                 asm.save_state(&state, None)?;
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    }
+
+    fn pass_2_repeat_begin_anchor(
+        &self,
+        patches: &mut utils::Patches,
+        asm: &utils::AnchorStateManager,
+        a0: &Anchor, 
+        a1: &Anchor,
+    ) -> Result<bool> {
+        let mut state: RepeatState = asm.load_state()?;
+        match state.get_status() {
+            AnchorStatus::NeedInjection => {
+                unimplemented!(); // TODO
+                /*
+                let range = Range {
+                    begin: a0.range.end.clone(),
+                    end: a1.range.begin.clone(),
+                };
+                patches.add_patch(&range, &state.output());
+                state.set_status(AnchorStatus::Completed);
+                asm.save_state(&state, None)?; */
                 Ok(true)
             }
             _ => Ok(false),

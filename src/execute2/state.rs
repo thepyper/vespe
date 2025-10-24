@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use uuid::{uuid, Uuid};
 
 use super::ModelContent;
 
@@ -13,7 +13,10 @@ pub trait State: serde::Serialize + serde::de::DeserializeOwned {
     /// Creates a new instance of the state, typically in its initial status.
     fn new() -> Self;
     /// Generates the final string output to be injected into the document.
-    fn output(&self) -> String;
+    fn output(&self) -> String
+    {
+        String::new()
+    }
     /// Gets the current status of the anchor's state machine.
     fn get_status(&self) -> &AnchorStatus;
     /// Sets the status of the anchor's state machine.
@@ -128,4 +131,19 @@ impl State for DeriveState {
 pub struct RepeatState {
     pub status: AnchorStatus,
     pub wrapper_uuid: Uuid,
+}
+
+impl State for RepeatState {
+    fn new() -> Self {
+        RepeatState {
+            status: AnchorStatus::JustCreated,
+            wrapper_uuid: uuid!("00000000-0000-0000-0000-000000000000"),
+        }
+    }
+    fn get_status(&self) -> &AnchorStatus {
+        &self.status
+    }
+    fn set_status(&mut self, status: AnchorStatus) {
+        self.status = status;
+    }
 }

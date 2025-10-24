@@ -392,14 +392,9 @@ impl Worker {
             anchor.command,
             anchor.kind
         );
-        // Update collector anchor stack
-        let collector = match anchor.kind {
-            AnchorKind::Begin => collector.enter(&anchor),
-            AnchorKind::End => collector.exit()?,
-        };
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
-        match (&anchor.command, &anchor.kind) {
+        let result = match (&anchor.command, &anchor.kind) {
             (CommandKind::Answer, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_answer_begin_anchor");
                 self.pass_1_answer_begin_anchor(
@@ -439,6 +434,26 @@ impl Worker {
                     anchor.kind
                 );
                 Ok(Some(collector))
+            }
+        };
+        match result {
+            Ok(maybe_collector) => {
+                match maybe_collector {
+                    Some(collector) => {
+                        // Update collector anchor stack
+                        let collector = match anchor.kind {
+                            AnchorKind::Begin => collector.enter(&anchor),
+                            AnchorKind::End => collector.exit()?,
+                        };
+                        return Ok(Some(collector));
+                    }
+                    None => {
+                        return Ok(None);
+                    }
+                }
+            }
+            Err(x) => {
+                return Err(x);
             }
         }
     }
@@ -795,6 +810,16 @@ impl Worker {
     ) -> Result<bool> {
         let mut state: S = asm.load_state()?;
         match state.get_status() {
+            AnchorStatus::NeedRepeat => {
+                let range = Range {
+                    begin: a0.range.end.clone(),
+                    end: a1.range.begin.clone(),
+                };
+                patches.add_patch(&range, "");
+                state.set_status(AnchorStatus::JustCreated);
+                asm.save_state(&state, None)?;
+                Ok(true)
+            }
             AnchorStatus::NeedInjection => {
                 let range = Range {
                     begin: a0.range.end.clone(),

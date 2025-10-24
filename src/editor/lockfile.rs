@@ -131,7 +131,7 @@ impl FileBasedEditorCommunicator {
 }
 
 impl EditorCommunicator for FileBasedEditorCommunicator {
-    fn request_file_modification(&self, file_path: &Path) -> anyhow::Result<Uuid> {
+    fn save_and_lock_file(&self, file_path: &Path) -> anyhow::Result<Uuid> {
         let request_id = Uuid::new_v4();
         let request = RequestState::RequestModification {
             file_path: file_path.to_path_buf(),
@@ -158,7 +158,7 @@ impl EditorCommunicator for FileBasedEditorCommunicator {
         }
     }
 
-    fn notify_file_modified(&self, request_id: Uuid) -> anyhow::Result<()> {
+    fn unlock_and_reload_file(&self, request_id: Uuid) -> anyhow::Result<()> {
         let file_path = self
             .active_locks
             .lock()

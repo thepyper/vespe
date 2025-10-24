@@ -72,14 +72,14 @@ impl FileAccessor for ProjectFileAccessor {
     fn lock_file(&self, path: &Path) -> Result<Uuid> {
         match &self.editor_interface {
             None => Ok(DUMMY_ID),
-            Some(x) => x.request_file_modification(path),
+            Some(x) => x.save_and_lock_file(path),
         }
     }
     /// Release excludive access to a file
     fn unlock_file(&self, uuid: &Uuid) -> Result<()> {
         match &self.editor_interface {
             None => Ok(()),
-            Some(x) => x.notify_file_modified(*uuid),
+            Some(x) => x.unlock_and_reload_file(*uuid),
         }
     }
     /// Write whole file, optional comment to the operation

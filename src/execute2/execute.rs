@@ -582,12 +582,39 @@ impl Worker {
                 } else {
                     return Err(anyhow::anyhow!("@repeat not wrapped by an existing anchor"));
                 } 
-                state.status = AnchorStatus::NeedInjection;
+                // Update wrapper's status
+                match state.wrapper.command {
+                    CommandKind::Answer => {
+                        self.pass_1_set_anchor_to_repeat_state::<AnswerState>(&state.wrapper)?;
+                    }
+                    CommandKind::Derive => {
+                        self.pass_1_set_anchor_to_repeat_state::<DeriveState>(&state.wrapper)?;
+                    }
+                    CommandKind::Inline => {
+                        self.pass_1_set_anchor_to_repeat_state::<InlineState>(&state.wrapper)?;
+                    }
+                    _ => {
+                        return Err(anyhow::anyhow!("@repeat is wrapped by non-repeatable anchor"));
+                    }
+                }
+                state.status = AnchorStatus::Completed;
                 asm.save_state(&state, None)?;
                 Ok(None)
             }
             _ => Ok(Some(collector)),
         }
+    }
+
+    fn pass_1_set_anchor_to_repeat_state<S: State + 'static>(
+        &self,
+        anchor: &Anchor,
+    ) -> Result<()> {
+        let asm =
+            utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
+        let mut state: S = asm.load_state()?;
+        state.set_status(AnchorStatus::NeedRepeat);
+        asm.save_state(&state, None)?;
+        Ok(())
     }
 
     /// **Pass 2**: Injects completed content into files.
@@ -748,18 +775,7 @@ impl Worker {
                     a0,
                     a1,
                 )
-            }
-            CommandKind::Repeat => {
-                 tracing::debug!(
-                    "Worker::pass_2_anchors calling pass_2_repeat_begin_anchor for Repeat"
-                );
-                self.pass_2_repeat_begin_anchor(
-                    patches,
-                    &asm,
-                    a0,
-                    a1,
-                )
-            }
+            }           
             _ => {
                 tracing::debug!(
                     "Worker::pass_2_anchors not handling command: {:?}",
@@ -791,30 +807,5 @@ impl Worker {
             }
             _ => Ok(false),
         }
-    }
-
-    fn pass_2_repeat_begin_anchor(
-        &self,
-        patches: &mut utils::Patches,
-        asm: &utils::AnchorStateManager,
-        a0: &Anchor, 
-        a1: &Anchor,
-    ) -> Result<bool> {
-        let mut state: RepeatState = asm.load_state()?;
-        match state.get_status() {
-            AnchorStatus::NeedInjection => {
-                unimplemented!(); // TODO
-                /*
-                let range = Range {
-                    begin: a0.range.end.clone(),
-                    end: a1.range.begin.clone(),
-                };
-                patches.add_patch(&range, &state.output());
-                state.set_status(AnchorStatus::Completed);
-                asm.save_state(&state, None)?; */
-                Ok(true)
-            }
-            _ => Ok(false),
-        }
-    }
+    }    
 }

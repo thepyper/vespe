@@ -30,6 +30,8 @@ pub trait State: serde::Serialize + serde::de::DeserializeOwned {
 pub enum AnchorStatus {
     /// The anchor has just been created. The state is empty and needs to be initialized.
     JustCreated,
+    /// The anchor need to clean current contents and repeat its action.
+    NeedRepeat,
     /// The necessary information has been gathered (e.g., context collected).
     /// The state is ready for the main processing step (e.g., calling a model).
     NeedProcessing,

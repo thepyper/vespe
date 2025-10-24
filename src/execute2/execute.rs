@@ -84,7 +84,7 @@ struct Collector {
     /// A stack of visited context file paths to detect and prevent circular includes.
     visit_stack: Vec<PathBuf>,
     /// A stack of entered anchors in current context file
-    anchor_stack: Vec<Uuid>,
+    anchor_stack: Vec<Anchor>,
     /// The accumulated content that will be sent to the model.
     context: ModelContent,
     /// Execution-time variables and settings.
@@ -140,9 +140,9 @@ impl Collector {
     }
  
     // TODO doc (entra in anchor)
-    fn enter(&self, uuid: &Uuid) -> Self {
+    fn enter(&self, anchor: &Anchor) -> Self {
         let mut collector = self.clone();
-        collector.anchor_stack.push(*uuid);
+        collector.anchor_stack.push(anchor.clone());
         collector
     }
 
@@ -394,7 +394,7 @@ impl Worker {
         );
         // Update collector anchor stack
         let collector = match anchor.kind {
-            AnchorKind::Begin => collector.enter(&anchor.uuid),
+            AnchorKind::Begin => collector.enter(&anchor),
             AnchorKind::End => collector.exit()?,
         };
         let asm =
@@ -578,7 +578,7 @@ impl Worker {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
                 if let Some(x) = collector.anchor_stack.last() {
-                    state.wrapper_uuid = *x;
+                    state.wrapper = x.clone();
                 } else {
                     return Err(anyhow::anyhow!("@repeat not wrapped by an existing anchor"));
                 } 

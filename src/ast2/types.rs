@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use uuid::Uuid;
+use uuid::{uuid, Uuid};
 
 /// Represents a specific point in the source document.
 ///
@@ -283,6 +283,17 @@ impl Anchor {
             range: Range::null(),
         };
         (begin, end)
+    }
+    /// Create a new invalid anchor
+    pub fn invalid() -> Self {
+        Anchor {
+            command: CommandKind::Tag,
+            uuid: uuid!("00000000-0000-0000-0000-000000000000"),
+            kind: AnchorKind::Begin,
+            parameters: Parameters::new(),
+            arguments: Arguments::new(),
+            range: Range::null(),
+        }
     }
 }
 

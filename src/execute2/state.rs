@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::{uuid, Uuid};
 
+use crate::ast2::{Anchor};
+
 use super::ModelContent;
 
 
@@ -130,14 +132,14 @@ impl State for DeriveState {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepeatState {
     pub status: AnchorStatus,
-    pub wrapper_uuid: Uuid,
+    pub wrapper: Anchor,
 }
 
 impl State for RepeatState {
     fn new() -> Self {
         RepeatState {
             status: AnchorStatus::JustCreated,
-            wrapper_uuid: uuid!("00000000-0000-0000-0000-000000000000"),
+            wrapper: Anchor::invalid(),
         }
     }
     fn get_status(&self) -> &AnchorStatus {

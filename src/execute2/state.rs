@@ -97,6 +97,60 @@ impl State for AnswerState {
     }
 }
 
+/// The persistent state for an `@decide` command.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DecideState {
+    pub status: AnchorStatus,
+    pub query: ModelContent,
+    pub reply: String,
+}
+
+impl State for DecideState {
+    fn new() -> Self {
+        DecideState {
+            status: AnchorStatus::JustCreated,
+            query: ModelContent::new(),
+            reply: String::new(),
+        }
+    }
+    fn output(&self) -> String {
+        self.reply.clone()
+    }
+    fn get_status(&self) -> &AnchorStatus {
+        &self.status
+    }
+    fn set_status(&mut self, status: AnchorStatus) {
+        self.status = status;
+    }
+}
+
+/// The persistent state for an `@choose` command.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChooseState {
+    pub status: AnchorStatus,
+    pub query: ModelContent,
+    pub reply: String,
+}
+
+impl State for ChooseState {
+    fn new() -> Self {
+        ChooseState {
+            status: AnchorStatus::JustCreated,
+            query: ModelContent::new(),
+            reply: String::new(),
+        }
+    }
+    fn output(&self) -> String {
+        self.reply.clone()
+    }
+    fn get_status(&self) -> &AnchorStatus {
+        &self.status
+    }
+    fn set_status(&mut self, status: AnchorStatus) {
+        self.status = status;
+    }
+}
+
 /// The persistent state for a `@derive` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeriveState {

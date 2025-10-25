@@ -1,6 +1,6 @@
 {
-  "status": "JustCreated",
-  "wrapper": "00000000-0000-0000-0000-000000000000",
+  "status": "Completed",
+  "wrapper": "391e00d5-4ca2-4109-83e8-840e401e1f1a",
   "variables": {
     "provider": "gemini -p -y -m gemini-2.5-flash",
     "output": null

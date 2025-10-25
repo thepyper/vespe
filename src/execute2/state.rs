@@ -52,7 +52,7 @@ pub struct InlineState {
     pub status: AnchorStatus,
     pub context_name: String,
     pub context: String,
-    pub variables: Option<Variables>,
+    pub variables: Variables,
 }
 
 impl State for InlineState {
@@ -61,7 +61,7 @@ impl State for InlineState {
             status: AnchorStatus::JustCreated,
             context_name: String::new(),
             context: String::new(),
-            variables: Some(variables.clone()),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -74,10 +74,7 @@ impl State for InlineState {
         self.status = status;
     }
     fn get_variables(&self) -> Variables {
-        match &self.variables {
-            Some(v) => v.clone(),
-            None => Variables::new(),
-        }
+        self.variables.clone()
     }
 }
 
@@ -87,7 +84,7 @@ pub struct AnswerState {
     pub status: AnchorStatus,
     pub query: ModelContent,
     pub reply: String,
-    pub variables: Option<Variables>,
+    pub variables: Variables,
 }
 
 impl State for AnswerState {
@@ -96,7 +93,7 @@ impl State for AnswerState {
             status: AnchorStatus::JustCreated,
             query: ModelContent::new(),
             reply: String::new(),
-            variables: Some(variables.clone()),
+             variables: variables.clone(),
        }
     }
     fn output(&self) -> String {
@@ -109,10 +106,7 @@ impl State for AnswerState {
         self.status = status;
     }
     fn get_variables(&self) -> Variables {
-        match &self.variables {
-            Some(v) => v.clone(),
-            None => Variables::new(),
-        }
+        self.variables.clone()
     }
 }
 
@@ -122,7 +116,7 @@ pub struct DecideState {
     pub status: AnchorStatus,
     pub query: ModelContent,
     pub reply: String,
-    pub variables: Option<Variables>,
+    pub variables: Variables,
 }
 
 impl State for DecideState {
@@ -131,7 +125,7 @@ impl State for DecideState {
             status: AnchorStatus::JustCreated,
             query: ModelContent::new(),
             reply: String::new(),
-            variables: Some(variables.clone()),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -144,10 +138,7 @@ impl State for DecideState {
         self.status = status;
     }
     fn get_variables(&self) -> Variables {
-        match &self.variables {
-            Some(v) => v.clone(),
-            None => Variables::new(),
-        }
+        self.variables.clone()
     }
 }
 
@@ -157,7 +148,7 @@ pub struct ChooseState {
     pub status: AnchorStatus,
     pub query: ModelContent,
     pub reply: String,
-    pub variables: Option<Variables>,
+    pub variables: Variables,
 }
 
 impl State for ChooseState {
@@ -166,7 +157,7 @@ impl State for ChooseState {
             status: AnchorStatus::JustCreated,
             query: ModelContent::new(),
             reply: String::new(),
-            variables: Some(variables.clone()),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -179,10 +170,7 @@ impl State for ChooseState {
         self.status = status;
     }
     fn get_variables(&self) -> Variables {
-        match &self.variables {
-            Some(v) => v.clone(),
-            None => Variables::new(),
-        }
+        self.variables.clone()
     }
 }
 
@@ -195,7 +183,7 @@ pub struct DeriveState {
     pub input_context_name: String,
     pub input_context: ModelContent,
     pub derived: String,
-    pub variables: Option<Variables>,
+    pub variables: Variables,
 }
 
 impl State for DeriveState {
@@ -207,7 +195,7 @@ impl State for DeriveState {
             input_context_name: String::new(),
             input_context: ModelContent::new(),
             derived: String::new(),
-            variables: Some(variables.clone()),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -220,10 +208,7 @@ impl State for DeriveState {
         self.status = status;
     }
     fn get_variables(&self) -> Variables {
-        match &self.variables {
-            Some(v) => v.clone(),
-            None => Variables::new(),
-        }
+        self.variables.clone()
     }
 }
 
@@ -232,7 +217,7 @@ impl State for DeriveState {
 pub struct RepeatState {
     pub status: AnchorStatus,
     pub wrapper: Uuid,
-    pub variables: Option<Variables>,
+    pub variables: Variables,
 }
 
 impl State for RepeatState {
@@ -240,7 +225,7 @@ impl State for RepeatState {
         RepeatState {
             status: AnchorStatus::JustCreated,
             wrapper: uuid::uuid!("00000000-0000-0000-0000-000000000000"),
-            variables: Some(variables.clone()),
+            variables: variables.clone(),
         }
     }
     fn get_status(&self) -> &AnchorStatus {
@@ -250,9 +235,6 @@ impl State for RepeatState {
         self.status = status;
     }
     fn get_variables(&self) -> Variables {
-        match &self.variables {
-            Some(v) => v.clone(),
-            None => Variables::new(),
-        }
+        self.variables.clone()
     }
 }

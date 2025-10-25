@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use uuid::{uuid, Uuid};
-use tracing::error;
+use tracing::{debug, error};
 
 use super::editor::EditorCommunicator;
 
@@ -84,6 +84,7 @@ impl FileAccessor for ProjectFileAccessor {
     }
     /// Write whole file, optional comment to the operation
     fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()> {
+        tracing::debug!("Writing file {:?}", path);
         std::fs::write(path, content)?;
         let mut mutable = self.mutable.lock().unwrap();
         mutable.modified_files.insert(path.into());

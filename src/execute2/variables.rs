@@ -29,10 +29,10 @@ impl Variables {
     pub fn update(&self, parameters: &Parameters) -> Self {
         let mut variables = self.clone();
         if let Some(x) = parameters.parameters.get("provider") {
-            variables.provider = x.to_string();
+            variables.provider = x.as_str().unwrap_or("internal-error-variables-rs-1").to_string();
         }
         if let Some(x) = parameters.parameters.get("output") {
-            variables.output = Some(x.to_string());
+            variables.output = Some(x.as_str().unwrap_or("internal-error-variables-rs-2").to_string());
         }
         variables
     }

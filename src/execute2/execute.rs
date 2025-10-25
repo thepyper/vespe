@@ -368,6 +368,7 @@ impl Worker {
             CommandKind::Include => self.pass_1_include_tag(collector, tag),
             CommandKind::Set => self.pass1_set_tag(collector, tag),
             _ => Ok(collector),
+            // TODO qui dovrebbero nascere gli State! non con la anchor, ma gia' qui per collecting delle variabili!!!
         }
     }
 
@@ -712,13 +713,16 @@ impl Worker {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
-
+    
         let result = self.pass_2_internal_y(&mut patches, &ast)?;
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
             self.file_access
                 .write_file(context_path, &new_context_content, None)?;
+
+            tracing::debug!(
+                "Worker::pass_2 applied patches to path: {:?}",new_context_content);
         }
 
         tracing::debug!("Worker::pass_2 finished for path: {:?}", context_path);
@@ -794,9 +798,16 @@ impl Worker {
     ) -> Result<bool> {
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
         patches.add_patch(&tag.range, &format!("{}\n{}\n", a0.to_string(), a1.to_string()));
+
+        tracing::debug!("Worker::pass_2 patch: {:?}", tag.range);
+
+        // TODO variabili dovrebbero nascere in pass_1 !!!!!
+        let variables = Variables::new();
+        let variables = variables.update(&tag.parameters);
+
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
-        asm.save_state(&S::new(), None)?;
+        asm.save_state(&S::new(&variables), None)?;
         Ok(true)
     }
 
@@ -894,8 +905,18 @@ impl Worker {
                 let range = Range {
                     begin: a0.range.end.clone(),
                     end: a1.range.begin.clone(),
-                };                
-                patches.add_patch(&range, &state.output());
+                };                         
+                let variables = state.get_variables();
+                match variables.output {
+                    Some(ref output_path) => {
+                        patches.add_patch(&range, &format!(">{}\n", output_path));
+                        let output_path = self.path_res.resolve_context(output_path)?;
+                        self.file_access.write_file(&output_path, &state.output(), None)?;
+                    }
+                    None => {
+                        patches.add_patch(&range, &state.output());
+                    }
+                }     
                 state.set_status(AnchorStatus::Completed);
                 asm.save_state(&state, None)?;
                 Ok(true)
@@ -961,38 +982,5 @@ impl Worker {
         asm.save_state(&state, None)?;
         Ok(())
     }
-
-    fn output(&self, variables: &Variables, patches: &mut utils::Patches, range: &Range, output: &str) -> Result<bool> {
-        match variables.output_mode {
-            OutputMode::Here => {
-                patches.add_patch(range, output);
-                Ok(true)
-            }
-            OutputMode::Append | OutputMode::Overwrite => {
-                let path = if let Some(file) = variables.output.strip_prefix("file://") {
-                    file.parse::<PathBuf>()
-                        .map_err(|_| anyhow::anyhow!("Invalid output file path"))?
-                } else {
-                    self.path_res.resolve_context(&variables.output)?
-                };
-                
-                let _lock = crate::file::FileLock::new(self.file_access.clone(), &path)?;
-                let mut file = match variables.output_mode {
-                    OutputMode::Append => OpenOptions::new()
-                        .append(true)
-                        .create(true) // Optionally create the file if it doesn't exist
-                        .open(&path)?,
-                    OutputMode::Overwrite => OpenOptions::new()
-                        .write(true)
-                        .create(true) // Optionally create the file if it doesn't exist
-                        .truncate(true)
-                        .open(&path)?,
-                    _ => unreachable!(),
-                };
-                file.write_all(output.as_bytes())?;
-                Ok(false)
-                        
-            }
-        }
-    }
 }
+

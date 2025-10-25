@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::{uuid, Uuid};
 
-use crate::ast2::{Anchor};
+use crate::{ast2::Anchor, execute2::variables};
 
+use super::variables::Variables;
 use super::ModelContent;
 
 
@@ -13,7 +14,7 @@ use super::ModelContent;
 /// `@answer`, `@derive`, etc.
 pub trait State: serde::Serialize + serde::de::DeserializeOwned {
     /// Creates a new instance of the state, typically in its initial status.
-    fn new() -> Self;
+    fn new(variables: &Variables) -> Self;
     /// Generates the final string output to be injected into the document.
     fn output(&self) -> String
     {
@@ -23,6 +24,8 @@ pub trait State: serde::Serialize + serde::de::DeserializeOwned {
     fn get_status(&self) -> &AnchorStatus;
     /// Sets the status of the anchor's state machine.
     fn set_status(&mut self, status: AnchorStatus);
+
+    fn get_variables(&self) -> Variables;
 }
 
 /// Defines the lifecycle stages of an anchor-based command.
@@ -49,14 +52,16 @@ pub struct InlineState {
     pub status: AnchorStatus,
     pub context_name: String,
     pub context: String,
+    pub variables: Variables,
 }
 
 impl State for InlineState {
-    fn new() -> Self {
+    fn new(variables: &Variables) -> Self {
         InlineState {
             status: AnchorStatus::JustCreated,
             context_name: String::new(),
             context: String::new(),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -68,6 +73,9 @@ impl State for InlineState {
     fn set_status(&mut self, status: AnchorStatus) {
         self.status = status;
     }
+    fn get_variables(&self) -> Variables {
+        self.variables.clone()
+    }
 }
 
 /// The persistent state for an `@answer` command.
@@ -76,15 +84,17 @@ pub struct AnswerState {
     pub status: AnchorStatus,
     pub query: ModelContent,
     pub reply: String,
+    pub variables: Variables,
 }
 
 impl State for AnswerState {
-    fn new() -> Self {
+    fn new(variables: &Variables) -> Self {
         AnswerState {
             status: AnchorStatus::JustCreated,
             query: ModelContent::new(),
             reply: String::new(),
-        }
+             variables: variables.clone(),
+       }
     }
     fn output(&self) -> String {
         self.reply.clone()
@@ -94,6 +104,9 @@ impl State for AnswerState {
     }
     fn set_status(&mut self, status: AnchorStatus) {
         self.status = status;
+    }
+    fn get_variables(&self) -> Variables {
+        self.variables.clone()
     }
 }
 
@@ -103,14 +116,16 @@ pub struct DecideState {
     pub status: AnchorStatus,
     pub query: ModelContent,
     pub reply: String,
+    pub variables: Variables,
 }
 
 impl State for DecideState {
-    fn new() -> Self {
+    fn new(variables: &Variables) -> Self {
         DecideState {
             status: AnchorStatus::JustCreated,
             query: ModelContent::new(),
             reply: String::new(),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -121,6 +136,9 @@ impl State for DecideState {
     }
     fn set_status(&mut self, status: AnchorStatus) {
         self.status = status;
+    }
+    fn get_variables(&self) -> Variables {
+        self.variables.clone()
     }
 }
 
@@ -130,14 +148,16 @@ pub struct ChooseState {
     pub status: AnchorStatus,
     pub query: ModelContent,
     pub reply: String,
+    pub variables: Variables,
 }
 
 impl State for ChooseState {
-    fn new() -> Self {
+    fn new(variables: &Variables) -> Self {
         ChooseState {
             status: AnchorStatus::JustCreated,
             query: ModelContent::new(),
             reply: String::new(),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -148,6 +168,9 @@ impl State for ChooseState {
     }
     fn set_status(&mut self, status: AnchorStatus) {
         self.status = status;
+    }
+    fn get_variables(&self) -> Variables {
+        self.variables.clone()
     }
 }
 
@@ -160,10 +183,11 @@ pub struct DeriveState {
     pub input_context_name: String,
     pub input_context: ModelContent,
     pub derived: String,
+    pub variables: Variables,
 }
 
 impl State for DeriveState {
-    fn new() -> Self {
+    fn new(variables: &Variables) -> Self {
         DeriveState {
             status: AnchorStatus::JustCreated,
             instruction_context_name: String::new(),
@@ -171,6 +195,7 @@ impl State for DeriveState {
             input_context_name: String::new(),
             input_context: ModelContent::new(),
             derived: String::new(),
+            variables: variables.clone(),
         }
     }
     fn output(&self) -> String {
@@ -182,6 +207,9 @@ impl State for DeriveState {
     fn set_status(&mut self, status: AnchorStatus) {
         self.status = status;
     }
+    fn get_variables(&self) -> Variables {
+        self.variables.clone()
+    }
 }
 
 /// The persistent state for a `@repeat` command.
@@ -189,13 +217,15 @@ impl State for DeriveState {
 pub struct RepeatState {
     pub status: AnchorStatus,
     pub wrapper: Uuid,
+    pub variables: Variables,
 }
 
 impl State for RepeatState {
-    fn new() -> Self {
+    fn new(variables: &Variables) -> Self {
         RepeatState {
             status: AnchorStatus::JustCreated,
             wrapper: uuid::uuid!("00000000-0000-0000-0000-000000000000"),
+            variables: variables.clone(),
         }
     }
     fn get_status(&self) -> &AnchorStatus {
@@ -203,5 +233,8 @@ impl State for RepeatState {
     }
     fn set_status(&mut self, status: AnchorStatus) {
         self.status = status;
+    }
+    fn get_variables(&self) -> Variables {
+        self.variables.clone()
     }
 }

@@ -1,0 +1,1836 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "You are an expert software engineer, acting as a \"Coder Agent.\" Your primary responsibility is to meticulously implement development plans provided, with a strong emphasis on technical excellence and proactive refinement.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "**Your core directives are:**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1.  **Understand the Plan:** Thoroughly review the provided plan. If any part is unclear or ambiguous, request clarification before proceeding.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2.  **Plan Refinement and Best Practices:**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Proactive Analysis:** Before implementation, critically analyze the plan for opportunities to enhance code quality, maintainability, performance, and adherence to modern software engineering principles.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Suggest Best Practices:** Propose improvements based on established best practices relevant to the project's technology stack (e.g., design patterns, architectural considerations, security implications).\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Recommend Stable Libraries:** Identify and suggest the use of well-established, stable, and idiomatic libraries or frameworks that could simplify implementation, improve robustness, or leverage existing solutions, *only after verifying their established usage within the project or obtaining explicit user approval for new dependencies*.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Optimal Implementations:** Offer alternative or refined implementation strategies that could lead to a more elegant, efficient, or robust solution.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Seek Approval:** Present any proposed refinements, library suggestions, or alternative implementations to the user for approval *before* proceeding with the actual coding.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "3.  **Iterative Development & Fine-Grained Checkpointing:**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Break down the (potentially refined) plan into the smallest possible, verifiable steps.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **After each significant step, logical unit of work, small feature addition, or bug fix, create a \"checkpoint\" by committing your changes using Git.**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Each commit must be granular, focusing on a single, atomic change.**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Each commit message must be clear, concise, and descriptive, explaining *what* was changed and *why*. Use `git status`, `git diff HEAD`, and `git log -n 3` to inform your commit messages and ensure all relevant files are staged.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "4.  **Adherence to Project Standards:**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Conventions:** Strictly follow existing code style, naming conventions, architectural patterns, and framework choices observed in the project. Use `glob` and `search_file_content` to identify these patterns.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Dependencies:** NEVER introduce new libraries or frameworks without explicit instruction or verifying their existing usage within the project (e.g., `Cargo.toml`, `package.json`, `requirements.txt`).\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Code Quality:** Ensure all changes are idiomatic, readable, maintainable, and performant.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "5.  **Testing & Verification:**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Unit Tests:** For new features or bug fixes, proactively write or update unit tests to ensure correctness and prevent regressions.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Verification Commands:** After making changes, identify and execute project-specific build, linting, and type-checking commands (e.g., `cargo check`, `cargo test`, `npm run lint`, `tsc`). Report any errors encountered.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Debugging:** If tests or verification commands fail, use your tools to debug and resolve the issues systematically.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "6.  **Tool Usage:**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Utilize `read_file`, `read_many_files`, `glob`, and `search_file_content` extensively to understand the codebase and locate relevant sections.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Use `replace` for precise, context-aware modifications. Always read the file content first to ensure `old_string` and `new_string` are accurate and provide sufficient context.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Use `write_file` for creating new files or overwriting existing ones when appropriate.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Use `run_shell_command` for executing build commands, tests, git operations, and other shell tasks. Always explain the purpose and potential impact of commands that modify the file system or system state.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "7.  **Communication:**\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Report progress after completing significant steps or encountering blockers.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Do not provide summaries of your changes unless explicitly asked.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   If you need to make a decision that deviates from the plan or requires further input, explain the situation and propose alternatives.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "8.  **Safety:** Prioritize safe and non-destructive modifications. Be cautious with `run_shell_command`, especially when deleting or modifying files outside the immediate project scope.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Your goal is to produce high-quality, well-tested, and well-documented code that seamlessly integrates into the existing project, following an iterative and verifiable process, and proactively contributing to the technical excellence of the solution.\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\r\n"
+      }
+    },
+    {
+      "User": {
+        "text": " "
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "C'e' un po di complessita' che mi sta scoppiando in mano, vorrei sistemare.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Guarda in src/execute2/state.rs, ci sono diversi stati ma c'e' molta ripetizione.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Vengono usati in src/execute2/execute.rs, leggi anche li.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Vorrei sistemare, in modo da risolvere le seguenti:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Prima idea:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "C'e' parte di State che e' comune a tutti, vorrei separare le strutture in parte fissa (.status attualmente, ma aggiungero' altre cose) e parte dipendente dal tipo di State (i campi vari di AnswerState, DeriveState, etc...); per questo mi viene in mente una enum tipo:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "enum State\n"
+      }
+    },
+    {
+      "User": {
+        "text": "{\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    AnswerState{ common: CommonState, ... i campi particolari di AnswerState ....}\n"
+      }
+    },
+    {
+      "User": {
+        "text": "}\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "struct CommonState\n"
+      }
+    },
+    {
+      "User": {
+        "text": "{\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    status: AnchorStatus,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "}\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Seconda idea, piu raffinata:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "In realta' State e' un po strano perche' in parte e' particolare, in parte e' generale, e non so come risolvere questa tensione.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Attualmente ho risolto gestendo uno Status comune a tutti (che in realta' e' quasi ok, ma non esattamente aderente per tutti),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "ed il resto dei campi dettagliato per ogni diverso State, e output letto usando un metodo.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Un po una porcheria.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Devo gestire i seguenti tipi di \"flusso\":\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1) flusso A: (answer, derive, decide, inline (che in realta' non ha llm query ma read-file))\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - JustCreated -> anchor vuota, solo inserita in testo (passaggio tag-independent)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - NeedRepeat -> anchor sporca, da svuotare per tornare a JustCreated (vuota e pulita) (passaggio tag-indepentent)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - NeedProcessing -> anchor ha raccolto il context da processare, e deve processarlo (passaggio molto tag-dependent) \n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - NeedInjection -> anchor ha a disposizione del text da iniettare nel context (tag-indepentent)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - Complete -> anchor completata ed inattiva\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2) flusso B: (repeat)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - JustCreated -> anchor vuota, solo inserita in testo  \n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - NeedInjection -> anchor ha a disposizione del text da iniettare nel context, ovvero alterare la anchor contenente\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    - Complete -> anchor completata ed inattiva\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "3) flusso C: (include, set)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    senza anchor, flusso basato solo sul tag senza modifiche al context di nessun tipo,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    solo comportamenti particolari del tag.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Come questo puo' essere gestito da State?\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Terza idea, stellare:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "In realta' poi l'ideale sarebbe una architettura in cui io non scrivo una porcheria come in execute.rs attuale,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "in cui il flusso di un tag e' spezzettato in mille punti, ma vorrei avere uno (o piu') trait per i tag, che poi\n"
+      }
+    },
+    {
+      "User": {
+        "text": "vanno completati per implementare i tag.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Mi sembra moooooolta roba da digerire, chissa se ce la fai?\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Se riesci, ragiona per step, e fammi una proposta di refactoring seria per ottenere un codice scritto meglio\n"
+      }
+    },
+    {
+      "User": {
+        "text": "di come e' fatto ora. Parlo di ergonomia di scrittura, di avere facilita' di aggiunta di nuovi tag,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "di separazione dell'engine dai dettagli dei tag.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "La funzionalita' in realta' mi va benissimo come e' fatta, con gli step fatti cosi, eccetera.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Non eseguire niente, pianifica solamente ed esponimi con massima chiarezza e dettaglio il piano.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Certamente. Ho analizzato la tua richiesta, le tue idee e il codice sorgente in `src/execute2/state.rs` e `execute.rs`.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "La tua analisi è eccellente e centra perfettamente il problema. L'architettura attuale mescola la logica del \"motore\" di esecuzione con i dettagli specifici di ogni tag, rendendo il codice ripetitivo, difficile da estendere e con una manutenibilità complessa. La tua \"terza idea, stellare\" è la direzione giusta: un'architettura a plugin basata su `trait` per i tag.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Ecco un piano di refactoring dettagliato, suddiviso in fasi progressive, per raggiungere quell'obiettivo. Ogni fase è un passo concreto che migliora la codebase e prepara la strada per la successiva.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "### Obiettivo Finale\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Separare nettamente il **motore di esecuzione** (l'orchestratore che gestisce il ciclo di vita delle ancore) dalla **logica dei tag** (le azioni specifiche che ogni tag compie). Questo renderà l'aggiunta di nuovi tag un processo semplice e isolato, senza dover modificare il motore principale.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "---\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "### Piano di Refactoring Proposto\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "#### Fase 1: Ristrutturazione del Modello Dati (`State`)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Questa fase implementa la tua \"prima idea\". L'obiettivo è eliminare la duplicazione nelle definizioni degli stati e creare una struttura dati unificata e coerente.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1.  **Definire `CommonState`**: Creeremo una struct che conterrà tutti i dati comuni a qualsiasi stato associato a un'ancora.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```rust\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // In src/execute2/state.rs\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub struct CommonState {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub status: AnchorStatus,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        // Aggiungeremo qui altri campi comuni in futuro, \n"
+      }
+    },
+    {
+      "User": {
+        "text": "        // es. ID dell'ancora, posizione, etc.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2.  **Definire `StateKind`**: Creeremo una `enum` che conterrà solo i dati *specifici* per ogni tipo di stato. Le attuali `AnswerState`, `DeriveState` verranno trasformate in varianti di questa enum, contenendo solo i loro campi unici.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```rust\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // In src/execute2/state.rs\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub struct AnswerStateData {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub model: String,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub prompt: String,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub output: Option<String>,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub struct DeriveStateData {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub from: String,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub output: Option<String>,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // ... e così via per gli altri ...\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub enum StateKind {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        Answer(AnswerStateData),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        Derive(DeriveStateData),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        Decide(DecideStateData),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        Inline(InlineStateData),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        Repeat(RepeatStateData),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        // Nota: i tag senza stato come 'include' e 'set' non appariranno qui.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "3.  **Unificare in `State`**: La `State` principale diventerà una struct che combina le due precedenti.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```rust\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // In src/execute2/state.rs\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub struct State {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub common: CommonState,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub kind: StateKind,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    impl State {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        // Metodi helper per accedere ai dati in modo sicuro e pulito\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub fn output(&self) -> Option<&str> {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            match &self.kind {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                StateKind::Answer(d) => d.output.as_deref(),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                StateKind::Derive(d) => d.output.as_deref(),\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                // ... etc.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "**Beneficio di questa fase**: Il modello dati diventa pulito, non ripetitivo e più facile da gestire. La logica che dipende solo da `AnchorStatus` può operare su `CommonState` senza conoscere i dettagli specifici del tag.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "---\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "#### Fase 2: Introduzione del Trait `TagProcessor`\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Questa è la fase cruciale che implementa la tua \"terza idea\". Definiamo un'interfaccia (un `trait`) che ogni tag dovrà implementare.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1.  **Definire il `trait`**: Creeremo un nuovo file, ad esempio `src/execute2/tag_processor.rs`, con la definizione del nostro trait. Questo trait astrae il ciclo di vita di un tag stateful.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```rust\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // In src/execute2/tag_processor.rs\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    use super::state::{State, StateKind, CommonState};\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // Azione che il motore deve compiere dopo l'avanzamento dello stato\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub enum TagAction {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        Inject(String), // Inietta questo testo\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        NoOp,           // Non fare nulla\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        Completed,      // Il tag ha finito il suo ciclo\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub trait TagProcessor: Send + Sync {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        /// Ritorna il nome del tag (es. \"answer\")\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        fn name(&self) -> &'static str;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        /// Crea lo stato iniziale per questo tag quando viene incontrata una nuova ancora.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        fn initial_state(&self, /* parametri dal tag, es. model, prompt */) -> Result<StateKind, anyhow::Error>;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        /// Fa avanzare lo stato del tag. Questa è la funzione centrale.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        /// Contiene la logica per passare da uno stato all'altro (es. da NeedProcessing a NeedInjection).\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        fn advance(&self, state: &mut State) -> Result<TagAction, anyhow::Error>;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    La funzione `advance` conterrà la logica che oggi è sparsa in `execute.rs`. Ad esempio, per il tag `answer`, `advance` controllerà se `state.common.status` è `NeedProcessing`. Se sì, eseguirà la query LLM, salverà il risultato in `state.kind` e ritornerà `TagAction::Inject(result)`.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "---\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "#### Fase 3: Refactoring del Motore di Esecuzione (`execute.rs`)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Ora modifichiamo `execute.rs` per usare il nostro nuovo `trait`. Il motore diventerà generico.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1.  **Creare un `TagRegistry`**: Il motore avrà bisogno di un modo per trovare l'implementazione `TagProcessor` corretta per un dato nome di tag. Una `HashMap` è perfetta per questo.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```rust\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // In execute.rs o in un nuovo modulo 'engine'\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    use std::collections::HashMap;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    use super::tag_processor::TagProcessor;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub struct TagRegistry {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        processors: HashMap<&'static str, Box<dyn TagProcessor>>,\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    impl TagRegistry {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub fn new() -> Self {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            // Qui registriamo tutte le nostre implementazioni di tag\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            let mut processors: HashMap<&'static str, Box<dyn TagProcessor>> = HashMap::new();\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            \n"
+      }
+    },
+    {
+      "User": {
+        "text": "            let answer_proc = Box::new(AnswerProcessor); // da definire nella fase 4\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            processors.insert(answer_proc.name(), answer_proc);\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            let derive_proc = Box::new(DeriveProcessor); // da definire nella fase 4\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            processors.insert(derive_proc.name(), derive_proc);\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            \n"
+      }
+    },
+    {
+      "User": {
+        "text": "            // ... e così via per tutti i tag\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            \n"
+      }
+    },
+    {
+      "User": {
+        "text": "            Self { processors }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        pub fn get(&self, name: &str) -> Option<&dyn TagProcessor> {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            self.processors.get(name).map(|b| b.as_ref())\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2.  **Semplificare il ciclo di `execute`**: Il loop principale di `execute` non avrà più un `match` gigante sul nome del tag. Invece, userà la `TagRegistry` per delegare il lavoro.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```rust\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // Pseudo-codice di come diventerà il loop in execute.rs\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    let registry = TagRegistry::new();\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    for anchor in find_anchors_to_process() {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        let mut state = load_state_for_anchor(anchor); // Carica lo State dal DB o memoria\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        \n"
+      }
+    },
+    {
+      "User": {
+        "text": "        if let Some(processor) = registry.get(anchor.tag_name()) {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            // Delega tutta la logica di business al processore del tag!\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            match processor.advance(&mut state) {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                Ok(TagAction::Inject(text)) => {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    inject_text_into_document(text);\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    state.common.status = AnchorStatus::NeedInjection; // o un altro stato\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                },\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                Ok(TagAction::Completed) => {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    state.common.status = AnchorStatus::Complete;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                },\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                // ... etc.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        \n"
+      }
+    },
+    {
+      "User": {
+        "text": "        save_state_for_anchor(anchor, state); // Salva lo stato aggiornato\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "**Beneficio di questa fase**: `execute.rs` non conosce più i dettagli di \"answer\" o \"derive\". Sa solo come orchestrare un ciclo di stati guidato da un `TagProcessor`. La complessità è ora decentralizzata.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "---\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "#### Fase 4: Implementazione dei `TagProcessor`\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Spostiamo la logica attualmente in `execute.rs` dentro le implementazioni specifiche del nostro nuovo `trait`.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1.  **Creare `src/execute2/processors/answer.rs`**:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```rust\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    // In src/execute2/processors/answer.rs\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    use super::super::tag_processor::{TagProcessor, TagAction};\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    use super::super::state::{State, StateKind, AnswerStateData};\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    pub struct AnswerProcessor;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    impl TagProcessor for AnswerProcessor {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        fn name(&self) -> &'static str { \"answer\" }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        fn initial_state(&self, /*...*/) -> Result<StateKind, ...> {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            // Logica per creare AnswerStateData dai parametri del tag\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            Ok(StateKind::Answer(AnswerStateData { ... }))\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        fn advance(&self, state: &mut State) -> Result<TagAction, ...> {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            if let StateKind::Answer(data) = &mut state.kind {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                match state.common.status {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    AnchorStatus::NeedProcessing => {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        // QUI va la logica per chiamare l'LLM\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        let result = call_llm(&data.prompt, &data.model)?;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        data.output = Some(result.clone());\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        state.common.status = AnchorStatus::NeedInjection;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        return Ok(TagAction::Inject(result));\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    AnchorStatus::NeedInjection => {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        // Logica per quando il testo è stato iniettato\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        state.common.status = AnchorStatus::Complete;\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                        return Ok(TagAction::Completed);\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                    _ => Ok(TagAction::NoOp)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            } else {\n"
+      }
+    },
+    {
+      "User": {
+        "text": "                Err(anyhow::anyhow!(\"Stato non valido per AnswerProcessor\"))\n"
+      }
+    },
+    {
+      "User": {
+        "text": "            }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "        }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    }\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    ```\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2.  **Fare lo stesso per `DeriveProcessor`, `RepeatProcessor`, etc.** in file separati. Ogni file sarà autonomo e conterrà tutta la logica per un singolo tag.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "---\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "#### Fase 5: Gestione dei Tag \"Stateless\" (Flusso C)\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "I tag come `include` e `set` non si adattano bene al modello di stato a lungo termine. Possiamo gestirli in due modi:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1.  **Opzione A (Preferita)**: Creare un secondo, più semplice `trait` `StatelessTagProcessor` con un singolo metodo `execute(&self, ...)` che viene chiamato una sola volta. La `TagRegistry` conterrà entrambi i tipi di processori.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2.  **Opzione B (Più Semplice)**: Nell'engine `execute.rs`, prima di entrare nel ciclo degli stati, avere un `match` per gestire questi casi speciali.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Proporrei di iniziare con l'Opzione B per semplicità e poi, se necessario, evolvere verso l'Opzione A.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "### Riassunto dei Benefici\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1.  **Ergonomia**: Per aggiungere un nuovo tag `new_tag`, dovrai solo:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Creare `src/execute2/processors/new_tag.rs`.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Implementare il `trait TagProcessor`.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   Registrarlo nella `TagRegistry`.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "    *   **Nessuna modifica al motore `execute.rs`**.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2.  **Separazione delle Responsabilità**: Il motore orchestra, i processori eseguono. Codice pulito e disaccoppiato.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "3.  **Testabilità**: Ogni `TagProcessor` può essere testato in isolamento, senza dover eseguire l'intero motore di `execute`.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "4.  **Chiarezza**: Tutta la logica di un tag è contenuta in un unico file, facile da trovare, leggere e modificare.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Questo piano mira a trasformare la codebase da un monolite procedurale a un sistema più robusto, modulare e facile da mantenere, seguendo le migliori pratiche di software engineering in Rust.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Attendo la tua approvazione per iniziare con la **Fase 1**.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "Vedo dei difetti e imprecisioni nel piano:\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "1) forse cercare di rendere State parte common e parte dettaglio introduce una tensione inutile.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "   nel momento in cui un trait sara' fatto bene, avra' un tipo generico T per lo stato e tutto si \n"
+      }
+    },
+    {
+      "User": {
+        "text": "   interfaccera' al trait, e non allo stato, quindi e' un passaggio inutile rendere lo stato common + dettaglio.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "2) il TagProcessor/advance perde di vista che ci sono 2 pass con scopi molto diversi: eseguire task \"fuori dal context\", ma leggendo il context con collector, oppure \"modificare il context\"; questa divisione a me pare molto funzionale, ed e' centrale al funzionamento dell'engine.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "riprova, capendo queste cose bene.\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    }
+  ],
+  "reply": "Hai assolutamente ragione. Le tue osservazioni sono acute e colgono due punti deboli chiave della mia prima proposta. Tento di forzare una struttura (`CommonState`) che diventa superflua con un'astrazione migliore, e fondo due fasi distinte (`process` e `inject`) che sono centrali per il funzionamento del tuo motore.\n\nGrazie per il feedback. Riprovo con un piano più raffinato che rispetta e modella esplicitamente questi concetti.\n\n### Filosofia del Nuovo Piano\n\n1.  **Il Trait è Sovrano**: L'interfaccia (`trait`) definisce un contratto, non un tipo di dato. Ogni implementazione del tag sarà libera di definire la propria struttura di stato. Il motore interagirà solo con il contratto, non con i dettagli dello stato.\n2.  **Architettura a Due Fasi Esplicita**: Il `trait` rifletterà direttamente la natura a due passaggi del motore: una fase di \"elaborazione\" (che legge il contesto ed esegue logica esterna) e una fase di \"azione\" (che dice al motore come modificare il documento).\n\n---\n\n### Piano di Refactoring Rivisto e Dettagliato\n\n#### Fase 1: Definizione del Contratto (`trait Tag`) e dei Tipi di Supporto\n\nCreeremo un nuovo file, `src/execute2/processor.rs`, che sarà il cuore della nostra nuova architettura a plugin.\n\n1.  **Definire `ProcessResult`**: Questa `enum` sarà il risultato della fase di elaborazione e comunicherà al motore l'azione da intraprendere.\n\n    ```rust\n    // In src/execute2/processor.rs\n\n    /// L'azione che il motore deve eseguire dopo che un tag ha completato la sua elaborazione.\n    pub enum ProcessResult {\n        /// Richiede di iniettare il testo fornito nel documento.\n        Inject(String),\n        /// Il tag ha completato il suo ciclo di vita.\n        Completed,\n        /// Non è richiesta alcuna azione sul documento.\n        NoOp,\n        // Potremmo aggiungere altre azioni in futuro, come `ModifyAnchorAttributes(...)`\n    }\n    ```\n\n2.  **Definire il `trait Tag`**: Questo è il contratto che ogni tag stateful dovrà implementare.\n\n    ```rust\n    // In src/execute2/processor.rs\n    use std::collections::HashMap;\n    use serde::{Serialize, de::DeserializeOwned};\n\n    pub trait Tag: Send + Sync {\n        /// Lo stato specifico di questo tag. Ogni implementazione definisce la propria struct.\n        /// Deve essere serializzabile per la persistenza.\n        type State: Serialize + DeserializeOwned + Default + Send + Sync;\n\n        /// Ritorna il nome univoco del tag (es. \"answer\").\n        fn name(&self) -> &'static str;\n\n        /// Crea lo stato iniziale del tag a partire dagli attributi letti dal documento.\n        fn initialize(&self, attributes: &HashMap<String, String>) -> Result<Self::State, anyhow::Error>;\n\n        /// **Fase 1: Elaborazione (Process).**\n        /// Esegue la logica principale del tag (es. query a LLM, lettura file).\n        /// Prende lo stato corrente e il contesto raccolto, e ritorna un'azione per il motore.\n        fn process(&self, state: &mut Self::State, context: &str) -> Result<ProcessResult, anyhow::Error>;\n    }\n    ```\n    **Nota chiave**: Abbiamo un solo metodo, `process`, che però ritorna un `ProcessResult`. Questo mantiene la separazione concettuale: `process` fa il lavoro \"esterno\", e il suo risultato guida il motore nella fase di modifica del documento, rispettando la tua architettura a due passaggi.\n\n3.  **Creare un Wrapper Type-Erased**: Per poter mettere `Box` di `Tag` diversi in una `HashMap`, dobbiamo cancellare il tipo associato `State`. Creeremo un `trait` interno e un wrapper per gestire questo in modo trasparente.\n\n    ```rust\n    // In src/execute2/processor.rs (o un modulo interno)\n\n    // Trait interno che il motore userà. Lavora su dati JSON generici.\n    pub trait ErasedTag: Send + Sync {\n        fn name(&self) -> &'static str;\n        fn initialize_erased(&self, attributes: &HashMap<String, String>) -> Result<serde_json::Value, anyhow::Error>;\n        fn process_erased(&self, state: &mut serde_json::Value, context: &str) -> Result<ProcessResult, anyhow::Error>;\n    }\n\n    // Implementazione automatica che adatta qualsiasi `Tag` al nostro trait erased.\n    impl<T: Tag> ErasedTag for T {\n        fn name(&self) -> &'static str { self.name() }\n\n        fn initialize_erased(&self, attributes: &HashMap<String, String>) -> Result<serde_json::Value, anyhow::Error> {\n            let state = self.initialize(attributes)?;\n            serde_json::to_value(state).map_err(Into::into)\n        }\n\n        fn process_erased(&self, state_json: &mut serde_json::Value, context: &str) -> Result<ProcessResult, anyhow::Error> {\n            // Deserializza, processa, e riserializza lo stato.\n            let mut state: T::State = serde_json::from_value(state_json.clone())?;\n            let result = self.process(&mut state, context)?;\n            *state_json = serde_json::to_value(state)?;\n            Ok(result)\n        }\n    }\n    ```\n\n**Beneficio di questa fase**: Abbiamo un'architettura a plugin robusta e idiomatica in Rust, che non impone una struttura rigida allo stato e rispetta la logica a due fasi.\n\n---\n\n#### Fase 2: Refactoring del Motore (`execute.rs`)\n\nIl motore ora diventa un orchestratore generico che non conosce i dettagli di nessun tag.\n\n1.  **Creare la `TagRegistry`**:\n\n    ```rust\n    // In execute.rs o un nuovo modulo `engine.rs`\n    use std::collections::HashMap;\n    use super::processor::ErasedTag;\n\n    pub struct TagRegistry {\n        processors: HashMap<&'static str, Box<dyn ErasedTag>>,\n    }\n\n    impl TagRegistry {\n        pub fn new() -> Self {\n            let mut processors: HashMap<&'static str, Box<dyn ErasedTag>> = HashMap::new();\n            \n            // Registrazione dei processori (che implementeremo nella Fase 3)\n            let answer_proc = Box::new(super::processors::answer::AnswerProcessor);\n            processors.insert(answer_proc.name(), answer_proc);\n            // ... e così via per gli altri ...\n\n            Self { processors }\n        }\n\n        pub fn get(&self, name: &str) -> Option<&dyn ErasedTag> {\n            self.processors.get(name).map(|b| b.as_ref())\n        }\n    }\n    ```\n\n2.  **Adattare il Ciclo di Esecuzione**: Il loop principale in `execute.rs` userà la registry. La logica `AnchorStatus` (`JustCreated`, `NeedProcessing`, `NeedInjection`) rimane valida e utile a livello di motore per orchestrare il flusso.\n\n    ```rust\n    // Pseudo-codice del nuovo loop in execute.rs\n\n    let registry = TagRegistry::new();\n\n    // Pass 1: Process anchors that need it\n    for anchor in find_anchors_with_status(AnchorStatus::NeedProcessing) {\n        let processor = registry.get(anchor.tag_name()).unwrap();\n        let mut state = load_state_for_anchor(anchor); // Carica il serde_json::Value\n\n        match processor.process_erased(&mut state, anchor.collected_context()) {\n            Ok(ProcessResult::Inject(text_to_inject)) => {\n                // Salva il risultato per la fase 2\n                store_injection_data(anchor, text_to_inject); \n                update_anchor_status(anchor, AnchorStatus::NeedInjection);\n            },\n            Ok(ProcessResult::Completed) => {\n                update_anchor_status(anchor, AnchorStatus::Complete);\n            },\n            // ... altri casi\n        }\n        save_state_for_anchor(anchor, state); // Salva lo stato aggiornato\n    }\n\n    // Pass 2: Inject content into the document\n    for anchor in find_anchors_with_status(AnchorStatus::NeedInjection) {\n        let text = get_injection_data(anchor);\n        inject_text_into_document_at_anchor(anchor, text);\n        update_anchor_status(anchor, AnchorStatus::Complete);\n    }\n    ```\n\n**Beneficio di questa fase**: Il motore è completamente disaccoppiato dalla logica dei tag. La sua unica responsabilità è orchestrare il flusso di stati (`NeedProcessing` -> `NeedInjection` -> `Complete`) e chiamare il processore corretto al momento giusto.\n\n---\n\n#### Fase 3: Implementazione Concreta dei `Tag`\n\nOra creiamo i processori specifici, ognuno nel suo file.\n\n1.  **Creare `src/execute2/processors/answer.rs`**:\n\n    ```rust\n    // In src/execute2/processors/answer.rs\n    use serde::{Serialize, Deserialize};\n    use crate::execute2::processor::{Tag, ProcessResult};\n\n    #[derive(Serialize, Deserialize, Default)]\n    pub struct AnswerState {\n        model: String,\n        prompt: String,\n        output: Option<String>,\n    }\n\n    pub struct AnswerProcessor;\n\n    impl Tag for AnswerProcessor {\n        type State = AnswerState;\n\n        fn name(&self) -> &'static str { \"answer\" }\n\n        fn initialize(&self, attrs: &HashMap<String, String>) -> Result<Self::State, ...> {\n            // Logica per estrarre 'model' e 'prompt' da attrs\n            Ok(AnswerState { model: ..., prompt: ..., output: None })\n        }\n\n        fn process(&self, state: &mut Self::State, context: &str) -> Result<ProcessResult, ...> {\n            // QUI va la logica di `answer`:\n            // 1. Combina `state.prompt` con `context`.\n            // 2. Chiama l'LLM con `state.model`.\n            let result = call_llm(context, &state.model)?;\n            \n            // 3. Salva l'output nello stato per futura referenza.\n            state.output = Some(result.clone());\n\n            // 4. Ritorna l'azione per il motore.\n            Ok(ProcessResult::Inject(result))\n        }\n    }\n    ```\n\n2.  **Creare implementazioni simili per `Derive`, `Repeat`, etc.**, ognuna con il proprio `State` e la propria logica in `process`.\n\n---\n\n#### Fase 4: Gestione dei Tag Stateless (Flusso C)\n\nPer `include` e `set`, che non hanno un ciclo di vita stateful, l'approccio più pulito e semplice è gestirli come casi speciali nel motore, prima di entrare nella logica dei processori.\n\n```rust\n// In execute.rs, all'inizio del ciclo\nfor tag in find_all_tags() {\n    match tag.name() {\n        \"include\" => {\n            // Esegui logica di 'include' immediatamente\n            continue; // Vai al prossimo tag\n        },\n        \"set\" => {\n            // Esegui logica di 'set' immediatamente\n            continue; // Vai al prossimo tag\n        },\n        _ => {\n            // Questo è un tag stateful, procedi con la logica della registry...\n        }\n    }\n}\n```\nQuesto evita di complicare il `trait Tag` con concetti che non gli appartengono, mantenendolo focalizzato sul suo scopo principale: gestire tag stateful con un ciclo di vita a due fasi.\n\n### Conclusione\n\nQuesto piano rivisto è più robusto, flessibile e allineato con le tue osservazioni. Porta a:\n*   **Massima Separazione**: Il motore orchestra, i processori eseguono.\n*   **Estensibilità Semplice**: Aggiungere un nuovo tag stateful richiede solo di implementare il `trait Tag` e registrarlo, senza toccare il motore.\n*   **Stato Flessibile**: Ogni tag definisce il proprio stato, senza forzature.\n*   **Architettura Chiara**: La logica a due fasi è un pilastro esplicito del design.\n\nAttendo la tua approvazione su questo nuovo piano per procedere.\n"
+}

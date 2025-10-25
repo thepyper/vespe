@@ -52,13 +52,13 @@ impl Variables {
     pub fn update(&self, parameters: &Parameters) -> Self {
         let mut variables = self.clone();
         if let Some(x) = parameters.parameters.get("provider") {
-            variables.provider = x.to_string();
+            variables.provider = x.as_str().unwrap_or("internal-error-variables-rs").to_string();
         }
         if let Some(x) = parameters.parameters.get("output_mode") {
             variables.output_mode = x.to_string().parse::<OutputMode>().unwrap_or(OutputMode::Here);
         }
         if let Some(x) = parameters.parameters.get("output") {
-            variables.output = x.to_string();
+            variables.output = x.as_str().unwrap_or("internal-error-variables-rs").to_string();
         }
         variables
     }

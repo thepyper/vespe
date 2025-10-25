@@ -712,13 +712,16 @@ impl Worker {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
-
+    
         let result = self.pass_2_internal_y(&mut patches, &ast)?;
 
         if !patches.is_empty() {
             let new_context_content = patches.apply_patches()?;
             self.file_access
                 .write_file(context_path, &new_context_content, None)?;
+
+            tracing::debug!(
+                "Worker::pass_2 applied patches to path: {:?}",new_context_content);
         }
 
         tracing::debug!("Worker::pass_2 finished for path: {:?}", context_path);
@@ -794,6 +797,9 @@ impl Worker {
     ) -> Result<bool> {
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
         patches.add_patch(&tag.range, &format!("{}\n{}\n", a0.to_string(), a1.to_string()));
+
+        tracing::debug!("Worker::pass_2 patch: {:?}", tag.range);
+
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), &a0);
         asm.save_state(&S::new(), None)?;
@@ -995,4 +1001,35 @@ impl Worker {
             }
         }
     }
+}
+
+
+
+
+
+
+
+trait TagProcessor {
+    fn process_tag_during_injection_pass(
+        &self,
+        patches: &mut utils::Patches,
+        tag: &Tag,  
+    ); // state!?!?!
+    fn process_tag_during_collection_pass(
+        &self,
+        collector: Collector,
+        tag: &Tag,
+    ) -> Result<Collector>; // state!?!?!
+    fn process_anchor_during_injection_pass(
+        &self,
+        patches: &mut utils::Patches,
+        a0: &Anchor,
+        a1: &Anchor,
+    ); // state!?!?!
+    fn process_anchor_during_collection_pass(
+        &self,
+        collector: Collector,
+        asm: &utils::AnchorStateManager,
+        anchor: &Anchor,
+    ) -> Result<Option<Collector>>; // state!?!?!
 }

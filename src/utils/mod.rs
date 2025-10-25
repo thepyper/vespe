@@ -111,7 +111,9 @@ impl<'a> Patches<'a> {
     pub fn apply_patches(&self) -> Result<String> {
         let mut result = self.document.to_string();
         for (range, replace) in self.patches.iter().rev() {
-            result.replace_range(range.begin.offset..range.end.offset, replace);
+            let start_byte = self.document.char_indices().nth(range.begin.offset).map(|(i, _)| i).unwrap_or(self.document.len());
+            let end_byte = self.document.char_indices().nth(range.end.offset).map(|(i, _)| i).unwrap_or(self.document.len());
+            result.replace_range(start_byte..end_byte, replace);
         }
         Ok(result)
     }

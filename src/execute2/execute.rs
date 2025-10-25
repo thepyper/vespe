@@ -19,7 +19,7 @@ use crate::path::PathResolver;
 
 use super::*;
 
-use crate::execute2::content::ModelContentItem;
+use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState, ChooseState, DecideState};
 use crate::execute2::variables::Variables;
 
@@ -302,16 +302,15 @@ impl Worker {
         };
     }
 
-    fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
-        let query = contents
-            .into_iter()
-            .flatten()
-            .map(|item| item.to_string())
-            .collect::<Vec<String>>()
-            .join("\n");
-        agent::shell::shell_call(&collector.variables.provider, &query)
-    }
-
+        fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
+            let query = contents
+                .into_iter()
+                .flat_map(|mc| mc.0)
+                .map(|item| item.to_string())
+                .collect::<Vec<String>>()
+                .join("\n");
+            agent::shell::shell_call(&collector.variables.provider, &query)
+        }
     /// **Pass 1**: Collects content and triggers slow/asynchronous tasks.
     ///
     /// This pass reads the AST and builds up the `ModelContent` by processing

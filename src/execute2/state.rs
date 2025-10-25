@@ -4,7 +4,7 @@ use uuid::{uuid, Uuid};
 use crate::{ast2::Anchor, execute2::variables};
 
 use super::variables::Variables;
-use super::ModelContent;
+use super::content::ModelContent;
 
 
 /// A trait for objects that represent the persistent state of an anchor command.
@@ -46,12 +46,22 @@ pub enum AnchorStatus {
     Completed,
 }
 
+impl Default for AnchorStatus {
+    fn default() -> Self {
+        AnchorStatus::JustCreated
+    }
+}
+
 /// The persistent state for an `@inline` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InlineState {
+    #[serde(default)]
     pub status: AnchorStatus,
+    #[serde(default)]
     pub context_name: String,
+    #[serde(default)]
     pub context: String,
+    #[serde(default)]
     pub variables: Variables,
 }
 
@@ -81,9 +91,13 @@ impl State for InlineState {
 /// The persistent state for an `@answer` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
+    #[serde(default)]
     pub status: AnchorStatus,
+    #[serde(default)]
     pub query: ModelContent,
+    #[serde(default)]
     pub reply: String,
+    #[serde(default)]
     pub variables: Variables,
 }
 
@@ -113,9 +127,13 @@ impl State for AnswerState {
 /// The persistent state for an `@decide` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DecideState {
+    #[serde(default)]
     pub status: AnchorStatus,
+    #[serde(default)]
     pub query: ModelContent,
+    #[serde(default)]
     pub reply: String,
+    #[serde(default)]
     pub variables: Variables,
 }
 
@@ -145,9 +163,13 @@ impl State for DecideState {
 /// The persistent state for an `@choose` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChooseState {
+    #[serde(default)]
     pub status: AnchorStatus,
+    #[serde(default)]
     pub query: ModelContent,
+    #[serde(default)]
     pub reply: String,
+    #[serde(default)]
     pub variables: Variables,
 }
 
@@ -177,12 +199,19 @@ impl State for ChooseState {
 /// The persistent state for a `@derive` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DeriveState {
+    #[serde(default)]
     pub status: AnchorStatus,
+    #[serde(default)]
     pub instruction_context_name: String,
+    #[serde(default)]
     pub instruction_context: ModelContent,
+    #[serde(default)]
     pub input_context_name: String,
+    #[serde(default)]
     pub input_context: ModelContent,
+    #[serde(default)]
     pub derived: String,
+    #[serde(default)]
     pub variables: Variables,
 }
 
@@ -215,8 +244,11 @@ impl State for DeriveState {
 /// The persistent state for a `@repeat` command.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RepeatState {
+    #[serde(default)]
     pub status: AnchorStatus,
+    #[serde(default)]
     pub wrapper: Uuid,
+    #[serde(default)]
     pub variables: Variables,
 }
 

@@ -8,7 +8,7 @@ use std::str::FromStr;
 ///
 /// This struct can be extended to include more dynamic settings, such as
 /// model choices, timeouts, or other parameters loaded from configuration files.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Variables {
     /// The command-line string used to invoke the external model provider (e.g., an LLM agent).
     pub provider: String,

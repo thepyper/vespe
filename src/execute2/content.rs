@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use serde::{de::{self, SeqAccess, Visitor}, Deserialize, Deserializer, Serialize};
+use std::fmt;
 
 /// Represents content originating from the system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,22 +40,73 @@ impl ModelContentItem {
 impl ToString for ModelContentItem {
     fn to_string(&self) -> String {
         match self {
-            /*
-            ModelContentItem::System(content) => format!("System: {}", content.text),
-            ModelContentItem::User(content) => format!("User: {}", content.text),
-            ModelContentItem::Agent(content) => {
-                format!("Agent ({}): {}", content.author, content.text)
-            }
-            */
             ModelContentItem::System(content) => format!("{}", content.text),
             ModelContentItem::User(content) => format!("{}", content.text),
-            ModelContentItem::Agent(content) => {
-                format!("{}", content.text)
-            }
+            ModelContentItem::Agent(content) => format!("{}", content.text),
         }
     }
 }
 
-/// A type alias for a vector of `ModelContentItem`, representing a full
-/// conversation or a multi-part prompt.
-pub type ModelContent = Vec<ModelContentItem>;
+/// A struct representing a full conversation or a multi-part prompt.
+#[derive(Debug, Clone, Serialize)]
+pub struct ModelContent(pub Vec<ModelContentItem>);
+
+impl ModelContent {
+    pub fn new() -> Self {
+        ModelContent(Vec::new())
+    }
+
+    pub fn push(&mut self, item: ModelContentItem) {
+        self.0.push(item);
+    }
+}
+
+impl Default for ModelContent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ToString for ModelContent {
+    fn to_string(&self) -> String {
+        self.0
+            .iter()
+            .map(|item| item.to_string())
+            .collect::<Vec<String>>()
+            .join("\n")
+    }
+}
+
+impl<'de> Deserialize<'de> for ModelContent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct ModelContentVisitor;
+
+        impl<'de> Visitor<'de> for ModelContentVisitor {
+            type Value = ModelContent;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a string or a sequence of model content items")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<ModelContent, E>
+            where
+                E: de::Error,
+            {
+                Ok(ModelContent(vec![ModelContentItem::user(value)]))
+            }
+
+            fn visit_seq<A>(self, seq: A) -> Result<ModelContent, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let items = Vec::<ModelContentItem>::deserialize(de::value::SeqAccessDeserializer::new(seq))?;
+                Ok(ModelContent(items))
+            }
+        }
+
+        deserializer.deserialize_any(ModelContentVisitor)
+    }
+}

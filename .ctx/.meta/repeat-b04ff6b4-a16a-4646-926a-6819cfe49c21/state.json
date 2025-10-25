@@ -1,0 +1,8 @@
+{
+  "status": "JustCreated",
+  "wrapper": "00000000-0000-0000-0000-000000000000",
+  "variables": {
+    "provider": "gemini -p -y -m gemini-2.5-flash",
+    "output": null
+  }
+}

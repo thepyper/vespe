@@ -352,6 +352,8 @@ impl Worker {
                 Content::Tag(tag) => {
                     let state = create_command_state_from_command_kind(tag.command);
                     // TODO patch if needed to convert into anchor, not otherwise
+
+
                 }
                 Content::Anchor(anchor) => {
                     let state = create_command_state_from_command_kind(anchor.command);
@@ -378,8 +380,9 @@ impl Worker {
 		state: &serde_json::Value,
     ) -> Result<(Option<Collector>, Option<serde_json::Value>, Option<String>)> {
         
+        
         match command {
-            CommandKind::Answer: manage_tag_answer(collector, parameters, arguments),
+            CommandKind::Answer: _pass_tag_answer(collector, parameters, arguments),
         }
 
 

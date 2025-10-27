@@ -1,5 +1,6 @@
 use anyhow::Result;
 use uuid::Uuid;
+use enum_dispatch::enum_dispatch;
 
 use super::execute::Collector;
 use super::execute::Worker;
@@ -269,4 +270,82 @@ impl StaticPolicy for SetPolicy {
     }
 }
 
-
+struct TagBehaviorDispatch;
+impl TagBehaviorDispatch {
+    fn execute_tag(
+        worker: &Worker,
+        collector: Collector,
+        tag: &Tag,
+    ) -> Result<(Option<Collector>, Vec<(Range, String)>)>
+    {
+        match tag.command {
+            crate::ast2::CommandKind::Answer => {
+                DynamicTagBehavior::<AnswerPolicy>::execute_tag(worker, collector, tag)
+            }
+            crate::ast2::CommandKind::Include => {
+                StaticTagBehavior::<IncludePolicy>::execute_tag(worker, collector, tag)
+            }
+            crate::ast2::CommandKind::Set => {
+                StaticTagBehavior::<SetPolicy>::execute_tag(worker, collector, tag)
+            }
+            _ => Err(anyhow::anyhow!("Unsupported tag command")),
+        }
+    }
+    fn collect_tag(
+        worker: &Worker,
+        collector: Collector,
+        tag: &Tag,
+    ) -> Result<Option<Collector>>
+    {
+        match tag.command {
+            crate::ast2::CommandKind::Answer => {
+                DynamicTagBehavior::<AnswerPolicy>::collect_tag(worker, collector, tag)
+            }
+            crate::ast2::CommandKind::Include => {
+                StaticTagBehavior::<IncludePolicy>::collect_tag(worker, collector, tag)
+            }
+            crate::ast2::CommandKind::Set => {
+                StaticTagBehavior::<SetPolicy>::collect_tag(worker, collector, tag)
+            }
+            _ => Err(anyhow::anyhow!("Unsupported tag command")),
+        }
+    }
+    fn execute_anchor(
+        worker: &Worker,
+        collector: Collector,
+        anchor: &Anchor,
+        anchor_end: Position,
+    ) -> Result<(Option<Collector>, Vec<(Range, String)>)>
+    {
+        match anchor.command {
+            crate::ast2::CommandKind::Answer => {
+                DynamicTagBehavior::<AnswerPolicy>::execute_anchor(
+                    worker,
+                    collector,
+                    anchor,
+                    anchor_end,
+                )
+            }
+            _ => Err(anyhow::anyhow!("Unsupported anchor command")),
+        }
+    }
+    fn collect_anchor(
+        worker: &Worker,
+        collector: Collector,
+        anchor: &Anchor,
+        anchor_end: Position,
+    ) -> Result<Option<Collector>>
+    {
+        match anchor.command {
+            crate::ast2::CommandKind::Answer => {
+                DynamicTagBehavior::<AnswerPolicy>::collect_anchor(
+                    worker,
+                    collector,
+                    anchor,
+                    anchor_end,
+                )
+            }
+            _ => Err(anyhow::anyhow!("Unsupported anchor command")),
+        }
+    }
+}

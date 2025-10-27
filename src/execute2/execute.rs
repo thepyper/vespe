@@ -1,7 +1,7 @@
 use crate::ast2::{
     Anchor, AnchorKind, Arguments, CommandKind, Content, Document, Parameters, Range, Tag, Text,
 };
-use crate::execute2::tags::TagBehaviorDispatch;
+//use crate::execute2::tags::TagBehaviorDispatch;
 use crate::path;
 use crate::utils;
 use crate::{agent, file};

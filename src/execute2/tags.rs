@@ -34,7 +34,17 @@ pub trait TagBehavior {
     ) -> Result<Option<Collector>>;
 }
 
-trait StaticTagBehavior: TagBehavior {
+trait StaticTagBehaviorTrait {
+    fn collect_static_tag(
+        worker: &Worker,
+        collector: Collector,
+        tag: &Tag,
+    ) -> Result<Option<Collector>>;
+}
+
+struct<T> StaticTagBehavior<T> : StaticTagBehaviorTrait;
+
+impl TagBehavior for StaticTagBehavior<T> {
     fn execute_anchor(
         worker: &Worker,
         mut collector: Collector,
@@ -56,18 +66,55 @@ trait StaticTagBehavior: TagBehavior {
         mut collector: Collector,
         tag: &Tag,
     ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
-        let collector = collect_tag(worker, collector, tag);
+        let collector = T::collect_static_tag(worker, collector, tag);
         Ok((collector, vec![]))
     }
     fn collect_tag(
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<Option<Collector>>;
+    ) -> Result<Option<Collector>>; {
+        T::collect_static_tag(worker, collector, tag)
+    }
 }
 
-trait DynamicTagBehavior: TagBehavior {
+trait DynamicTagBehaviorTrait {
     type State;
+
+    fn execute(
+        worker: &Worker,
+        mut collector: Collector,
+        mut state: Self::State,
+    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)> {
+        Self::mono(worker, collector, state)
+    }
+    fn collect(
+        worker: &Worker,
+        mut collector: Collector,
+        mut state: Self::State,
+    ) -> Result<(Option<Collector>, Option<Self::State>)> {
+        let (collector, new_state, new_output) = Self::mono(worker, collector, state)?;
+        match new_output {
+            Some(_) => {
+                // Cannot produce output during collect, new state discarded
+                Ok((collector, None))
+            }
+            None => {
+                // No new output produced, save new state
+                Ok((collector, new_state))
+            }
+        }
+    }
+    fn mono(
+        worker: &Worker,
+        collector: Collector,
+        state: Self::State,
+    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)>;
+}
+
+struct<T> DynamicTagBehavior<T> : DynamicTagBehaviorTrait;
+
+impl TagBehavior for DynamicTagBehavior<T> {
 
     fn execute_tag(
         worker: &Worker,
@@ -140,35 +187,6 @@ trait DynamicTagBehavior: TagBehavior {
         // Return collector
         Ok(collector)
     }
-    fn execute(
-        worker: &Worker,
-        mut collector: Collector,
-        mut state: Self::State,
-    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)> {
-        mono(worker, collector, state)
-    }
-    fn collect(
-        worker: &Worker,
-        mut collector: Collector,
-        mut state: Self::State,
-    ) -> Result<(Option<Collector>, Option<Self::State>)> {
-        let (collector, new_state, new_output) = mono(worker, collector, state)?;
-        match new_output {
-            Some(_) => {
-                // Cannot produce output during collect, new state discarded
-                Ok((collector, None))
-            }
-            None => {
-                // No new output produced, save new state
-                Ok((collector, new_state))
-            }
-        }
-    }
-    fn mono(
-        worker: &Worker,
-        collector: Collector,
-        state: Self::State,
-    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)>;
 }
 
 #[derive(Debug)]

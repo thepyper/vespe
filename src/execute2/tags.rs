@@ -190,7 +190,7 @@ struct AnswerState {
 
 struct AnswerTagBehavior;
 
-//impl TagBehavior for AnswerTagBehavior {} 
+impl TagBehavior for AnswerTagBehavior {}
 
 impl DynamicTagBehavior for AnswerTagBehavior {
     type State = AnswerState;
@@ -232,6 +232,8 @@ impl DynamicTagBehavior for AnswerTagBehavior {
 #[derive(Debug)]
 struct IncludeTagBehaviour;
 
+impl TagBehavior for IncludeTagBehaviour {}
+
 impl StaticTagBehavior for IncludeTagBehaviour {
     fn collect_tag(
         worker: &Worker,
@@ -250,6 +252,8 @@ impl StaticTagBehavior for IncludeTagBehaviour {
 }
 
 struct SetTagBehaviour;
+
+impl TagBehavior for SetTagBehaviour {}
 
 impl StaticTagBehavior for SetTagBehaviour {
     fn collect_tag(

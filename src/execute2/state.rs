@@ -268,3 +268,31 @@ impl State for RepeatState {
         self.variables.clone()
     }
 }
+
+#[enum_dispatch]
+pub trait CommandBehavior {
+    fn load(&mut self);
+    fn execute(&mut self);
+    fn description(&self) -> String;
+}
+
+impl CommandBehavior for AnswerState {
+    fn execute(&mut self) {
+    }
+}
+
+#[enum_dispatch(CommandBehavior)]
+#[derive(Debug)]
+pub enum CommandState {
+    Answer(AnswerState),
+    Include(IncludeState),
+    Derive(DeriveState),
+}
+
+pub fn create_command_with_state(kind: CommandKind) -> CommandState {
+    match kind {
+        CommandKind::Answer => CommandState::Answer(AnswerState::default()),
+         CommandKind::Include => CommandState::Include(IncludeState),
+         CommandKind::Derive => CommandState::Derive(DeriveState::default()),
+     }
+}

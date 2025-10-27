@@ -18,11 +18,12 @@
 mod content;
 mod execute;
 //mod state;
-mod variables;
 mod tags;
+mod variables;
 
 use content::*;
 //use state::*;
+use execute::*;
 use variables::*;
 
 pub use execute::collect_context;

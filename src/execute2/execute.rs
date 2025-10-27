@@ -88,7 +88,7 @@ pub fn collect_context(
 /// It is passed by value through the execution flow, ensuring a functional-style,
 /// predictable state management.
 #[derive(Clone)]
-struct Collector {
+pub(crate) struct Collector {
     /// A stack of visited context file paths to detect and prevent circular includes.
     visit_stack: Vec<PathBuf>,
     /// A stack of entered anchors in current context file
@@ -170,7 +170,7 @@ impl Collector {
 /// The `Worker` holds thread-safe handles to the tools needed for execution,
 /// such as the file accessor and path resolver. It contains the core logic
 /// for the multi-pass execution strategy.
-struct Worker {
+pub(crate) struct Worker {
     file_access: Arc<dyn file::FileAccessor>,
     path_res: Arc<dyn path::PathResolver>,
 }
@@ -274,7 +274,7 @@ impl Worker {
     /// If `pass_1` completes without starting any new tasks, it returns `Ok(Some(Collector))`,
     /// signaling that the execution has converged and is complete.
     fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
-        /* TODO 
+        /* TODO
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
         // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
@@ -328,55 +328,49 @@ impl Worker {
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
-        let (collector, patches) = self._pass_internal(collector, context_path, true)?;
-        if !patches.is_empty() {
-            // This is collect pass, cannot produce patches, it's a bug!
-            panic!("Cannot produce patches during collect pass!");
-        } else {
-            // No patches, definitive collector to return
-            return Ok(collector);
-        }
+        self._pass_internal(collector, context_path, true)
     }
 
     fn apply_patches(context_content: &str, patches: &Vec<(Range, String)>) -> Result<String> {
         let mut result = context_content.to_string();
         for (range, replace) in patches.iter().rev() {
-            let start_byte = self
-                .document
+            let start_byte = context_content
                 .char_indices()
                 .nth(range.begin.offset)
                 .map(|(i, _)| i)
-                .unwrap_or(self.document.len());
-            let end_byte = self
-                .document
+                .unwrap_or(context_content.len());
+            let end_byte = context_content
                 .char_indices()
                 .nth(range.end.offset)
                 .map(|(i, _)| i)
-                .unwrap_or(self.document.len());
+                .unwrap_or(context_content.len());
             result.replace_range(start_byte..end_byte, replace);
         }
         Ok(result)
     }
 
-    fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {       
+    fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
         let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
-        self._pass_internal(collector, context_path, false)?  
+        self._pass_internal(collector, context_path, false)
     }
 
-    fn _pass_internal(&self, mut collector: Collector, context_path: &Path, is_collect: bool) -> Result<Option<Collector>> {
-
+    fn _pass_internal(
+        &self,
+        mut collector: Collector,
+        context_path: &Path,
+        is_collect: bool,
+    ) -> Result<Option<Collector>> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let anchor_index = utils::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
-            
-            let (maybe_new_collector, patches) = {
+            let (maybe_new_collector, patches) = match item {
                 Content::Text(text) => {
                     collector
                         .context
                         .push(ModelContentItem::user(&text.content));
-                    (collector, vec![])                            
+                    (collector, vec![])
                 }
                 Content::Tag(tag) => {
                     if is_collect {
@@ -385,24 +379,26 @@ impl Worker {
                         TagBehaviorDispatch::execute_tag(self, collector, tag)?
                     }
                 }
-                Content::Anchor(anchor) => {
-                    match anchor.kind {
-                        AnchorKind::Begin => {
-                            let anchor_end = anchor_index.get_end(anchor.uuid)?;
-                            if is_collect {
-                                TagBehaviorDispatch::collect_anchor(self, collector, anchor, anchor_end)?
-                            } else {
-                                TagBehaviorDispatch::execute_anchor(self, collector, anchor, anchor_end)?
-                            }
-                            collector.enter(anchor);
+                Content::Anchor(anchor) => match anchor.kind {
+                    AnchorKind::Begin => {
+                        let anchor_end = anchor_index.get_end(anchor.uuid)?;
+                        if is_collect {
+                            TagBehaviorDispatch::collect_anchor(
+                                self, collector, anchor, anchor_end,
+                            )?
+                        } else {
+                            TagBehaviorDispatch::execute_anchor(
+                                self, collector, anchor, anchor_end,
+                            )?
                         }
-                        AnchorKind::End => {
-                            collector.exit()?;
-                        }
+                        collector.enter(anchor);
                     }
-                }
-            };	            
-            // Evaluate patches            
+                    AnchorKind::End => {
+                        collector.exit()?;
+                    }
+                },
+            };
+            // Evaluate patches
             if patches.is_empty() {
                 // No patches to apply
             } else if is_collect {
@@ -411,9 +407,10 @@ impl Worker {
             } else {
                 // Apply patches and trigger new pass
                 let new_content = Self::apply_patches(&context_content, &patches)?;
-                self.file_access.write_file(context_path, &new_content)?;
+                self.file_access
+                    .write_file(context_path, &new_content, None)?;
                 return Ok(None);
-            }        
+            }
             // Check if collector has been discarded, then exit and trigger another pass
             match maybe_new_collector {
                 None => {
@@ -423,7 +420,7 @@ impl Worker {
                     collector = new_collector;
                 }
             }
-        } 
+        }
         // No patches applied nor new pass triggered, then return definitive collector
         Ok(Some(collector))
     }

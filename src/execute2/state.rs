@@ -269,35 +269,3 @@ impl State for RepeatState {
     }
 }
 
-#[enum_dispatch]
-pub trait CommandBehavior {
-    fn from_json(json: &serde_json::Value) -> Self
-    {
-        serde_json::from_value(json)
-    }
-    fn load(&mut self, uuid: &Uuid);
-    fn execute(&mut self);
-    fn description(&self) -> String;
-}
-
-impl CommandBehavior for AnswerState {
-    fn execute(&mut self) {
-    }
-}
-
-#[enum_dispatch(CommandBehavior)]
-#[derive(Debug)]
-pub enum CommandState {
-    DummyState(DummyState),
-    Answer(AnswerState),
-    Include(IncludeState),
-    Derive(DeriveState),
-}
-
-pub fn create_command_state_from_command_kind(kind: CommandKind) -> CommandState {
-    match kind {
-        CommandKind::Answer => CommandState::Answer(AnswerState::default()),
-         CommandKind::Include => CommandState::Include(IncludeState),
-         CommandKind::Derive => CommandState::Derive(DeriveState::default()),
-     }
-}

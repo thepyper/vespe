@@ -342,112 +342,93 @@ impl Worker {
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
-        
+        let anchor_index = utils::AnchorIndex::new(&ast.content);
+
         for item in &ast.content {
 
-            match item {
+            let (collector, new_state, new_output, state_path) = match item {
                 Content::Text(text) => {
-                    collector = _pass_text(collector, text)?
+                    collector
+                        .context
+                        .push(ModelContentItem::user(&text.content));
+                    (collector, None, None, None)                        
                 }
                 Content::Tag(tag) => {
                     let state = create_command_state_from_command_kind(tag.command);
-                    // TODO patch if needed to convert into anchor, not otherwise
+                    let (collector, new_state, new_output) = state.execute(self, collector);
 
-
+                    let state_path = match new_state {
+                        Some(_) => self.path_res.resolve_metadata(&tag.command.to_string(), &Uuis::new_v4())?.join("state.json"),
+                        None => None
+                    };
+                    
+                    (collector, new_state, new_output, state_path)
                 }
                 Content::Anchor(anchor) => {
-                    let state = create_command_state_from_command_kind(anchor.command);
-                    state.load(anchor.uuid);
-                    // TODO patch, change state, and so
+                    match anchor.kind {
+                        AnchorKind::Begin => {
+                            let state      = create_command_state_from_command_kind(anchor.command);
+                            let state_path = self.path_res.resolve_metadata(&anchor.command.to_string(), &self.uuid)?.join("state.json");
 
-                }
-            }			 
-        }
-    }
-	
-	fn _pass_text(mut collector: Collector, Content::Text &text) -> Result<Option<Collector>> {
-		let collector
-            .context
-            .push(ModelContentItem::user(&text.content));
-        Ok(collector)
-	}
-	
-	fn _pass_tag(&self,
-        collector: &Collector,
-        command: CommandKind,
-        parameters: &Parameters,
-        arguments: &Arguments,
-		state: &serde_json::Value,
-    ) -> Result<(Option<Collector>, Option<serde_json::Value>, Option<String>)> {
-        
-        
-        match command {
-            CommandKind::Answer: _pass_tag_answer(collector, parameters, arguments),
-        }
-
-
-        Ok((None, None, None))
-    }
-
-    /// **Pass 1**: Collects content and triggers slow/asynchronous tasks.
-    ///
-    /// This pass reads the AST and builds up the `ModelContent` by processing
-    /// text and tags. When it encounters an anchor that is in a state that requires
-    /// processing (e.g., `JustCreated`), it initiates the required action (like a
-    /// model call) and returns `Ok(None)`. This signals to the `execute_step` loop
-    /// that a long-running task has started and a new cycle will be needed later.
-    ///
-    /// If the entire document is parsed without initiating any new tasks, it returns
-    /// `Ok(Some(Collector))`, indicating this pass is complete and the state is stable.
-    fn pass_1(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
-        tracing::debug!("Worker::pass_1 for path: {:?}", context_path,);
-        let context_content = self.file_access.read_file(context_path)?;
-        let ast = crate::ast2::parse_document(&context_content)?;
-
-        let mut current_collector = collector;
-
-        for item in &ast.content {
-            match item {
-                crate::ast2::Content::Text(text) => {
-                    current_collector = self.pass_1_text(current_collector, text)?;
-                }
-                crate::ast2::Content::Tag(tag) => {
-                    current_collector = self.pass_1_tag(current_collector, tag)?;
-                }
-                crate::ast2::Content::Anchor(anchor) => {
-                    match self.pass_1_anchor(current_collector, anchor)? {
-                        Some(c) => current_collector = c,
-                        None => {
-                            tracing::debug!(
-                                "Worker::pass_1 returning None after processing anchor for path: {:?}",
-                                context_path
-                            );
-                            return Ok(None);
+                            let state      = state.load(state_path);
+                            let (collector, new_state, new_output) = state.execute(self, collector);                            
+                            
+                            // Update anchor stack
+                            collect.anchor_stack.push(anchor);
+                            
+                            (collector, new_state, new_output, state_path)
+                        }
+                        _ => {
+                            // Update anchor stack
+                            match collect.anchor_stack.pop() {
+                                None => {
+                                    return Err(anyhow::anyhow!("Anchor stack empty!?!?"));
+                                }
+                                _ => {}
+                            }
                         }
                     }
                 }
+            }	            
+            // Check if some new output has been created
+            let has_new_output = match new_output {
+                None => {
+                    false
+                }
+                Some(new_output) => {
+                    if let Some(patches) = patches {
+                        // Have new output in write pass, let's add a patch
+                        let end_anchor = anchor_index.get_end(anchor.uuid)?;
+                        let range      = Range {
+                            begin: anchor.end,
+                            end:   end_anchor.begin,
+                        };
+                        patches.add_patch(range, new_output);
+                    } else {
+                        // Have new output in read-only pass, return without updating state
+                        return Ok(None);
+                    }
+                }
+            }
+            // Check is some new state has been created
+            let has_new_state = match new_state {
+                None => {
+                    false
+                }
+                Some(new_state) => {
+                    let new_state = serde_json::to_string_pretty(new_state)?;
+                    self.file_access.write_file(state_path, new_state, None)?;
+                    true
+                }
+            };
+            // If any of new output or state has been created, exit and trigger another pass
+            if has_new_output | has_new_state {
+                return Ok(none);
             }
         }
-        tracing::debug!("Worker::pass_1 finished for path: {:?}", context_path);
-        Ok(Some(current_collector))
     }
-
-    fn pass_1_text(&self, mut collector: Collector, text: &Text) -> Result<Collector> {
-        collector
-            .context
-            .push(ModelContentItem::user(&text.content));
-        Ok(collector)
-    }
-
-    /// Processes tags that do not modify context, such as `@include`.
-    fn pass_1_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {
-        match tag.command {
-            CommandKind::Include => self.pass_1_include_tag(collector, tag),
-            CommandKind::Set => self.pass1_set_tag(collector, tag),
-            _ => Ok(collector),
-            // TODO qui dovrebbero nascere gli State! non con la anchor, ma gia' qui per collecting delle variabili!!!
-        }
-    }
+	
+  
 
     /// Handles the `@include` tag by recursively calling the main `collect` method.
     fn pass_1_include_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {

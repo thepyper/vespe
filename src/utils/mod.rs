@@ -68,6 +68,19 @@ impl AnchorStateManager {
             uuid: anchor.uuid,
         }
     }
+    pub fn from_command_uuid(
+        file_access: Arc<dyn file::FileAccessor>,
+        path_res: Arc<dyn path::PathResolver>,
+        command: CommandKind,
+        uuid: Uuid,
+    ) -> Self {
+        AnchorStateManager {
+            file_access,
+            path_res,
+            command,
+            uuid,
+        }
+    }
     pub fn get_state_path(&self) -> Result<PathBuf> {
         let meta_path = self
             .path_res

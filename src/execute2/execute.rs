@@ -1,5 +1,6 @@
 use crate::ast2::{Anchor, AnchorKind, Arguments, CommandKind, Content, Document, Parameters, Range, Tag, Text,
-    Position, Uuid as AstUuid};
+    Position };
+use uuid::Uuid;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
 use super::*;
@@ -7,6 +8,11 @@ use crate::execute2::tags::TagBehaviorDispatch;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::variables::Variables;
+
+use std::sync::Arc;
+use std::path::{Path, PathBuf};
+
+use anyhow::Result;
 
 /// Executes a context and all its dependencies, processing all commands.
 ///
@@ -22,8 +28,8 @@ use crate::execute2::variables::Variables;
 /// # Returns
 /// The final, collected `ModelContent` after full execution.
 pub fn execute_context(
-    file_access: Arc<dyn file::FileAccessor>,
-    path_res: Arc<dyn path::PathResolver>,
+    file_access: Arc<dyn FileAccessor>,
+    path_res: Arc<dyn PathResolver>,
     context_name: &str,
 ) -> Result<ModelContent> {
     tracing::debug!("Executing context: {}", context_name);
@@ -49,8 +55,8 @@ pub fn execute_context(
 /// # Returns
 /// The collected `ModelContent`.
 pub fn collect_context(
-    file_access: Arc<dyn file::FileAccessor>,
-    path_res: Arc<dyn path::PathResolver>,
+    file_access: Arc<dyn FileAccessor>,
+    path_res: Arc<dyn PathResolver>,
     context_name: &str,
 ) -> Result<ModelContent> {
     tracing::debug!("Collecting context: {}", context_name);
@@ -152,15 +158,15 @@ impl Collector {
 /// such as the file accessor and path resolver. It contains the core logic
 /// for the multi-pass execution strategy.
 pub(crate) struct Worker {
-    file_access: Arc<dyn file::FileAccessor>,
-    path_res: Arc<dyn path::PathResolver>,
+    file_access: Arc<dyn FileAccessor>,
+    path_res: Arc<dyn PathResolver>,
 }
 
 impl Worker {
     /// Creates a new `Worker` with the necessary tools.
     fn new(
-        file_access: Arc<dyn file::FileAccessor>,
-        path_res: Arc<dyn path::PathResolver>,
+        file_access: Arc<dyn FileAccessor>,
+        path_res: Arc<dyn PathResolver>,
     ) -> Self {
         Worker {
             file_access,
@@ -171,7 +177,6 @@ impl Worker {
     /// Collects context from a file, resolving includes but not executing stateful anchors.
     /// This represents the entry point for a read-only collection pass.
     fn collect(&self, collector: Collector, context_name: &str) -> Result<Collector> {
-        /* TODO
         tracing::debug!("Worker::collect for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -184,12 +189,12 @@ impl Worker {
                 return Ok(collector);
             }
             Some(collector) => {
-                // Read file, parse it, collect without allowing execution
-                match self.pass_1(collector, &context_path)? {
+                // Read file, parse it, collect without allowing execution                
+                match self.collect_pass(collector, &context_path)? {
                     Some(collector) => {
                         // Successfully collected everything without needing further processing
                         tracing::debug!(
-                            "Worker::execute_step collected from pass_1 for path: {:?}",
+                            "Worker::execute_step collected from collect_pass for path: {:?}",
                             context_path
                         );
                         return Ok(collector);
@@ -203,8 +208,6 @@ impl Worker {
                 };
             }
         }
-        */
-        unimplemented!()
     }
 
     /// Executes a context fully, running a loop of `execute_step` until the state converges.
@@ -212,7 +215,6 @@ impl Worker {
     /// This is the main entry point for a full execution, which can modify files.
     /// It orchestrates the two-pass strategy until all anchors are `Completed`.
     fn execute(&self, collector: Collector, context_name: &str) -> Result<Collector> {
-        /* TODO
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -239,8 +241,7 @@ impl Worker {
                     tracing::debug!("Worker::execute continuing for context: {}", context_name);
                 }
             }
-        }*/
-        unimplemented!()
+        }
     }
 
     /// Executes a single step of the two-pass strategy.
@@ -255,28 +256,34 @@ impl Worker {
     /// If `pass_1` completes without starting any new tasks, it returns `Ok(Some(Collector))`,
     /// signaling that the execution has converged and is complete.
     fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
-        /* TODO
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
         // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        match self.pass_2(context_path)? {
-            true => {
+        match self.execute_pass(collector.clone(), context_path)? {
+            None => {
                 tracing::debug!(
                     "Worker::execute_step pass_2 needs another pass for path: {:?}",
                     context_path
                 );
-                return Ok(None);
             }
-            false => {
+            Some(collector) => {
                 tracing::debug!(
                     "Worker::execute_step no changes in pass_2 for path: {:?}",
                     context_path
                 );
+                return Ok(Some(collector));
             }
-        }
+        };
 
         // Re-read file, parse it, execute slow things that do not modify context, collect data
-        match self.pass_1(collector, context_path)? {
+        match self.collect_pass(collector, context_path)? {
+            None => {
+                // Could not collect everything in pass_1, need to trigger another step
+                tracing::debug!(
+                    "Worker::execute_step could not collect from pass_1 for path: {:?}",
+                    context_path
+                );
+            }
             Some(collector) => {
                 // Successfully collected everything without needing further processing
                 tracing::debug!(
@@ -285,17 +292,9 @@ impl Worker {
                 );
                 return Ok(Some(collector));
             }
-            None => {
-                // Could not collect everything in pass_1, need to trigger another step
-                tracing::debug!(
-                    "Worker::execute_step could not collect from pass_1 for path: {:?}",
-                    context_path
-                );
-                return Ok(None);
-            }
         };
-        */
-        unimplemented!()
+
+        return Ok(None);
     }
 
     fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
@@ -305,7 +304,7 @@ impl Worker {
             .map(|item| item.to_string())
             .collect::<Vec<String>>()
             .join("\n");
-        agent::shell::shell_call(&collector.variables.provider, &query)
+        crate::agent::shell::shell_call(&collector.variables.provider, &query)
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
@@ -343,7 +342,7 @@ impl Worker {
     ) -> Result<Option<Collector>> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
-        let anchor_index = utils::AnchorIndex::new(&ast.content);
+        let anchor_index = crate::utils::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
             let (maybe_new_collector, patches) = match item {
@@ -351,31 +350,45 @@ impl Worker {
                     collector
                         .context
                         .push(ModelContentItem::user(&text.content));
-                    (collector, vec![])
+                    (Some(collector), vec![])
                 }
                 Content::Tag(tag) => {
                     if is_collect {
-                        TagBehaviorDispatch::collect_tag(self, collector, tag)?
+                        (TagBehaviorDispatch::collect_tag(self, collector, tag)?, vec![])
                     } else {
                         TagBehaviorDispatch::execute_tag(self, collector, tag)?
                     }
                 }
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
-                        let anchor_end = anchor_index.get_end(anchor.uuid)?;
-                        if is_collect {
-                            TagBehaviorDispatch::collect_anchor(
-                                self, collector, anchor, anchor_end,
-                            )?
+                        let anchor_end = anchor_index.get_end(&anchor.uuid)
+                        .ok_or(anyhow::anyhow!("end anchor not found"))?;
+                        let anchor_end = ast.content.get(anchor_end).and_then(|c| match c {
+                            Content::Anchor(a) => Some(a),
+                            _ => None,
+                        }).ok_or(anyhow::anyhow!("end anchor not found"))?;
+                        let (mut maybe_collector, patches) = if is_collect {
+                            (TagBehaviorDispatch::collect_anchor(
+                                self, collector, anchor, anchor_end.range.begin,
+                            )?, vec![])
                         } else {
                             TagBehaviorDispatch::execute_anchor(
-                                self, collector, anchor, anchor_end,
+                                self, collector, anchor, anchor_end.range.begin,
                             )?
-                        }
-                        collector.enter(anchor);
+                        };
+                        let collector = match maybe_collector.take() {
+                            None => {
+                                None
+                            }
+                            Some(c) => {
+                                Some(c.enter(anchor))
+                            }
+                        };
+                        (collector, patches)
                     }
                     AnchorKind::End => {
                         collector.exit()?;
+                        (Some(collector), vec![])
                     }
                 },
             };

@@ -270,9 +270,10 @@ impl StaticPolicy for SetPolicy {
     }
 }
 
-struct TagBehaviorDispatch;
+pub(crate) struct TagBehaviorDispatch;
+
 impl TagBehaviorDispatch {
-    fn execute_tag(
+    pub fn execute_tag(
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
@@ -291,7 +292,7 @@ impl TagBehaviorDispatch {
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }
-    fn collect_tag(
+    pub fn collect_tag(
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
@@ -310,7 +311,7 @@ impl TagBehaviorDispatch {
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }
-    fn execute_anchor(
+    pub fn execute_anchor(
         worker: &Worker,
         collector: Collector,
         anchor: &Anchor,
@@ -329,7 +330,7 @@ impl TagBehaviorDispatch {
             _ => Err(anyhow::anyhow!("Unsupported anchor command")),
         }
     }
-    fn collect_anchor(
+    pub fn collect_anchor(
         worker: &Worker,
         collector: Collector,
         anchor: &Anchor,

@@ -271,7 +271,7 @@ impl State for RepeatState {
 
 #[enum_dispatch]
 pub trait CommandBehavior {
-    fn load(&mut self);
+    fn load(&mut self, uuid: &Uuid);
     fn execute(&mut self);
     fn description(&self) -> String;
 }
@@ -289,7 +289,7 @@ pub enum CommandState {
     Derive(DeriveState),
 }
 
-pub fn create_command_with_state(kind: CommandKind) -> CommandState {
+pub fn create_command_state_from_command_kind(kind: CommandKind) -> CommandState {
     match kind {
         CommandKind::Answer => CommandState::Answer(AnswerState::default()),
          CommandKind::Include => CommandState::Include(IncludeState),

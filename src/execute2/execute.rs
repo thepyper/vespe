@@ -338,30 +338,32 @@ impl Worker {
         }
     }
 
-    fn _pass_internal(&self, collector: Collector, context_path: &Path, &patches: Option<Patches>) -> Result<(Option<Collector>)> {
+    fn _pass_internal(&self, mut collector: Collector, context_path: &Path, &patches: Option<Patches>) -> Result<(Option<Collector>)> {
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
-
-        let mut current_collector = collector;
         
         for item in &ast.content {
-			
-			let state = match item {
-               Content::Text(text) => serde_json::Value::null,
-               Content::Tag(tag) => ,
-               Content::Anchor(anchor) => self.pass_tag(current_collector, tag)?,
-			}
-			
-            let (new_collector, new_state, tag_output) = match item {
-               Content::Text(text) => self._pass_text(current_collector, text)?,
-               Content::Tag(tag) => self.pass_tag(current_collector, tag)?,
-               Content::Anchor(anchor) => self.pass_tag(current_collector, tag)?,
-            };            
+
+            match item {
+                Content::Text(text) => {
+                    collector = _pass_text(collector, text)?
+                }
+                Content::Tag(tag) => {
+                    let state = create_command_state_from_command_kind(tag.command);
+                    // TODO patch if needed to convert into anchor, not otherwise
+                }
+                Content::Anchor(anchor) => {
+                    let state = create_command_state_from_command_kind(anchor.command);
+                    state.load(anchor.uuid);
+                    // TODO patch, change state, and so
+
+                }
+            }			 
         }
     }
 	
-	fn _pass_text(mut collector: Collector, Content::Text &text) -> Result<(Option<Collector>, Option<serde_json::Value>, Option<String>)> {
+	fn _pass_text(mut collector: Collector, Content::Text &text) -> Result<Option<Collector>> {
 		let collector
             .context
             .push(ModelContentItem::user(&text.content));

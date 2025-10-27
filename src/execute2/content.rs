@@ -1,4 +1,7 @@
-use serde::{de::{self, SeqAccess, Visitor}, Deserialize, Deserializer, Serialize};
+use serde::{
+    de::{self, SeqAccess, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 use std::fmt;
 
 /// Represents content originating from the system.
@@ -102,7 +105,9 @@ impl<'de> Deserialize<'de> for ModelContent {
             where
                 A: SeqAccess<'de>,
             {
-                let items = Vec::<ModelContentItem>::deserialize(de::value::SeqAccessDeserializer::new(seq))?;
+                let items = Vec::<ModelContentItem>::deserialize(
+                    de::value::SeqAccessDeserializer::new(seq),
+                )?;
                 Ok(ModelContent(items))
             }
         }

@@ -1,15 +1,15 @@
 use crate::ast2::{
-    Content, Anchor, AnchorKind, Arguments, CommandKind, Document, Parameters, Range, Tag, Text,
+    Anchor, AnchorKind, Arguments, CommandKind, Content, Document, Parameters, Range, Tag, Text,
 };
 use crate::path;
 use crate::utils;
 use crate::{agent, file};
 use anyhow::Result;
 use std::collections::{self, HashSet};
+use std::ops::Drop;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
-use std::ops::Drop;
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -20,7 +20,9 @@ use crate::path::PathResolver;
 use super::*;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
-use crate::execute2::state::{AnchorStatus, AnswerState, DeriveState, InlineState, ChooseState, DecideState};
+use crate::execute2::state::{
+    AnchorStatus, AnswerState, ChooseState, DecideState, DeriveState, InlineState,
+};
 use crate::execute2::variables::Variables;
 
 /// Executes a context and all its dependencies, processing all commands.
@@ -142,7 +144,7 @@ impl Collector {
         collector.variables = collector.variables.update(parameters);
         collector
     }
- 
+
     // TODO doc (entra in anchor)
     fn enter(&self, anchor: &Anchor) -> Self {
         let mut collector = self.clone();
@@ -153,7 +155,10 @@ impl Collector {
     // TODO doc (esci da anchor)
     fn exit(&self) -> Result<Self> {
         let mut collector = self.clone();
-        collector.anchor_stack.pop().ok_or_else(|| anyhow::anyhow!("Pop on empty stack!?"))?;
+        collector
+            .anchor_stack
+            .pop()
+            .ok_or_else(|| anyhow::anyhow!("Pop on empty stack!?"))?;
         Ok(collector)
     }
 }
@@ -302,15 +307,83 @@ impl Worker {
         };
     }
 
-        fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
-            let query = contents
-                .into_iter()
-                .flat_map(|mc| mc.0)
-                .map(|item| item.to_string())
-                .collect::<Vec<String>>()
-                .join("\n");
-            agent::shell::shell_call(&collector.variables.provider, &query)
+    fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
+        let query = contents
+            .into_iter()
+            .flat_map(|mc| mc.0)
+            .map(|item| item.to_string())
+            .collect::<Vec<String>>()
+            .join("\n");
+        agent::shell::shell_call(&collector.variables.provider, &query)
+    }
+
+    fn pass(&self, collector: Collector, context_path: &Path, is_readonly: bool) -> Result<Option<Collector>> {
+        if is_readonly {    
+            let collector = self._pass_internal(collector, context_path, None)?;
+            return Ok(collector);
+        } else {
+            let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
+            let mut patches = utils::Patches::new(&context_content);
+            let collector = self._pass_internal(collector, context_path, Some(patches));
+            if !patches.is_empty() {
+                // Patches produces, then would need another pass, no definitive collector to return
+                let new_context_content = patches.apply_patches()?;
+                self.file_access
+                    .write_file(context_path, &new_context_content, None)?;
+                return Ok(None);
+            } else {
+                // No patches, definitive collector to return
+                return Ok(collector);
+            }
         }
+    }
+
+    fn _pass_internal(&self, collector: Collector, context_path: &Path, &patches: Option<Patches>) -> Result<(Option<Collector>)> {
+
+        let context_content = self.file_access.read_file(context_path)?;
+        let ast = crate::ast2::parse_document(&context_content)?;
+
+        let mut current_collector = collector;
+        
+        for item in &ast.content {
+			
+			let state = match item {
+               Content::Text(text) => serde_json::Value::null,
+               Content::Tag(tag) => ,
+               Content::Anchor(anchor) => self.pass_tag(current_collector, tag)?,
+			}
+			
+            let (new_collector, new_state, tag_output) = match item {
+               Content::Text(text) => self._pass_text(current_collector, text)?,
+               Content::Tag(tag) => self.pass_tag(current_collector, tag)?,
+               Content::Anchor(anchor) => self.pass_tag(current_collector, tag)?,
+            };            
+        }
+    }
+	
+	fn _pass_text(mut collector: Collector, Content::Text &text) -> Result<(Option<Collector>, Option<serde_json::Value>, Option<String>)> {
+		let collector
+            .context
+            .push(ModelContentItem::user(&text.content));
+        Ok(collector)
+	}
+	
+	fn _pass_tag(&self,
+        collector: &Collector,
+        command: CommandKind,
+        parameters: &Parameters,
+        arguments: &Arguments,
+		state: &serde_json::Value,
+    ) -> Result<(Option<Collector>, Option<serde_json::Value>, Option<String>)> {
+        
+        match command {
+            CommandKind::Answer: manage_tag_answer(collector, parameters, arguments),
+        }
+
+
+        Ok((None, None, None))
+    }
+
     /// **Pass 1**: Collects content and triggers slow/asynchronous tasks.
     ///
     /// This pass reads the AST and builds up the `ModelContent` by processing
@@ -383,8 +456,8 @@ impl Worker {
         self.collect(collector, &included_context_name)
     }
 
-     /// Handles the `@set` tag by updating collector's variabiles
-    fn pass1_set_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {        
+    /// Handles the `@set` tag by updating collector's variabiles
+    fn pass1_set_tag(&self, collector: Collector, tag: &Tag) -> Result<Collector> {
         Ok(collector.update(&tag.parameters))
     }
 
@@ -401,51 +474,27 @@ impl Worker {
         let result = match (&anchor.command, &anchor.kind) {
             (CommandKind::Answer, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_answer_begin_anchor");
-                self.pass_1_answer_begin_anchor(
-                    collector,
-                    &asm,
-                    anchor,
-                )
+                self.pass_1_answer_begin_anchor(collector, &asm, anchor)
             }
             (CommandKind::Decide, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_decide_begin_anchor");
-                self.pass_1_decide_begin_anchor(
-                    collector,
-                    &asm,
-                    anchor,
-                )
+                self.pass_1_decide_begin_anchor(collector, &asm, anchor)
             }
             (CommandKind::Choose, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_choose_begin_anchor");
-                self.pass_1_choose_begin_anchor(
-                    collector,
-                    &asm,
-                    anchor,
-                )
+                self.pass_1_choose_begin_anchor(collector, &asm, anchor)
             }
             (CommandKind::Derive, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_derive_begin_anchor");
-                self.pass_1_derive_begin_anchor(
-                    collector,
-                    &asm,
-                    anchor,
-                )
+                self.pass_1_derive_begin_anchor(collector, &asm, anchor)
             }
             (CommandKind::Inline, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_inline_begin_anchor");
-                self.pass_1_inline_begin_anchor(
-                    collector,
-                    &asm,
-                    anchor,
-                )
+                self.pass_1_inline_begin_anchor(collector, &asm, anchor)
             }
             (CommandKind::Repeat, AnchorKind::Begin) => {
                 tracing::debug!("Worker::pass_1_anchor calling pass_1_repeat_begin_anchor");
-                self.pass_1_repeat_begin_anchor(
-                    collector,
-                    &asm,
-                    anchor,
-                )
+                self.pass_1_repeat_begin_anchor(collector, &asm, anchor)
             }
             _ => {
                 tracing::debug!(
@@ -509,7 +558,7 @@ impl Worker {
             _ => Ok(Some(collector)),
         }
     }
-    
+
     fn pass_1_decide_begin_anchor(
         &self,
         collector: Collector,
@@ -542,7 +591,7 @@ impl Worker {
             _ => Ok(Some(collector)),
         }
     }
-    
+
     fn pass_1_choose_begin_anchor(
         &self,
         collector: Collector,
@@ -588,13 +637,15 @@ impl Worker {
                 if !collector.can_execute {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
-                state.instruction_context_name = anchor.arguments
+                state.instruction_context_name = anchor
+                    .arguments
                     .arguments
                     .get(0)
                     .ok_or_else(|| anyhow::anyhow!("Missing instruction context name"))?
                     .value
                     .clone();
-                state.input_context_name = anchor.arguments
+                state.input_context_name = anchor
+                    .arguments
                     .arguments
                     .get(1)
                     .ok_or_else(|| anyhow::anyhow!("Missing input context name"))?
@@ -642,7 +693,8 @@ impl Worker {
                 if !collector.can_execute {
                     return Err(anyhow::anyhow!("Execution not allowed"));
                 }
-                state.context_name = anchor.arguments
+                state.context_name = anchor
+                    .arguments
                     .arguments
                     .get(0)
                     .ok_or_else(|| anyhow::anyhow!("Missing context name"))?
@@ -683,8 +735,8 @@ impl Worker {
                     state.wrapper = x.uuid;
                 } else {
                     return Err(anyhow::anyhow!("@repeat not wrapped by an existing anchor"));
-                } 
-                
+                }
+
                 state.status = AnchorStatus::NeedInjection;
                 asm.save_state(&state, None)?;
                 Ok(None)
@@ -712,7 +764,7 @@ impl Worker {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let mut patches = utils::Patches::new(&context_content);
-    
+
         let result = self.pass_2_internal_y(&mut patches, &ast)?;
 
         if !patches.is_empty() {
@@ -721,7 +773,9 @@ impl Worker {
                 .write_file(context_path, &new_context_content, None)?;
 
             tracing::debug!(
-                "Worker::pass_2 applied patches to path: {:?}",new_context_content);
+                "Worker::pass_2 applied patches to path: {:?}",
+                new_context_content
+            );
         }
 
         tracing::debug!("Worker::pass_2 finished for path: {:?}", context_path);
@@ -770,22 +824,10 @@ impl Worker {
 
     fn pass_2_tag(&self, patches: &mut utils::Patches, tag: &Tag) -> Result<bool> {
         match tag.command {
-            CommandKind::Answer => self.pass_2_normal_tag::<AnswerState>(
-                patches,
-                tag,
-            ),
-            CommandKind::Derive => self.pass_2_normal_tag::<DeriveState>(
-                patches,
-                tag,
-            ),
-            CommandKind::Inline => self.pass_2_normal_tag::<InlineState>(
-                patches,
-                tag,
-            ),
-            CommandKind::Repeat => self.pass_2_normal_tag::<RepeatState>(
-                patches,
-                tag,
-            ),
+            CommandKind::Answer => self.pass_2_normal_tag::<AnswerState>(patches, tag),
+            CommandKind::Derive => self.pass_2_normal_tag::<DeriveState>(patches, tag),
+            CommandKind::Inline => self.pass_2_normal_tag::<InlineState>(patches, tag),
+            CommandKind::Repeat => self.pass_2_normal_tag::<RepeatState>(patches, tag),
             _ => Ok(false),
         }
     }
@@ -796,7 +838,10 @@ impl Worker {
         tag: &Tag,
     ) -> Result<bool> {
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
-        patches.add_patch(&tag.range, &format!("{}\n{}\n", a0.to_string(), a1.to_string()));
+        patches.add_patch(
+            &tag.range,
+            &format!("{}\n{}\n", a0.to_string(), a1.to_string()),
+        );
 
         tracing::debug!("Worker::pass_2 patch: {:?}", tag.range);
 
@@ -829,47 +874,25 @@ impl Worker {
                 tracing::debug!(
                     "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Answer"
                 );
-                self.pass_2_normal_begin_anchor::<AnswerState>(
-                    patches,
-                    &asm,
-                    a0,
-                    a1,
-                )
+                self.pass_2_normal_begin_anchor::<AnswerState>(patches, &asm, a0, a1)
             }
             CommandKind::Derive => {
                 tracing::debug!(
                     "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Derive"
                 );
-                self.pass_2_normal_begin_anchor::<DeriveState>(
-                    patches,
-                    &asm,
-                    a0,
-                    a1,
-                )
+                self.pass_2_normal_begin_anchor::<DeriveState>(patches, &asm, a0, a1)
             }
             CommandKind::Inline => {
                 tracing::debug!(
                     "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Inline"
                 );
-                self.pass_2_normal_begin_anchor::<InlineState>(
-                    patches,
-                    &asm,
-                    a0,
-                    a1,
-                )
-            }           
+                self.pass_2_normal_begin_anchor::<InlineState>(patches, &asm, a0, a1)
+            }
             CommandKind::Repeat => {
                 tracing::debug!(
                     "Worker::pass_2_anchors calling pass_2_normal_begin_anchor for Repeat"
                 );
-                self.pass_2_repeat_begin_anchor(
-                    patches,
-                    &asm,
-                    ast,
-                    anchor_index,
-                    a0,
-                    a1,
-                )
+                self.pass_2_repeat_begin_anchor(patches, &asm, ast, anchor_index, a0, a1)
             }
             _ => {
                 tracing::debug!(
@@ -885,7 +908,7 @@ impl Worker {
         &self,
         patches: &mut utils::Patches,
         asm: &utils::AnchorStateManager,
-        a0: &Anchor, 
+        a0: &Anchor,
         a1: &Anchor,
     ) -> Result<bool> {
         let mut state: S = asm.load_state()?;
@@ -904,25 +927,26 @@ impl Worker {
                 let range = Range {
                     begin: a0.range.end.clone(),
                     end: a1.range.begin.clone(),
-                };                         
+                };
                 let variables = state.get_variables();
                 match variables.output {
                     Some(ref output_path) => {
                         patches.add_patch(&range, &format!(">{}\n", output_path));
                         let output_path = self.path_res.resolve_context(output_path)?;
-                        self.file_access.write_file(&output_path, &state.output(), None)?;
+                        self.file_access
+                            .write_file(&output_path, &state.output(), None)?;
                     }
                     None => {
                         patches.add_patch(&range, &state.output());
                     }
-                }     
+                }
                 state.set_status(AnchorStatus::Completed);
                 asm.save_state(&state, None)?;
                 Ok(true)
             }
             _ => Ok(false),
         }
-    }   
+    }
 
     fn pass_2_repeat_begin_anchor(
         &self,
@@ -930,22 +954,27 @@ impl Worker {
         asm: &utils::AnchorStateManager,
         ast: &Document,
         anchor_index: &utils::AnchorIndex,
-        a0: &Anchor, 
+        a0: &Anchor,
         a1: &Anchor,
     ) -> Result<bool> {
         let mut state: RepeatState = asm.load_state()?;
         match state.status {
             AnchorStatus::NeedInjection => {
-                let wrapper = anchor_index.get_begin(&state.wrapper)
+                let wrapper = anchor_index
+                    .get_begin(&state.wrapper)
                     .ok_or_else(|| anyhow::anyhow!("@repeat wrapper begin anchor not found"))?;
-                let wrapper = ast.content
+                let wrapper = ast
+                    .content
                     .get(wrapper)
                     .ok_or_else(|| anyhow::anyhow!("@repeat wrapper begin anchor bad index"))?;
                 let Content::Anchor(wrapper) = wrapper else {
                     return Err(anyhow::anyhow!("@repeat wrapper begin anchor bad content"));
                 };
                 let wrapper_mutated = wrapper.update(&a0.parameters);
-                patches.add_patch(&wrapper_mutated.range, &format!("{}\n", &wrapper_mutated.to_string()));
+                patches.add_patch(
+                    &wrapper_mutated.range,
+                    &format!("{}\n", &wrapper_mutated.to_string()),
+                );
                 // Update wrapper's status
                 match wrapper.command {
                     CommandKind::Answer => {
@@ -958,7 +987,9 @@ impl Worker {
                         self.pass_2_set_anchor_to_repeat_state::<InlineState>(&wrapper)?;
                     }
                     _ => {
-                        return Err(anyhow::anyhow!("@repeat is wrapped by non-repeatable anchor"));
+                        return Err(anyhow::anyhow!(
+                            "@repeat is wrapped by non-repeatable anchor"
+                        ));
                     }
                 }
                 // Mark repeat as completed
@@ -968,12 +999,9 @@ impl Worker {
             }
             _ => Ok(false),
         }
-    } 
-    
-    fn pass_2_set_anchor_to_repeat_state<S: State + 'static>(
-        &self,
-        anchor: &Anchor,
-    ) -> Result<()> {
+    }
+
+    fn pass_2_set_anchor_to_repeat_state<S: State + 'static>(&self, anchor: &Anchor) -> Result<()> {
         let asm =
             utils::AnchorStateManager::new(self.file_access.clone(), self.path_res.clone(), anchor);
         let mut state: S = asm.load_state()?;
@@ -982,4 +1010,3 @@ impl Worker {
         Ok(())
     }
 }
-

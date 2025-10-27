@@ -346,4 +346,3 @@ pub struct Document {
     /// The range spanning the entire document.
     pub range: Range,
 }
-

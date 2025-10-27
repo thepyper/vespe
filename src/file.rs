@@ -2,8 +2,8 @@ use anyhow::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use uuid::{uuid, Uuid};
 use tracing::{debug, error};
+use uuid::{uuid, Uuid};
 
 use super::editor::EditorCommunicator;
 
@@ -94,7 +94,6 @@ impl FileAccessor for ProjectFileAccessor {
         Ok(())
     }
 }
-
 
 /// A RAII guard to ensure a file lock is released.
 pub struct FileLock {

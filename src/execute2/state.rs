@@ -3,9 +3,8 @@ use uuid::{uuid, Uuid};
 
 use crate::{ast2::Anchor, execute2::variables};
 
-use super::variables::Variables;
 use super::content::ModelContent;
-
+use super::variables::Variables;
 
 /// A trait for objects that represent the persistent state of an anchor command.
 ///
@@ -16,8 +15,7 @@ pub trait State: serde::Serialize + serde::de::DeserializeOwned {
     /// Creates a new instance of the state, typically in its initial status.
     fn new(variables: &Variables) -> Self;
     /// Generates the final string output to be injected into the document.
-    fn output(&self) -> String
-    {
+    fn output(&self) -> String {
         String::new()
     }
     /// Gets the current status of the anchor's state machine.
@@ -107,8 +105,8 @@ impl State for AnswerState {
             status: AnchorStatus::JustCreated,
             query: ModelContent::new(),
             reply: String::new(),
-             variables: variables.clone(),
-       }
+            variables: variables.clone(),
+        }
     }
     fn output(&self) -> String {
         self.reply.clone()

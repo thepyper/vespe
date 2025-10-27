@@ -1,25 +1,9 @@
-use crate::ast2::{
-    Anchor, AnchorKind, Arguments, CommandKind, Content, Document, Parameters, Range, Tag, Text,
-};
-//use crate::execute2::tags::TagBehaviorDispatch;
-use crate::path;
-use crate::utils;
-use crate::{agent, file};
-use anyhow::Result;
-use std::collections::{self, HashSet};
-use std::ops::Drop;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-use std::vec;
-use uuid::Uuid;
-
-use std::fs::OpenOptions;
-use std::io::Write;
-
+use crate::ast2::{Anchor, AnchorKind, Arguments, CommandKind, Content, Document, Parameters, Range, Tag, Text,
+    Position, Uuid as AstUuid};
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
-
 use super::*;
+use crate::execute2::tags::TagBehaviorDispatch;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::variables::Variables;

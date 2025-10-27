@@ -22,9 +22,6 @@ use crate::path::PathResolver;
 use super::*;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
-use crate::execute2::state::{
-    AnchorStatus, AnswerState, ChooseState, DecideState, DeriveState, InlineState,
-};
 use crate::execute2::variables::Variables;
 
 /// Executes a context and all its dependencies, processing all commands.

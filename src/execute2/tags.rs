@@ -1,32 +1,34 @@
 use anyhow::Result;
+use uuid::Uuid;
 
 use super::execute::Collector;
 use super::execute::Worker;
 use super::variables::Variables;
+use super::content::ModelContent;
 
-use crate::ast2::{Anchor, ModelContent, Position, Range, Tag};
+use crate::ast2::{Anchor, Position, Range, Tag};
 
 //#[enum_dispatch]
 pub trait TagBehavior {
     fn execute_tag(
         worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         tag: &Tag,
     ) -> Result<(Option<Collector>, Vec<(Range, String)>)>;
     fn collect_tag(
         worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         tag: &Tag,
     ) -> Result<Option<Collector>>;
     fn execute_anchor(
         worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(Option<Collector>, Vec<(Range, String)>)>;
     fn collect_anchor(
         worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<Option<Collector>>;
@@ -59,7 +61,7 @@ trait StaticTagBehavior: TagBehavior {
     }
     fn collect_tag(
         worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         tag: &Tag,
     ) -> Result<Option<Collector>>;
 }
@@ -73,7 +75,7 @@ trait DynamicTagBehavior: TagBehavior {
         tag: &Tag,
     ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
         let state: Self::State = Self::State::default();
-        let (collector, new_state, new_output) = state.execute(self, collector, state);
+        let (collector, new_state, new_output) = state.execute(worker, collector, state);
         // If there is a new state, save it
         match new_state {
             Some(new_state) => {
@@ -104,7 +106,7 @@ trait DynamicTagBehavior: TagBehavior {
         anchor_end: Position,
     ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
         let state = worker.load_state::<Self::State>(&anchor.command, &anchor.uuid)?;
-        let (collector, new_state, new_output) = state.execute(self, collector, state);
+        let (collector, new_state, new_output) = state.execute(worker, collector, state);
         // If there is a new state, save it
         match new_state {
             Some(new_state) => {
@@ -127,7 +129,7 @@ trait DynamicTagBehavior: TagBehavior {
         anchor_end: Position,
     ) -> Result<Option<Collector>> {
         let state = worker.load_state::<Self::State>(&anchor.command, &anchor.uuid)?;
-        let (collector, new_state) = state.collect(self, collector, state);
+        let (collector, new_state) = state.collect(worker, collector, state);
         // If there is a new state, save it
         match new_state {
             Some(new_state) => {
@@ -141,15 +143,15 @@ trait DynamicTagBehavior: TagBehavior {
     fn execute(
         worker: &Worker,
         mut collector: Collector,
-        mut state: State,
-    ) -> Result<(Option<Collector>, Option<State>, Option<String>)> {
+        mut state: Self::State,
+    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)> {
         mono(worker, collector, state)
     }
     fn collect(
         worker: &Worker,
         mut collector: Collector,
-        mut state: State,
-    ) -> Result<(Option<Collector>, Option<State>)> {
+        mut state: Self::State,
+    ) -> Result<(Option<Collector>, Option<Self::State>)> {
         let (collector, new_state, new_output) = mono(worker, collector, state)?;
         match new_output {
             Some(_) => {
@@ -164,9 +166,9 @@ trait DynamicTagBehavior: TagBehavior {
     }
     fn mono(
         worker: &Worker,
-        mut collector: Collector,
-        mut state: State,
-    ) -> Result<(Option<Collector>, Option<State>, Option<String>)>;
+        collector: Collector,
+        state: Self::State,
+    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)>;
 }
 
 #[derive(Debug)]
@@ -186,13 +188,17 @@ struct AnswerState {
     pub variables: Variables,
 }
 
-impl DynamicTagBehavior for AnswerState {
+struct AnswerTagBehavior;
+
+//impl TagBehavior for AnswerTagBehavior {} 
+
+impl DynamicTagBehavior for AnswerTagBehavior {
     type State = AnswerState;
     fn mono(
         worker: &Worker,
         mut collector: Collector,
-        mut state: State,
-    ) -> Result<(Option<Collector>, Option<State>, Option<String>)> {
+        mut state: Self::State,
+    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)> {
         match state.status {
             AnswerStatus::JustCreated => {
                 // Prepare the query
@@ -255,6 +261,7 @@ impl StaticTagBehavior for SetTagBehaviour {
     }
 }
 
+/*
 #[enum_dispatch(TagBehavior)]
 #[derive(Debug)]
 pub enum TagBehaviorDispatch {
@@ -262,3 +269,4 @@ pub enum TagBehaviorDispatch {
     Include(IncludeTagBehaviour),
     Static(StaticTagBehaviour),
 }
+*/

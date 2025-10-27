@@ -1,6 +1,5 @@
 use anyhow::Result;
 use uuid::Uuid;
-use enum_dispatch::enum_dispatch;
 
 use super::execute::Collector;
 use super::execute::Worker;
@@ -270,12 +269,4 @@ impl StaticPolicy for SetPolicy {
     }
 }
 
-// Esempio di come useresti queste struct con enum_dispatch (se lo volessi)
-// use enum_dispatch::enum_dispatch;
 
-//#[enum_dispatch(TagBehavior)]
-//pub enum TagBehaviorDispatch {
-    Answer(DynamicTagBehavior<AnswerPolicy>),
-    Include(StaticTagBehavior<IncludePolicy>),
-    Set(StaticTagBehavior<SetPolicy>),
-}

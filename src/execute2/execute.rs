@@ -338,22 +338,32 @@ impl Worker {
         }
     }
 
-    fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {       
-        let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
-        let (collector, patches) = self._pass_internal(collector, context_path, false)?;
-        if !patches.is_empty() {
-            // Patches produces, then would need another pass, no definitive collector to return
-            let new_context_content = patches.apply_patches()?;
-            self.file_access
-                .write_file(context_path, &new_context_content, None)?;
-            return Ok(None);
-        } else {
-            // No patches, definitive collector to return
-            return Ok(collector);
+    fn apply_patches(context_content: &str, patches: &Vec<(Range, String)>) -> Result<String> {
+        let mut result = context_content.to_string();
+        for (range, replace) in patches.iter().rev() {
+            let start_byte = self
+                .document
+                .char_indices()
+                .nth(range.begin.offset)
+                .map(|(i, _)| i)
+                .unwrap_or(self.document.len());
+            let end_byte = self
+                .document
+                .char_indices()
+                .nth(range.end.offset)
+                .map(|(i, _)| i)
+                .unwrap_or(self.document.len());
+            result.replace_range(start_byte..end_byte, replace);
         }
+        Ok(result)
     }
 
-    fn _pass_internal(&self, mut collector: Collector, context_path: &Path, is_collect: bool) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
+    fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {       
+        let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
+        self._pass_internal(collector, context_path, false)?  
+    }
+
+    fn _pass_internal(&self, mut collector: Collector, context_path: &Path, is_collect: bool) -> Result<Option<Collector>> {
 
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -392,21 +402,29 @@ impl Worker {
                     }
                 }
             };	            
-            // Check if some new patch has been created, then exit and trigger another pass
-            if !patches.is_empty() {
-                return Ok((None, patches));
-            }
+            // Evaluate patches            
+            if patches.is_empty() {
+                // No patches to apply
+            } else if is_collect {
+                // This is collect pass, cannot produce patches, it's a bug!
+                panic!("Cannot produce patches during collect pass!");
+            } else {
+                // Apply patches and trigger new pass
+                let new_content = Self::apply_patches(&context_content, &patches)?;
+                self.file_access.write_file(context_path, &new_content)?;
+                return Ok(None);
+            }        
             // Check if collector has been discarded, then exit and trigger another pass
             match maybe_new_collector {
                 None => {
-                    return Ok((None, vec![]));
+                    return Ok(None);
                 }
                 Some(new_collector) => {
                     collector = new_collector;
                 }
             }
-        }
-        // No patches created, return definitive collector
-        Ok(Some(collector), vec![])
+        } 
+        // No patches applied nor new pass triggered, then return definitive collector
+        Ok(Some(collector))
     }
 }

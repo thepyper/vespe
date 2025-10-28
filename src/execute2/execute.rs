@@ -1,15 +1,14 @@
-use crate::ast2::{Anchor, AnchorKind, CommandKind, Content, Parameters, Range,
-    Tag, Position };
-use uuid::Uuid;
+use crate::ast2::{Anchor, AnchorKind, CommandKind, Content, Parameters, Position, Range, Tag};
+use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
-use crate::execute2::tags::TagBehaviorDispatch;
+use uuid::Uuid;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::variables::Variables;
 
-use std::sync::Arc;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use anyhow::Result;
 
@@ -167,10 +166,7 @@ pub(crate) struct Worker {
 
 impl Worker {
     /// Creates a new `Worker` with the necessary tools.
-    fn new(
-        file_access: Arc<dyn FileAccessor>,
-        path_res: Arc<dyn PathResolver>,
-    ) -> Self {
+    fn new(file_access: Arc<dyn FileAccessor>, path_res: Arc<dyn PathResolver>) -> Self {
         Worker {
             file_access,
             path_res,
@@ -192,7 +188,7 @@ impl Worker {
                 return Ok(collector);
             }
             Some(collector) => {
-                // Read file, parse it, collect without allowing execution  
+                // Read file, parse it, collect without allowing execution
                 let (do_next_pass, collector) = self.collect_pass(collector, &context_path)?;
                 match do_next_pass {
                     false => {
@@ -233,7 +229,8 @@ impl Worker {
             Some(collector) => {
                 let mut collector = collector;
                 loop {
-                    let (do_next_pass, collector) = self.execute_step(collector.clone(), &context_path)?;
+                    let (do_next_pass, collector) =
+                        self.execute_step(collector.clone(), &context_path)?;
                     if !do_next_pass {
                         tracing::debug!(
                             "Worker::execute returning collected for context: {}",
@@ -302,7 +299,11 @@ impl Worker {
         return Ok((true, collector));
     }
 
-    pub(crate) fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
+    pub(crate) fn call_model(
+        &self,
+        collector: &Collector,
+        contents: Vec<ModelContent>,
+    ) -> Result<String> {
         let query = contents
             .into_iter()
             .flat_map(|mc| mc.0)
@@ -359,7 +360,8 @@ impl Worker {
                 }
                 Content::Tag(tag) => {
                     if is_collect {
-                        let (do_next_pass, collector) = TagBehaviorDispatch::collect_tag(self, collector, tag)?;
+                        let (do_next_pass, collector) =
+                            TagBehaviorDispatch::collect_tag(self, collector, tag)?;
                         (do_next_pass, collector, vec![])
                     } else {
                         TagBehaviorDispatch::execute_tag(self, collector, tag)?
@@ -367,27 +369,36 @@ impl Worker {
                 }
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
-                        let anchor_end = anchor_index.get_end(&anchor.uuid)
-                        .ok_or(anyhow::anyhow!("end anchor not found"))?;
-                        let anchor_end = ast.content.get(anchor_end).and_then(|c| match c {
-                            Content::Anchor(a) => Some(a),
-                            _ => None,
-                        }).ok_or(anyhow::anyhow!("end anchor not found"))?;
+                        let anchor_end = anchor_index
+                            .get_end(&anchor.uuid)
+                            .ok_or(anyhow::anyhow!("end anchor not found"))?;
+                        let anchor_end = ast
+                            .content
+                            .get(anchor_end)
+                            .and_then(|c| match c {
+                                Content::Anchor(a) => Some(a),
+                                _ => None,
+                            })
+                            .ok_or(anyhow::anyhow!("end anchor not found"))?;
                         let (do_next_pass, new_collector, patches) = if is_collect {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
-                                self, collector, anchor, anchor_end.range.begin,
+                                self,
+                                collector,
+                                anchor,
+                                anchor_end.range.begin,
                             )?;
                             (do_next_pass, collector, vec![])
                         } else {
                             TagBehaviorDispatch::execute_anchor(
-                                self, collector, anchor, anchor_end.range.begin,
+                                self,
+                                collector,
+                                anchor,
+                                anchor_end.range.begin,
                             )?
                         };
                         (do_next_pass, new_collector.enter(anchor), patches)
                     }
-                    AnchorKind::End => {
-                        (false, collector.exit()?, vec![])
-                    }
+                    AnchorKind::End => (false, collector.exit()?, vec![]),
                 },
             };
             collector = next_collector;
@@ -421,35 +432,70 @@ impl Worker {
         let state_path = meta_path.join("state.json");
         Ok(state_path)
     }
-    pub fn load_state<T: serde::de::DeserializeOwned>(&self, command: CommandKind, uuid: &Uuid) -> Result<T> {
+    pub fn load_state<T: serde::de::DeserializeOwned>(
+        &self,
+        command: CommandKind,
+        uuid: &Uuid,
+    ) -> Result<T> {
         let state_path = self.get_state_path(command, uuid)?;
+        tracing::debug!("Loading state from {:?}", state_path);
         let state = self.file_access.read_file(&state_path)?;
         let state: T = serde_json::from_str(&state)?;
         Ok(state)
     }
-    pub fn save_state<T: serde::Serialize>(&self, command: CommandKind, uuid: &Uuid, state: &T, comment: Option<&str>) -> Result<()> {
+    pub fn save_state<T: serde::Serialize>(
+        &self,
+        command: CommandKind,
+        uuid: &Uuid,
+        state: &T,
+        comment: Option<&str>,
+    ) -> Result<()> {
         let state_path = self.get_state_path(command, uuid)?;
+        tracing::debug!("Saving state to {:?}", state_path);
         let state_str = serde_json::to_string_pretty(state)?;
         self.file_access
             .write_file(&state_path, &state_str, comment)?;
         Ok(())
     }
 
-    pub fn tag_to_anchor(&self, collector: &Collector, tag: &Tag, output: &str) -> Result<Vec<(Range, String)>> {
+    pub fn tag_to_anchor(
+        &self,
+        collector: &Collector,
+        tag: &Tag,
+        output: &str,
+    ) -> Result<(Uuid, Vec<(Range, String)>)> {
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
         match self.redirect_output(collector, output)? {
             true => {
                 // Output redirected, just convert tag into anchor
-                Ok(vec![(tag.range, format!("{}\n{}\n", a0.to_string(), a1.to_string()))])
+                Ok((
+                    a0.uuid,
+                    vec![(
+                        tag.range,
+                        format!("{}\n{}\n", a0.to_string(), a1.to_string()),
+                    )],
+                ))
             }
             false => {
                 // Output not redirected, include in new anchors
-                Ok(vec![(tag.range, format!("{}\n{}\n{}\n", a0.to_string(), output, a1.to_string()))]) 
+                Ok((
+                    a0.uuid,
+                    vec![(
+                        tag.range,
+                        format!("{}\n{}{}\n", a0.to_string(), output, a1.to_string()),
+                    )],
+                ))
             }
         }
     }
 
-    pub fn inject_into_anchor(&self, collector: &Collector, anchor: &Anchor, anchor_end: &Position, output: &str) -> Result<Vec<(Range, String)>> {
+    pub fn inject_into_anchor(
+        &self,
+        collector: &Collector,
+        anchor: &Anchor,
+        anchor_end: &Position,
+        output: &str,
+    ) -> Result<Vec<(Range, String)>> {
         match self.redirect_output(collector, output)? {
             true => {
                 // Output redirected, no change in anchor
@@ -457,9 +503,15 @@ impl Worker {
             }
             false => {
                 // Output not redirected, patch anchor contents
-                Ok(vec![(Range { begin: anchor.range.end, end: *anchor_end }, output.to_string())])
+                Ok(vec![(
+                    Range {
+                        begin: anchor.range.end,
+                        end: *anchor_end,
+                    },
+                    output.to_string(),
+                )])
             }
-        }        
+        }
     }
 
     fn redirect_output(&self, _collector: &Collector, _output: &str) -> Result<bool> {

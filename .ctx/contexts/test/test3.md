@@ -1,6 +1,2 @@
-
-
-ciao!
-
+Come ti chiami?
 @answer
-

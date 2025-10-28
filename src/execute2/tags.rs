@@ -1,12 +1,12 @@
 use anyhow::Result;
-use uuid::Uuid;
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
+use super::content::ModelContent;
 use super::execute::Collector;
 use super::execute::Worker;
 use super::variables::Variables;
-use super::content::ModelContent;
 
 use crate::ast2::{Anchor, CommandKind, Position, Range, Tag};
 
@@ -18,11 +18,7 @@ pub trait TagBehavior {
         collector: Collector,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
-    fn collect_tag(
-        worker: &Worker,
-        collector: Collector,
-        tag: &Tag,
-    ) -> Result<(bool, Collector)>;
+    fn collect_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<(bool, Collector)>;
     fn execute_anchor(
         worker: &Worker,
         collector: Collector,
@@ -42,11 +38,7 @@ pub trait TagBehavior {
 // Anche qui, tutti i metodi sono funzioni associate.
 
 pub trait StaticPolicy {
-    fn collect_static_tag(
-        worker: &Worker,
-        collector: Collector,
-        tag: &Tag,
-    ) -> Result<Collector>;
+    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
 }
 
 pub trait DynamicPolicy {
@@ -93,11 +85,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         Ok((false, collector, vec![]))
     }
 
-    fn collect_tag(
-        worker: &Worker,
-        collector: Collector,
-        tag: &Tag,
-    ) -> Result<(bool, Collector)> {
+    fn collect_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<(bool, Collector)> {
         let collector = P::collect_static_tag(worker, collector, tag)?;
         Ok((false, collector))
     }
@@ -113,16 +101,13 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
         let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
+        // If there is some output, patch into new anchor
+        let (uuid, patches) =
+            worker.tag_to_anchor(&collector, tag, &new_output.unwrap_or(String::new()))?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
-            worker.save_state::<P::State>(tag.command, &Uuid::new_v4(), &new_state, None)?;
+            worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
         }
-        // If there is some output, patch into new anchor
-        let patches = if let Some(output) = new_output {
-            worker.tag_to_anchor(&collector, tag, &output)?
-        } else {
-            vec![]
-        };
         // Return collector and patches
         Ok((do_next_pass, collector, patches))
     }
@@ -203,14 +188,17 @@ impl DynamicPolicy for AnswerPolicy {
         collector: Collector,
         mut state: Self::State,
     ) -> Result<(bool, Collector, Option<Self::State>, Option<String>)> {
+        tracing::debug!("AnswerPolicy::mono with state: {:?}", state);
         match state.status {
             AnswerStatus::JustCreated => {
+                tracing::debug!("AnswerStatus::JustCreated");
                 // Prepare the query
                 state.status = AnswerStatus::NeedProcessing;
                 state.reply = String::new();
                 Ok((true, collector, Some(state), Some(String::new())))
             }
             AnswerStatus::NeedProcessing => {
+                tracing::debug!("AnswerStatus::NeedProcessing");
                 // Execute the model query
                 let response = worker.call_model(&collector, vec![collector.context().clone()])?;
                 state.reply = response;
@@ -218,12 +206,14 @@ impl DynamicPolicy for AnswerPolicy {
                 Ok((true, collector, Some(state), None))
             }
             AnswerStatus::NeedInjection => {
+                tracing::debug!("AnswerStatus::NeedInjection");
                 // Inject the reply into the document
                 let output = state.reply.clone();
                 state.status = AnswerStatus::Completed;
                 Ok((true, collector, Some(state), Some(output)))
             }
             AnswerStatus::Completed | AnswerStatus::Repeat => {
+                tracing::debug!("AnswerStatus::Completed or AnswerStatus::Repeat");
                 // Nothing to do
                 Ok((false, collector, None, None))
             }
@@ -234,11 +224,7 @@ impl DynamicPolicy for AnswerPolicy {
 pub struct IncludePolicy;
 
 impl StaticPolicy for IncludePolicy {
-    fn collect_static_tag(
-        worker: &Worker,
-        collector: Collector,
-        tag: &Tag,
-    ) -> Result<Collector> {
+    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
         let included_context_name = tag
             .arguments
             .arguments
@@ -246,6 +232,7 @@ impl StaticPolicy for IncludePolicy {
             .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
             .value
             .clone();
+        tracing::debug!("Including context: {}", included_context_name);
         worker.collect(collector, &included_context_name)
     }
 }
@@ -253,11 +240,8 @@ impl StaticPolicy for IncludePolicy {
 pub struct SetPolicy;
 
 impl StaticPolicy for SetPolicy {
-    fn collect_static_tag(
-        _worker: &Worker,
-        collector: Collector,
-        tag: &Tag,
-    ) -> Result<Collector> {
+    fn collect_static_tag(_worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
+        tracing::debug!("Setting variables: {:?}", tag.parameters);
         Ok(collector.update(&tag.parameters))
     }
 }
@@ -269,8 +253,8 @@ impl TagBehaviorDispatch {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<(bool, Collector, Vec<(Range, String)>)>
-    {
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
+        tracing::debug!("Executing tag: {:?}", tag);
         match tag.command {
             crate::ast2::CommandKind::Answer => {
                 DynamicTagBehavior::<AnswerPolicy>::execute_tag(worker, collector, tag)
@@ -288,8 +272,8 @@ impl TagBehaviorDispatch {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<(bool, Collector)>
-    {
+    ) -> Result<(bool, Collector)> {
+        tracing::debug!("Collecting tag: {:?}", tag);
         match tag.command {
             crate::ast2::CommandKind::Answer => {
                 DynamicTagBehavior::<AnswerPolicy>::collect_tag(worker, collector, tag)
@@ -308,17 +292,12 @@ impl TagBehaviorDispatch {
         collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
-    ) -> Result<(bool, Collector, Vec<(Range, String)>)>
-    {
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
+        tracing::debug!("Executing anchor: {:?}", anchor);
         match anchor.command {
-            crate::ast2::CommandKind::Answer => {
-                DynamicTagBehavior::<AnswerPolicy>::execute_anchor(
-                    worker,
-                    collector,
-                    anchor,
-                    anchor_end,
-                )
-            }
+            crate::ast2::CommandKind::Answer => DynamicTagBehavior::<AnswerPolicy>::execute_anchor(
+                worker, collector, anchor, anchor_end,
+            ),
             _ => Err(anyhow::anyhow!("Unsupported anchor command")),
         }
     }
@@ -327,17 +306,12 @@ impl TagBehaviorDispatch {
         collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
-    ) -> Result<(bool, Collector)>
-    {
+    ) -> Result<(bool, Collector)> {
+        tracing::debug!("Collecting anchor: {:?}", anchor);
         match anchor.command {
-            crate::ast2::CommandKind::Answer => {
-                DynamicTagBehavior::<AnswerPolicy>::collect_anchor(
-                    worker,
-                    collector,
-                    anchor,
-                    anchor_end,
-                )
-            }
+            crate::ast2::CommandKind::Answer => DynamicTagBehavior::<AnswerPolicy>::collect_anchor(
+                worker, collector, anchor, anchor_end,
+            ),
             _ => Err(anyhow::anyhow!("Unsupported anchor command")),
         }
     }

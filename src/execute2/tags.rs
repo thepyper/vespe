@@ -112,13 +112,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let state: P::State = P::State::default();
         let (collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
-        if let Some(_new_state) = new_state {
-            // worker.save_state(new_state, &tag.command.to_string(), &Uuid::new_v4())?;
+        if let Some(new_state) = new_state {
+            worker.save_state(&tag.command, &Uuid::new_v4(), new_state)?;
         }
         // If there is some output, patch into new anchor
-        let patches = if let Some(_output) = new_output {
-            // worker.patch_tag_to_anchor(tag, &output)?;
-            vec![] // Placeholder
+        let patches = if let Some(output) = new_output {
+            worker.tag_to_anchor(&collector, tag, &output)?
         } else {
             vec![]
         };
@@ -141,17 +140,15 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
-        // let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
-        let state: P::State = P::State::default(); // Placeholder
+        let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
         let (collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
-        if let Some(_new_state) = new_state {
-            // worker.save_state(new_state, &anchor.command.to_string(), &anchor.uuid)?;
+        if let Some(new_state) = new_state {
+            worker.save_state(&anchor.command, &anchor.uuid, new_state)?;
         }
         // If there is some output, patch into new anchor
         let patches = if let Some(_output) = new_output {
-            // worker.patch_into_anchor(anchor, anchor_end, &output)?;
-            vec![] // Placeholder
+            worker.inject_into_anchor(&collector, anchor, anchor_end, &output)?
         } else {
             vec![]
         };
@@ -165,12 +162,11 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         _anchor: &Anchor,
         _anchor_end: Position,
     ) -> Result<Option<Collector>> {
-        // let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
-        let state: P::State = P::State::default(); // Placeholder
+        let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
         let (collector, new_state, _new_output) = P::mono(_worker, _collector, state)?;
         // If there is a new state, save it
         if let Some(_new_state) = new_state {
-            // worker.save_state(new_state, &anchor.command.to_string(), &anchor.uuid)?;
+            worker.save_state(&anchor.command, &anchor.uuid, new_state)?;
         }
         // Return collector
         Ok(collector)

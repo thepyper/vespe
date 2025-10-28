@@ -418,4 +418,56 @@ impl Worker {
         // No patches applied nor new pass triggered, then return definitive collector
         Ok(Some(collector))
     }
+
+    fn get_state_path(&self, command: CommandKind, uuid: &Uuid) -> Result<PathBuf> {
+        let meta_path = self
+            .path_res
+            .resolve_metadata(&command.to_string(), &uuid)?;
+        let state_path = meta_path.join("state.json");
+        Ok(state_path)
+    }
+    pub fn load_state<T: serde::de::DeserializeOwned>(&self, command: CommandKind, uuid: &Uuid) -> Result<T> {
+        let state_path = self.get_state_path()?;
+        let state = self.file_access.read_file(&state_path)?;
+        let state: T = serde_json::from_str(&state)?;
+        Ok(state)
+    }
+    pub fn save_state<T: serde::Serialize>(&self, command: CommandKind, uuid: &Uuid, state: &T, comment: Option<&str>) -> Result<()> {
+        let state_path = self.get_state_path(command, uuid)?;
+        let state_str = serde_json::to_string_pretty(state)?;
+        self.file_access
+            .write_file(&state_path, &state_str, comment)?;
+        Ok(())
+    }
+
+    pub fn tag_to_anchor(collector: &Collector, tag: &Tag, output: &str) -> Result<Vec<(Range, String)>> {
+        let (a0, a1) = Anchor::new_couple(tag.command, tag.parameters, tag.arguments);
+        match redirect_output(collector, output)? {
+            true => {
+                // Output redirected, just convert tag into anchor
+                Ok(vec![(tag.range, format!("{}\n{}\n", a0.to_string(), a1.to_string()))])
+            }
+            false => {
+                // Output not redirected, include in new anchors
+                Ok(vec![(tag.range, format!("{}\n{}\n{}\n", a0.to_string(), output, a1.to_string()))]) 
+            }
+        }
+    }
+
+    pub fn inject_into_anchor(collector: &Collector, anchor: &Anchor, anchor_end: &Range, output: &str) -> Result<Vec<(Range, String)>> {
+        match redirect_output(collector, output)? {
+            true => {
+                // Output redirected, no change in anchor
+                Ok(vec![])
+            }
+            false => {
+                // Output not redirected, patch anchor contents
+                Ok(vec![(Range { begin: anchor.end, end: anchor_end.begin }, output)])
+            }
+        }        
+    }
+
+    fn redirect_output(collector: &Collector, output: &str) -> Result<bool> {
+        false // TRUE if output has been redirected
+    }
 }

@@ -1,5 +1,6 @@
 use anyhow::Result;
 use enum_dispatch::enum_dispatch;
+use handlebars::template::Parameter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,7 +13,7 @@ use super::tag_answer::AnswerPolicy;
 use super::tag_include::IncludePolicy;
 use super::tag_set::SetPolicy;
 
-use crate::ast2::{Anchor, CommandKind, Position, Range, Tag};
+use crate::ast2::{Anchor, Arguments, Parameters, CommandKind, Position, Range, Tag};
 
 // 1. HOST INTERFACE (TagBehavior)
 // Tutti i metodi sono funzioni associate (statiche) come da tua intenzione.
@@ -51,6 +52,8 @@ pub trait DynamicPolicy {
     fn mono(
         worker: &Worker,
         collector: Collector,
+        parameters: &Parameters,
+        arguments: &Arguments,
         state: Self::State,
     ) -> Result<(bool, Collector, Option<Self::State>, Option<String>)>;
 }
@@ -104,7 +107,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
-        let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
+        let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, &tag.parameters, &tag.arguments, state)?;
         // If there is some output, patch into new anchor
         let (uuid, patches) =
             worker.tag_to_anchor(&collector, tag, &new_output.unwrap_or(String::new()))?;
@@ -132,7 +135,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
+        let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, &anchor.parameters, &anchor.arguments, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
@@ -154,7 +157,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, _new_output) = P::mono(worker, collector, state)?;
+        let (do_next_pass, collector, new_state, _new_output) = P::mono(worker, collector, &anchor.parameters, &anchor.arguments, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;

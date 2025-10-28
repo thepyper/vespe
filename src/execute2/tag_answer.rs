@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::execute::{Worker, Collector};
 use super::tags::DynamicPolicy;
-use crate::ast2::{Tag, Anchor, Position};
+use crate::ast2::{Parameters, Tag, Arguments, Anchor, Position};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
 enum AnswerStatus {
@@ -29,7 +29,9 @@ impl DynamicPolicy for AnswerPolicy {
 
     fn mono(
         worker: &Worker,
-        collector: Collector,
+        mut collector: Collector,
+        parameters: &Parameters,
+        arguments: &Arguments,
         mut state: Self::State,
     ) -> Result<(bool, Collector, Option<Self::State>, Option<String>)> {
         tracing::debug!("AnswerPolicy::mono with state: {:?}", state);
@@ -44,6 +46,7 @@ impl DynamicPolicy for AnswerPolicy {
             AnswerStatus::NeedProcessing => {
                 tracing::debug!("AnswerStatus::NeedProcessing");
                 // Execute the model query
+                collector = collector.update(parameters);
                 let response = worker.call_model(&collector, vec![collector.context().clone()])?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;

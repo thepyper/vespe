@@ -33,10 +33,10 @@ pub fn execute_context(
     tracing::debug!("Executing context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    let collector = exe.execute(Collector::new(true), context_name)?;
-
-    tracing::debug!("Finished executing context: {}", context_name);
-    Ok(collector.context)
+    match exe.execute(Collector::new(true), context_name, 77)? {
+        Some(collector) => Ok(collector.context().clone()),
+        None => Err(anyhow::anyhow!("Execute context returned no collector")),
+    }
 }
 
 /// Collects a context's content without executing any commands that modify state or call models.
@@ -60,10 +60,11 @@ pub fn collect_context(
     tracing::debug!("Collecting context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    let collector = exe.collect(Collector::new(false), context_name)?;
-
-    tracing::debug!("Finished collecting context: {}", context_name);
-    Ok(collector.context)
+    
+    match exe.execute(Collector::new(false), context_name, 0)? {
+        Some(collector) => Ok(collector.context().clone()),
+        None => Err(anyhow::anyhow!("Collect context returned no collector")),
+    }
 }
 
 /// Central state object for the execution engine.
@@ -173,48 +174,11 @@ impl Worker {
         }
     }
 
-    /// Collects context from a file, resolving includes but not executing stateful anchors.
-    /// This represents the entry point for a read-only collection pass.
-    pub(crate) fn collect(&self, collector: Collector, context_name: &str) -> Result<Collector> {
-        tracing::debug!("Worker::collect for context: {}", context_name);
-        let context_path = self.path_res.resolve_context(context_name)?;
-
-        match collector.descent(&context_path) {
-            None => {
-                tracing::debug!(
-                    "Context {} already in visit stack, skipping collection.",
-                    context_name
-                );
-                return Ok(collector);
-            }
-            Some(collector) => {
-                // Read file, parse it, collect without allowing execution
-                let (do_next_pass, collector) = self.collect_pass(collector, &context_path)?;
-                match do_next_pass {
-                    false => {
-                        // Successfully collected everything without needing further processing
-                        tracing::debug!(
-                            "Worker::execute_step collected from collect_pass for path: {:?}",
-                            context_path
-                        );
-                        return Ok(collector);
-                    }
-                    true => {
-                        return Err(anyhow::anyhow!(
-                            "Collection incomplete, execution needed for context: {}",
-                            context_name
-                        ));
-                    }
-                };
-            }
-        }
-    }
-
     /// Executes a context fully, running a loop of `execute_step` until the state converges.
     ///
     /// This is the main entry point for a full execution, which can modify files.
     /// It orchestrates the two-pass strategy until all anchors are `Completed`.
-    fn execute(&self, collector: Collector, context_name: &str) -> Result<Collector> {
+    pub fn execute(&self, collector: Collector, context_name: &str, max_rewrite_steps: usize) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -224,79 +188,69 @@ impl Worker {
                     "Context {} already in visit stack, skipping execution.",
                     context_name
                 );
-                return Ok(collector);
+                return Ok(Some(collector));
             }
             Some(collector) => {
-                let mut collector = collector;
-                loop {
-                    let (do_next_pass, collector) =
-                        self.execute_step(collector.clone(), &context_path)?;
-                    if !do_next_pass {
-                        tracing::debug!(
-                            "Worker::execute returning collected for context: {}",
-                            context_name
-                        );
-                        return Ok(collector);
-                    }
-                    tracing::debug!("Worker::execute continuing for context: {}", context_name);
+                for i in 1..=max_rewrite_steps {
+                    // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
+                    let (do_next_pass, collector) = self.execute_pass(collector.clone(), &context_path)?;
+                    match do_next_pass {
+                        true => {
+                            tracing::debug!(
+                                "Worker::execute_step pass_2 needs another pass for path: {:?}",
+                                context_path
+                            );
+                        }
+                        false => {
+                            tracing::debug!(
+                                "Worker::execute_step no changes in pass_2 for path: {:?}",
+                                context_path
+                            );
+                            return Ok(Some(collector));
+                        }
+                    };
+                    // Re-read file, parse it, execute slow things that do not modify context, collect data
+                    let (do_next_pass, collector) = self.collect_pass(collector.clone(), &context_path)?;
+                    match do_next_pass {
+                        true => {
+                            // Could not collect everything in pass_1, need to trigger another step
+                            tracing::debug!(
+                                "Worker::execute_step could not collect from pass_1 for path: {:?}",
+                                context_path
+                            );
+                        }
+                        false => {
+                            // Successfully collected everything without needing further processing
+                            tracing::debug!(
+                                "Worker::execute_step collected from pass_1 for path: {:?}",
+                                context_path
+                            );
+                            return Ok(Some(collector));
+                        }
+                    };
                 }
+                // Last re-read file, parse it, collect data
+                let (do_next_pass, collector) = self.collect_pass(collector.clone(), &context_path)?;
+                match do_next_pass {
+                    true => {
+                        // Could not collect everything in pass_1, need to trigger another step
+                        tracing::debug!(
+                            "Worker::execute_step could not collect from pass_1 for path: {:?}",
+                            context_path
+                        );
+                        return Ok(None);
+                    }
+                    false => {
+                        // Successfully collected everything without needing further processing
+                        tracing::debug!(
+                            "Worker::execute_step collected from pass_1 for path: {:?}",
+                            context_path
+                        );
+                        return Ok(Some(collector));
+                    }
+                };
             }
         }
-    }
-
-    /// Executes a single step of the two-pass strategy.
-    ///
-    /// 1.  **Pass 2**: Scans the document for anchors that are ready for injection (`NeedInjection`)
-    ///     and patches the file on disk. This is a fast, synchronous operation.
-    /// 2.  **Pass 1**: Re-reads the document and collects content. If it encounters anchors
-    ///     that need processing (`JustCreated` or `NeedProcessing`), it triggers the slow
-    ///     tasks (like model calls) and returns `Ok(None)` to signal that the `execute`
-    ///     loop needs to run again.
-    ///
-    /// If `pass_1` completes without starting any new tasks, it returns `Ok(Some(Collector))`,
-    /// signaling that the execution has converged and is complete.
-    fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
-        tracing::debug!("Worker::execute_step for path: {:?}", context_path);
-
-        // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        let (do_next_pass, collector) = self.execute_pass(collector.clone(), context_path)?;
-        match do_next_pass {
-            true => {
-                tracing::debug!(
-                    "Worker::execute_step pass_2 needs another pass for path: {:?}",
-                    context_path
-                );
-            }
-            false => {
-                tracing::debug!(
-                    "Worker::execute_step no changes in pass_2 for path: {:?}",
-                    context_path
-                );
-                return Ok((false, collector));
-            }
-        };
-
-        // Re-read file, parse it, execute slow things that do not modify context, collect data
-        let (do_next_pass, collector) = self.collect_pass(collector.clone(), context_path)?;
-        match do_next_pass {
-            true => {
-                // Could not collect everything in pass_1, need to trigger another step
-                tracing::debug!(
-                    "Worker::execute_step could not collect from pass_1 for path: {:?}",
-                    context_path
-                );
-            }
-            false => {
-                // Successfully collected everything without needing further processing
-                tracing::debug!(
-                    "Worker::execute_step collected from pass_1 for path: {:?}",
-                    context_path
-                );
-                return Ok((false, collector));
-            }
-        };
-
-        return Ok((true, collector));
     }
 
     pub(crate) fn call_model(

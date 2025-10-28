@@ -233,7 +233,10 @@ impl StaticPolicy for IncludePolicy {
             .value
             .clone();
         tracing::debug!("Including context: {}", included_context_name);
-        worker.collect(collector, &included_context_name)
+        match worker.execute(collector, &included_context_name, 0)? {
+            Some(collector) => Ok(collector),
+            None => Err(anyhow::anyhow!("Included context returned no collector")),
+        }
     }
 }
 

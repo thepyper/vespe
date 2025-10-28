@@ -191,9 +191,9 @@ impl Worker {
                 return Ok(Some(collector));
             }
             Some(collector) => {
-                for i in 1..=max_rewrite_steps {
+                for _i in 1..=max_rewrite_steps {
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
-                    let (do_next_pass, collector) = self.execute_pass(collector.clone(), &context_path)?;
+                    let (do_next_pass, collector_1) = self.execute_pass(collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -206,11 +206,11 @@ impl Worker {
                                 "Worker::execute_step no changes in pass_2 for path: {:?}",
                                 context_path
                             );
-                            return Ok(Some(collector));
+                            return Ok(Some(collector_1));
                         }
                     };
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
-                    let (do_next_pass, collector) = self.collect_pass(collector.clone(), &context_path)?;
+                    let (do_next_pass, collector_2) = self.collect_pass(collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
                             // Could not collect everything in pass_1, need to trigger another step
@@ -225,7 +225,7 @@ impl Worker {
                                 "Worker::execute_step collected from pass_1 for path: {:?}",
                                 context_path
                             );
-                            return Ok(Some(collector));
+                            return Ok(Some(collector_2));
                         }
                     };
                 }

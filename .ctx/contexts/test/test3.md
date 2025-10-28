@@ -1,3 +1,4 @@
 Come ti chiami?
-<!-- answer-7b7c7de1-7866-4672-82ca-385cfcafa88a:begin   -->
-<!-- answer-7b7c7de1-7866-4672-82ca-385cfcafa88a:end   -->
+<!-- answer-b87f41dc-3b26-4a14-b065-00d19b9fe123:begin   -->
+Mi chiamo Gemini.
+<!-- answer-b87f41dc-3b26-4a14-b065-00d19b9fe123:end   -->

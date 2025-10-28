@@ -1,9 +1,8 @@
-use crate::ast2::{Anchor, AnchorKind, Arguments, CommandKind, Content, Document, Parameters, Range, Tag, Text,
-    Position };
+use crate::ast2::{Anchor, AnchorKind, CommandKind, Content, Parameters, Range,
+    Tag, Position };
 use uuid::Uuid;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
-use super::*;
 use crate::execute2::tags::TagBehaviorDispatch;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
@@ -89,6 +88,10 @@ pub(crate) struct Collector {
 }
 
 impl Collector {
+    pub(crate) fn context(&self) -> &ModelContent {
+        &self.context
+    }
+
     /// Creates a new, empty `Collector`.
     ///
     /// # Arguments
@@ -128,7 +131,7 @@ impl Collector {
     ///
     /// # Arguments
     /// * `parameters` - Parameters to take variable values from
-    fn update(&self, parameters: &Parameters) -> Self {
+    pub(crate) fn update(&self, parameters: &Parameters) -> Self {
         let mut collector = self.clone();
         collector.variables = collector.variables.update(parameters);
         collector
@@ -176,7 +179,7 @@ impl Worker {
 
     /// Collects context from a file, resolving includes but not executing stateful anchors.
     /// This represents the entry point for a read-only collection pass.
-    fn collect(&self, collector: Collector, context_name: &str) -> Result<Collector> {
+    pub(crate) fn collect(&self, collector: Collector, context_name: &str) -> Result<Collector> {
         tracing::debug!("Worker::collect for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -299,7 +302,7 @@ impl Worker {
         return Ok((true, collector));
     }
 
-    fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
+    pub(crate) fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
         let query = contents
             .into_iter()
             .flat_map(|mc| mc.0)
@@ -347,7 +350,7 @@ impl Worker {
         let anchor_index = crate::utils::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
-            let (do_next_pass, collector, patches) = match item {
+            let (do_next_pass, next_collector, patches) = match item {
                 Content::Text(text) => {
                     collector
                         .context
@@ -370,8 +373,8 @@ impl Worker {
                             Content::Anchor(a) => Some(a),
                             _ => None,
                         }).ok_or(anyhow::anyhow!("end anchor not found"))?;
-                        let (do_next_pass, collector, patches) = if is_collect {
-                            let (do_next_pass, collector) = collect_anchor(
+                        let (do_next_pass, new_collector, patches) = if is_collect {
+                            let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
                                 self, collector, anchor, anchor_end.range.begin,
                             )?;
                             (do_next_pass, collector, vec![])
@@ -380,15 +383,15 @@ impl Worker {
                                 self, collector, anchor, anchor_end.range.begin,
                             )?
                         };
-                        collector.enter(anchor);
-                        (do_next_pass, collector, patches)
+                        (do_next_pass, new_collector.enter(anchor), patches)
                     }
                     AnchorKind::End => {
-                        collector.exit()?;
-                        (false, collector, vec![])
+                        (false, collector.exit()?, vec![])
                     }
                 },
             };
+            collector = next_collector;
+
             // Evaluate patches
             if patches.is_empty() {
                 // No patches to apply
@@ -400,15 +403,15 @@ impl Worker {
                 let new_content = Self::apply_patches(&context_content, &patches)?;
                 self.file_access
                     .write_file(context_path, &new_content, None)?;
-                return Ok(None);
+                return Ok((true, collector));
             }
             // Check if collector has been discarded, then exit and trigger another pass
             if do_next_pass {
-                return (true, collector);
+                return Ok((true, collector));
             }
         }
         // No patches applied nor new pass triggered, then return definitive collector
-        (false, collector)
+        Ok((false, collector))
     }
 
     fn get_state_path(&self, command: CommandKind, uuid: &Uuid) -> Result<PathBuf> {
@@ -419,7 +422,7 @@ impl Worker {
         Ok(state_path)
     }
     pub fn load_state<T: serde::de::DeserializeOwned>(&self, command: CommandKind, uuid: &Uuid) -> Result<T> {
-        let state_path = self.get_state_path()?;
+        let state_path = self.get_state_path(command, uuid)?;
         let state = self.file_access.read_file(&state_path)?;
         let state: T = serde_json::from_str(&state)?;
         Ok(state)
@@ -433,8 +436,8 @@ impl Worker {
     }
 
     pub fn tag_to_anchor(&self, collector: &Collector, tag: &Tag, output: &str) -> Result<Vec<(Range, String)>> {
-        let (a0, a1) = Anchor::new_couple(tag.command, tag.parameters, tag.arguments);
-        match redirect_output(collector, output)? {
+        let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
+        match self.redirect_output(collector, output)? {
             true => {
                 // Output redirected, just convert tag into anchor
                 Ok(vec![(tag.range, format!("{}\n{}\n", a0.to_string(), a1.to_string()))])
@@ -447,19 +450,19 @@ impl Worker {
     }
 
     pub fn inject_into_anchor(&self, collector: &Collector, anchor: &Anchor, anchor_end: &Position, output: &str) -> Result<Vec<(Range, String)>> {
-        match redirect_output(collector, output)? {
+        match self.redirect_output(collector, output)? {
             true => {
                 // Output redirected, no change in anchor
                 Ok(vec![])
             }
             false => {
                 // Output not redirected, patch anchor contents
-                Ok(vec![(Range { begin: anchor.end, end: anchor_end }, output)])
+                Ok(vec![(Range { begin: anchor.range.end, end: *anchor_end }, output.to_string())])
             }
         }        
     }
 
-    fn redirect_output(&self, collector: &Collector, output: &str) -> Result<bool> {
-        false // TRUE if output has been redirected
+    fn redirect_output(&self, _collector: &Collector, _output: &str) -> Result<bool> {
+        Ok(false) // TRUE if output has been redirected
     }
 }

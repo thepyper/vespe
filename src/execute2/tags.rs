@@ -1,13 +1,14 @@
 use anyhow::Result;
 use uuid::Uuid;
 use enum_dispatch::enum_dispatch;
+use serde::{Deserialize, Serialize};
 
 use super::execute::Collector;
 use super::execute::Worker;
 use super::variables::Variables;
 use super::content::ModelContent;
 
-use crate::ast2::{Anchor, Position, Range, Tag};
+use crate::ast2::{Anchor, CommandKind, Position, Range, Tag};
 
 // 1. HOST INTERFACE (TagBehavior)
 // Tutti i metodi sono funzioni associate (statiche) come da tua intenzione.
@@ -49,7 +50,7 @@ pub trait StaticPolicy {
 }
 
 pub trait DynamicPolicy {
-    type State: Default + std::fmt::Debug; // Lo stato deve essere Default e Debug
+    type State: Default + std::fmt::Debug + Serialize + for<'de> Deserialize<'de>; // Lo stato deve essere Default e Debug
 
     fn mono(
         worker: &Worker,
@@ -114,7 +115,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
-            worker.save_state::<P::State>(&tag.command, &Uuid::new_v4(), new_state)?;
+            worker.save_state::<P::State>(tag.command, &Uuid::new_v4(), &new_state, None)?;
         }
         // If there is some output, patch into new anchor
         let patches = if let Some(output) = new_output {
@@ -132,7 +133,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         _tag: &Tag,
     ) -> Result<(bool, Collector)> {
         // Dynamic tags do not support collect_tag because they always produce a new anchor during execution
-        Ok(false, None)
+        panic!("Dynamic tags do not support collect_tag because they always produce a new anchor during execution");
     }
 
     fn execute_anchor(
@@ -141,14 +142,14 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
+        let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
-            worker.save_state::<P::State>(anchor.command, &anchor.uuid, new_state)?;
+            worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
         }
         // If there is some output, patch into new anchor
-        let patches = if let Some(_output) = new_output {
+        let patches = if let Some(output) = new_output {
             worker.inject_into_anchor(&collector, anchor, &anchor_end, &output)?
         } else {
             vec![]
@@ -164,7 +165,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, _new_output) = P::mono(_worker, _collector, state)?;
+        let (do_next_pass, collector, new_state, _new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
@@ -176,7 +177,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
 
 // 4. CONCRETE POLICIES
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
 enum AnswerStatus {
     #[default]
     JustCreated,
@@ -186,12 +187,10 @@ enum AnswerStatus {
     Completed,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AnswerState {
     pub status: AnswerStatus,
-    pub query: ModelContent,
     pub reply: String,
-    pub variables: Variables,
 }
 
 pub struct AnswerPolicy;
@@ -201,22 +200,20 @@ impl DynamicPolicy for AnswerPolicy {
 
     fn mono(
         worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         mut state: Self::State,
     ) -> Result<(bool, Collector, Option<Self::State>, Option<String>)> {
         match state.status {
             AnswerStatus::JustCreated => {
                 // Prepare the query
                 state.status = AnswerStatus::NeedProcessing;
-                // state.query = collector.context.clone(); // Private field
                 state.reply = String::new();
-                // state.variables = collector.variables.clone(); // Private field
                 Ok((true, collector, Some(state), Some(String::new())))
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                // let response = worker.call_model(&state.query, &state.variables)?; // Private method
-                // state.reply = response;
+                let response = worker.call_model(&collector, vec![collector.context().clone()])?;
+                state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 Ok((true, collector, Some(state), None))
             }
@@ -249,8 +246,7 @@ impl StaticPolicy for IncludePolicy {
             .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
             .value
             .clone();
-        // worker.collect(collector, &included_context_name) // Private method
-        Ok(collector) // Placeholder
+        worker.collect(collector, &included_context_name)
     }
 }
 
@@ -259,11 +255,10 @@ pub struct SetPolicy;
 impl StaticPolicy for SetPolicy {
     fn collect_static_tag(
         _worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         tag: &Tag,
     ) -> Result<Collector> {
-        // Ok(Some(collector.update(&tag.parameters))) // Private method
-        Ok(collector) // Placeholder
+        Ok(collector.update(&tag.parameters))
     }
 }
 

@@ -16,24 +16,24 @@ pub trait TagBehavior {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)>;
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
     fn collect_tag(
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<Option<Collector>>;
+    ) -> Result<(bool, Collector)>;
     fn execute_anchor(
         worker: &Worker,
         collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)>;
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
     fn collect_anchor(
         worker: &Worker,
         collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
-    ) -> Result<Option<Collector>>;
+    ) -> Result<(bool, Collector)>;
 }
 
 // 2. POLICY TRAITS
@@ -114,7 +114,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
-            worker.save_state(&tag.command, &Uuid::new_v4(), new_state)?;
+            worker.save_state::<P::State>(&tag.command, &Uuid::new_v4(), new_state)?;
         }
         // If there is some output, patch into new anchor
         let patches = if let Some(output) = new_output {
@@ -145,7 +145,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
-            worker.save_state(&anchor.command, &anchor.uuid, new_state)?;
+            worker.save_state::<P::State>(anchor.command, &anchor.uuid, new_state)?;
         }
         // If there is some output, patch into new anchor
         let patches = if let Some(_output) = new_output {
@@ -158,16 +158,16 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     }
 
     fn collect_anchor(
-        _worker: &Worker,
-        _collector: Collector,
-        _anchor: &Anchor,
-        _anchor_end: Position,
+        worker: &Worker,
+        collector: Collector,
+        anchor: &Anchor,
+        anchor_end: Position,
     ) -> Result<(bool, Collector)> {
-        let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
+        let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let (do_next_pass, collector, new_state, _new_output) = P::mono(_worker, _collector, state)?;
         // If there is a new state, save it
-        if let Some(_new_state) = new_state {
-            worker.save_state(&anchor.command, &anchor.uuid, new_state)?;
+        if let Some(new_state) = new_state {
+            worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
         }
         // Return collector
         Ok((do_next_pass, collector))

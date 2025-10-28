@@ -8,6 +8,10 @@ use super::execute::Collector;
 use super::execute::Worker;
 use super::variables::Variables;
 
+use super::tag_answer::AnswerPolicy;
+use super::tag_include::IncludePolicy;
+use super::tag_set::SetPolicy;
+
 use crate::ast2::{Anchor, CommandKind, Position, Range, Tag};
 
 // 1. HOST INTERFACE (TagBehavior)
@@ -157,95 +161,6 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // Return collector
         Ok((do_next_pass, collector))
-    }
-}
-
-// 4. CONCRETE POLICIES
-
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
-enum AnswerStatus {
-    #[default]
-    JustCreated,
-    Repeat,
-    NeedProcessing,
-    NeedInjection,
-    Completed,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct AnswerState {
-    pub status: AnswerStatus,
-    pub reply: String,
-}
-
-pub struct AnswerPolicy;
-
-impl DynamicPolicy for AnswerPolicy {
-    type State = AnswerState;
-
-    fn mono(
-        worker: &Worker,
-        collector: Collector,
-        mut state: Self::State,
-    ) -> Result<(bool, Collector, Option<Self::State>, Option<String>)> {
-        tracing::debug!("AnswerPolicy::mono with state: {:?}", state);
-        match state.status {
-            AnswerStatus::JustCreated => {
-                tracing::debug!("AnswerStatus::JustCreated");
-                // Prepare the query
-                state.status = AnswerStatus::NeedProcessing;
-                state.reply = String::new();
-                Ok((true, collector, Some(state), Some(String::new())))
-            }
-            AnswerStatus::NeedProcessing => {
-                tracing::debug!("AnswerStatus::NeedProcessing");
-                // Execute the model query
-                let response = worker.call_model(&collector, vec![collector.context().clone()])?;
-                state.reply = response;
-                state.status = AnswerStatus::NeedInjection;
-                Ok((true, collector, Some(state), None))
-            }
-            AnswerStatus::NeedInjection => {
-                tracing::debug!("AnswerStatus::NeedInjection");
-                // Inject the reply into the document
-                let output = state.reply.clone();
-                state.status = AnswerStatus::Completed;
-                Ok((true, collector, Some(state), Some(output)))
-            }
-            AnswerStatus::Completed | AnswerStatus::Repeat => {
-                tracing::debug!("AnswerStatus::Completed or AnswerStatus::Repeat");
-                // Nothing to do
-                Ok((false, collector, None, None))
-            }
-        }
-    }
-}
-
-pub struct IncludePolicy;
-
-impl StaticPolicy for IncludePolicy {
-    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
-        let included_context_name = tag
-            .arguments
-            .arguments
-            .get(0)
-            .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
-            .value
-            .clone();
-        tracing::debug!("Including context: {}", included_context_name);
-        match worker.execute(collector, &included_context_name, 0)? {
-            Some(collector) => Ok(collector),
-            None => Err(anyhow::anyhow!("Included context returned no collector")),
-        }
-    }
-}
-
-pub struct SetPolicy;
-
-impl StaticPolicy for SetPolicy {
-    fn collect_static_tag(_worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
-        tracing::debug!("Setting variables: {:?}", tag.parameters);
-        Ok(collector.update(&tag.parameters))
     }
 }
 

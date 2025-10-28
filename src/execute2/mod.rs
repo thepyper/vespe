@@ -19,12 +19,19 @@ mod content;
 mod execute;
 //mod state;
 mod tags;
+mod tag_answer;
+mod tag_include;
+mod tag_set;
 mod variables;
 
 use content::*;
 //use state::*;
 use execute::*;
 use variables::*;
+use tags::*;
+use tag_answer::*;
+use tag_include::*;
+use tag_set::*;
 
 pub use execute::collect_context;
 pub use execute::execute_context;

@@ -45,7 +45,7 @@ pub trait StaticPolicy {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<Option<Collector>>;
+    ) -> Result<Collector>;
 }
 
 pub trait DynamicPolicy {
@@ -55,7 +55,7 @@ pub trait DynamicPolicy {
         worker: &Worker,
         collector: Collector,
         state: Self::State,
-    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)>;
+    ) -> Result<(bool, Collector, Option<Self::State>, Option<String>)>;
 }
 
 // 3. HOST STRUCTS
@@ -70,7 +70,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         _collector: Collector,
         _anchor: &Anchor,
         _anchor_end: Position,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         panic!("StaticTag does not support execute_anchor");
     }
 
@@ -79,7 +79,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         _collector: Collector,
         _anchor: &Anchor,
         _anchor_end: Position,
-    ) -> Result<Option<Collector>> {
+    ) -> Result<(bool, Collector)> {
         panic!("StaticTag does not support collect_anchor");
     }
 
@@ -87,17 +87,18 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let collector = P::collect_static_tag(worker, collector, tag)?;
-        Ok((collector, vec![]))
+        Ok((false, collector, vec![]))
     }
 
     fn collect_tag(
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<Option<Collector>> {
-        P::collect_static_tag(worker, collector, tag)
+    ) -> Result<(bool, Collector)> {
+        let collector = P::collect_static_tag(worker, collector, tag)?;
+        Ok((false, collector))
     }
 }
 
@@ -108,9 +109,9 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
-        let (collector, new_state, new_output) = P::mono(worker, collector, state)?;
+        let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state(&tag.command, &Uuid::new_v4(), new_state)?;
@@ -122,16 +123,16 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             vec![]
         };
         // Return collector and patches
-        Ok((collector, patches))
+        Ok((do_next_pass, collector, patches))
     }
 
     fn collect_tag(
         _worker: &Worker,
         _collector: Collector,
         _tag: &Tag,
-    ) -> Result<Option<Collector>> {
+    ) -> Result<(bool, Collector)> {
         // Dynamic tags do not support collect_tag because they always produce a new anchor during execution
-        Ok(None)
+        Ok(false, None)
     }
 
     fn execute_anchor(
@@ -139,21 +140,21 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)> {
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
-        let (collector, new_state, new_output) = P::mono(worker, collector, state)?;
+        let (do_next_pass, collector, new_state, new_output) = P::mono(worker, collector, state)?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state(&anchor.command, &anchor.uuid, new_state)?;
         }
         // If there is some output, patch into new anchor
         let patches = if let Some(_output) = new_output {
-            worker.inject_into_anchor(&collector, anchor, anchor_end, &output)?
+            worker.inject_into_anchor(&collector, anchor, &anchor_end, &output)?
         } else {
             vec![]
         };
         // Return collector and patches
-        Ok((collector, patches))
+        Ok((do_next_pass, collector, patches))
     }
 
     fn collect_anchor(
@@ -161,15 +162,15 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         _collector: Collector,
         _anchor: &Anchor,
         _anchor_end: Position,
-    ) -> Result<Option<Collector>> {
+    ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(&anchor.command, &anchor.uuid)?;
-        let (collector, new_state, _new_output) = P::mono(_worker, _collector, state)?;
+        let (do_next_pass, collector, new_state, _new_output) = P::mono(_worker, _collector, state)?;
         // If there is a new state, save it
         if let Some(_new_state) = new_state {
             worker.save_state(&anchor.command, &anchor.uuid, new_state)?;
         }
         // Return collector
-        Ok(collector)
+        Ok((do_next_pass, collector))
     }
 }
 
@@ -202,7 +203,7 @@ impl DynamicPolicy for AnswerPolicy {
         worker: &Worker,
         mut collector: Collector,
         mut state: Self::State,
-    ) -> Result<(Option<Collector>, Option<Self::State>, Option<String>)> {
+    ) -> Result<(bool, Collector, Option<Self::State>, Option<String>)> {
         match state.status {
             AnswerStatus::JustCreated => {
                 // Prepare the query
@@ -210,24 +211,24 @@ impl DynamicPolicy for AnswerPolicy {
                 // state.query = collector.context.clone(); // Private field
                 state.reply = String::new();
                 // state.variables = collector.variables.clone(); // Private field
-                Ok((None, Some(state), Some(String::new())))
+                Ok((true, collector, Some(state), Some(String::new())))
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
                 // let response = worker.call_model(&state.query, &state.variables)?; // Private method
                 // state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
-                Ok((None, Some(state), None))
+                Ok((true, collector, Some(state), None))
             }
             AnswerStatus::NeedInjection => {
                 // Inject the reply into the document
                 let output = state.reply.clone();
                 state.status = AnswerStatus::Completed;
-                Ok((None, Some(state), Some(output)))
+                Ok((true, collector, Some(state), Some(output)))
             }
             AnswerStatus::Completed | AnswerStatus::Repeat => {
                 // Nothing to do
-                Ok((Some(collector), None, None))
+                Ok((false, collector, None, None))
             }
         }
     }
@@ -240,7 +241,7 @@ impl StaticPolicy for IncludePolicy {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<Option<Collector>> {
+    ) -> Result<Collector> {
         let included_context_name = tag
             .arguments
             .arguments
@@ -249,7 +250,7 @@ impl StaticPolicy for IncludePolicy {
             .value
             .clone();
         // worker.collect(collector, &included_context_name) // Private method
-        Ok(Some(collector)) // Placeholder
+        Ok(collector) // Placeholder
     }
 }
 
@@ -260,9 +261,9 @@ impl StaticPolicy for SetPolicy {
         _worker: &Worker,
         mut collector: Collector,
         tag: &Tag,
-    ) -> Result<Option<Collector>> {
+    ) -> Result<Collector> {
         // Ok(Some(collector.update(&tag.parameters))) // Private method
-        Ok(Some(collector)) // Placeholder
+        Ok(collector) // Placeholder
     }
 }
 
@@ -273,7 +274,7 @@ impl TagBehaviorDispatch {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)>
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)>
     {
         match tag.command {
             crate::ast2::CommandKind::Answer => {
@@ -292,7 +293,7 @@ impl TagBehaviorDispatch {
         worker: &Worker,
         collector: Collector,
         tag: &Tag,
-    ) -> Result<Option<Collector>>
+    ) -> Result<(bool, Collector)>
     {
         match tag.command {
             crate::ast2::CommandKind::Answer => {
@@ -312,7 +313,7 @@ impl TagBehaviorDispatch {
         collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
-    ) -> Result<(Option<Collector>, Vec<(Range, String)>)>
+    ) -> Result<(bool, Collector, Vec<(Range, String)>)>
     {
         match anchor.command {
             crate::ast2::CommandKind::Answer => {
@@ -331,7 +332,7 @@ impl TagBehaviorDispatch {
         collector: Collector,
         anchor: &Anchor,
         anchor_end: Position,
-    ) -> Result<Option<Collector>>
+    ) -> Result<(bool, Collector)>
     {
         match anchor.command {
             crate::ast2::CommandKind::Answer => {

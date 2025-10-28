@@ -189,9 +189,10 @@ impl Worker {
                 return Ok(collector);
             }
             Some(collector) => {
-                // Read file, parse it, collect without allowing execution                
-                match self.collect_pass(collector, &context_path)? {
-                    Some(collector) => {
+                // Read file, parse it, collect without allowing execution  
+                let (do_next_pass, collector) = self.collect_pass(collector, &context_path)?;
+                match do_next_pass {
+                    false => {
                         // Successfully collected everything without needing further processing
                         tracing::debug!(
                             "Worker::execute_step collected from collect_pass for path: {:?}",
@@ -199,7 +200,7 @@ impl Worker {
                         );
                         return Ok(collector);
                     }
-                    None => {
+                    true => {
                         return Err(anyhow::anyhow!(
                             "Collection incomplete, execution needed for context: {}",
                             context_name
@@ -229,14 +230,13 @@ impl Worker {
             Some(collector) => {
                 let mut collector = collector;
                 loop {
-                    if let Some(new_collector) =
-                        self.execute_step(collector.clone(), &context_path)?
-                    {
+                    let (do_next_pass, collector) = self.execute_step(collector.clone(), &context_path)?;
+                    if !do_next_pass {
                         tracing::debug!(
                             "Worker::execute returning collected for context: {}",
                             context_name
                         );
-                        return Ok(new_collector);
+                        return Ok(collector);
                     }
                     tracing::debug!("Worker::execute continuing for context: {}", context_name);
                 }
@@ -255,46 +255,48 @@ impl Worker {
     ///
     /// If `pass_1` completes without starting any new tasks, it returns `Ok(Some(Collector))`,
     /// signaling that the execution has converged and is complete.
-    fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
+    fn execute_step(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
         tracing::debug!("Worker::execute_step for path: {:?}", context_path);
 
         // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
-        match self.execute_pass(collector.clone(), context_path)? {
-            None => {
+        let (do_next_pass, collector) = self.execute_pass(collector.clone(), context_path)?;
+        match do_next_pass {
+            true => {
                 tracing::debug!(
                     "Worker::execute_step pass_2 needs another pass for path: {:?}",
                     context_path
                 );
             }
-            Some(collector) => {
+            false => {
                 tracing::debug!(
                     "Worker::execute_step no changes in pass_2 for path: {:?}",
                     context_path
                 );
-                return Ok(Some(collector));
+                return Ok((false, collector));
             }
         };
 
         // Re-read file, parse it, execute slow things that do not modify context, collect data
-        match self.collect_pass(collector, context_path)? {
-            None => {
+        let (do_next_pass, collector) = self.collect_pass(collector.clone(), context_path)?;
+        match do_next_pass {
+            true => {
                 // Could not collect everything in pass_1, need to trigger another step
                 tracing::debug!(
                     "Worker::execute_step could not collect from pass_1 for path: {:?}",
                     context_path
                 );
             }
-            Some(collector) => {
+            false => {
                 // Successfully collected everything without needing further processing
                 tracing::debug!(
                     "Worker::execute_step collected from pass_1 for path: {:?}",
                     context_path
                 );
-                return Ok(Some(collector));
+                return Ok((false, collector));
             }
         };
 
-        return Ok(None);
+        return Ok((true, collector));
     }
 
     fn call_model(&self, collector: &Collector, contents: Vec<ModelContent>) -> Result<String> {
@@ -307,7 +309,7 @@ impl Worker {
         crate::agent::shell::shell_call(&collector.variables.provider, &query)
     }
 
-    fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
+    fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
         self._pass_internal(collector, context_path, true)
     }
 
@@ -329,7 +331,7 @@ impl Worker {
         Ok(result)
     }
 
-    fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<Option<Collector>> {
+    fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
         let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
         self._pass_internal(collector, context_path, false)
     }
@@ -339,22 +341,23 @@ impl Worker {
         mut collector: Collector,
         context_path: &Path,
         is_collect: bool,
-    ) -> Result<Option<Collector>> {
+    ) -> Result<(bool, Collector)> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let anchor_index = crate::utils::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
-            let (maybe_new_collector, patches) = match item {
+            let (do_next_pass, collector, patches) = match item {
                 Content::Text(text) => {
                     collector
                         .context
                         .push(ModelContentItem::user(&text.content));
-                    (Some(collector), vec![])
+                    (false, collector, vec![])
                 }
                 Content::Tag(tag) => {
                     if is_collect {
-                        (TagBehaviorDispatch::collect_tag(self, collector, tag)?, vec![])
+                        let (do_next_pass, collector) = TagBehaviorDispatch::collect_tag(self, collector, tag)?;
+                        (do_next_pass, collector, vec![])
                     } else {
                         TagBehaviorDispatch::execute_tag(self, collector, tag)?
                     }
@@ -367,28 +370,22 @@ impl Worker {
                             Content::Anchor(a) => Some(a),
                             _ => None,
                         }).ok_or(anyhow::anyhow!("end anchor not found"))?;
-                        let (mut maybe_collector, patches) = if is_collect {
-                            (TagBehaviorDispatch::collect_anchor(
+                        let (do_next_pass, collector, patches) = if is_collect {
+                            let (do_next_pass, collector) = collect_anchor(
                                 self, collector, anchor, anchor_end.range.begin,
-                            )?, vec![])
+                            )?;
+                            (do_next_pass, collector, vec![])
                         } else {
                             TagBehaviorDispatch::execute_anchor(
                                 self, collector, anchor, anchor_end.range.begin,
                             )?
                         };
-                        let collector = match maybe_collector.take() {
-                            None => {
-                                None
-                            }
-                            Some(c) => {
-                                Some(c.enter(anchor))
-                            }
-                        };
-                        (collector, patches)
+                        collector.enter(anchor);
+                        (do_next_pass, collector, patches)
                     }
                     AnchorKind::End => {
                         collector.exit()?;
-                        (Some(collector), vec![])
+                        (false, collector, vec![])
                     }
                 },
             };
@@ -406,17 +403,12 @@ impl Worker {
                 return Ok(None);
             }
             // Check if collector has been discarded, then exit and trigger another pass
-            match maybe_new_collector {
-                None => {
-                    return Ok(None);
-                }
-                Some(new_collector) => {
-                    collector = new_collector;
-                }
+            if do_next_pass {
+                return (true, collector);
             }
         }
         // No patches applied nor new pass triggered, then return definitive collector
-        Ok(Some(collector))
+        (false, collector)
     }
 
     fn get_state_path(&self, command: CommandKind, uuid: &Uuid) -> Result<PathBuf> {
@@ -440,7 +432,7 @@ impl Worker {
         Ok(())
     }
 
-    pub fn tag_to_anchor(collector: &Collector, tag: &Tag, output: &str) -> Result<Vec<(Range, String)>> {
+    pub fn tag_to_anchor(&self, collector: &Collector, tag: &Tag, output: &str) -> Result<Vec<(Range, String)>> {
         let (a0, a1) = Anchor::new_couple(tag.command, tag.parameters, tag.arguments);
         match redirect_output(collector, output)? {
             true => {
@@ -454,7 +446,7 @@ impl Worker {
         }
     }
 
-    pub fn inject_into_anchor(collector: &Collector, anchor: &Anchor, anchor_end: &Range, output: &str) -> Result<Vec<(Range, String)>> {
+    pub fn inject_into_anchor(&self, collector: &Collector, anchor: &Anchor, anchor_end: &Position, output: &str) -> Result<Vec<(Range, String)>> {
         match redirect_output(collector, output)? {
             true => {
                 // Output redirected, no change in anchor
@@ -462,12 +454,12 @@ impl Worker {
             }
             false => {
                 // Output not redirected, patch anchor contents
-                Ok(vec![(Range { begin: anchor.end, end: anchor_end.begin }, output)])
+                Ok(vec![(Range { begin: anchor.end, end: anchor_end }, output)])
             }
         }        
     }
 
-    fn redirect_output(collector: &Collector, output: &str) -> Result<bool> {
+    fn redirect_output(&self, collector: &Collector, output: &str) -> Result<bool> {
         false // TRUE if output has been redirected
     }
 }

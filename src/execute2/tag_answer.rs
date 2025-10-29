@@ -29,7 +29,7 @@ impl DynamicPolicy for AnswerPolicy {
 
     fn mono(
         worker: &Worker,
-        mut collector: Collector,
+        collector: Collector,
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,

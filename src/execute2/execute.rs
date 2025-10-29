@@ -88,8 +88,12 @@ pub(crate) struct Collector {
 }
 
 impl Collector {
-    pub(crate) fn context(&self) -> &ModelContent {
+    pub fn context(&self) -> &ModelContent {
         &self.context
+    }
+
+    pub fn anchor_stack(&self) -> &Vec<Anchor> {
+        &self.anchor_stack
     }
 
     /// Creates a new, empty `Collector`.
@@ -470,5 +474,11 @@ impl Worker {
 
     fn redirect_output(&self, _collector: &Collector, _output: &str) -> Result<bool> {
         Ok(false) // TRUE if output has been redirected
+    }
+
+    pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
+        Ok(vec![
+            (anchor.range, format!("{}\n", anchor.to_string()))
+        ])
     }
 }

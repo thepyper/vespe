@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::execute::{Collector, Worker};
-use super::tags::DynamicPolicy;
+use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
 use crate::ast2::{Anchor, Arguments, Parameters, Position, Range, Tag};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -34,45 +34,46 @@ impl DynamicPolicy for AnswerPolicy {
         arguments: &Arguments,
         mut state: Self::State,
         readonly: bool,
-    ) -> Result<(
-        bool,
-        Collector,
-        Option<Self::State>,
-        Option<String>,
-        Vec<(Range, String)>,
-    )> {
+    ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!("tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n", state, readonly);
+        let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
         match state.status {
             AnswerStatus::JustCreated => {
                 // Prepare the query
                 state.status = AnswerStatus::NeedProcessing;
                 state.reply = String::new();
-                Ok((true, collector, Some(state), None, vec![]))
+                result.new_state = Some(state);
+                result.do_next_pass = true;
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                collector = collector.update(parameters);
-                let response = worker.call_model(&collector, vec![collector.context().clone()])?;
+                result.collector = result.collector.update(parameters);
+                let response = worker.call_model(&result.collector, vec![result.collector.context().clone()])?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
-                Ok((true, collector, Some(state), None, vec![]))
+                result.new_state = Some(state);
+                result.do_next_pass = true;
             }
             AnswerStatus::NeedInjection => {
                 // Inject the reply into the document
                 let output = state.reply.clone();
                 state.status = AnswerStatus::Completed;
-                Ok((true, collector, Some(state), Some(output), vec![]))
+                result.new_state = Some(state);
+                result.new_output = Some(output);
+                result.do_next_pass = true;                
             }
             AnswerStatus::Completed => {
                 // Nothing to do
-                Ok((false, collector, None, None, vec![]))
             }
             AnswerStatus::Repeat => {
                 // Prepare the query
                 state.status = AnswerStatus::NeedProcessing;
                 state.reply = String::new();
-                Ok((true, collector, Some(state), Some(String::new()), vec![]))
+                result.new_state = Some(state);
+                result.new_output = Some(String::new());
+                result.do_next_pass = true;                
             }
         }
+        Ok(result)
     }
 }

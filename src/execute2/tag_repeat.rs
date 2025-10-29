@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
-use super::tags::DynamicPolicy;
+use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
@@ -32,18 +32,13 @@ impl DynamicPolicy for RepeatPolicy {
         arguments: &Arguments,
         mut state: Self::State,
         readonly: bool,
-    ) -> Result<(
-        bool,
-        Collector,
-        Option<Self::State>,
-        Option<String>,
-        Vec<(Range, String)>,
-    )> {
+    ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!("tag_repeat::RepeatPolicy::mono\nState = {:?}\nreadonly = {}\n", state, readonly);
+        let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
         match state.status {
             RepeatStatus::JustCreated => {
                 // Find anchor to repeat if any
-                let patches = match collector.anchor_stack().last() {
+                let patches = match result.collector.anchor_stack().last() {
                     Some(anchor) => {
                         let is_anchor_repeatable = match anchor.command {
                             CommandKind::Answer => {
@@ -65,9 +60,7 @@ impl DynamicPolicy for RepeatPolicy {
                             let mut mutated_anchor = anchor.clone();
                             mutated_anchor.parameters = parameters.clone();
                             mutated_anchor.arguments = arguments.clone();
-                            worker.mutate_anchor(&mutated_anchor)?
-                        } else {
-                            vec![]
+                            result.new_patches.extend(worker.mutate_anchor(&mutated_anchor)?);
                         }
                     }
                     None => {
@@ -76,12 +69,13 @@ impl DynamicPolicy for RepeatPolicy {
                 };
                 // Prepare the query
                 state.status = RepeatStatus::Completed;
-                Ok((true, collector, Some(state), None, patches))
+                result.new_state = Some(state);
+                result.do_next_pass = true;
             }
             RepeatStatus::Completed => {
                 // Nothing to do
-                Ok((false, collector, None, None, vec![]))
             }
         }
+        Ok(result)
     }
 }

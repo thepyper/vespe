@@ -47,6 +47,26 @@ pub trait StaticPolicy {
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
 }
 
+pub struct DynamicPolicyMonoResult<State> {
+    pub do_next_pass: bool,
+    pub collector: Collector,
+    pub new_state: Option<State>,
+    pub new_output: Option<String>,
+    pub new_patches: Vec<(Range, String)>,
+}
+
+impl<T> DynamicPolicyMonoResult<T> {
+    pub fn new<State>(collector: Collector) -> DynamicPolicyMonoResult<State> {
+        DynamicPolicyMonoResult {
+            do_next_pass: false,
+            collector,
+            new_state: None,
+            new_output: None,
+            new_patches: vec![],
+        }
+    }
+}
+
 pub trait DynamicPolicy {
     type State: Default + std::fmt::Debug + Serialize + for<'de> Deserialize<'de>; // Lo stato deve essere Default e Debug
 
@@ -57,18 +77,8 @@ pub trait DynamicPolicy {
         arguments: &Arguments,
         state: Self::State,
         readonly: bool,
-    ) -> Result<(
-        bool,
-        Collector,
-        Option<Self::State>,
-        Option<String>,
-        Vec<(Range, String)>,
-    )>;
+    ) -> Result<DynamicPolicyMonoResult<Self::State>>;
 }
-
-// 3. HOST STRUCTS
-// Queste struct generiche prendono una politica (P) e implementano TagBehavior
-// delegando le chiamate ai metodi associati della politica.
 
 pub struct StaticTagBehavior<P: StaticPolicy>(P);
 
@@ -115,19 +125,18 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
-        let (do_next_pass, collector, new_state, new_output, patches_1) =
-            P::mono(worker, collector, &tag.parameters, &tag.arguments, state, false)?;
+        let mono_result = P::mono(worker, collector, &tag.parameters, &tag.arguments, state, false)?;
         // Mutate tag into a new anchor
         let (uuid, patches_2) =
-            worker.tag_to_anchor(&collector, tag, &new_output.unwrap_or(String::new()))?;
+            worker.tag_to_anchor(&mono_result.collector, tag, &mono_result.new_output.unwrap_or(String::new()))?;
         // If there is a new state, save it
-        if let Some(new_state) = new_state {
+        if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
         } // TODO se nnn c'e', errore!! deve mutare in anchor!!
           // Return collector and patches
-        let mut patches = patches_1;
+        let mut patches = mono_result.new_patches;
         patches.extend(patches_2);
-        Ok((do_next_pass, collector, patches))
+        Ok((mono_result.do_next_pass, mono_result.collector, patches))
     }
 
     fn collect_tag(
@@ -146,7 +155,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, new_output, patches_1) = P::mono(
+        let mono_result = P::mono(
             worker,
             collector,
             &anchor.parameters,
@@ -155,19 +164,19 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             false,
         )?;
         // If there is a new state, save it
-        if let Some(new_state) = new_state {
+        if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
         }
         // If there is some output, patch into new anchor
-        let patches_2 = if let Some(output) = new_output {
-            worker.inject_into_anchor(&collector, anchor, &anchor_end, &output)?
+        let patches_2 = if let Some(output) = mono_result.new_output {
+            worker.inject_into_anchor(&mono_result.collector, anchor, &anchor_end, &output)?
         } else {
             vec![]
         };
         // Return collector and patches
-        let mut patches = patches_1;
+        let mut patches = mono_result.new_patches;
         patches.extend(patches_2);
-        Ok((do_next_pass, collector, patches))
+        Ok((mono_result.do_next_pass, mono_result.collector, patches))
     }
 
     fn collect_anchor(
@@ -177,7 +186,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, new_output, patches) = P::mono(
+        let mono_result = P::mono(
             worker,
             collector,
             &anchor.parameters,
@@ -186,21 +195,21 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             true,
         )?;
         // If there is some patches, just discard them and new state as well as it cannot be applied
-        if !patches.is_empty() {
-            tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor, patches);
-            return Ok((true, collector));
+        if !mono_result.new_patches.is_empty() {
+            tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor, mono_result.new_patches);
+            return Ok((true, mono_result.collector));
         }
         // If there is new output, just discard it and new state as well as it cannot be injected 
-        if let Some(output) = new_output {
+        if let Some(output) = mono_result.new_output {
             tracing::warn!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor, output);
-            return Ok((true, collector));
+            return Ok((true, mono_result.collector));
         };
         // If there is a new state, save it
-        if let Some(new_state) = new_state {
+        if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
-        } // TODO verifica non ci siano patches!!!
-          // Return collector
-        Ok((do_next_pass, collector))
+        } 
+        // Return collector
+        Ok((mono_result.do_next_pass, mono_result.collector))
     }
 }
 

@@ -2,9 +2,9 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::execute::{Worker, Collector};
+use super::execute::{Collector, Worker};
 use super::tags::DynamicPolicy;
-use crate::ast2::{Parameters, Tag, Arguments, Anchor, Range, Position};
+use crate::ast2::{Anchor, Arguments, Parameters, Position, Range, Tag};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
 pub enum AnswerStatus {
@@ -33,7 +33,13 @@ impl DynamicPolicy for AnswerPolicy {
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
-    ) -> Result<(bool, Collector, Option<Self::State>, Option<String>, Vec<(Range, String)>)> {
+    ) -> Result<(
+        bool,
+        Collector,
+        Option<Self::State>,
+        Option<String>,
+        Vec<(Range, String)>,
+    )> {
         tracing::debug!("AnswerPolicy::mono with state: {:?}", state);
         match state.status {
             AnswerStatus::JustCreated => {

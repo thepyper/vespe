@@ -2,11 +2,11 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::execute::{Worker, Collector};
-use super::tags::DynamicPolicy;
+use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
+use super::tags::DynamicPolicy;
 
-use crate::ast2::{Parameters, CommandKind, Tag, Arguments, Anchor, Range, Position};
+use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
 enum RepeatStatus {
@@ -31,7 +31,13 @@ impl DynamicPolicy for RepeatPolicy {
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
-    ) -> Result<(bool, Collector, Option<Self::State>, Option<String>, Vec<(Range, String)>)> {
+    ) -> Result<(
+        bool,
+        Collector,
+        Option<Self::State>,
+        Option<String>,
+        Vec<(Range, String)>,
+    )> {
         tracing::debug!("RepeatPolicy::mono with state: {:?}", state);
         match state.status {
             RepeatStatus::JustCreated => {
@@ -41,20 +47,24 @@ impl DynamicPolicy for RepeatPolicy {
                     Some(anchor) => {
                         let is_anchor_repeatable = match anchor.command {
                             CommandKind::Answer => {
-                                let mut answer_state = worker.load_state::<AnswerState>(anchor.command, &anchor.uuid)?;
+                                let mut answer_state = worker
+                                    .load_state::<AnswerState>(anchor.command, &anchor.uuid)?;
                                 answer_state.status = AnswerStatus::Repeat;
-                                worker.save_state::<AnswerState>(anchor.command, &anchor.uuid, &answer_state, None)?;
+                                worker.save_state::<AnswerState>(
+                                    anchor.command,
+                                    &anchor.uuid,
+                                    &answer_state,
+                                    None,
+                                )?;
                                 true
                             }
-                            _ => {
-                                false
-                            }
+                            _ => false,
                         };
                         if is_anchor_repeatable {
                             // Mutate anchor variables
                             let mut mutated_anchor = anchor.clone();
                             mutated_anchor.parameters = parameters.clone();
-                            mutated_anchor.arguments  = arguments.clone();
+                            mutated_anchor.arguments = arguments.clone();
                             worker.mutate_anchor(&mutated_anchor)?
                         } else {
                             vec![]
@@ -67,7 +77,7 @@ impl DynamicPolicy for RepeatPolicy {
                 // Prepare the query
                 state.status = RepeatStatus::Completed;
                 Ok((true, collector, Some(state), None, patches))
-            }            
+            }
             RepeatStatus::Completed => {
                 tracing::debug!("RepeatPolicy::Completed");
                 // Nothing to do

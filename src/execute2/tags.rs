@@ -10,11 +10,11 @@ use super::execute::Worker;
 use super::variables::Variables;
 
 use super::tag_answer::AnswerPolicy;
-use super::tag_repeat::RepeatPolicy;
 use super::tag_include::IncludePolicy;
+use super::tag_repeat::RepeatPolicy;
 use super::tag_set::SetPolicy;
 
-use crate::ast2::{Anchor, Arguments, Parameters, CommandKind, Position, Range, Tag};
+use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
 // 1. HOST INTERFACE (TagBehavior)
 // Tutti i metodi sono funzioni associate (statiche) come da tua intenzione.
@@ -56,7 +56,13 @@ pub trait DynamicPolicy {
         parameters: &Parameters,
         arguments: &Arguments,
         state: Self::State,
-    ) -> Result<(bool, Collector, Option<Self::State>, Option<String>, Vec<(Range, String)>)>;
+    ) -> Result<(
+        bool,
+        Collector,
+        Option<Self::State>,
+        Option<String>,
+        Vec<(Range, String)>,
+    )>;
 }
 
 // 3. HOST STRUCTS
@@ -108,7 +114,8 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
-        let (do_next_pass, collector, new_state, new_output, patches_1) = P::mono(worker, collector, &tag.parameters, &tag.arguments, state)?;
+        let (do_next_pass, collector, new_state, new_output, patches_1) =
+            P::mono(worker, collector, &tag.parameters, &tag.arguments, state)?;
         // Mutate tag into a new anchor
         let (uuid, patches_2) =
             worker.tag_to_anchor(&collector, tag, &new_output.unwrap_or(String::new()))?;
@@ -116,7 +123,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
         } // TODO se nnn c'e', errore!! deve mutare in anchor!!
-        // Return collector and patches
+          // Return collector and patches
         let mut patches = patches_1;
         patches.extend(patches_2);
         Ok((do_next_pass, collector, patches))
@@ -138,7 +145,13 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, new_output, patches_1) = P::mono(worker, collector, &anchor.parameters, &anchor.arguments, state)?;
+        let (do_next_pass, collector, new_state, new_output, patches_1) = P::mono(
+            worker,
+            collector,
+            &anchor.parameters,
+            &anchor.arguments,
+            state,
+        )?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
@@ -162,12 +175,18 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, _new_output, _patches_1) = P::mono(worker, collector, &anchor.parameters, &anchor.arguments, state)?;
+        let (do_next_pass, collector, new_state, _new_output, _patches_1) = P::mono(
+            worker,
+            collector,
+            &anchor.parameters,
+            &anchor.arguments,
+            state,
+        )?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
         } // TODO verifica non ci siano patches!!!
-        // Return collector
+          // Return collector
         Ok((do_next_pass, collector))
     }
 }
@@ -191,9 +210,7 @@ impl TagBehaviorDispatch {
             CommandKind::Include => {
                 StaticTagBehavior::<IncludePolicy>::execute_tag(worker, collector, tag)
             }
-            CommandKind::Set => {
-                StaticTagBehavior::<SetPolicy>::execute_tag(worker, collector, tag)
-            }
+            CommandKind::Set => StaticTagBehavior::<SetPolicy>::execute_tag(worker, collector, tag),
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }
@@ -213,9 +230,7 @@ impl TagBehaviorDispatch {
             CommandKind::Include => {
                 StaticTagBehavior::<IncludePolicy>::collect_tag(worker, collector, tag)
             }
-            CommandKind::Set => {
-                StaticTagBehavior::<SetPolicy>::collect_tag(worker, collector, tag)
-            }
+            CommandKind::Set => StaticTagBehavior::<SetPolicy>::collect_tag(worker, collector, tag),
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }

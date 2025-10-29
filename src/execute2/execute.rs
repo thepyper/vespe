@@ -60,7 +60,7 @@ pub fn collect_context(
     tracing::debug!("Collecting context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    
+
     match exe.execute(Collector::new(false), context_name, 0)? {
         Some(collector) => Ok(collector.context().clone()),
         None => Err(anyhow::anyhow!("Collect context returned no collector")),
@@ -182,7 +182,12 @@ impl Worker {
     ///
     /// This is the main entry point for a full execution, which can modify files.
     /// It orchestrates the two-pass strategy until all anchors are `Completed`.
-    pub fn execute(&self, collector: Collector, context_name: &str, max_rewrite_steps: usize) -> Result<Option<Collector>> {
+    pub fn execute(
+        &self,
+        collector: Collector,
+        context_name: &str,
+        max_rewrite_steps: usize,
+    ) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -197,7 +202,8 @@ impl Worker {
             Some(collector) => {
                 for _i in 1..=max_rewrite_steps {
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
-                    let (do_next_pass, collector_1) = self.execute_pass(collector.clone(), &context_path)?;
+                    let (do_next_pass, collector_1) =
+                        self.execute_pass(collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -214,7 +220,8 @@ impl Worker {
                         }
                     };
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
-                    let (do_next_pass, collector_2) = self.collect_pass(collector.clone(), &context_path)?;
+                    let (do_next_pass, collector_2) =
+                        self.collect_pass(collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
                             // Could not collect everything in pass_1, need to trigger another step
@@ -234,7 +241,8 @@ impl Worker {
                     };
                 }
                 // Last re-read file, parse it, collect data
-                let (do_next_pass, collector) = self.collect_pass(collector.clone(), &context_path)?;
+                let (do_next_pass, collector) =
+                    self.collect_pass(collector.clone(), &context_path)?;
                 match do_next_pass {
                     true => {
                         // Could not collect everything in pass_1, need to trigger another step
@@ -477,8 +485,6 @@ impl Worker {
     }
 
     pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
-        Ok(vec![
-            (anchor.range, format!("{}\n", anchor.to_string()))
-        ])
+        Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
     }
 }

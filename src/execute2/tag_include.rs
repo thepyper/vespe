@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::execute::{Worker, Collector};
+use super::execute::{Collector, Worker};
 use super::tags::StaticPolicy;
 use crate::ast2::Tag;
 pub struct IncludePolicy;

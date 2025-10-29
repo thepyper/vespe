@@ -24,6 +24,7 @@ mod tag_repeat;
 mod tag_set;
 mod tags;
 mod variables;
+mod utils;
 
 use content::*;
 //use state::*;
@@ -34,6 +35,7 @@ use tag_repeat::*;
 use tag_set::*;
 use tags::*;
 use variables::*;
+use utils::*;
 
 pub use execute::collect_context;
 pub use execute::execute_context;

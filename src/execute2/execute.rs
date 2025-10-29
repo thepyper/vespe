@@ -303,7 +303,7 @@ impl Worker {
     ) -> Result<(bool, Collector)> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
-        let anchor_index = crate::utils::AnchorIndex::new(&ast.content);
+        let anchor_index = super::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
             let (do_next_pass, next_collector, patches) = match item {

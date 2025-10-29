@@ -8,7 +8,6 @@ pub mod file;
 pub mod git;
 pub mod path;
 pub mod project;
-pub mod utils;
 
 pub fn init_telemetry() {
     tracing_subscriber::fmt()

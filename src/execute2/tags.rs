@@ -39,10 +39,6 @@ pub trait TagBehavior {
     ) -> Result<(bool, Collector)>;
 }
 
-// 2. POLICY TRAITS
-// Definiscono l'interfaccia per le politiche specifiche (statiche o dinamiche).
-// Anche qui, tutti i metodi sono funzioni associate.
-
 pub trait StaticPolicy {
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
 }

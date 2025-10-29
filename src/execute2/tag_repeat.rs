@@ -31,6 +31,7 @@ impl DynamicPolicy for RepeatPolicy {
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
+        readonly: bool,
     ) -> Result<(
         bool,
         Collector,

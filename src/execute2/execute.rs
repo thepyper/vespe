@@ -430,6 +430,7 @@ impl Worker {
         tag: &Tag,
         output: &str,
     ) -> Result<(Uuid, Vec<(Range, String)>)> {
+        tracing::debug!("execute2:tag_to_anchor tag {:?} output {:?}", tag, output);
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
         match self.redirect_output(collector, output)? {
             true => {
@@ -462,6 +463,7 @@ impl Worker {
         anchor_end: &Position,
         output: &str,
     ) -> Result<Vec<(Range, String)>> {
+        tracing::debug!("execute2:inject_into_anchor anchor {:?} output {:?}", anchor, output);
         match self.redirect_output(collector, output)? {
             true => {
                 // Output redirected, no change in anchor
@@ -485,6 +487,7 @@ impl Worker {
     }
 
     pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
+        tracing::debug!("execute2:mutate_anchor anchor {:?}", anchor);
         Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
     }
 }

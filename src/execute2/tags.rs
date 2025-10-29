@@ -56,6 +56,7 @@ pub trait DynamicPolicy {
         parameters: &Parameters,
         arguments: &Arguments,
         state: Self::State,
+        readonly: bool,
     ) -> Result<(
         bool,
         Collector,
@@ -115,7 +116,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
         let (do_next_pass, collector, new_state, new_output, patches_1) =
-            P::mono(worker, collector, &tag.parameters, &tag.arguments, state)?;
+            P::mono(worker, collector, &tag.parameters, &tag.arguments, state, false)?;
         // Mutate tag into a new anchor
         let (uuid, patches_2) =
             worker.tag_to_anchor(&collector, tag, &new_output.unwrap_or(String::new()))?;
@@ -144,6 +145,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
+        tracing::debug!("execute_anchor {:?}", anchor);
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let (do_next_pass, collector, new_state, new_output, patches_1) = P::mono(
             worker,
@@ -151,12 +153,14 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             &anchor.parameters,
             &anchor.arguments,
             state,
+            false,
         )?;
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
         }
         // If there is some output, patch into new anchor
+        tracing::debug!("new output {:?}", new_output);
         let patches_2 = if let Some(output) = new_output {
             worker.inject_into_anchor(&collector, anchor, &anchor_end, &output)?
         } else {
@@ -175,13 +179,24 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (do_next_pass, collector, new_state, _new_output, _patches_1) = P::mono(
+        let (do_next_pass, collector, new_state, new_output, patches) = P::mono(
             worker,
             collector,
             &anchor.parameters,
             &anchor.arguments,
             state,
+            true,
         )?;
+        // If there is some patches, just discard them and new state as well as it cannot be applied
+        if !patches.is_empty() {
+            tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor, patches);
+            return Ok((true, collector));
+        }
+        // If there is new output, just discard it and new state as well as it cannot be injected 
+        if let Some(output) = new_output {
+            tracing::warn!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor, output);
+            return Ok((true, collector));
+        };
         // If there is a new state, save it
         if let Some(new_state) = new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;

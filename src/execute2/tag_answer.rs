@@ -33,6 +33,7 @@ impl DynamicPolicy for AnswerPolicy {
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
+        readonly: bool,
     ) -> Result<(
         bool,
         Collector,

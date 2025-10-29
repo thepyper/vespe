@@ -33,7 +33,11 @@ impl DynamicPolicy for RepeatPolicy {
         mut state: Self::State,
         readonly: bool,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
-        tracing::debug!("tag_repeat::RepeatPolicy::mono\nState = {:?}\nreadonly = {}\n", state, readonly);
+        tracing::debug!(
+            "tag_repeat::RepeatPolicy::mono\nState = {:?}\nreadonly = {}\n",
+            state,
+            readonly
+        );
         let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
         match state.status {
             RepeatStatus::JustCreated => {
@@ -60,7 +64,9 @@ impl DynamicPolicy for RepeatPolicy {
                             let mut mutated_anchor = anchor.clone();
                             mutated_anchor.parameters = parameters.clone();
                             mutated_anchor.arguments = arguments.clone();
-                            result.new_patches.extend(worker.mutate_anchor(&mutated_anchor)?);
+                            result
+                                .new_patches
+                                .extend(worker.mutate_anchor(&mutated_anchor)?);
                         }
                     }
                     None => {

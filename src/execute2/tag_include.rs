@@ -9,7 +9,10 @@ pub struct IncludePolicy;
 
 impl StaticPolicy for IncludePolicy {
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
-        tracing::debug!("tag_include::IncludePolicy::collect_static_tag\nTag = {:?}\n", tag);
+        tracing::debug!(
+            "tag_include::IncludePolicy::collect_static_tag\nTag = {:?}\n",
+            tag
+        );
         let included_context_name = tag
             .arguments
             .arguments

@@ -35,7 +35,11 @@ impl DynamicPolicy for AnswerPolicy {
         mut state: Self::State,
         readonly: bool,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
-        tracing::debug!("tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n", state, readonly);
+        tracing::debug!(
+            "tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n",
+            state,
+            readonly
+        );
         let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
         match state.status {
             AnswerStatus::JustCreated => {
@@ -48,7 +52,8 @@ impl DynamicPolicy for AnswerPolicy {
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
                 result.collector = result.collector.update(parameters);
-                let response = worker.call_model(&result.collector, vec![result.collector.context().clone()])?;
+                let response = worker
+                    .call_model(&result.collector, vec![result.collector.context().clone()])?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);
@@ -60,7 +65,7 @@ impl DynamicPolicy for AnswerPolicy {
                 state.status = AnswerStatus::Completed;
                 result.new_state = Some(state);
                 result.new_output = Some(output);
-                result.do_next_pass = true;                
+                result.do_next_pass = true;
             }
             AnswerStatus::Completed => {
                 // Nothing to do
@@ -71,7 +76,7 @@ impl DynamicPolicy for AnswerPolicy {
                 state.reply = String::new();
                 result.new_state = Some(state);
                 result.new_output = Some(String::new());
-                result.do_next_pass = true;                
+                result.do_next_pass = true;
             }
         }
         Ok(result)

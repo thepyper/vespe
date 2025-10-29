@@ -125,10 +125,20 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
-        let mono_result = P::mono(worker, collector, &tag.parameters, &tag.arguments, state, false)?;
+        let mono_result = P::mono(
+            worker,
+            collector,
+            &tag.parameters,
+            &tag.arguments,
+            state,
+            false,
+        )?;
         // Mutate tag into a new anchor
-        let (uuid, patches_2) =
-            worker.tag_to_anchor(&mono_result.collector, tag, &mono_result.new_output.unwrap_or(String::new()))?;
+        let (uuid, patches_2) = worker.tag_to_anchor(
+            &mono_result.collector,
+            tag,
+            &mono_result.new_output.unwrap_or(String::new()),
+        )?;
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
@@ -199,7 +209,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor, mono_result.new_patches);
             return Ok((true, mono_result.collector));
         }
-        // If there is new output, just discard it and new state as well as it cannot be injected 
+        // If there is new output, just discard it and new state as well as it cannot be injected
         if let Some(output) = mono_result.new_output {
             tracing::warn!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor, output);
             return Ok((true, mono_result.collector));
@@ -207,7 +217,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
-        } 
+        }
         // Return collector
         Ok((mono_result.do_next_pass, mono_result.collector))
     }

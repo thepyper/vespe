@@ -48,6 +48,7 @@ impl AnchorIndex {
     }
 }
 
+/*
 pub struct AnchorStateManager {
     file_access: Arc<dyn file::FileAccessor>,
     path_res: Arc<dyn path::PathResolver>,
@@ -141,3 +142,4 @@ impl<'a> Patches<'a> {
         Ok(result)
     }
 }
+*/

@@ -194,28 +194,24 @@ impl Worker {
         match collector.descent(&context_path) {
             None => {
                 tracing::debug!(
-                    "Context {} already in visit stack, skipping execution.",
+                    "execute::Worker::execute: Context {} already in visit stack, skipping execution.",
                     context_name
                 );
                 return Ok(Some(collector));
             }
             Some(collector) => {
-                for _i in 1..=max_rewrite_steps {
+                for i in 1..=max_rewrite_steps {
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
                     let (do_next_pass, collector_1) =
                         self.execute_pass(collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
-                                "Worker::execute_step pass_2 needs another pass for path: {:?}",
-                                context_path
+                                "execute::Worker::execute: After {} modifying pass, needs another pass for context: {:?}",
+                                i, context_path
                             );
                         }
                         false => {
-                            tracing::debug!(
-                                "Worker::execute_step no changes in pass_2 for path: {:?}",
-                                context_path
-                            );
                             return Ok(Some(collector_1));
                         }
                     };
@@ -224,18 +220,12 @@ impl Worker {
                         self.collect_pass(collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
-                            // Could not collect everything in pass_1, need to trigger another step
                             tracing::debug!(
-                                "Worker::execute_step could not collect from pass_1 for path: {:?}",
-                                context_path
+                                "execute::Worker::execute: After {} readonly pass, needs another pass for context: {:?}",
+                                i, context_path
                             );
                         }
                         false => {
-                            // Successfully collected everything without needing further processing
-                            tracing::debug!(
-                                "Worker::execute_step collected from pass_1 for path: {:?}",
-                                context_path
-                            );
                             return Ok(Some(collector_2));
                         }
                     };
@@ -245,9 +235,8 @@ impl Worker {
                     self.collect_pass(collector.clone(), &context_path)?;
                 match do_next_pass {
                     true => {
-                        // Could not collect everything in pass_1, need to trigger another step
                         tracing::debug!(
-                            "Worker::execute_step could not collect from pass_1 for path: {:?}",
+                            "execute::Worker::execute: After last readonly pass, needs another pass for context: {:?}",
                             context_path
                         );
                         return Ok(None);
@@ -255,7 +244,7 @@ impl Worker {
                     false => {
                         // Successfully collected everything without needing further processing
                         tracing::debug!(
-                            "Worker::execute_step collected from pass_1 for path: {:?}",
+                            "execute::Worker::execute: Successfully collected context: {:?}",
                             context_path
                         );
                         return Ok(Some(collector));

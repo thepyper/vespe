@@ -145,7 +145,6 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        tracing::debug!("execute_anchor {:?}", anchor);
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let (do_next_pass, collector, new_state, new_output, patches_1) = P::mono(
             worker,
@@ -160,7 +159,6 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
         }
         // If there is some output, patch into new anchor
-        tracing::debug!("new output {:?}", new_output);
         let patches_2 = if let Some(output) = new_output {
             worker.inject_into_anchor(&collector, anchor, &anchor_end, &output)?
         } else {
@@ -214,7 +212,6 @@ impl TagBehaviorDispatch {
         collector: Collector,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        tracing::debug!("Executing tag: {:?}", tag);
         match tag.command {
             CommandKind::Answer => {
                 DynamicTagBehavior::<AnswerPolicy>::execute_tag(worker, collector, tag)
@@ -234,7 +231,6 @@ impl TagBehaviorDispatch {
         collector: Collector,
         tag: &Tag,
     ) -> Result<(bool, Collector)> {
-        tracing::debug!("Collecting tag: {:?}", tag);
         match tag.command {
             CommandKind::Answer => {
                 DynamicTagBehavior::<AnswerPolicy>::collect_tag(worker, collector, tag)
@@ -255,7 +251,6 @@ impl TagBehaviorDispatch {
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        tracing::debug!("Executing anchor: {:?}", anchor);
         match anchor.command {
             CommandKind::Answer => DynamicTagBehavior::<AnswerPolicy>::execute_anchor(
                 worker, collector, anchor, anchor_end,
@@ -272,7 +267,6 @@ impl TagBehaviorDispatch {
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
-        tracing::debug!("Collecting anchor: {:?}", anchor);
         match anchor.command {
             CommandKind::Answer => DynamicTagBehavior::<AnswerPolicy>::collect_anchor(
                 worker, collector, anchor, anchor_end,

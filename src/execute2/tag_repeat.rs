@@ -39,10 +39,9 @@ impl DynamicPolicy for RepeatPolicy {
         Option<String>,
         Vec<(Range, String)>,
     )> {
-        tracing::debug!("RepeatPolicy::mono with state: {:?}", state);
+        tracing::debug!("tag_repeat::RepeatPolicy::mono\nState = {:?}\nreadonly = {}\n", state, readonly);
         match state.status {
             RepeatStatus::JustCreated => {
-                tracing::debug!("RepeatPolicy::JustCreated");
                 // Find anchor to repeat if any
                 let patches = match collector.anchor_stack().last() {
                     Some(anchor) => {
@@ -80,7 +79,6 @@ impl DynamicPolicy for RepeatPolicy {
                 Ok((true, collector, Some(state), None, patches))
             }
             RepeatStatus::Completed => {
-                tracing::debug!("RepeatPolicy::Completed");
                 // Nothing to do
                 Ok((false, collector, None, None, vec![]))
             }

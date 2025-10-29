@@ -41,17 +41,15 @@ impl DynamicPolicy for AnswerPolicy {
         Option<String>,
         Vec<(Range, String)>,
     )> {
-        tracing::debug!("AnswerPolicy::mono with state: {:?}", state);
+        tracing::debug!("tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n", state, readonly);
         match state.status {
             AnswerStatus::JustCreated => {
-                tracing::debug!("AnswerStatus::JustCreated");
                 // Prepare the query
                 state.status = AnswerStatus::NeedProcessing;
                 state.reply = String::new();
                 Ok((true, collector, Some(state), None, vec![]))
             }
             AnswerStatus::NeedProcessing => {
-                tracing::debug!("AnswerStatus::NeedProcessing");
                 // Execute the model query
                 collector = collector.update(parameters);
                 let response = worker.call_model(&collector, vec![collector.context().clone()])?;
@@ -60,19 +58,16 @@ impl DynamicPolicy for AnswerPolicy {
                 Ok((true, collector, Some(state), None, vec![]))
             }
             AnswerStatus::NeedInjection => {
-                tracing::debug!("AnswerStatus::NeedInjection");
                 // Inject the reply into the document
                 let output = state.reply.clone();
                 state.status = AnswerStatus::Completed;
                 Ok((true, collector, Some(state), Some(output), vec![]))
             }
             AnswerStatus::Completed => {
-                tracing::debug!("AnswerStatus::Completed");
                 // Nothing to do
                 Ok((false, collector, None, None, vec![]))
             }
             AnswerStatus::Repeat => {
-                tracing::debug!("AnswerStatus::Repeat");
                 // Prepare the query
                 state.status = AnswerStatus::NeedProcessing;
                 state.reply = String::new();

@@ -404,7 +404,6 @@ impl Worker {
         uuid: &Uuid,
     ) -> Result<T> {
         let state_path = self.get_state_path(command, uuid)?;
-        tracing::debug!("Loading state from {:?}", state_path);
         let state = self.file_access.read_file(&state_path)?;
         let state: T = serde_json::from_str(&state)?;
         Ok(state)
@@ -417,7 +416,6 @@ impl Worker {
         comment: Option<&str>,
     ) -> Result<()> {
         let state_path = self.get_state_path(command, uuid)?;
-        tracing::debug!("Saving state to {:?}", state_path);
         let state_str = serde_json::to_string_pretty(state)?;
         self.file_access
             .write_file(&state_path, &state_str, comment)?;
@@ -430,7 +428,6 @@ impl Worker {
         tag: &Tag,
         output: &str,
     ) -> Result<(Uuid, Vec<(Range, String)>)> {
-        tracing::debug!("execute2:tag_to_anchor tag {:?} output {:?}", tag, output);
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
         match self.redirect_output(collector, output)? {
             true => {
@@ -463,7 +460,6 @@ impl Worker {
         anchor_end: &Position,
         output: &str,
     ) -> Result<Vec<(Range, String)>> {
-        tracing::debug!("execute2:inject_into_anchor anchor {:?} output {:?}", anchor, output);
         match self.redirect_output(collector, output)? {
             true => {
                 // Output redirected, no change in anchor
@@ -487,7 +483,6 @@ impl Worker {
     }
 
     pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
-        tracing::debug!("execute2:mutate_anchor anchor {:?}", anchor);
         Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
     }
 }

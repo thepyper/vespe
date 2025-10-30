@@ -589,8 +589,8 @@ pub(crate) fn _try_parse_argument<'doc>(
 ) -> Result<Option<(Argument, Parser<'doc>)>> {
     let begin = parser.get_position();
 
-    if let Some(p1) = parser.consume_matching_char_immutable('\'') {
-        if let Some((value, p)) = _try_parse_enclosed_string(&p1, "'")? {
+    //if let Some(p1) = parser.consume_matching_char_immutable('\'') {
+        if let Some((value, p)) = _try_parse_enclosed_string(&parser, "'")? {
             let end = p.get_position();
             let arg = Argument {
                 value,
@@ -598,10 +598,10 @@ pub(crate) fn _try_parse_argument<'doc>(
             };
             return Ok(Some((arg, p)));
         }
-    }
+    //}
 
-    if let Some(p1) = parser.consume_matching_char_immutable('"') {
-        if let Some((value, p)) = _try_parse_enclosed_string(&p1, "\"")? {
+    //if let Some(p1) = parser.consume_matching_char_immutable('"') {
+        if let Some((value, p)) = _try_parse_enclosed_string(&parser, "\"")? {
             let end = p.get_position();
             let arg = Argument {
                 value,
@@ -609,7 +609,7 @@ pub(crate) fn _try_parse_argument<'doc>(
             };
             return Ok(Some((arg, p)));
         }
-    }
+    //}
 
     if let Some((value, p)) = _try_parse_nude_string(parser)? {
         let end = p.get_position();
@@ -644,7 +644,7 @@ pub(crate) fn _try_parse_identifier<'doc>(
 pub(crate) fn _try_parse_value<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
-    if let Some(p1) = parser.consume_matching_char_immutable('"') {
+    /* if let Some(p1) = parser.consume_matching_char_immutable('"') {
         // try to parse a double-quoted string
         _try_parse_enclosed_value(&p1, "\"")
     } else if let Some(p1) = parser.consume_matching_char_immutable('\'') {
@@ -652,6 +652,13 @@ pub(crate) fn _try_parse_value<'doc>(
         _try_parse_enclosed_value(&p1, "\'")
     } else {
         // try to parse a "nude" value (unquoted)
+        _try_parse_nude_value(parser)
+    } */
+    if let Some(x) = _try_parse_enclosed_value(parser, "\"")? {
+        Ok(Some(x)) 
+    } else if let Some(x) = _try_parse_enclosed_value(parser, "\'")? {
+        Ok(Some(x)) 
+    } else {
         _try_parse_nude_value(parser)
     }
 }
@@ -674,41 +681,45 @@ pub(crate) fn _try_parse_enclosed_string<'doc>(
     let mut value = String::new();
     let mut current_parser = parser.clone();
 
-    loop {
-        if let Some(p) = current_parser.consume_matching_string_immutable("\\\"") {
-            value.push('\"');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\'") {
-            value.push('\'');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
-            value.push('\n');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
-            value.push('\r');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
-            value.push('\t');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
-            value.push('\\');
-            current_parser = p;
-        } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
-            return Ok(Some((value, p)));
-        } else if current_parser.is_eod() {
-            return Err(Ast2Error::UnclosedString {
-                position: begin_pos,
-            });
-        } else {
-            match current_parser.advance_immutable() {
-                None => unreachable!("Checked is_eod() already"),
-                Some((x, p)) => {
-                    value.push(x);
-                    current_parser = p;
+    if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
+        current_parser = p;
+        loop {
+            if let Some(p) = current_parser.consume_matching_string_immutable("\\\"") {
+                value.push('\"');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\'") {
+                value.push('\'');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
+                value.push('\n');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
+                value.push('\r');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
+                value.push('\t');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
+                value.push('\\');
+                current_parser = p;
+            } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
+                return Ok(Some((value, p)));
+            } else if current_parser.is_eod() {
+                return Err(Ast2Error::UnclosedString {
+                    position: begin_pos,
+                });
+            } else {
+                match current_parser.advance_immutable() {
+                    None => unreachable!("Checked is_eod() already"),
+                    Some((x, p)) => {
+                        value.push(x);
+                        current_parser = p;
+                    }
                 }
             }
         }
     }
+    Ok(None)
 }
 
 pub(crate) fn _try_parse_nude_value<'doc>(
@@ -874,13 +885,13 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<
                 p3.skip_many_whitespaces_or_eol();
                 if let Some((object, p4)) = _try_parse_jsonplus_object(&p3)? {
                     properties.insert(key, JsonPlusEntity::Object(object));
-                    p1 = p4;
+                    p1 = p4; 
                 } else if let Some((array, p4)) = _try_parse_jsonplus_array(&p3)? {
                     properties.insert(key, JsonPlusEntity::Array(array));
-                    p1 = p4;
+                    p1 = p4; 
                 } else if let Some((single_quoted_content, p4)) = _try_parse_enclosed_string(&p3, "'")? {
                     properties.insert(key, JsonPlusEntity::SingleQuotedString(single_quoted_content));
-                    p1 = p4;
+                    p1 = p4; 
                 } else if let Some((double_quoted_content, p4)) = _try_parse_enclosed_string(&p3, "\"")? {
                     properties.insert(key, JsonPlusEntity::DoubleQuotedString(double_quoted_content));
                     p1 = p4;
@@ -895,7 +906,10 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<
                     p1 = p4
                 } else if let Some((x, p4)) = _try_parse_nude_string(&p3)? {
                     properties.insert(key, JsonPlusEntity::NudeString(x));
-                    p1 = p4
+                    p1 = p4 
+                } else {
+                    // No value
+                    return Err(Ast2Error::MissingParameterValue{ position: p1.get_position() });
                 }
             } else {
                 properties.insert(key, JsonPlusEntity::Flag);

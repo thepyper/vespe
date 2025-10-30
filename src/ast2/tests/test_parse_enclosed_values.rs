@@ -6,7 +6,7 @@ fn test_try_parse_enclosed_string_double_quote() {
     let doc = r#""hello world" rest"#;
     let parser = Parser::new(doc);
     let p_after_opening_quote = parser.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
-    let (value, p_next) = super::_try_parse_enclosed_string(&p_after_opening_quote, "\"")
+    let (value, p_next) = super::_try_parse_enclosed_string(&parser, "\"")
         .unwrap()
         .unwrap();
     assert_eq!(value, "hello world");
@@ -17,7 +17,7 @@ fn test_try_parse_enclosed_string_double_quote() {
     let p_after_opening_quote_escaped =
         parser_escaped.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
     let (value_escaped, p_next_escaped) =
-        super::_try_parse_enclosed_string(&p_after_opening_quote_escaped, "\"")
+        super::_try_parse_enclosed_string(&parser_escaped, "\"")
             .unwrap()
             .unwrap();
     assert_eq!(value_escaped, "hello \"world\""); // Expect unescaped
@@ -28,7 +28,7 @@ fn test_try_parse_enclosed_string_double_quote() {
     let p_after_opening_quote_unclosed = parser_unclosed
         .consume_matching_char_immutable('"')
         .unwrap(); // Consume opening quote
-    let result = super::_try_parse_enclosed_string(&p_after_opening_quote_unclosed, "\"");
+    let result = super::_try_parse_enclosed_string(&parser_unclosed, "\"");
     assert!(matches!(result, Err(Ast2Error::UnclosedString { .. })));
 }
 
@@ -37,7 +37,7 @@ fn test_try_parse_enclosed_string_single_quote() {
     let doc = r#"'hello world' rest"#;
     let parser = Parser::new(doc);
     let p_after_opening_quote = parser.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
-    let (value, p_next) = super::_try_parse_enclosed_string(&p_after_opening_quote, "'")
+    let (value, p_next) = super::_try_parse_enclosed_string(&parser, "'")
         .unwrap()
         .unwrap();
     assert_eq!(value, "hello world");
@@ -49,7 +49,7 @@ fn test_try_parse_enclosed_string_single_quote() {
         .consume_matching_char_immutable('\'')
         .unwrap(); // Consume opening quote
     let (value_escaped, p_next_escaped) =
-        super::_try_parse_enclosed_string(&p_after_opening_quote_escaped, "'")
+        super::_try_parse_enclosed_string(&parser_escaped, "'")
             .unwrap()
             .unwrap();
     assert_eq!(value_escaped, "hello 'world'"); // Expect unescaped
@@ -61,7 +61,7 @@ fn test_try_parse_enclosed_value_double_quote() {
     let doc = r#""json value" rest"#;
     let parser = Parser::new(doc);
     let p_after_opening_quote = parser.consume_matching_char_immutable('"').unwrap(); // Consume opening quote
-    let (value, p_next) = super::_try_parse_enclosed_value(&p_after_opening_quote, "\"")
+    let (value, p_next) = super::_try_parse_enclosed_value(&parser, "\"")
         .unwrap()
         .unwrap();
     assert_eq!(value, json!("json value"));
@@ -73,7 +73,7 @@ fn test_try_parse_enclosed_value_single_quote() {
     let doc = "'json value' rest";
     let parser = Parser::new(doc);
     let p_after_opening_quote = parser.consume_matching_char_immutable('\'').unwrap(); // Consume opening quote
-    let (value, p_next) = super::_try_parse_enclosed_value(&p_after_opening_quote, "'")
+    let (value, p_next) = super::_try_parse_enclosed_value(&parser, "'")
         .unwrap()
         .unwrap();
     assert_eq!(value, json!("json value"));

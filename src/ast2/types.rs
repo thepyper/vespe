@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use uuid::{uuid, Uuid};
 
 /// Represents a specific point in the source document.
@@ -121,6 +122,82 @@ impl ToString for CommandKind {
             CommandKind::Set => "set",
         }
         .to_string()
+    }
+}
+
+enum JsonPlusEntity {
+    Flag,
+    Boolean(bool),
+    Integer(i64),
+    Float(f64),
+    SingleQuotedString(String),
+    DoubleQuotedString(String),
+    NudeString(String),
+    Object(JsonPlusObject),
+    Array(Vec<JsonPlusEntity>),
+}
+
+impl JsonPlusEntity {
+    fn _to_string_0(&self, prefix: &str, pre_indent: &str) -> String {
+        match self {
+            JsonPlusEntity::Flag => String::new(),
+            JsonPlusEntity::Boolean(x) => format!("{}{}", prefix, if *x { "true" } else { "false" }),
+            JsonPlusEntity::Integer(x) => format!("{}{}", prefix, x),
+            JsonPlusEntity::Float(x) => format!("{}{}", prefix, x),
+            JsonPlusEntity::SingleQuotedString(x) => format!("{}'{}'", prefix, x),
+            JsonPlusEntity::DoubleQuotedString(x) => format!("{}\"{}\"", prefix, x),
+            JsonPlusEntity::NudeString(x) => format!("{}{}", prefix, x),
+            JsonPlusEntity::Object(x) => format!("{}{}", prefix, Self::_object_to_string_0(x, pre_indent)),
+            JsonPlusEntity::Array(x) => format!("{}{}", prefix, Self::_array_to_string_0(x, pre_indent)),
+        }
+    }
+    fn _array_to_string_0(array: &Vec<JsonPlusEntity>, pre_indent: &str) -> String {
+        let mut s = format!("[");
+        let     n = array.len();
+        let (separator, indent) = match n {
+            0 => ("", String::new()),
+            1 => (" ", String::new()),
+            _ => ("\n", format!("{}\t", pre_indent)), 
+        };
+        for value in array {
+            s.push_str(&indent);
+            s.push_str(&value._to_string_0("", &indent));
+            s.push_str(",");
+            s.push_str(separator);
+        }
+        s.push_str(&indent);
+        s.push_str("]");
+        s
+    }
+    fn _object_to_string_0(object: &JsonPlusObject, pre_indent: &str) -> String {
+        let mut s = format!("{{");
+        let     n = object.properties.len();
+        let (separator, indent) = match n {
+            0 => ("", String::new()),
+            1 => (" ", String::new()),
+            _ => ("\n", format!("{}\t", pre_indent)), 
+        };
+        for (key, value) in &object.properties {
+            s.push_str(&indent);
+            s.push_str(&key);
+            s.push_str(&value._to_string_0(": ", &indent));
+            s.push_str(",");
+            s.push_str(separator);
+        }
+        s.push_str(&indent);
+        s.push_str("}");
+        s
+    }
+}
+
+pub struct JsonPlusObject
+{
+    pub properties: HashMap<String, JsonPlusEntity>,
+}
+
+impl ToString for JsonPlusObject {
+    fn to_string(&self) -> String {
+        JsonPlusEntity::_object_to_string_0(&self, "")
     }
 }
 

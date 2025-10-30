@@ -125,7 +125,7 @@ impl ToString for CommandKind {
     }
 }
 
-enum JsonPlusEntity {
+pub enum JsonPlusEntity {
     Flag,
     Boolean(bool),
     Integer(i64),

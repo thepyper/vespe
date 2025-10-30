@@ -869,7 +869,7 @@ pub(crate) fn _try_parse_jsonplus_object(parser: &Parser<'doc>) -> Result<Option
 
         if let Some((key, p3)) = _try_parse_identifier(&p1)? {
             p3.skip_many_whitespaces_or_eol();
-            if let Some((colon, p3)) = p3.consume_matching_char_immutable(':') {
+            if let Some(p3) = p3.consume_matching_char_immutable(':') {
                 p3.skip_many_whitespaces_or_eol();
                 if let Some((object, p4)) = _try_parse_jsonplus_object(&p3)? {
                     properties.insert(key, JsonPlusEntity::Object(object));
@@ -917,7 +917,7 @@ pub(crate) fn _try_parse_jsonplus_object(parser: &Parser<'doc>) -> Result<Option
         }
     }
 
-    Ok(None)
+    Err(Ast2Error::UnterminatedObject{ position: p1.get_position() })
 }
 
 pub(crate) fn _try_parse_jsonplus_array(parser: &Parser<'doc>) -> Result<Option<(Vec<JsonPlusEntity>, Parser<'doc>)>> {
@@ -977,7 +977,7 @@ pub(crate) fn _try_parse_jsonplus_array(parser: &Parser<'doc>) -> Result<Option<
         }
     }
 
-    Ok(None)
+    Err(Ast2Error::UnterminatedArray{ position: p1.get_position() })
 }
 
 #[cfg(test)]

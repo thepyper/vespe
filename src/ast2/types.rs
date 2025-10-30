@@ -125,6 +125,7 @@ impl ToString for CommandKind {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum JsonPlusEntity {
     Flag,
     Boolean(bool),
@@ -190,6 +191,7 @@ impl JsonPlusEntity {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JsonPlusObject
 {
     pub properties: HashMap<String, JsonPlusEntity>,

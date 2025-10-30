@@ -1044,3 +1044,7 @@ mod test_parse_parameters;
 #[cfg(test)]
 #[path = "./tests/test_parse_tag.rs"]
 mod test_parse_tag;
+
+#[cfg(test)]
+#[path = "./tests/test_parse_jsonplus.rs"]
+mod test_parse_jsonplus;

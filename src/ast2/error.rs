@@ -71,6 +71,12 @@ pub enum Ast2Error {
     /// A line was expected to start at the beginning, but had preceding characters.
     #[error("Expected beginning of line at {position:?}")]
     ExpectedBeginOfLine { position: Position },
+    /// Unterminated object
+    #[error("Unterminated object at {position:?}")]
+    UnterminatedObject { position: Position },
+    /// Unterminated array
+    #[error("Unterminated array {position:?}")]
+    UnterminatedArray { position: Position },
 }
 
 /// A specialized `Result` type for the AST parsing module.

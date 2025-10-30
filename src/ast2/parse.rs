@@ -451,6 +451,14 @@ pub(crate) fn _try_parse_parameters<'doc>(
 ) -> Result<Option<(Parameters, Parser<'doc>)>> {
     let begin = parser.get_position();
 
+    if let Some((json_object, parser)) = _try_parse_jsonplus_object(parser)? {
+        let end = parser.get_position();
+        return Ok(Some((Parameters { parameters: json_object, range: { begin, end } }, parser)))
+    } else {
+        return Ok(None);
+    }
+
+    /*
     // Must start with '['
     let mut p_current = match parser.consume_matching_char_immutable('[') {
         Some(p) => p,
@@ -463,7 +471,7 @@ pub(crate) fn _try_parse_parameters<'doc>(
         let end = p_final.get_position();
         return Ok(Some((
             Parameters {
-                parameters: serde_json::Map::new(),
+                parameters: JsonPlusObject::new(), // serde_json::Map::new(),
                 range: Range { begin, end },
             },
             p_final,
@@ -509,6 +517,7 @@ pub(crate) fn _try_parse_parameters<'doc>(
             });
         }
     }
+        */
 }
 
 pub(crate) fn _try_parse_parameter<'doc>(

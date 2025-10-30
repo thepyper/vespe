@@ -202,6 +202,14 @@ pub struct JsonPlusObject {
     pub properties: HashMap<String, JsonPlusEntity>,
 }
 
+impl JsonPlusObject {
+    pub fn new() -> Self {
+        JsonPlusObject {
+            properties: HashMap::new(),
+        }
+    }
+}
+
 impl ToString for JsonPlusObject {
     fn to_string(&self) -> String {
         JsonPlusEntity::_object_to_string_0(&self, "")
@@ -214,7 +222,7 @@ impl ToString for JsonPlusObject {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Parameters {
     /// The map of parameter keys to their JSON values.
-    pub parameters: serde_json::Map<String, serde_json::Value>,
+    pub parameters: JsonPlusObject, // serde_json::Map<String, serde_json::Value>,
     /// The location of the parameter block in the source document.
     pub range: Range,
 }
@@ -223,7 +231,7 @@ impl Parameters {
     /// Creates a new, empty set of parameters.
     pub fn new() -> Self {
         Parameters {
-            parameters: serde_json::Map::new(),
+            parameters: JsonPlusObject::new(), // serde_json::Map::new(),
             range: Range::null(),
         }
     }
@@ -231,18 +239,7 @@ impl Parameters {
 
 impl ToString for Parameters {
     fn to_string(&self) -> String {
-        if self.parameters.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "[{}]",
-                self.parameters
-                    .iter()
-                    .map(|(x, y)| format!("{}={}", x, y.to_string()))
-                    .collect::<Vec::<String>>()
-                    .join(",")
-            )
-        }
+        self.parameters.to_string()
     }
 }
 

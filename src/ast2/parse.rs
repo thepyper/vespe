@@ -463,67 +463,6 @@ pub(crate) fn _try_parse_parameters<'doc>(
     } else {
         return Ok(None);
     }
-
-    /*
-    // Must start with '['
-    let mut p_current = match parser.consume_matching_char_immutable('[') {
-        Some(p) => p,
-        None => return Ok(None),
-    };
-    p_current = p_current.skip_many_whitespaces_or_eol_immutable();
-
-    // Check for empty parameters: []
-    if let Some(p_final) = p_current.consume_matching_char_immutable(']') {
-        let end = p_final.get_position();
-        return Ok(Some((
-            Parameters {
-                parameters: JsonPlusObject::new(), // serde_json::Map::new(),
-                range: Range { begin, end },
-            },
-            p_final,
-        )));
-    }
-
-    let mut parameters_map = serde_json::Map::new();
-
-    // Loop to parse key-value pairs
-    loop {
-        // Parse a parameter
-        let ((key, value), p_after_param) = match _try_parse_parameter(&p_current)? {
-            Some((param, p_next)) => (param, p_next),
-            None => {
-                // This means we couldn't parse a parameter where one was expected.
-                return Err(Ast2Error::ParameterNotParsed {
-                    position: p_current.get_position(),
-                });
-            }
-        };
-        parameters_map.insert(key, value);
-        p_current = p_after_param.skip_many_whitespaces_or_eol_immutable();
-
-        // After a parameter, we expect either a ']' (end) or a ',' (continue)
-        if let Some(p_final) = p_current.consume_matching_char_immutable(']') {
-            // End of parameters
-            let end = p_final.get_position();
-            return Ok(Some((
-                Parameters {
-                    parameters: parameters_map,
-                    range: Range { begin, end },
-                },
-                p_final,
-            )));
-        } else if let Some(p_after_comma) = p_current.consume_matching_char_immutable(',') {
-            // Comma found, continue loop
-            p_current = p_after_comma.skip_many_whitespaces_or_eol_immutable();
-        } else {
-            // Neither ']' nor ',' found after a parameter. Syntax error.
-            return Err(Ast2Error::MissingCommaInParameters {
-                // Or missing closing brace
-                position: p_current.get_position(),
-            });
-        }
-    }
-        */
 }
 
 pub(crate) fn _try_parse_parameter<'doc>(
@@ -896,7 +835,7 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(
 
         if let Some((key, mut p3)) = _try_parse_identifier(&p1)? {
             p3.skip_many_whitespaces_or_eol();
-            if let Some(mut p3) = p3.consume_matching_char_immutable(':') {
+            if let Some((_, mut p3)) = p3.consume_char_if_immutable(|x| (x == ':') | (x == '=')) {
                 p3.skip_many_whitespaces_or_eol();
                 if let Some((object, p4)) = _try_parse_jsonplus_object(&p3)? {
                     properties.insert(key, JsonPlusEntity::Object(object));
@@ -949,7 +888,7 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(
             });
         }
 
-        p1.skip_many_whitespaces_or_eol();
+        p1.skip_many_whitespaces_or_eol();        
         if let Some(p2) = p1.consume_matching_string_immutable("}") {
             // Will exit on next iteration
         } else if let Some(p2) = p1.consume_matching_string_immutable(",") {

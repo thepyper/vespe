@@ -235,6 +235,16 @@ impl Parameters {
             range: Range::null(),
         }
     }
+    pub fn get(&self, key: &str) -> Option<&JsonPlusEntity> {
+        self.parameters.properties.get(key)
+    }
+    pub fn update(&mut self, other: &Parameters) {
+        for parameter in other.parameters.properties.iter() {
+            self.parameters
+                .properties
+                .insert(parameter.0.clone(), parameter.1.clone());
+        }
+    }
 }
 
 impl ToString for Parameters {
@@ -385,12 +395,7 @@ impl Anchor {
     /// Create a new anchor from an existing one taking values from Parameters
     pub fn update(&self, parameters: &Parameters) -> Self {
         let mut anchor = self.clone();
-        for parameter in parameters.parameters.iter() {
-            anchor
-                .parameters
-                .parameters
-                .insert(parameter.0.clone(), parameter.1.clone());
-        }
+        anchor.parameters.update(parameters);
         anchor
     }
 }

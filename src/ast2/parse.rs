@@ -453,7 +453,13 @@ pub(crate) fn _try_parse_parameters<'doc>(
 
     if let Some((json_object, parser)) = _try_parse_jsonplus_object(parser)? {
         let end = parser.get_position();
-        return Ok(Some((Parameters { parameters: json_object, range: { begin, end } }, parser)))
+        return Ok(Some((
+            Parameters {
+                parameters: json_object,
+                range: Range { begin, end },
+            },
+            parser,
+        )));
     } else {
         return Ok(None);
     }

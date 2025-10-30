@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::ast2::Parameters;
+use crate::ast2::{JsonPlusEntity, Parameters};
 
 use std::str::FromStr;
 
@@ -28,18 +28,25 @@ impl Variables {
     /// Create a new 'Variables' instance from an existing one taking values from Parameters
     pub fn update(&self, parameters: &Parameters) -> Self {
         let mut variables = self.clone();
-        if let Some(x) = parameters.parameters.get("provider") {
-            variables.provider = x
-                .as_str()
-                .unwrap_or("internal-error-variables-rs-1")
-                .to_string();
-        }
-        if let Some(x) = parameters.parameters.get("output") {
-            variables.output = Some(
-                x.as_str()
-                    .unwrap_or("internal-error-variables-rs-2")
-                    .to_string(),
-            );
+        match parameters.get("provider") {
+            Some(
+                JsonPlusEntity::DoubleQuotedString(x)
+                | JsonPlusEntity::SingleQuotedString(x)
+                | JsonPlusEntity::NudeString(x),
+            ) => {
+                variables.provider = x.clone();
+            }
+            _ => {}
+        };
+        match parameters.get("output") {
+            Some(
+                JsonPlusEntity::DoubleQuotedString(x)
+                | JsonPlusEntity::SingleQuotedString(x)
+                | JsonPlusEntity::NudeString(x),
+            ) => {
+                variables.output = Some(x.clone());
+            }
+            _ => {}
         }
         variables
     }

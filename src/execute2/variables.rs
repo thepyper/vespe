@@ -12,6 +12,8 @@ use std::str::FromStr;
 pub struct Variables {
     /// The command-line string used to invoke the external model provider (e.g., an LLM agent).
     pub provider: String,
+    /// The system prompt string used as prelude to context
+    pub system: Option<String>,
     /// The output redirection for other document modes
     pub output: Option<String>,
 }
@@ -22,32 +24,8 @@ impl Variables {
         Variables {
             // TODO: This should be loaded from a project or user configuration file.
             provider: "gemini -p -y -m gemini-2.5-flash".to_string(),
+            system: None,
             output: None,
         }
-    }
-    /// Create a new 'Variables' instance from an existing one taking values from Parameters
-    pub fn update(&self, parameters: &Parameters) -> Self {
-        let mut variables = self.clone();
-        match parameters.get("provider") {
-            Some(
-                JsonPlusEntity::DoubleQuotedString(x)
-                | JsonPlusEntity::SingleQuotedString(x)
-                | JsonPlusEntity::NudeString(x),
-            ) => {
-                variables.provider = x.clone();
-            }
-            _ => {}
-        };
-        match parameters.get("output") {
-            Some(
-                JsonPlusEntity::DoubleQuotedString(x)
-                | JsonPlusEntity::SingleQuotedString(x)
-                | JsonPlusEntity::NudeString(x),
-            ) => {
-                variables.output = Some(x.clone());
-            }
-            _ => {}
-        }
-        variables
-    }
+    }    
 }

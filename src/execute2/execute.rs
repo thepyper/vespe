@@ -1,11 +1,11 @@
-use crate::ast2::{Anchor, AnchorKind, CommandKind, Content, Parameters, Position, Range, Tag};
+use crate::ast2::{Anchor, AnchorKind, CommandKind, Content, Parameters, Position, Range, Tag, JsonPlusEntity};
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
 use uuid::Uuid;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
-use crate::execute2::variables::Variables;
+use crate::execute2::variables::{self, Variables};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -33,7 +33,7 @@ pub fn execute_context(
     tracing::debug!("Executing context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    match exe.execute(Collector::new(true), context_name, 77)? {
+    match exe.execute(Collector::new(), context_name, 77)? {
         Some(collector) => Ok(collector.context().clone()),
         None => Err(anyhow::anyhow!("Execute context returned no collector")),
     }
@@ -61,7 +61,7 @@ pub fn collect_context(
 
     let exe = Worker::new(file_access, path_res);
 
-    match exe.execute(Collector::new(false), context_name, 0)? {
+    match exe.execute(Collector::new(), context_name, 0)? {
         Some(collector) => Ok(collector.context().clone()),
         None => Err(anyhow::anyhow!("Collect context returned no collector")),
     }
@@ -83,8 +83,6 @@ pub(crate) struct Collector {
     context: ModelContent,
     /// Execution-time variables and settings.
     variables: Variables,
-    /// A flag indicating whether the engine is in `execute` (true) or `collect` (false) mode.
-    can_execute: bool,
 }
 
 impl Collector {
@@ -96,17 +94,20 @@ impl Collector {
         &self.anchor_stack
     }
 
+    pub fn variables(&self) -> &Variables {
+        &self.variables
+    }
+
     /// Creates a new, empty `Collector`.
     ///
     /// # Arguments
     /// * `can_execute` - Sets the execution mode. `true` for full execution, `false` for collect-only.
-    fn new(can_execute: bool) -> Self {
+    fn new() -> Self {
         Collector {
             visit_stack: Vec::new(),
             anchor_stack: Vec::new(),
             context: ModelContent::new(),
             variables: Variables::new(),
-            can_execute,
         }
     }
 
@@ -127,18 +128,7 @@ impl Collector {
             anchor_stack: Vec::new(),
             context: ModelContent::new(),
             variables: self.variables.clone(),
-            can_execute: self.can_execute,
         })
-    }
-
-    /// Creates a new `Collector` with updated variables values, taken from Parameters
-    ///
-    /// # Arguments
-    /// * `parameters` - Parameters to take variable values from
-    pub(crate) fn update(&self, parameters: &Parameters) -> Self {
-        let mut collector = self.clone();
-        collector.variables = collector.variables.update(parameters);
-        collector
     }
 
     // TODO doc (entra in anchor)
@@ -156,6 +146,13 @@ impl Collector {
             .pop()
             .ok_or_else(|| anyhow::anyhow!("Pop on empty stack!?"))?;
         Ok(collector)
+    }
+
+    // TODO doc
+    pub fn update(&self, variables: &Variables) -> Self {
+        let mut collector = self.clone();
+        collector.variables = variables.clone();
+        collector
     }
 }
 
@@ -256,16 +253,16 @@ impl Worker {
 
     pub(crate) fn call_model(
         &self,
-        collector: &Collector,
+        variables: &Variables,
         contents: Vec<ModelContent>,
     ) -> Result<String> {
-        let query = contents
+       /*/ let query = contents
             .into_iter()
             .flat_map(|mc| mc.0)
             .map(|item| item.to_string())
             .collect::<Vec<String>>()
-            .join("\n");
-        crate::agent::shell::shell_call(&collector.variables.provider, &query)
+            .join("\n"); */
+        crate::agent::shell::shell_call(&variables.provider, &self.modelcontent_to_string(&contents)?)
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
@@ -473,5 +470,52 @@ impl Worker {
 
     pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
         Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
+    }
+
+    pub fn update_variables(&self, variables: &Variables, parameters: &Parameters) -> Result<Variables> {
+        let mut new_variables = variables.clone();
+        match parameters.get("provider") {
+            Some(
+                JsonPlusEntity::DoubleQuotedString(x)
+                | JsonPlusEntity::SingleQuotedString(x)
+                | JsonPlusEntity::NudeString(x),
+            ) => {
+                new_variables.provider = x.clone();
+            }
+            _ => {}
+        };
+        match parameters.get("output") {
+            Some(
+                JsonPlusEntity::DoubleQuotedString(x)
+                | JsonPlusEntity::SingleQuotedString(x)
+                | JsonPlusEntity::NudeString(x),
+            ) => {
+                new_variables.output = Some(x.clone());
+            }
+            _ => {}
+        }
+        match parameters.get("system") {
+            Some(JsonPlusEntity::NudeString(x)) => {
+                match self.execute(Collector::new(), x, 0)? {
+                    Some(x) => {
+                        new_variables.system = Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
+                    }
+                    None => {
+                        return Err(anyhow::anyhow!("Failed to collect system contest {}", x));
+                    }
+                }
+            }
+            _ => {}
+        }
+        Ok(new_variables)
+    }
+
+    fn modelcontent_to_string(&self, content: &Vec<ModelContent>) -> Result<String> {
+        Ok(content
+            .into_iter()
+            .flat_map(|mc| mc.0.clone())
+            .map(|item| item.to_string())
+            .collect::<Vec<String>>()
+            .join("\n"))    
     }
 }

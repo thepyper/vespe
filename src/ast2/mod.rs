@@ -21,6 +21,6 @@ mod types;
 pub use error::{Ast2Error, Result};
 pub use parse::parse_document;
 pub use types::{
-    Anchor, AnchorKind, Argument, Arguments, CommandKind, Content, Document, Parameters, Position,
-    Range, Tag, Text, JsonPlusEntity, JsonPlusObject
+    Anchor, AnchorKind, Argument, Arguments, CommandKind, Content, Document, JsonPlusEntity,
+    JsonPlusObject, Parameters, Position, Range, Tag, Text,
 };

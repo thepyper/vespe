@@ -23,8 +23,8 @@ mod tag_include;
 mod tag_repeat;
 mod tag_set;
 mod tags;
-mod variables;
 mod utils;
+mod variables;
 
 use content::*;
 //use state::*;
@@ -34,8 +34,8 @@ use tag_include::*;
 use tag_repeat::*;
 use tag_set::*;
 use tags::*;
-use variables::*;
 use utils::*;
+use variables::*;
 
 pub use execute::collect_context;
 pub use execute::execute_context;

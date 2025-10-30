@@ -1,12 +1,12 @@
 use serde_json::json;
+use std::collections::HashMap;
 use std::str::Chars;
 use std::str::FromStr;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::{
-    Anchor, AnchorKind, Argument, Arguments, Ast2Error, CommandKind, Content, Document, Parameters,
-    Position, Range, Result, Tag, Text, JsonPlusEntity, JsonPlusObject
+    Anchor, AnchorKind, Argument, Arguments, Ast2Error, CommandKind, Content, Document,
+    JsonPlusEntity, JsonPlusObject, Parameters, Position, Range, Result, Tag, Text,
 };
 
 /// A stateful parser that consumes a string slice and tracks the current position.
@@ -590,25 +590,25 @@ pub(crate) fn _try_parse_argument<'doc>(
     let begin = parser.get_position();
 
     //if let Some(p1) = parser.consume_matching_char_immutable('\'') {
-        if let Some((value, p)) = _try_parse_enclosed_string(&parser, "'")? {
-            let end = p.get_position();
-            let arg = Argument {
-                value,
-                range: Range { begin, end },
-            };
-            return Ok(Some((arg, p)));
-        }
+    if let Some((value, p)) = _try_parse_enclosed_string(&parser, "'")? {
+        let end = p.get_position();
+        let arg = Argument {
+            value,
+            range: Range { begin, end },
+        };
+        return Ok(Some((arg, p)));
+    }
     //}
 
     //if let Some(p1) = parser.consume_matching_char_immutable('"') {
-        if let Some((value, p)) = _try_parse_enclosed_string(&parser, "\"")? {
-            let end = p.get_position();
-            let arg = Argument {
-                value,
-                range: Range { begin, end },
-            };
-            return Ok(Some((arg, p)));
-        }
+    if let Some((value, p)) = _try_parse_enclosed_string(&parser, "\"")? {
+        let end = p.get_position();
+        let arg = Argument {
+            value,
+            range: Range { begin, end },
+        };
+        return Ok(Some((arg, p)));
+    }
     //}
 
     if let Some((value, p)) = _try_parse_nude_string(parser)? {
@@ -655,9 +655,9 @@ pub(crate) fn _try_parse_value<'doc>(
         _try_parse_nude_value(parser)
     } */
     if let Some(x) = _try_parse_enclosed_value(parser, "\"")? {
-        Ok(Some(x)) 
+        Ok(Some(x))
     } else if let Some(x) = _try_parse_enclosed_value(parser, "\'")? {
-        Ok(Some(x)) 
+        Ok(Some(x))
     } else {
         _try_parse_nude_value(parser)
     }
@@ -862,8 +862,9 @@ pub(crate) fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tex
     Ok(Some((text, p_current)))
 }
 
-pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<Option<(JsonPlusObject, Parser<'doc>)>> {
-    
+pub(crate) fn _try_parse_jsonplus_object<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(JsonPlusObject, Parser<'doc>)>> {
     let mut p1 = match parser.consume_matching_char_immutable('{') {
         Some(p) => p,
         None => return Ok(None),
@@ -872,11 +873,10 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<
     let mut properties = HashMap::new();
 
     while !p1.is_eod() {
-
         p1.skip_many_whitespaces_or_eol();
 
         if let Some(p2) = p1.consume_matching_string_immutable("}") {
-            return Ok(Some((JsonPlusObject{ properties }, p2)))
+            return Ok(Some((JsonPlusObject { properties }, p2)));
         }
 
         if let Some((key, mut p3)) = _try_parse_identifier(&p1)? {
@@ -885,15 +885,25 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<
                 p3.skip_many_whitespaces_or_eol();
                 if let Some((object, p4)) = _try_parse_jsonplus_object(&p3)? {
                     properties.insert(key, JsonPlusEntity::Object(object));
-                    p1 = p4; 
+                    p1 = p4;
                 } else if let Some((array, p4)) = _try_parse_jsonplus_array(&p3)? {
                     properties.insert(key, JsonPlusEntity::Array(array));
-                    p1 = p4; 
-                } else if let Some((single_quoted_content, p4)) = _try_parse_enclosed_string(&p3, "'")? {
-                    properties.insert(key, JsonPlusEntity::SingleQuotedString(single_quoted_content));
-                    p1 = p4; 
-                } else if let Some((double_quoted_content, p4)) = _try_parse_enclosed_string(&p3, "\"")? {
-                    properties.insert(key, JsonPlusEntity::DoubleQuotedString(double_quoted_content));
+                    p1 = p4;
+                } else if let Some((single_quoted_content, p4)) =
+                    _try_parse_enclosed_string(&p3, "'")?
+                {
+                    properties.insert(
+                        key,
+                        JsonPlusEntity::SingleQuotedString(single_quoted_content),
+                    );
+                    p1 = p4;
+                } else if let Some((double_quoted_content, p4)) =
+                    _try_parse_enclosed_string(&p3, "\"")?
+                {
+                    properties.insert(
+                        key,
+                        JsonPlusEntity::DoubleQuotedString(double_quoted_content),
+                    );
                     p1 = p4;
                 } else if let Some((x, p4)) = _try_parse_nude_float(&p3)? {
                     properties.insert(key, JsonPlusEntity::Float(x));
@@ -906,10 +916,12 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<
                     p1 = p4
                 } else if let Some((x, p4)) = _try_parse_nude_string(&p3)? {
                     properties.insert(key, JsonPlusEntity::NudeString(x));
-                    p1 = p4 
+                    p1 = p4
                 } else {
                     // No value
-                    return Err(Ast2Error::MissingParameterValue{ position: p1.get_position() });
+                    return Err(Ast2Error::MissingParameterValue {
+                        position: p1.get_position(),
+                    });
                 }
             } else {
                 properties.insert(key, JsonPlusEntity::Flag);
@@ -917,7 +929,9 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<
             }
         } else {
             // Missing identifier
-            return Err(Ast2Error::MissingParameterKey{ position: p1.get_position() });
+            return Err(Ast2Error::MissingParameterKey {
+                position: p1.get_position(),
+            });
         }
 
         p1.skip_many_whitespaces_or_eol();
@@ -928,15 +942,20 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(parser: &Parser<'doc>) -> Result<
             p1 = p2;
         } else {
             // Missing separator
-            return Err(Ast2Error::MissingCommaInParameters{ position: p1.get_position() });
+            return Err(Ast2Error::MissingCommaInParameters {
+                position: p1.get_position(),
+            });
         }
     }
 
-    Err(Ast2Error::UnterminatedObject{ position: p1.get_position() })
+    Err(Ast2Error::UnterminatedObject {
+        position: p1.get_position(),
+    })
 }
 
-pub(crate) fn _try_parse_jsonplus_array<'doc>(parser: &Parser<'doc>) -> Result<Option<(Vec<JsonPlusEntity>, Parser<'doc>)>> {
-    
+pub(crate) fn _try_parse_jsonplus_array<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(Vec<JsonPlusEntity>, Parser<'doc>)>> {
     let mut p1 = match parser.consume_matching_char_immutable('[') {
         Some(p) => p,
         None => return Ok(None),
@@ -945,11 +964,10 @@ pub(crate) fn _try_parse_jsonplus_array<'doc>(parser: &Parser<'doc>) -> Result<O
     let mut array = Vec::new();
 
     while !p1.is_eod() {
-
         p1.skip_many_whitespaces_or_eol();
 
         if let Some(p2) = p1.consume_matching_string_immutable("]") {
-            return Ok(Some((array, p2)))
+            return Ok(Some((array, p2)));
         }
 
         if let Some((object, p4)) = _try_parse_jsonplus_object(&p1)? {
@@ -977,7 +995,9 @@ pub(crate) fn _try_parse_jsonplus_array<'doc>(parser: &Parser<'doc>) -> Result<O
             array.push(JsonPlusEntity::NudeString(x));
             p1 = p4
         } else {
-            return Err(Ast2Error::MalformedValue{ position: p1.get_position() });
+            return Err(Ast2Error::MalformedValue {
+                position: p1.get_position(),
+            });
         }
 
         p1.skip_many_whitespaces_or_eol();
@@ -988,11 +1008,15 @@ pub(crate) fn _try_parse_jsonplus_array<'doc>(parser: &Parser<'doc>) -> Result<O
             p1 = p2;
         } else {
             // Missing separator
-            return Err(Ast2Error::MissingCommaInParameters{ position: p1.get_position() });
+            return Err(Ast2Error::MissingCommaInParameters {
+                position: p1.get_position(),
+            });
         }
     }
 
-    Err(Ast2Error::UnterminatedArray{ position: p1.get_position() })
+    Err(Ast2Error::UnterminatedArray {
+        position: p1.get_position(),
+    })
 }
 
 #[cfg(test)]

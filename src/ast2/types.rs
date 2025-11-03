@@ -179,19 +179,25 @@ impl JsonPlusEntity {
     fn _object_to_string_0(object: &JsonPlusObject, pre_indent: &str) -> String {
         let mut s = format!("{{");
         let n = object.properties.len();
-        let (separator, indent) = match n {
-            0 => ("", String::new()),
-            1 => (" ", String::new()),
-            _ => ("\n", format!("{}\t", pre_indent)),
+        let (separator, pre_indent, indent) = match n {
+            0 | 1 => (" ", "", "".into()),
+            _     => ("\n", pre_indent, format!("\t{}", pre_indent)),
         };
+        let mut first = true;
         for (key, value) in &object.properties {
+            if !first {
+                s.push_str(",");
+            }
+            first = false;
+            s.push_str(&separator);
             s.push_str(&indent);
             s.push_str(&key);
             s.push_str(&value._to_string_0(": ", &indent));
-            s.push_str(",");
-            s.push_str(separator);
         }
-        s.push_str(&indent);
+        if !first {
+            s.push_str(&separator);
+            s.push_str(pre_indent);
+        }
         s.push_str("}");
         s
     }

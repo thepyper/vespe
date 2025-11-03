@@ -11,7 +11,8 @@ pub struct SetPolicy;
 impl StaticPolicy for SetPolicy {
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
         tracing::debug!("tag_set::SetPolicy::collect_static_tag\nTag = {:?}\n", tag);
-        let variables = worker.update_variables(collector.variables(), &tag.parameters)?;
-        Ok(collector.update(&variables))
+        worker.update_variables(&collector, &tag.parameters)
+        //let variables = worker.update_variables(collector.variables(), &tag.parameters)?;
+        //Ok(collector.update(&variables))
     }
 }

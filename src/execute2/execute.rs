@@ -149,13 +149,6 @@ impl Collector {
             .ok_or_else(|| anyhow::anyhow!("Pop on empty stack!?"))?;
         Ok(collector)
     }
-
-    // TODO doc
-    pub fn update(&self, variables: &Variables) -> Self {
-        let mut collector = self.clone();
-        collector.variables = variables.clone();
-        collector
-    }
 }
 
 /// The stateless engine that drives the context execution.
@@ -475,7 +468,7 @@ impl Worker {
         }
     }
 
-    fn redirect_output(&self, collector: &Collector, output: &str) -> Result<bool> {
+    fn redirect_output(&self, collector: &Collector, output: &str) -> Result<bool> {        
         match &collector.variables.output {
             Some(x) => {
                 tracing::debug!("Output redirection to {}\n", &x);
@@ -495,10 +488,12 @@ impl Worker {
 
     pub fn update_variables(
         &self,
-        variables: &Variables,
+        //variables: &Variables,
+        collector: &Collector,
         parameters: &Parameters,
-    ) -> Result<Variables> {
-        let mut new_variables = variables.clone();
+    //) -> Result<Variables> {
+    ) -> Result<Collector> {
+        let mut new_variables = collector.variables.clone();
         match parameters.get("provider") {
             Some(
                 JsonPlusEntity::DoubleQuotedString(x)
@@ -515,6 +510,7 @@ impl Worker {
                 | JsonPlusEntity::SingleQuotedString(x)
                 | JsonPlusEntity::NudeString(x),
             ) => {
+                tracing::debug!("output = {}", &x);
                 new_variables.output = Some(x.clone());
             }
             _ => {}
@@ -531,7 +527,9 @@ impl Worker {
             },
             _ => {}
         }
-        Ok(new_variables)
+        let mut new_collector = collector.clone();
+        new_collector.variables = new_variables;
+        Ok(new_collector)
     }
 
     fn modelcontent_to_string(&self, content: &Vec<ModelContent>) -> Result<String> {

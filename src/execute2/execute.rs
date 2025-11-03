@@ -420,11 +420,12 @@ impl Worker {
     pub fn tag_to_anchor(
         &self,
         collector: &Collector,
+        local_variables: &Variables,
         tag: &Tag,
         output: &str,
     ) -> Result<(Uuid, Vec<(Range, String)>)> {
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
-        match self.redirect_output(collector, output)? {
+        match self.redirect_output(local_variables, output)? {
             true => {
                 // Output redirected, just convert tag into anchor
                 Ok((
@@ -451,11 +452,12 @@ impl Worker {
     pub fn inject_into_anchor(
         &self,
         collector: &Collector,
+        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: &Position,
         output: &str,
     ) -> Result<Vec<(Range, String)>> {
-        match self.redirect_output(collector, output)? {
+        match self.redirect_output(local_variables, output)? {
             true => {
                 // Output redirected, delete anchor contents
                 Ok(vec![(
@@ -479,8 +481,8 @@ impl Worker {
         }
     }
 
-    fn redirect_output(&self, collector: &Collector, output: &str) -> Result<bool> {        
-        match &collector.variables.output {
+    fn redirect_output(&self, local_variables: &Variables, output: &str) -> Result<bool> {        
+        match &local_variables.output {
             Some(x) => {
                 tracing::debug!("Output redirection to {}\n", &x);
                 let output_path = self.path_res.resolve_context(&x)?;

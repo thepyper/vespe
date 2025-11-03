@@ -2,11 +2,11 @@
 
 Tell me the difference between red and blue.
 
-<!-- answer-c1cc0d93-ff22-41ff-8366-403bd39bbf71:begin {
+<!-- answer-8be93625-d745-4b1b-917b-174fb4046322:begin {
 	system: agent/doggy,
 	output: out/doggy
 }  -->
-<!-- answer-c1cc0d93-ff22-41ff-8366-403bd39bbf71:end {}  -->
+<!-- answer-8be93625-d745-4b1b-917b-174fb4046322:end {}  -->
 
 Tell me something nice.
 

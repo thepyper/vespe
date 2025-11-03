@@ -143,6 +143,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         // Mutate tag into a new anchor
         let (uuid, patches_2) = worker.tag_to_anchor(
             &mono_result.collector,
+            local_variables,
             tag,
             &mono_result.new_output.unwrap_or(String::new()),
         )?;
@@ -189,7 +190,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // If there is some output, patch into new anchor
         let patches_2 = if let Some(output) = mono_result.new_output {
-            worker.inject_into_anchor(&mono_result.collector, anchor, &anchor_end, &output)?
+            worker.inject_into_anchor(&mono_result.collector, local_variables, anchor, &anchor_end, &output)?
         } else {
             vec![]
         };

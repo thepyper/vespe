@@ -85,6 +85,8 @@ pub(crate) struct Collector {
     context: ModelContent,
     /// Execution-time variables and settings.
     variables: Variables,
+    /// Latest processed range
+    latest_range: Range,
 }
 
 impl Collector {
@@ -110,6 +112,7 @@ impl Collector {
             anchor_stack: Vec::new(),
             context: ModelContent::new(),
             variables: Variables::new(),
+            latest_range: Range::null(),
         }
     }
 
@@ -130,6 +133,7 @@ impl Collector {
             anchor_stack: Vec::new(),
             context: ModelContent::new(),
             variables: self.variables.clone(),
+            latest_range: self.latest_range.clone(),
         })
     }
 
@@ -146,12 +150,16 @@ impl Collector {
         collector
             .anchor_stack
             .pop()
-            .ok_or_else(|| anyhow::anyhow!("Pop on empty stack!?"))?;
+            .ok_or_else(|| anyhow::anyhow!("Pop on empty stack at {:?}", self.latest_range))?;
         Ok(collector)
     }
 
     pub fn push_item(&mut self, item: ModelContentItem) {
         self.context.push(item);
+    }
+
+    pub fn set_latest_range(&mut self, range: &Range) {
+        self.latest_range = range.clone();
     }
 
     // TODO doc
@@ -317,12 +325,14 @@ impl Worker {
         for item in &ast.content {
             let (do_next_pass, next_collector, patches) = match item {
                 Content::Text(text) => {
+                    collector.set_latest_range(&text.range);
                     collector
                         .context
                         .push(ModelContentItem::user(&text.content));
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {
+                    collector.set_latest_range(&tag.range);
                     let local_variables = self.update_variables(&collector.variables(), &tag.parameters)?;
                     if is_collect {
                         let (do_next_pass, collector) =
@@ -334,6 +344,7 @@ impl Worker {
                 }
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
+                        collector.set_latest_range(&anchor.range);
                         let local_variables = self.update_variables(&collector.variables(), &anchor.parameters)?;
                         let anchor_end = anchor_index
                             .get_end(&anchor.uuid)

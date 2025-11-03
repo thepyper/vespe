@@ -149,6 +149,13 @@ impl Collector {
             .ok_or_else(|| anyhow::anyhow!("Pop on empty stack!?"))?;
         Ok(collector)
     }
+
+    // TODO doc
+    pub fn update_variables(&self, new_variables: &Variables) -> Self {
+        let mut collector = self.clone();
+        collector.variables = new_variables.clone();
+        collector
+    }
 }
 
 /// The stateless engine that drives the context execution.
@@ -309,16 +316,18 @@ impl Worker {
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {
+                    let local_variables = self.update_variables(&collector.variables(), &tag.parameters)?;
                     if is_collect {
                         let (do_next_pass, collector) =
-                            TagBehaviorDispatch::collect_tag(self, collector, tag)?;
+                            TagBehaviorDispatch::collect_tag(self, collector, &local_variables, tag)?;
                         (do_next_pass, collector, vec![])
                     } else {
-                        TagBehaviorDispatch::execute_tag(self, collector, tag)?
+                        TagBehaviorDispatch::execute_tag(self, collector, &local_variables, tag)?
                     }
                 }
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
+                        let local_variables = self.update_variables(&collector.variables(), &anchor.parameters)?;
                         let anchor_end = anchor_index
                             .get_end(&anchor.uuid)
                             .ok_or(anyhow::anyhow!("end anchor not found"))?;
@@ -334,6 +343,7 @@ impl Worker {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
                                 self,
                                 collector,
+                                &local_variables,
                                 anchor,
                                 anchor_end.range.begin,
                             )?;
@@ -342,6 +352,7 @@ impl Worker {
                             TagBehaviorDispatch::execute_anchor(
                                 self,
                                 collector,
+                                &local_variables,
                                 anchor,
                                 anchor_end.range.begin,
                             )?
@@ -488,12 +499,10 @@ impl Worker {
 
     pub fn update_variables(
         &self,
-        //variables: &Variables,
-        collector: &Collector,
+        variables: &Variables,
         parameters: &Parameters,
-    //) -> Result<Variables> {
-    ) -> Result<Collector> {
-        let mut new_variables = collector.variables.clone();
+    ) -> Result<Variables> {
+        let mut new_variables = variables.clone();
         match parameters.get("provider") {
             Some(
                 JsonPlusEntity::DoubleQuotedString(x)
@@ -527,9 +536,7 @@ impl Worker {
             },
             _ => {}
         }
-        let mut new_collector = collector.clone();
-        new_collector.variables = new_variables;
-        Ok(new_collector)
+        Ok(new_variables)
     }
 
     fn modelcontent_to_string(&self, content: &Vec<ModelContent>) -> Result<String> {

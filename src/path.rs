@@ -30,9 +30,15 @@ impl ProjectPathResolver {
 }
 
 impl PathResolver for ProjectPathResolver {
-    /// Resolve a context name to a path
+    /// Resolve a context name to a path, create directory if doesn't exist
     fn resolve_context(&self, context_name: &str) -> Result<PathBuf> {
-        Ok(self.contexts_root().join(format!("{}.md", context_name)))
+        let context_path = self.contexts_root().join(format!("{}.md", context_name));
+        let parent_dir = context_path
+            .parent()
+            .context("Failed to get parent directory")?;
+        std::fs::create_dir_all(parent_dir)
+            .context("Failed to create parent directories for context file")?;
+        Ok(context_path)
     }
     /// Resolve a meta kind / uuid to a path, create directory if doesn't exist
     fn resolve_metadata(&self, meta_kind: &str, meta_uuid: &Uuid) -> Result<PathBuf> {

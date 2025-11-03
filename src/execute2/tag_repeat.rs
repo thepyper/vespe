@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::variables::Variables;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
@@ -28,6 +29,7 @@ impl DynamicPolicy for RepeatPolicy {
     fn mono(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
@@ -60,7 +62,7 @@ impl DynamicPolicy for RepeatPolicy {
                             _ => false,
                         };
                         if is_anchor_repeatable {
-                            // Mutate anchor variables
+                            // Mutate anchor parameters
                             let mutated_anchor = anchor.update(parameters, arguments);
                             result
                                 .new_patches

@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::variables::Variables;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
 use crate::ast2::{Anchor, Arguments, Parameters, Position, Range, Tag};
@@ -30,6 +31,7 @@ impl DynamicPolicy for AnswerPolicy {
     fn mono(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
@@ -51,9 +53,8 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let local_collector = worker.update_variables(&result.collector, parameters)?;
                 let response =
-                    worker.call_model(&local_collector.variables(), vec![result.collector.context().clone()])?;
+                    worker.call_model(&local_variables, vec![result.collector.context().clone()])?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);

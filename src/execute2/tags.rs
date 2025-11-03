@@ -22,25 +22,28 @@ pub trait TagBehavior {
     fn execute_tag(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
-    fn collect_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<(bool, Collector)>;
+    fn collect_tag(worker: &Worker, collector: Collector, local_variables : &Variables, tag: &Tag) -> Result<(bool, Collector)>;
     fn execute_anchor(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
     fn collect_anchor(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector)>;
 }
 
 pub trait StaticPolicy {
-    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
+    fn collect_static_tag(worker: &Worker, collector: Collector, local_variables: &Variables, tag: &Tag) -> Result<Collector>;
 }
 
 pub struct DynamicPolicyMonoResult<State> {
@@ -69,6 +72,7 @@ pub trait DynamicPolicy {
     fn mono(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         parameters: &Parameters,
         arguments: &Arguments,
         state: Self::State,
@@ -82,6 +86,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
     fn execute_anchor(
         _worker: &Worker,
         _collector: Collector,
+        _local_variables: &Variables,
         _anchor: &Anchor,
         _anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
@@ -91,6 +96,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
     fn collect_anchor(
         _worker: &Worker,
         _collector: Collector,
+        _local_variables: &Variables,
         _anchor: &Anchor,
         _anchor_end: Position,
     ) -> Result<(bool, Collector)> {
@@ -100,14 +106,17 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
     fn execute_tag(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        let collector = P::collect_static_tag(worker, collector, tag)?;
+        let collector = P::collect_static_tag(worker, collector, local_variables, tag)?;
         Ok((false, collector, vec![]))
     }
 
-    fn collect_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<(bool, Collector)> {
-        let collector = P::collect_static_tag(worker, collector, tag)?;
+    fn collect_tag(worker: &Worker, collector: Collector, 
+                local_variables: &Variables,
+tag: &Tag) -> Result<(bool, Collector)> {
+        let collector = P::collect_static_tag(worker, collector, local_variables, tag)?;
         Ok((false, collector))
     }
 }
@@ -118,12 +127,14 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     fn execute_tag(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
         let mono_result = P::mono(
             worker,
             collector,
+            local_variables,
             &tag.parameters,
             &tag.arguments,
             state,
@@ -139,7 +150,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
         } // TODO se nnn c'e', errore!! deve mutare in anchor!!
-          // Return collector and patches
+        // Return collector and patches
         let mut patches = mono_result.new_patches;
         patches.extend(patches_2);
         Ok((mono_result.do_next_pass, mono_result.collector, patches))
@@ -148,6 +159,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     fn collect_tag(
         _worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         _tag: &Tag,
     ) -> Result<(bool, Collector)> {
         // Dynamic tags do not support collect_tag because they always produce a new anchor during execution, then trigger a new pass
@@ -157,6 +169,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     fn execute_anchor(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
@@ -164,6 +177,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let mono_result = P::mono(
             worker,
             collector,
+            local_variables,
             &anchor.parameters,
             &anchor.arguments,
             state,
@@ -188,6 +202,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     fn collect_anchor(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
@@ -195,6 +210,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let mono_result = P::mono(
             worker,
             collector,
+            local_variables,
             &anchor.parameters,
             &anchor.arguments,
             state,
@@ -225,53 +241,56 @@ impl TagBehaviorDispatch {
     pub fn execute_tag(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,    
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         match tag.command {
             CommandKind::Answer => {
-                DynamicTagBehavior::<AnswerPolicy>::execute_tag(worker, collector, tag)
+                DynamicTagBehavior::<AnswerPolicy>::execute_tag(worker, collector, local_variables, tag)
             }
             CommandKind::Repeat => {
-                DynamicTagBehavior::<RepeatPolicy>::execute_tag(worker, collector, tag)
+                DynamicTagBehavior::<RepeatPolicy>::execute_tag(worker, collector, local_variables, tag)
             }
             CommandKind::Include => {
-                StaticTagBehavior::<IncludePolicy>::execute_tag(worker, collector, tag)
+                StaticTagBehavior::<IncludePolicy>::execute_tag(worker, collector, local_variables, tag)
             }
-            CommandKind::Set => StaticTagBehavior::<SetPolicy>::execute_tag(worker, collector, tag),
+            CommandKind::Set => StaticTagBehavior::<SetPolicy>::execute_tag(worker, collector, local_variables, tag),
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }
     pub fn collect_tag(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,    
         tag: &Tag,
     ) -> Result<(bool, Collector)> {
         match tag.command {
             CommandKind::Answer => {
-                DynamicTagBehavior::<AnswerPolicy>::collect_tag(worker, collector, tag)
+                DynamicTagBehavior::<AnswerPolicy>::collect_tag(worker, collector, local_variables, tag)
             }
             CommandKind::Repeat => {
-                DynamicTagBehavior::<RepeatPolicy>::collect_tag(worker, collector, tag)
+                DynamicTagBehavior::<RepeatPolicy>::collect_tag(worker, collector, local_variables, tag)
             }
             CommandKind::Include => {
-                StaticTagBehavior::<IncludePolicy>::collect_tag(worker, collector, tag)
+                StaticTagBehavior::<IncludePolicy>::collect_tag(worker, collector, local_variables, tag)
             }
-            CommandKind::Set => StaticTagBehavior::<SetPolicy>::collect_tag(worker, collector, tag),
+            CommandKind::Set => StaticTagBehavior::<SetPolicy>::collect_tag(worker, collector, local_variables, tag),
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }
     pub fn execute_anchor(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,    
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         match anchor.command {
             CommandKind::Answer => DynamicTagBehavior::<AnswerPolicy>::execute_anchor(
-                worker, collector, anchor, anchor_end,
+                worker, collector, local_variables, anchor, anchor_end,
             ),
             CommandKind::Repeat => DynamicTagBehavior::<RepeatPolicy>::execute_anchor(
-                worker, collector, anchor, anchor_end,
+                worker, collector, local_variables, anchor, anchor_end,
             ),
             _ => Err(anyhow::anyhow!("Unsupported anchor command")),
         }
@@ -279,15 +298,16 @@ impl TagBehaviorDispatch {
     pub fn collect_anchor(
         worker: &Worker,
         collector: Collector,
+        local_variables: &Variables,    
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         match anchor.command {
             CommandKind::Answer => DynamicTagBehavior::<AnswerPolicy>::collect_anchor(
-                worker, collector, anchor, anchor_end,
+                worker, collector, local_variables, anchor, anchor_end,
             ),
             CommandKind::Repeat => DynamicTagBehavior::<RepeatPolicy>::collect_anchor(
-                worker, collector, anchor, anchor_end,
+                worker, collector, local_variables, anchor, anchor_end,
             ),
             _ => Err(anyhow::anyhow!("Unsupported anchor command")),
         }

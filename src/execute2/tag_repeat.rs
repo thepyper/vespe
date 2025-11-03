@@ -61,9 +61,7 @@ impl DynamicPolicy for RepeatPolicy {
                         };
                         if is_anchor_repeatable {
                             // Mutate anchor variables
-                            let mut mutated_anchor = anchor.clone();
-                            mutated_anchor.parameters = parameters.clone();
-                            mutated_anchor.arguments = arguments.clone();
+                            let mutated_anchor = anchor.update(parameters, arguments);
                             result
                                 .new_patches
                                 .extend(worker.mutate_anchor(&mutated_anchor)?);

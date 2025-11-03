@@ -23,7 +23,10 @@ fn test_try_parse_anchor_simple() {
 #[test]
 fn test_try_parse_anchor_with_parameters() {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
-    let doc = format!("<!-- include-{}:end {{file=\"path.txt\"}} --> rest", uuid_str);
+    let doc = format!(
+        "<!-- include-{}:end {{file=\"path.txt\"}} --> rest",
+        uuid_str
+    );
     let parser = Parser::new(&doc);
     let (anchor, p_next) = super::_try_parse_anchor(&parser).unwrap().unwrap();
     assert_eq!(anchor.command, CommandKind::Include);

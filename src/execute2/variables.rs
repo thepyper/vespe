@@ -27,5 +27,5 @@ impl Variables {
             system: None,
             output: None,
         }
-    }    
+    }
 }

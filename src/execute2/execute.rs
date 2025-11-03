@@ -1,4 +1,6 @@
-use crate::ast2::{Anchor, AnchorKind, CommandKind, Content, Parameters, Position, Range, Tag, JsonPlusEntity};
+use crate::ast2::{
+    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, Parameters, Position, Range, Tag,
+};
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
@@ -256,12 +258,12 @@ impl Worker {
         variables: &Variables,
         contents: Vec<ModelContent>,
     ) -> Result<String> {
-       /*/ let query = contents
-            .into_iter()
-            .flat_map(|mc| mc.0)
-            .map(|item| item.to_string())
-            .collect::<Vec<String>>()
-            .join("\n"); */
+        /*/ let query = contents
+        .into_iter()
+        .flat_map(|mc| mc.0)
+        .map(|item| item.to_string())
+        .collect::<Vec<String>>()
+        .join("\n"); */
         let mut prompt = String::new();
         prompt.push_str(&variables.system.clone().unwrap_or(String::new()));
         prompt.push_str(&self.modelcontent_to_string(&contents)?);
@@ -451,8 +453,14 @@ impl Worker {
     ) -> Result<Vec<(Range, String)>> {
         match self.redirect_output(collector, output)? {
             true => {
-                // Output redirected, no change in anchor
-                Ok(vec![])
+                // Output redirected, delete anchor contents
+                Ok(vec![(
+                    Range {
+                        begin: anchor.range.end,
+                        end: *anchor_end,
+                    },
+                    String::new(),
+                )])
             }
             false => {
                 // Output not redirected, patch anchor contents
@@ -467,15 +475,28 @@ impl Worker {
         }
     }
 
-    fn redirect_output(&self, _collector: &Collector, _output: &str) -> Result<bool> {
-        Ok(false) // TRUE if output has been redirected
+    fn redirect_output(&self, collector: &Collector, output: &str) -> Result<bool> {
+        match &collector.variables.output {
+            Some(x) => {
+                let output_path = self.path_res.resolve_context(&x)?;
+                self.file_access.write_file(&output_path, output, None)?;
+                return Ok(true);
+            }
+            None => {
+                return Ok(false);
+            }
+        }
     }
 
     pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
         Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
     }
 
-    pub fn update_variables(&self, variables: &Variables, parameters: &Parameters) -> Result<Variables> {
+    pub fn update_variables(
+        &self,
+        variables: &Variables,
+        parameters: &Parameters,
+    ) -> Result<Variables> {
         let mut new_variables = variables.clone();
         match parameters.get("provider") {
             Some(
@@ -498,16 +519,15 @@ impl Worker {
             _ => {}
         }
         match parameters.get("system") {
-            Some(JsonPlusEntity::NudeString(x)) => {
-                match self.execute(Collector::new(), x, 0)? {
-                    Some(x) => {
-                        new_variables.system = Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
-                    }
-                    None => {
-                        return Err(anyhow::anyhow!("Failed to collect system contest {}", x));
-                    }
+            Some(JsonPlusEntity::NudeString(x)) => match self.execute(Collector::new(), x, 0)? {
+                Some(x) => {
+                    new_variables.system =
+                        Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
                 }
-            }
+                None => {
+                    return Err(anyhow::anyhow!("Failed to collect system contest {}", x));
+                }
+            },
             _ => {}
         }
         Ok(new_variables)
@@ -519,6 +539,6 @@ impl Worker {
             .flat_map(|mc| mc.0.clone())
             .map(|item| item.to_string())
             .collect::<Vec<String>>()
-            .join("\n"))    
+            .join("\n"))
     }
 }

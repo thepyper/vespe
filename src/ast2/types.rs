@@ -392,10 +392,11 @@ impl Anchor {
             range: Range::null(),
         }
     }
-    /// Create a new anchor from an existing one taking values from Parameters
-    pub fn update(&self, parameters: &Parameters) -> Self {
+    /// Create a new anchor from an existing one taking values from new Parameters and Arguments
+    pub fn update(&self, parameters: &Parameters, arguments: &Arguments) -> Self {
         let mut anchor = self.clone();
         anchor.parameters.update(parameters);
+        anchor.arguments = arguments.clone();
         anchor
     }
 }

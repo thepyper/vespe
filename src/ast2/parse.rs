@@ -888,7 +888,7 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(
             });
         }
 
-        p1.skip_many_whitespaces_or_eol();        
+        p1.skip_many_whitespaces_or_eol();
         if let Some(p2) = p1.consume_matching_string_immutable("}") {
             // Will exit on next iteration
         } else if let Some(p2) = p1.consume_matching_string_immutable(",") {

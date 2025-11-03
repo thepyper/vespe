@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::content::ModelContent;
 use super::variables::Variables;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
@@ -32,6 +33,7 @@ impl DynamicPolicy for AnswerPolicy {
         worker: &Worker,
         collector: Collector,
         local_variables: &Variables,
+        input: &ModelContent,
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
@@ -54,7 +56,7 @@ impl DynamicPolicy for AnswerPolicy {
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
                 let response =
-                    worker.call_model(&local_variables, vec![result.collector.context().clone()])?;
+                    worker.call_model(&local_variables, input)?; // vec![result.collector.context().clone()])?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);

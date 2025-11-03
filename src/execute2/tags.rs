@@ -74,6 +74,7 @@ pub trait DynamicPolicy {
         worker: &Worker,
         collector: Collector,
         local_variables: &Variables,
+        input: &ModelContent,
         parameters: &Parameters,
         arguments: &Arguments,
         state: Self::State,
@@ -132,10 +133,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
+        let input = collector.context().clone();
         let mono_result = P::mono(
             worker,
             collector,
             local_variables,
+            &input,
             &tag.parameters,
             &tag.arguments,
             state,
@@ -176,10 +179,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
+        let input = collector.context().clone();
         let mut mono_result = P::mono(
             worker,
             collector,
             local_variables,
+            &input,
             &anchor.parameters,
             &anchor.arguments,
             state,
@@ -213,10 +218,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
+        let input = collector.context().clone();
         let mut mono_result = P::mono(
             worker,
             collector,
             local_variables,
+            &input,
             &anchor.parameters,
             &anchor.arguments,
             state,

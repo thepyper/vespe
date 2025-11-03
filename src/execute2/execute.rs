@@ -261,7 +261,8 @@ impl Worker {
     pub(crate) fn call_model(
         &self,
         variables: &Variables,
-        contents: Vec<ModelContent>,
+        //contents: Vec<ModelContent>,
+        content: &ModelContent,
     ) -> Result<String> {
         /*/ let query = contents
         .into_iter()
@@ -271,7 +272,8 @@ impl Worker {
         .join("\n"); */
         let mut prompt = String::new();
         prompt.push_str(&variables.system.clone().unwrap_or(String::new()));
-        prompt.push_str(&self.modelcontent_to_string(&contents)?);
+        //prompt.push_str(&self.modelcontent_to_string(&contents)?);
+        prompt.push_str(&content.to_string());
         crate::agent::shell::shell_call(&variables.provider, &prompt)
     }
 
@@ -532,10 +534,11 @@ impl Worker {
             _ => {}
         }
         match parameters.get("system") {
+            
             Some(JsonPlusEntity::NudeString(x)) => match self.execute(Collector::new(), x, 0)? {
                 Some(x) => {
-                    new_variables.system =
-                        Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
+                    new_variables.system = Some(x.context().to_string());
+                        //Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
                 }
                 None => {
                     return Err(anyhow::anyhow!("Failed to collect system contest {}", x));
@@ -546,6 +549,7 @@ impl Worker {
         Ok(new_variables)
     }
 
+    /*
     fn modelcontent_to_string(&self, content: &Vec<ModelContent>) -> Result<String> {
         Ok(content
             .into_iter()
@@ -554,4 +558,5 @@ impl Worker {
             .collect::<Vec<String>>()
             .join("\n"))
     }
+            */
 }

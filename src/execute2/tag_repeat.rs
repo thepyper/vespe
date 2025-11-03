@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use super::content::ModelContent;
 use super::variables::Variables;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
@@ -30,6 +31,7 @@ impl DynamicPolicy for RepeatPolicy {
         worker: &Worker,
         collector: Collector,
         local_variables: &Variables,
+        input: &ModelContent,
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,

@@ -133,7 +133,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
-        let input = collector.context().clone();
+        let input = worker.redirect_input(local_variables, collector.context().clone())?;
         let mono_result = P::mono(
             worker,
             collector,
@@ -179,7 +179,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let input = collector.context().clone();
+        let input = worker.redirect_input(local_variables, collector.context().clone())?;
         let mut mono_result = P::mono(
             worker,
             collector,
@@ -218,7 +218,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let input = collector.context().clone();
+        let input = worker.redirect_input(local_variables, collector.context().clone())?;
         let mut mono_result = P::mono(
             worker,
             collector,

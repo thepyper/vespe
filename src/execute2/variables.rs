@@ -14,8 +14,10 @@ pub struct Variables {
     pub provider: String,
     /// The system prompt string used as prelude to context
     pub system: Option<String>,
-    /// The output redirection for other document modes
+    /// The output redirection to other contexts
     pub output: Option<String>,
+    /// The input redirection from other contexts
+    pub input: Option<String>,
 }
 
 impl Variables {
@@ -26,6 +28,7 @@ impl Variables {
             provider: "gemini -y -m gemini-2.5-flash".to_string(),
             system: None,
             output: None,
+            input: None,
         }
     }
 }

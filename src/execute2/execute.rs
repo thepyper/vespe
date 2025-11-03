@@ -491,13 +491,31 @@ impl Worker {
     fn redirect_output(&self, local_variables: &Variables, output: &str) -> Result<bool> {        
         match &local_variables.output {
             Some(x) => {
-                tracing::debug!("Output redirection to {}\n", &x);
                 let output_path = self.path_res.resolve_context(&x)?;
                 self.file_access.write_file(&output_path, output, None)?;
                 return Ok(true);
             }
             None => {
                 return Ok(false);
+            }
+        }
+    }
+
+    pub fn redirect_input(&self, local_variables: &Variables, input: ModelContent) -> Result<ModelContent> {
+        match &local_variables.input {
+            Some(x) => {
+                let output_path = self.path_res.resolve_context(&x)?;
+                match self.execute(Collector::new(), x, 0)? {
+                    Some(x) => {
+                        return Ok(x.context().clone())
+                    }
+                    None => {
+                        return Err(anyhow::anyhow!("Failed to collect input context {}", x));
+                    }
+                };
+            }
+            None => {
+                return Ok(input);
             }
         }
     }
@@ -528,8 +546,17 @@ impl Worker {
                 | JsonPlusEntity::SingleQuotedString(x)
                 | JsonPlusEntity::NudeString(x),
             ) => {
-                tracing::debug!("output = {}", &x);
                 new_variables.output = Some(x.clone());
+            }
+            _ => {}
+        }
+        match parameters.get("input") {
+            Some(
+                JsonPlusEntity::DoubleQuotedString(x)
+                | JsonPlusEntity::SingleQuotedString(x)
+                | JsonPlusEntity::NudeString(x),
+            ) => {
+                new_variables.input = Some(x.clone());
             }
             _ => {}
         }

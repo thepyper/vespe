@@ -176,7 +176,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let mono_result = P::mono(
+        let mut mono_result = P::mono(
             worker,
             collector,
             local_variables,
@@ -185,6 +185,10 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             state,
             false,
         )?;
+        // If output has been redirected, place output redirected placeholder
+        if let Some(_) = local_variables.output {
+            mono_result.collector.push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
+        }
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;

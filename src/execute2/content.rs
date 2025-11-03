@@ -82,7 +82,7 @@ impl ToString for ModelContent {
             .join("\n")
     }
 }
-
+/*
 impl<'de> Deserialize<'de> for ModelContent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -118,3 +118,4 @@ impl<'de> Deserialize<'de> for ModelContent {
         deserializer.deserialize_any(ModelContentVisitor)
     }
 }
+*/

@@ -262,7 +262,10 @@ impl Worker {
             .map(|item| item.to_string())
             .collect::<Vec<String>>()
             .join("\n"); */
-        crate::agent::shell::shell_call(&variables.provider, &self.modelcontent_to_string(&contents)?)
+        let mut prompt = String::new();
+        prompt.push_str(&variables.system.clone().unwrap_or(String::new()));
+        prompt.push_str(&self.modelcontent_to_string(&contents)?);
+        crate::agent::shell::shell_call(&variables.provider, &prompt)
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {

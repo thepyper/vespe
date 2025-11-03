@@ -147,11 +147,11 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
 
     fn collect_tag(
         _worker: &Worker,
-        _collector: Collector,
+        collector: Collector,
         _tag: &Tag,
     ) -> Result<(bool, Collector)> {
-        // Dynamic tags do not support collect_tag because they always produce a new anchor during execution
-        panic!("Dynamic tags do not support collect_tag because they always produce a new anchor during execution");
+        // Dynamic tags do not support collect_tag because they always produce a new anchor during execution, then trigger a new pass
+        Ok((true, collector))        
     }
 
     fn execute_anchor(

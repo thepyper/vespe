@@ -23,7 +23,7 @@ impl Variables {
     pub fn new() -> Self {
         Variables {
             // TODO: This should be loaded from a project or user configuration file.
-            provider: "gemini -p -y -m gemini-2.5-flash".to_string(),
+            provider: "gemini -y -m gemini-2.5-flash".to_string(),
             system: None,
             output: None,
         }

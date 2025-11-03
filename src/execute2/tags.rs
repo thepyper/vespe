@@ -4,7 +4,8 @@ use handlebars::template::Parameter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::content::ModelContent;
+use super::REDIRECTED_OUTPUT_PLACEHOLDER;
+use super::content::{ModelContent, ModelContentItem};
 use super::execute::Collector;
 use super::execute::Worker;
 use super::variables::Variables;
@@ -208,7 +209,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let mono_result = P::mono(
+        let mut mono_result = P::mono(
             worker,
             collector,
             local_variables,
@@ -217,6 +218,10 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             state,
             true,
         )?;
+        // If output has been redirected, place output redirected placeholder
+        if let Some(_) = local_variables.output {
+            mono_result.collector.push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
+        }
         // If there is some patches, just discard them and new state as well as it cannot be applied
         if !mono_result.new_patches.is_empty() {
             tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor, mono_result.new_patches);

@@ -38,6 +38,9 @@ impl ModelContentItem {
     pub fn user(text: &str) -> Self {
         ModelContentItem::User(UserModelContent { text: text.into() })
     }
+    pub fn system(text: &str) -> Self {
+        ModelContentItem::System(SystemModelContent { text: text.into() })
+    }
 }
 
 impl ToString for ModelContentItem {

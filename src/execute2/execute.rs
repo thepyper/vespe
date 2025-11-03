@@ -14,8 +14,6 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-const REDIRECTED_OUTPUT_PLACEHOLDER : &str = "Context here has been answered but output has been redirected.\nAnyway do not respond anymore to context above this sentence.\n";
-
 /// Executes a context and all its dependencies, processing all commands.
 ///
 /// This function orchestrates the full, multi-pass execution of a context file.
@@ -152,6 +150,10 @@ impl Collector {
         Ok(collector)
     }
 
+    pub fn push_item(&mut self, item: ModelContentItem) {
+        self.context.push(item);
+    }
+
     // TODO doc
     pub fn update_variables(&self, new_variables: &Variables) -> Self {
         let mut collector = self.clone();
@@ -213,7 +215,8 @@ impl Worker {
                             );
                         }
                         false => {
-                            return Ok(Some(collector_1));
+                            // Ready for final collect pass
+                            break;
                         }
                     };
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
@@ -434,7 +437,7 @@ impl Worker {
                     a0.uuid,
                     vec![(
                         tag.range,
-                        format!("{}\n{}{}\n", a0.to_string(), REDIRECTED_OUTPUT_PLACEHOLDER, a1.to_string()),
+                        format!("{}\n{}\n", a0.to_string(), a1.to_string()),
                     )],
                 ))
             }
@@ -467,7 +470,7 @@ impl Worker {
                         begin: anchor.range.end,
                         end: *anchor_end,
                     },
-                    REDIRECTED_OUTPUT_PLACEHOLDER.to_string(),
+                    String::new(),
                 )])
             }
             false => {

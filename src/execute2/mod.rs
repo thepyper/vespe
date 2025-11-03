@@ -39,3 +39,5 @@ use variables::*;
 
 pub use execute::collect_context;
 pub use execute::execute_context;
+
+const REDIRECTED_OUTPUT_PLACEHOLDER : &str = "Context here has been answered but output has been redirected, so do not respond anymore to context above this sentence.\n";

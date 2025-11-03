@@ -478,6 +478,7 @@ impl Worker {
     fn redirect_output(&self, collector: &Collector, output: &str) -> Result<bool> {
         match &collector.variables.output {
             Some(x) => {
+                tracing::debug!("Output redirection to {}\n", &x);
                 let output_path = self.path_res.resolve_context(&x)?;
                 self.file_access.write_file(&output_path, output, None)?;
                 return Ok(true);

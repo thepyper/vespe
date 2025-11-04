@@ -6,6 +6,7 @@ use tracing::{debug, error};
 use uuid::{uuid, Uuid};
 
 use super::editor::EditorCommunicator;
+use super::git::git_commit_files;
 
 pub trait FileAccessor {
     /// Read whole file to a string
@@ -58,6 +59,16 @@ impl ProjectFileAccessor {
             .unwrap()
             .modified_files_comments
             .join("\n")
+    }
+    pub fn commit(&self) -> Result<()> {
+        let _ = git_commit_files(
+            &self.modified_files(),
+            &self.modified_files_comments(),
+        )?;
+        let mut mutable = self.mutable.lock().unwrap();
+        mutable.modified_files.clear();
+        mutable.modified_files_comments.clear();
+        Ok(())
     }
 }
 

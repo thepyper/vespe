@@ -104,6 +104,7 @@ impl Project {
             self.path_res.clone(),
             context_name,
         )?;
+        self.file_access.commit()?;
         Ok(())
     }
 

@@ -131,7 +131,7 @@ impl Collector {
         Some(Collector {
             visit_stack,
             anchor_stack: Vec::new(),
-            context: ModelContent::new(),
+            context: self.context.clone(),
             variables: self.variables.clone(),
             latest_range: self.latest_range.clone(),
         })

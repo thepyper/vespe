@@ -61,11 +61,15 @@ impl ProjectFileAccessor {
             .join("\n")
     }
     pub fn commit(&self) -> Result<()> {
-        let _ = git_commit_files(
-            &self.modified_files(),
-            &self.modified_files_comments(),
-        )?;
         let mut mutable = self.mutable.lock().unwrap();
+        if !mutable.modified_files.is_empty() {
+            let _ = git_commit_files(
+                &mutable.modified_files.iter()
+                .cloned()
+                .collect::<Vec<PathBuf>>(),
+                &mutable.modified_files_comments.join("\n"),
+            )?;
+        }
         mutable.modified_files.clear();
         mutable.modified_files_comments.clear();
         Ok(())

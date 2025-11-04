@@ -137,6 +137,16 @@ impl Collector {
         })
     }
 
+    pub fn forget(&self) -> Self {
+        Collector {
+            visit_stack: self.visit_stack.clone(),
+            anchor_stack: self.anchor_stack.clone(),
+            context: ModelContent::new(),
+            variables: self.variables.clone(),
+            latest_range: self.latest_range.clone(),
+        }
+    }
+
     // TODO doc (entra in anchor)
     fn enter(&self, anchor: &Anchor) -> Self {
         let mut collector = self.clone();

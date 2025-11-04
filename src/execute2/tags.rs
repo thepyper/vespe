@@ -14,6 +14,7 @@ use super::tag_answer::AnswerPolicy;
 use super::tag_include::IncludePolicy;
 use super::tag_repeat::RepeatPolicy;
 use super::tag_set::SetPolicy;
+use super::tag_forget::ForgetPolicy;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
@@ -272,6 +273,7 @@ impl TagBehaviorDispatch {
                 StaticTagBehavior::<IncludePolicy>::execute_tag(worker, collector, local_variables, tag)
             }
             CommandKind::Set => StaticTagBehavior::<SetPolicy>::execute_tag(worker, collector, local_variables, tag),
+            CommandKind::Forget => StaticTagBehavior::<ForgetPolicy>::execute_tag(worker, collector, local_variables, tag),
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }
@@ -292,6 +294,7 @@ impl TagBehaviorDispatch {
                 StaticTagBehavior::<IncludePolicy>::collect_tag(worker, collector, local_variables, tag)
             }
             CommandKind::Set => StaticTagBehavior::<SetPolicy>::collect_tag(worker, collector, local_variables, tag),
+            CommandKind::Forget => StaticTagBehavior::<ForgetPolicy>::collect_tag(worker, collector, local_variables, tag),
             _ => Err(anyhow::anyhow!("Unsupported tag command")),
         }
     }

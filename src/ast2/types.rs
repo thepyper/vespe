@@ -106,6 +106,8 @@ pub enum CommandKind {
     Repeat,
     /// Set variables from there on
     Set,
+    /// Forget previous context
+    Forget,
 }
 
 impl ToString for CommandKind {
@@ -120,6 +122,7 @@ impl ToString for CommandKind {
             CommandKind::Derive => "derive",
             CommandKind::Repeat => "repeat",
             CommandKind::Set => "set",
+            CommandKind::Forget => "forget",
         }
         .to_string()
     }

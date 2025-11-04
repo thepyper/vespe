@@ -64,9 +64,11 @@ impl ProjectFileAccessor {
         let mut mutable = self.mutable.lock().unwrap();
         if !mutable.modified_files.is_empty() {
             let _ = git_commit_files(
-                &mutable.modified_files.iter()
-                .cloned()
-                .collect::<Vec<PathBuf>>(),
+                &mutable
+                    .modified_files
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<PathBuf>>(),
                 &mutable.modified_files_comments.join("\n"),
             )?;
         }

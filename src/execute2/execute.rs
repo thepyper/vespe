@@ -343,10 +343,15 @@ impl Worker {
                 }
                 Content::Tag(tag) => {
                     collector.set_latest_range(&tag.range);
-                    let local_variables = self.update_variables(&collector.variables(), &tag.parameters)?;
+                    let local_variables =
+                        self.update_variables(&collector.variables(), &tag.parameters)?;
                     if is_collect {
-                        let (do_next_pass, collector) =
-                            TagBehaviorDispatch::collect_tag(self, collector, &local_variables, tag)?;
+                        let (do_next_pass, collector) = TagBehaviorDispatch::collect_tag(
+                            self,
+                            collector,
+                            &local_variables,
+                            tag,
+                        )?;
                         (do_next_pass, collector, vec![])
                     } else {
                         TagBehaviorDispatch::execute_tag(self, collector, &local_variables, tag)?
@@ -355,7 +360,8 @@ impl Worker {
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
                         collector.set_latest_range(&anchor.range);
-                        let local_variables = self.update_variables(&collector.variables(), &anchor.parameters)?;
+                        let local_variables =
+                            self.update_variables(&collector.variables(), &anchor.parameters)?;
                         let anchor_end = anchor_index
                             .get_end(&anchor.uuid)
                             .ok_or(anyhow::anyhow!("end anchor not found"))?;
@@ -509,7 +515,7 @@ impl Worker {
         }
     }
 
-    fn redirect_output(&self, local_variables: &Variables, output: &str) -> Result<bool> {        
+    fn redirect_output(&self, local_variables: &Variables, output: &str) -> Result<bool> {
         match &local_variables.output {
             Some(x) => {
                 let output_path = self.path_res.resolve_context(&x)?;
@@ -522,14 +528,16 @@ impl Worker {
         }
     }
 
-    pub fn redirect_input(&self, local_variables: &Variables, input: ModelContent) -> Result<ModelContent> {
+    pub fn redirect_input(
+        &self,
+        local_variables: &Variables,
+        input: ModelContent,
+    ) -> Result<ModelContent> {
         match &local_variables.input {
             Some(x) => {
                 let output_path = self.path_res.resolve_context(&x)?;
                 match self.execute(Collector::new(), x, 0)? {
-                    Some(x) => {
-                        return Ok(x.context().clone())
-                    }
+                    Some(x) => return Ok(x.context().clone()),
                     None => {
                         return Err(anyhow::anyhow!("Failed to collect input context {}", x));
                     }
@@ -582,11 +590,10 @@ impl Worker {
             _ => {}
         }
         match parameters.get("system") {
-            
             Some(JsonPlusEntity::NudeString(x)) => match self.execute(Collector::new(), x, 0)? {
                 Some(x) => {
                     new_variables.system = Some(x.context().to_string());
-                        //Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
+                    //Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
                 }
                 None => {
                     return Err(anyhow::anyhow!("Failed to collect system contest {}", x));

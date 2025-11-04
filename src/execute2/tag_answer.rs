@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::content::ModelContent;
-use super::variables::Variables;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
+use super::variables::Variables;
 use crate::ast2::{Anchor, Arguments, Parameters, Position, Range, Tag};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -55,8 +55,7 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let response =
-                    worker.call_model(&local_variables, input)?; // vec![result.collector.context().clone()])?;
+                let response = worker.call_model(&local_variables, input)?; // vec![result.collector.context().clone()])?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);

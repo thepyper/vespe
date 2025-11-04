@@ -4,17 +4,17 @@ use handlebars::template::Parameter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::REDIRECTED_OUTPUT_PLACEHOLDER;
 use super::content::{ModelContent, ModelContentItem};
 use super::execute::Collector;
 use super::execute::Worker;
 use super::variables::Variables;
+use super::REDIRECTED_OUTPUT_PLACEHOLDER;
 
 use super::tag_answer::AnswerPolicy;
+use super::tag_forget::ForgetPolicy;
 use super::tag_include::IncludePolicy;
 use super::tag_repeat::RepeatPolicy;
 use super::tag_set::SetPolicy;
-use super::tag_forget::ForgetPolicy;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
@@ -28,7 +28,13 @@ pub trait TagBehavior {
         local_variables: &Variables,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
-    fn collect_tag(&self, worker: &Worker, collector: Collector, local_variables : &Variables, tag: &Tag) -> Result<(bool, Collector)>;
+    fn collect_tag(
+        &self,
+        worker: &Worker,
+        collector: Collector,
+        local_variables: &Variables,
+        tag: &Tag,
+    ) -> Result<(bool, Collector)>;
     fn execute_anchor(
         &self,
         worker: &Worker,
@@ -48,7 +54,12 @@ pub trait TagBehavior {
 }
 
 pub trait StaticPolicy {
-    fn collect_static_tag(worker: &Worker, collector: Collector, local_variables: &Variables, tag: &Tag) -> Result<Collector>;
+    fn collect_static_tag(
+        worker: &Worker,
+        collector: Collector,
+        local_variables: &Variables,
+        tag: &Tag,
+    ) -> Result<Collector>;
 }
 
 pub struct DynamicPolicyMonoResult<State> {
@@ -122,9 +133,13 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         Ok((false, collector, vec![]))
     }
 
-    fn collect_tag(&self, worker: &Worker, collector: Collector, 
-                local_variables: &Variables,
-tag: &Tag) -> Result<(bool, Collector)> {
+    fn collect_tag(
+        &self,
+        worker: &Worker,
+        collector: Collector,
+        local_variables: &Variables,
+        tag: &Tag,
+    ) -> Result<(bool, Collector)> {
         let collector = P::collect_static_tag(worker, collector, local_variables, tag)?;
         Ok((false, collector))
     }
@@ -163,7 +178,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
         } // TODO se nnn c'e', errore!! deve mutare in anchor!!
-        // Return collector and patches
+          // Return collector and patches
         let mut patches = mono_result.new_patches;
         patches.extend(patches_2);
         Ok((mono_result.do_next_pass, mono_result.collector, patches))
@@ -202,7 +217,9 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         )?;
         // If output has been redirected, place output redirected placeholder
         if let Some(_) = local_variables.output {
-            mono_result.collector.push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
+            mono_result
+                .collector
+                .push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
         }
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
@@ -210,7 +227,13 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // If there is some output, patch into new anchor
         let patches_2 = if let Some(output) = mono_result.new_output {
-            worker.inject_into_anchor(&mono_result.collector, local_variables, anchor, &anchor_end, &output)?
+            worker.inject_into_anchor(
+                &mono_result.collector,
+                local_variables,
+                anchor,
+                &anchor_end,
+                &output,
+            )?
         } else {
             vec![]
         };
@@ -242,7 +265,9 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         )?;
         // If output has been redirected, place output redirected placeholder
         if let Some(_) = local_variables.output {
-            mono_result.collector.push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
+            mono_result
+                .collector
+                .push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
         }
         // If there is some patches, just discard them and new state as well as it cannot be applied
         if !mono_result.new_patches.is_empty() {
@@ -280,7 +305,7 @@ impl TagBehaviorDispatch {
     pub fn execute_tag(
         worker: &Worker,
         collector: Collector,
-        local_variables: &Variables,    
+        local_variables: &Variables,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let behavior = Self::get_behavior(tag.command)?;
@@ -290,7 +315,7 @@ impl TagBehaviorDispatch {
     pub fn collect_tag(
         worker: &Worker,
         collector: Collector,
-        local_variables: &Variables,    
+        local_variables: &Variables,
         tag: &Tag,
     ) -> Result<(bool, Collector)> {
         let behavior = Self::get_behavior(tag.command)?;
@@ -300,7 +325,7 @@ impl TagBehaviorDispatch {
     pub fn execute_anchor(
         worker: &Worker,
         collector: Collector,
-        local_variables: &Variables,    
+        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
@@ -311,7 +336,7 @@ impl TagBehaviorDispatch {
     pub fn collect_anchor(
         worker: &Worker,
         collector: Collector,
-        local_variables: &Variables,    
+        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {

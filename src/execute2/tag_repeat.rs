@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::content::ModelContent;
-use super::variables::Variables;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
+use super::variables::Variables;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 

@@ -184,7 +184,7 @@ impl JsonPlusEntity {
         let n = object.properties.len();
         let (separator, pre_indent, indent) = match n {
             0 | 1 => (" ", "", "".into()),
-            _     => ("\n", pre_indent, format!("\t{}", pre_indent)),
+            _ => ("\n", pre_indent, format!("\t{}", pre_indent)),
         };
         let mut first = true;
         for (key, value) in &object.properties {

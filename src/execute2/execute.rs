@@ -75,18 +75,18 @@ pub fn collect_context(
 /// variables and the call stack to prevent infinite recursion.
 /// It is passed by value through the execution flow, ensuring a functional-style,
 /// predictable state management.
-#[derive(Clone)]
-pub(crate) struct Collector {
-    /// A stack of visited context file paths to detect and prevent circular includes.
-    visit_stack: Vec<PathBuf>,
-    /// A stack of entered anchors in current context file
-    anchor_stack: Vec<Anchor>,
-    /// The accumulated content that will be sent to the model.
-    context: ModelContent,
-    /// Execution-time variables and settings.
-    variables: Variables,
-    /// Latest processed range
-    latest_range: Range,
+pub struct Collector {
+    pub context: Vec<ModelContent>,
+    pub variables: Variables,
+    pub visit_stack: Vec<PathBuf>,
+}
+
+impl Collector {
+    /// Consumes the collector, adds a text content, and returns a new collector.
+    pub fn push_content(mut self, content: ModelContent) -> Self {
+        self.context.push(content);
+        self
+    }
 }
 
 impl Collector {
@@ -336,9 +336,9 @@ impl Worker {
             let (do_next_pass, next_collector, patches) = match item {
                 Content::Text(text) => {
                     collector.set_latest_range(&text.range);
-                    collector
-                        .context
-                        .push(ModelContentItem::user(&text.content));
+                if is_collect_pass {
+                    current_collector = current_collector.push_content(ModelContent::Text(text.clone()));
+                }
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {

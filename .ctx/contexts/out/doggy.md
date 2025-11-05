@@ -1,1 +1,1 @@
-Woof woof! Red is a color at the long-wavelength end of the visible spectrum, often associated with warmth, energy, and passion. Blue, on the other hand, is at the short-wavelength end, typically associated with coolness, calmness, and tranquility. Woof woof!
+Woof! Woof! Red and blue are primary colors, meaning they can't be created by mixing other colors. Red is associated with warmth, energy, and passion, while blue is often linked to coolness, calmness, and stability. They are also on opposite ends of the visible light spectrum! Woof! Woof!

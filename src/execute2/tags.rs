@@ -48,11 +48,7 @@ pub trait TagBehavior {
 }
 
 pub trait StaticPolicy {
-    fn collect_static_tag(
-        worker: &Worker,
-        collector: Collector,
-        tag: &Tag,
-    ) -> Result<Collector>;
+    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
 }
 
 pub struct DynamicPolicyMonoResult<State> {
@@ -209,12 +205,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // If there is some output, patch into new anchor
         let patches_2 = if let Some(output) = mono_result.new_output {
-            worker.inject_into_anchor(
-                &mono_result.collector,
-                anchor,
-                &anchor_end,
-                &output,
-            )?
+            worker.inject_into_anchor(&mono_result.collector, anchor, &anchor_end, &output)?
         } else {
             vec![]
         };
@@ -243,7 +234,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             true,
         )?;
         // If output has been redirected, place output redirected placeholder
-        if let Some(_) =  worker.is_output_redirected(&anchor.parameters)? {
+        if let Some(_) = worker.is_output_redirected(&anchor.parameters)? {
             mono_result
                 .collector
                 .push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));

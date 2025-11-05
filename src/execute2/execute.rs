@@ -92,7 +92,7 @@ impl Collector {
 
     pub fn anchor_stack(&self) -> &Vec<Anchor> {
         &self.anchor_stack
-    }    
+    }
 
     /// Creates a new, empty `Collector`.
     ///
@@ -195,18 +195,24 @@ impl Worker {
                 return Ok(collector.context().clone());
             }
             None => {
-                return Err(anyhow::anyhow!("Could not execute context {}", context_name));
+                return Err(anyhow::anyhow!(
+                    "Could not execute context {}",
+                    context_name
+                ));
             }
         }
     }
-    
+
     pub fn collect(&self, context_name: &str) -> Result<ModelContent> {
         match self._execute(Collector::new(), context_name, 0)? {
             Some(collector) => {
                 return Ok(collector.context().clone());
             }
             None => {
-                return Err(anyhow::anyhow!("Could not collect context {}", context_name));
+                return Err(anyhow::anyhow!(
+                    "Could not collect context {}",
+                    context_name
+                ));
             }
         }
     }
@@ -292,7 +298,7 @@ impl Worker {
         &self,
         parameters: &Parameters,
         content: &ModelContent,
-    ) -> Result<String> {       
+    ) -> Result<String> {
         let mut prompt = ModelContent::new();
         match parameters.parameters.properties.get("prefix") {
             Some(JsonPlusEntity::NudeString(x)) => {
@@ -314,9 +320,11 @@ impl Worker {
             None => {}
         }
         let provider = match parameters.parameters.properties.get("provider") {
-            Some(JsonPlusEntity::NudeString(x) | JsonPlusEntity::SingleQuotedString(x) | JsonPlusEntity::DoubleQuotedString(x)) => {
-                x
-            }
+            Some(
+                JsonPlusEntity::NudeString(x)
+                | JsonPlusEntity::SingleQuotedString(x)
+                | JsonPlusEntity::DoubleQuotedString(x),
+            ) => x,
             Some(x) => {
                 return Err(anyhow::anyhow!("Bad provider"));
             }
@@ -375,20 +383,15 @@ impl Worker {
                         // Agents write inside anchors
                         ModelContentItem::agent(&text.content)
                     };
-                    collector
-                        .context
-                        .push(content);
+                    collector.context.push(content);
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {
                     collector.set_latest_range(&tag.range);
                     let integrated_tag = tag.clone().integrate(&collector.default_parameters);
                     if is_collect {
-                        let (do_next_pass, collector) = TagBehaviorDispatch::collect_tag(
-                            self,
-                            collector,
-                            &integrated_tag,
-                        )?;
+                        let (do_next_pass, collector) =
+                            TagBehaviorDispatch::collect_tag(self, collector, &integrated_tag)?;
                         (do_next_pass, collector, vec![])
                     } else {
                         TagBehaviorDispatch::execute_tag(self, collector, &integrated_tag)?
@@ -583,7 +586,7 @@ impl Worker {
         match &parameters.parameters.properties.get("input") {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let output_path = self.path_res.resolve_context(&x)?;
-                self.execute(&x)                   
+                self.execute(&x)
             }
             Some(x) => {
                 return Err(anyhow::anyhow!("Unsupported input {:?}", x));

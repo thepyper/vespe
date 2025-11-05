@@ -227,7 +227,7 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
         }
 
         if let Some((text, p_next)) = _try_parse_text(&p_current)? {
-            let latest_content = contents.pop();            
+            let latest_content = contents.pop();
             match latest_content {
                 Some(Content::Text(prev_text)) => {
                     let mut new_text = String::new();
@@ -620,7 +620,7 @@ pub(crate) fn _try_parse_identifier<'doc>(
 
 pub(crate) fn _try_parse_value<'doc>(
     parser: &Parser<'doc>,
-) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {   
+) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
     if let Some(x) = _try_parse_enclosed_value(parser, "\"")? {
         Ok(Some(x))
     } else if let Some(x) = _try_parse_enclosed_value(parser, "\'")? {

@@ -279,19 +279,12 @@ impl Worker {
     pub(crate) fn call_model(
         &self,
         variables: &Variables,
-        //contents: Vec<ModelContent>,
         content: &ModelContent,
-    ) -> Result<String> {
-        /*/ let query = contents
-        .into_iter()
-        .flat_map(|mc| mc.0)
-        .map(|item| item.to_string())
-        .collect::<Vec<String>>()
-        .join("\n"); */
+    ) -> Result<String> {       
         let mut prompt = String::new();
-        prompt.push_str(&variables.system.clone().unwrap_or(String::new()));
-        //prompt.push_str(&self.modelcontent_to_string(&contents)?);
+        prompt.push_str(&variables.prefix.clone().unwrap_or(String::new()));
         prompt.push_str(&content.to_string());
+        prompt.push_str(&variables.postfix.clone().unwrap_or(String::new()));
         crate::agent::shell::shell_call(&variables.provider, &prompt)
     }
 
@@ -589,11 +582,21 @@ impl Worker {
             }
             _ => {}
         }
-        match parameters.get("system") {
+        match parameters.get("prefix") {
             Some(JsonPlusEntity::NudeString(x)) => match self.execute(Collector::new(), x, 0)? {
                 Some(x) => {
-                    new_variables.system = Some(x.context().to_string());
-                    //Some(self.modelcontent_to_string(&vec![x.context().clone()])?);
+                    new_variables.prefix = Some(x.context().to_string());
+                }
+                None => {
+                    return Err(anyhow::anyhow!("Failed to collect system contest {}", x));
+                }
+            },
+            _ => {}
+        }
+        match parameters.get("postfix") {
+            Some(JsonPlusEntity::NudeString(x)) => match self.execute(Collector::new(), x, 0)? {
+                Some(x) => {
+                    new_variables.postfix = Some(x.context().to_string());
                 }
                 None => {
                     return Err(anyhow::anyhow!("Failed to collect system contest {}", x));

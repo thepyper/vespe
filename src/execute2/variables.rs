@@ -13,7 +13,9 @@ pub struct Variables {
     /// The command-line string used to invoke the external model provider (e.g., an LLM agent).
     pub provider: String,
     /// The system prompt string used as prelude to context
-    pub system: Option<String>,
+    pub prefix: Option<String>,
+    /// The system prompt string used as postfix to context
+    pub postfix: Option<String>,
     /// The output redirection to other contexts
     pub output: Option<String>,
     /// The input redirection from other contexts
@@ -26,7 +28,8 @@ impl Variables {
         Variables {
             // TODO: This should be loaded from a project or user configuration file.
             provider: "gemini -y -m gemini-2.5-flash".to_string(),
-            system: None,
+            prefix: None,
+            postfix: None,
             output: None,
             input: None,
         }

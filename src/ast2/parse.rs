@@ -227,7 +227,29 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
         }
 
         if let Some((text, p_next)) = _try_parse_text(&p_current)? {
-            contents.push(Content::Text(text));
+            let latest_content = contents.pop();            
+            match latest_content {
+                Some(Content::Text(prev_text)) => {
+                    let mut new_text = String::new();
+                    new_text.push_str(&prev_text.content);
+                    new_text.push_str(&text.content);
+                    let new_range = Range {
+                        begin: prev_text.range.begin,
+                        end: text.range.end,
+                    };
+                    contents.push(Content::Text(Text {
+                        content: new_text,
+                        range: new_range,
+                    }));
+                }
+                Some(x) => {
+                    contents.push(x);
+                    contents.push(Content::Text(text));
+                }
+                None => {
+                    contents.push(Content::Text(text));
+                }
+            }
             p_current = p_next;
             continue;
         }
@@ -598,17 +620,7 @@ pub(crate) fn _try_parse_identifier<'doc>(
 
 pub(crate) fn _try_parse_value<'doc>(
     parser: &Parser<'doc>,
-) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
-    /* if let Some(p1) = parser.consume_matching_char_immutable('"') {
-        // try to parse a double-quoted string
-        _try_parse_enclosed_value(&p1, "\"")
-    } else if let Some(p1) = parser.consume_matching_char_immutable('\'') {
-        // try to parse a single-quoted string
-        _try_parse_enclosed_value(&p1, "\'")
-    } else {
-        // try to parse a "nude" value (unquoted)
-        _try_parse_nude_value(parser)
-    } */
+) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {   
     if let Some(x) = _try_parse_enclosed_value(parser, "\"")? {
         Ok(Some(x))
     } else if let Some(x) = _try_parse_enclosed_value(parser, "\'")? {

@@ -1,0 +1,150 @@
+> rust: so che con i Trait posso implementare dei metodi di default. C'e' qualche modo per "stratificare" la
+  implementazione dei metodi di default? tipo un trait Tag che ha 6 metodi, ma ne implementa 2, e in qualche modo
+   "ereditare" il trait Tag e fare un MoreSpecificTag che implementa altri 2 metodi (e magari reimplementa quelli
+   del Tag)... esiste? forse un "impl Trait for Trait" !?!?
+
+✦ Ciao! Ottima domanda. Hai centrato perfettamente uno dei concetti chiave del sistema dei trait di Rust.
+
+  La tua intuizione è corretta, ma la sintassi che hai immaginato (impl Trait for Trait) non è quella usata da
+   Rust. Il meccanismo che cerchi si chiama "supertrait" o, più formalmente, specificare un trait come "bound"
+   (vincolo) di un altro.
+
+  In pratica, puoi definire un trait che richiede che, per essere implementato, anche un altro trait (il
+  "genitore" o "supertrait") debba essere implementato. Questo crea esattamente la stratificazione che
+  descrivi.
+
+  Vediamo come funziona usando il tuo esempio di Tag e MoreSpecificTag.
+
+  Come "Ereditare" da un Trait
+
+  La sintassi è trait NomeFiglio: NomeGenitore.
+
+  Questo significa: "Qualsiasi tipo che voglia implementare NomeFiglio deve prima (o contemporaneamente)
+  implementare NomeGenitore".
+
+  Ecco un esempio di codice completo che mette in pratica la tua idea:
+
+     1 // 1. TRAIT BASE ("Tag")
+     2 // Definiamo un trait con 6 metodi.
+     3 // - 2 hanno un'implementazione di default.
+     4 // - 4 devono essere implementati dal tipo concreto.
+     5 trait Tag {
+     6     // Metodi con implementazione di default
+     7     fn method_a(&self) {
+     8         println!("-> Chiamato method_a (default da Tag)");
+     9     }
+    10     fn method_b(&self) {
+    11         println!("-> Chiamato method_b (default da Tag)");
+    12     }
+    13
+    14     // Metodi senza implementazione di default (obbligatori)
+    15     fn method_c(&self);
+    16     fn method_d(&self);
+    17     fn method_e(&self);
+    18     fn method_f(&self);
+    19 }
+    20
+    21 // 2. TRAIT "DERIVATO" ("MoreSpecificTag")
+    22 // Questo trait "eredita" da Tag. Qualsiasi tipo che implementa MoreSpecificTag
+    23 // DEVE implementare anche Tag.
+    24 // Aggiungiamo un'implementazione di default per altri due metodi.
+    25 trait MoreSpecificTag: Tag {
+    26     // Forniamo un'implementazione di default per method_e e method_f
+    27     // che erano obbligatori in Tag.
+    28     fn method_e(&self) {
+    29         println!("-> Chiamato method_e (default da MoreSpecificTag)");
+    30     }
+    31     fn method_f(&self) {
+    32         println!("-> Chiamato method_f (default da MoreSpecificTag)");
+    33     }
+    34 }
+    35
+    36 // 3. TIPO CONCRETO
+    37 // Una struct che implementerà i nostri trait.
+    38 struct MyObject;
+    39
+    40 // 4. IMPLEMENTAZIONE DEL TRAIT BASE
+    41 // Ora implementiamo Tag per MyObject.
+    42 impl Tag for MyObject {
+    43     // Usiamo il default per method_a (non lo nominiamo nemmeno).
+    44
+    45     // Facciamo l'override di method_b.
+    46     fn method_b(&self) {
+    47         println!("-> Chiamato method_b (OVERRIDE da MyObject)");
+    48     }
+    49
+    50     // Implementiamo i metodi che erano obbligatori in Tag
+    51     // e non avevano un default in MoreSpecificTag.
+    52     fn method_c(&self) {
+    53         println!("-> Chiamato method_c (implementato da MyObject)");
+    54     }
+    55     fn method_d(&self) {
+    56         println!("-> Chiamato method_d (implementato da MyObject)");
+    57     }
+    58
+    59     // Anche se MoreSpecificTag fornisce un default per method_e e method_f,
+    60     // dobbiamo comunque dichiararli qui perché Tag li richiede.
+    61     // La loro implementazione effettiva può essere quella del trait "figlio".
+    62     fn method_e(&self) {
+    63         // Per usare l'implementazione di default di MoreSpecificTag,
+    64         // la invochiamo esplicitamente.
+    65         <Self as MoreSpecificTag>::method_e(self);
+    66     }
+    67     fn method_f(&self) {
+    68         <Self as MoreSpecificTag>::method_f(self);
+    69     }
+    70 }
+    71
+    72 // 5. IMPLEMENTAZIONE DEL TRAIT "DERIVATO"
+    73 // Poiché abbiamo già `impl Tag for MyObject`, il compilatore è contento.
+    74 impl MoreSpecificTag for MyObject {
+    75     // Qui potremmo fare l'override dei metodi di MoreSpecificTag se volessimo.
+    76     // Per esempio, facciamo l'override di method_f.
+    77     fn method_f(&self) {
+    78         println!("-> Chiamato method_f (OVERRIDE da impl MoreSpecificTag per MyObject)");
+    79     }
+    80 }
+    81
+    82
+    83 fn main() {
+    84     let obj = MyObject;
+    85
+    86     println!("Test su method_a (usa default di Tag):");
+    87     obj.method_a(); // Usa il default di Tag
+    88
+    89     println!("\nTest su method_b (usa override di MyObject):");
+    90     obj.method_b(); // Usa l'override in `impl Tag for MyObject`
+    91
+    92     println!("\nTest su method_c (usa impl di MyObject):");
+    93     obj.method_c(); // Usa l'implementazione obbligatoria
+    94
+    95     println!("\nTest su method_d (usa impl di MyObject):");
+    96     obj.method_d(); // Usa l'implementazione obbligatoria
+    97
+    98     println!("\nTest su method_e (usa default di MoreSpecificTag):");
+    99     obj.method_e(); // Usa il default di MoreSpecificTag
+   100
+   101     println!("\nTest su method_f (usa override di MoreSpecificTag):");
+   102     obj.method_f(); // Usa l'override in `impl MoreSpecificTag for MyObject`
+   103 }
+
+  Riepilogo dei Punti Chiave:
+
+   1. Sintassi del Supertrait: trait Figlio: Genitore è il modo per dire che Figlio richiede Genitore.
+   2. Stratificazione:
+       * Tag definisce un contratto di base con alcuni default e alcuni obblighi.
+       * MoreSpecificTag eredita questi vincoli e aggiunge i suoi default, specializzando il comportamento.
+   3. Override: L'override dei metodi con implementazione di default avviene sempre nel blocco impl per il tipo
+      concreto (impl Tag for MyObject). Un trait non può fare l'override di un metodo del suo supertrait; può
+      solo "nasconderlo" con un metodo omonimo, ma è il tipo finale che decide quale implementazione usare.
+   4. Chiarezza: Questo pattern è molto potente perché permette di costruire gerarchie di astrazioni. Ad esempio,
+       in una libreria grafica potresti avere:
+       * trait Drawable (ha un metodo draw())
+       * trait Clickable: Drawable (aggiunge un metodo on_click())
+       * trait Draggable: Clickable (aggiunge on_drag_start(), on_drag_end())
+
+  Un Button potrebbe implementare Clickable, mentre uno Slider potrebbe implementare Draggable. Il sistema dei
+   trait garantisce che tutto ciò che è Draggable sia anche Clickable e Drawable.
+
+  In conclusione: sì, il concetto esiste ed è fondamentale in Rust. Si realizza con i supertrait, non con impl
+   Trait for Trait.

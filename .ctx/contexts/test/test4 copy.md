@@ -1,4 +1,5 @@
 @include rules
+@include agent/gemini_25_flash_yolo
 
 Tell me 3 violet things.
 
@@ -11,7 +12,7 @@ Tell me the difference between red and blue.
 @answer {
 	prefix: agent/doggy,
 	output: out/doggy
-}  -->
+}  
 
 Tell me something nice.
 

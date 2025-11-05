@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::execute::{Collector, Worker};
 use super::tags::StaticPolicy;
-use super::variables::Variables;
+//use super::variables::Variables;
 use crate::ast2::Tag;
 pub struct ForgetPolicy;
 
@@ -12,7 +12,6 @@ impl StaticPolicy for ForgetPolicy {
     fn collect_static_tag(
         worker: &Worker,
         collector: Collector,
-        local_variables: &Variables,
         tag: &Tag,
     ) -> Result<Collector> {
         tracing::debug!(

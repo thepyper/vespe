@@ -5,7 +5,7 @@ use uuid::Uuid;
 use super::content::ModelContent;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
-use super::variables::Variables;
+//use super::variables::Variables;
 use crate::ast2::{Anchor, Arguments, Parameters, Position, Range, Tag};
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -32,7 +32,6 @@ impl DynamicPolicy for AnswerPolicy {
     fn mono(
         worker: &Worker,
         collector: Collector,
-        local_variables: &Variables,
         input: &ModelContent,
         parameters: &Parameters,
         arguments: &Arguments,
@@ -55,7 +54,7 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let response = worker.call_model(&local_variables, input)?; 
+                let response = worker.call_model(parameters, input)?; 
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);

@@ -25,7 +25,7 @@ mod tag_repeat;
 mod tag_set;
 mod tags;
 mod utils;
-mod variables;
+//mod variables;
 
 use content::*;
 use execute::*;
@@ -36,7 +36,7 @@ use tag_repeat::*;
 use tag_set::*;
 use tags::*;
 use utils::*;
-use variables::*;
+//use variables::*;
 
 pub use execute::collect_context;
 pub use execute::execute_context;

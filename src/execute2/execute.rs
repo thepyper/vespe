@@ -7,7 +7,7 @@ use crate::path::PathResolver;
 use uuid::Uuid;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
-use crate::execute2::variables::{self, Variables};
+//use crate::execute2::variables::{self, Variables};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -35,10 +35,7 @@ pub fn execute_context(
     tracing::debug!("Executing context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    match exe.execute(Collector::new(), context_name, 77)? {
-        Some(collector) => Ok(collector.context().clone()),
-        None => Err(anyhow::anyhow!("Execute context returned no collector")),
-    }
+    exe.execute(context_name)
 }
 
 /// Collects a context's content without executing any commands that modify state or call models.
@@ -63,10 +60,7 @@ pub fn collect_context(
 
     let exe = Worker::new(file_access, path_res);
 
-    match exe.execute(Collector::new(), context_name, 0)? {
-        Some(collector) => Ok(collector.context().clone()),
-        None => Err(anyhow::anyhow!("Collect context returned no collector")),
-    }
+    exe.collect(context_name)
 }
 
 /// Central state object for the execution engine.
@@ -84,7 +78,7 @@ pub(crate) struct Collector {
     /// The accumulated content that will be sent to the model.
     context: ModelContent,
     /// Execution-time variables and settings.
-    variables: Variables,
+    ///variables: Variables,
     /// Execution-time default parameters for tags
     default_parameters: Parameters,
     /// Latest processed range
@@ -98,11 +92,7 @@ impl Collector {
 
     pub fn anchor_stack(&self) -> &Vec<Anchor> {
         &self.anchor_stack
-    }
-
-    pub fn variables(&self) -> &Variables {
-        &self.variables
-    }
+    }    
 
     /// Creates a new, empty `Collector`.
     ///
@@ -113,7 +103,6 @@ impl Collector {
             visit_stack: Vec::new(),
             anchor_stack: Vec::new(),
             context: ModelContent::new(),
-            variables: Variables::new(),
             default_parameters: Parameters::new(),
             latest_range: Range::null(),
         }
@@ -135,7 +124,6 @@ impl Collector {
             visit_stack,
             anchor_stack: Vec::new(),
             context: self.context.clone(),
-            variables: self.variables.clone(),
             default_parameters: self.default_parameters.clone(),
             latest_range: self.latest_range.clone(),
         })
@@ -146,7 +134,6 @@ impl Collector {
             visit_stack: self.visit_stack.clone(),
             anchor_stack: self.anchor_stack.clone(),
             context: ModelContent::new(),
-            variables: self.variables.clone(),
             default_parameters: self.default_parameters.clone(),
             latest_range: self.latest_range.clone(),
         }
@@ -177,13 +164,6 @@ impl Collector {
         self.latest_range = range.clone();
     }
 
-    // TODO doc
-    pub fn update_variables(&self, new_variables: &Variables) -> Self {
-        let mut collector = self.clone();
-        collector.variables = new_variables.clone();
-        collector
-    }
-
     pub fn set_default_parameters(mut self, new_parameters: &Parameters) -> Self {
         self.default_parameters = new_parameters.clone();
         self
@@ -209,11 +189,33 @@ impl Worker {
         }
     }
 
+    pub fn execute(&self, context_name: &str) -> Result<ModelContent> {
+        match self._execute(Collector::new(), context_name, 100)? {
+            Some(collector) => {
+                return Ok(collector.context().clone());
+            }
+            None => {
+                return Err(anyhow::anyhow!("Could not execute context {}", context_name));
+            }
+        }
+    }
+    
+    pub fn collect(&self, context_name: &str) -> Result<ModelContent> {
+        match self._execute(Collector::new(), context_name, 0)? {
+            Some(collector) => {
+                return Ok(collector.context().clone());
+            }
+            None => {
+                return Err(anyhow::anyhow!("Could not collect context {}", context_name));
+            }
+        }
+    }
+
     /// Executes a context fully, running a loop of `execute_step` until the state converges.
     ///
     /// This is the main entry point for a full execution, which can modify files.
     /// It orchestrates the two-pass strategy until all anchors are `Completed`.
-    pub fn execute(
+    pub fn _execute(
         &self,
         collector: Collector,
         context_name: &str,
@@ -288,18 +290,41 @@ impl Worker {
 
     pub(crate) fn call_model(
         &self,
-        variables: &Variables,
+        parameters: &Parameters,
         content: &ModelContent,
     ) -> Result<String> {       
         let mut prompt = ModelContent::new();
-        if let Some(x) = &variables.prefix {
-            prompt.push(ModelContentItem::system(&x));
+        match parameters.parameters.properties.get("prefix") {
+            Some(JsonPlusEntity::NudeString(x)) => {
+                prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
+            }
+            Some(x) => {
+                return Err(anyhow::anyhow!("Bad prefix"));
+            }
+            None => {}
         }
         prompt.extend(content.clone());
-        if let Some(x) = &variables.postfix {
-            prompt.push(ModelContentItem::system(&x));
+        match parameters.parameters.properties.get("postfix") {
+            Some(JsonPlusEntity::NudeString(x)) => {
+                prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
+            }
+            Some(x) => {
+                return Err(anyhow::anyhow!("Bad postfix"));
+            }
+            None => {}
         }
-        crate::agent::shell::shell_call(&variables.provider, &prompt.to_prompt()) // to_string())
+        let provider = match parameters.parameters.properties.get("provider") {
+            Some(JsonPlusEntity::NudeString(x) | JsonPlusEntity::SingleQuotedString(x) | JsonPlusEntity::DoubleQuotedString(x)) => {
+                x
+            }
+            Some(x) => {
+                return Err(anyhow::anyhow!("Bad provider"));
+            }
+            None => {
+                return Err(anyhow::anyhow!("No provider"));
+            }
+        };
+        crate::agent::shell::shell_call(&provider, &prompt.to_prompt()) // to_string())
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
@@ -357,26 +382,21 @@ impl Worker {
                 }
                 Content::Tag(tag) => {
                     collector.set_latest_range(&tag.range);
-                    let local_variables =
-                        self.update_variables(&collector.variables(), &tag.parameters)?;
                     let integrated_tag = tag.clone().integrate(&collector.default_parameters);
                     if is_collect {
                         let (do_next_pass, collector) = TagBehaviorDispatch::collect_tag(
                             self,
                             collector,
-                            &local_variables,
                             &integrated_tag,
                         )?;
                         (do_next_pass, collector, vec![])
                     } else {
-                        TagBehaviorDispatch::execute_tag(self, collector, &local_variables, &integrated_tag)?
+                        TagBehaviorDispatch::execute_tag(self, collector, &integrated_tag)?
                     }
                 }
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
                         collector.set_latest_range(&anchor.range);
-                        let local_variables =
-                            self.update_variables(&collector.variables(), &anchor.parameters)?;
                         let anchor_end = anchor_index
                             .get_end(&anchor.uuid)
                             .ok_or(anyhow::anyhow!("end anchor not found"))?;
@@ -392,7 +412,6 @@ impl Worker {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
                                 self,
                                 collector,
-                                &local_variables,
                                 anchor,
                                 anchor_end.range.begin,
                             )?;
@@ -401,7 +420,6 @@ impl Worker {
                             TagBehaviorDispatch::execute_anchor(
                                 self,
                                 collector,
-                                &local_variables,
                                 anchor,
                                 anchor_end.range.begin,
                             )?
@@ -471,12 +489,11 @@ impl Worker {
     pub fn tag_to_anchor(
         &self,
         collector: &Collector,
-        local_variables: &Variables,
         tag: &Tag,
         output: &str,
     ) -> Result<(Uuid, Vec<(Range, String)>)> {
         let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
-        match self.redirect_output(local_variables, output)? {
+        match self.redirect_output(&tag.parameters, output)? {
             true => {
                 // Output redirected, just convert tag into anchor
                 Ok((
@@ -503,12 +520,11 @@ impl Worker {
     pub fn inject_into_anchor(
         &self,
         collector: &Collector,
-        local_variables: &Variables,
         anchor: &Anchor,
         anchor_end: &Position,
         output: &str,
     ) -> Result<Vec<(Range, String)>> {
-        match self.redirect_output(local_variables, output)? {
+        match self.redirect_output(&anchor.parameters, output)? {
             true => {
                 // Output redirected, delete anchor contents
                 Ok(vec![(
@@ -532,10 +548,24 @@ impl Worker {
         }
     }
 
-    fn redirect_output(&self, local_variables: &Variables, output: &str) -> Result<bool> {
-        match &local_variables.output {
-            Some(x) => {
+    pub fn is_output_redirected(&self, parameters: &Parameters) -> Result<Option<PathBuf>> {
+        match &parameters.parameters.properties.get("output") {
+            Some(JsonPlusEntity::NudeString(x)) => {
                 let output_path = self.path_res.resolve_context(&x)?;
+                return Ok(Some(output_path));
+            }
+            Some(x) => {
+                return Err(anyhow::anyhow!("Unsupported output {:?}", x));
+            }
+            None => {
+                return Ok(None);
+            }
+        }
+    }
+
+    fn redirect_output(&self, parameters: &Parameters, output: &str) -> Result<bool> {
+        match self.is_output_redirected(parameters)? {
+            Some(output_path) => {
                 self.file_access.write_file(&output_path, output, None)?;
                 return Ok(true);
             }
@@ -547,18 +577,16 @@ impl Worker {
 
     pub fn redirect_input(
         &self,
-        local_variables: &Variables,
+        parameters: &Parameters,
         input: ModelContent,
     ) -> Result<ModelContent> {
-        match &local_variables.input {
-            Some(x) => {
+        match &parameters.parameters.properties.get("input") {
+            Some(JsonPlusEntity::NudeString(x)) => {
                 let output_path = self.path_res.resolve_context(&x)?;
-                match self.execute(Collector::new(), x, 0)? {
-                    Some(x) => return Ok(x.context().clone()),
-                    None => {
-                        return Err(anyhow::anyhow!("Failed to collect input context {}", x));
-                    }
-                };
+                self.execute(&x)                   
+            }
+            Some(x) => {
+                return Err(anyhow::anyhow!("Unsupported input {:?}", x));
             }
             None => {
                 return Ok(input);
@@ -568,66 +596,5 @@ impl Worker {
 
     pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
         Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
-    }
-
-    pub fn update_variables(
-        &self,
-        variables: &Variables,
-        parameters: &Parameters,
-    ) -> Result<Variables> {
-        let mut new_variables = variables.clone();
-        match parameters.get("provider") {
-            Some(
-                JsonPlusEntity::DoubleQuotedString(x)
-                | JsonPlusEntity::SingleQuotedString(x)
-                | JsonPlusEntity::NudeString(x),
-            ) => {
-                new_variables.provider = x.clone();
-            }
-            _ => {}
-        };
-        match parameters.get("output") {
-            Some(
-                JsonPlusEntity::DoubleQuotedString(x)
-                | JsonPlusEntity::SingleQuotedString(x)
-                | JsonPlusEntity::NudeString(x),
-            ) => {
-                new_variables.output = Some(x.clone());
-            }
-            _ => {}
-        }
-        match parameters.get("input") {
-            Some(
-                JsonPlusEntity::DoubleQuotedString(x)
-                | JsonPlusEntity::SingleQuotedString(x)
-                | JsonPlusEntity::NudeString(x),
-            ) => {
-                new_variables.input = Some(x.clone());
-            }
-            _ => {}
-        }
-        match parameters.get("prefix") {
-            Some(JsonPlusEntity::NudeString(x)) => match self.execute(Collector::new(), x, 0)? {
-                Some(x) => {
-                    new_variables.prefix = Some(x.context().to_string());
-                }
-                None => {
-                    return Err(anyhow::anyhow!("Failed to collect system contest {}", x));
-                }
-            },
-            _ => {}
-        }
-        match parameters.get("postfix") {
-            Some(JsonPlusEntity::NudeString(x)) => match self.execute(Collector::new(), x, 0)? {
-                Some(x) => {
-                    new_variables.postfix = Some(x.context().to_string());
-                }
-                None => {
-                    return Err(anyhow::anyhow!("Failed to collect system contest {}", x));
-                }
-            },
-            _ => {}
-        }
-        Ok(new_variables)
     }
 }

@@ -6,7 +6,6 @@ use super::content::ModelContent;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
-use super::variables::Variables;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
@@ -30,7 +29,6 @@ impl DynamicPolicy for RepeatPolicy {
     fn mono(
         worker: &Worker,
         collector: Collector,
-        local_variables: &Variables,
         input: &ModelContent,
         parameters: &Parameters,
         arguments: &Arguments,

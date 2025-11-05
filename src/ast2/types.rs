@@ -247,12 +247,24 @@ impl Parameters {
     pub fn get(&self, key: &str) -> Option<&JsonPlusEntity> {
         self.parameters.properties.get(key)
     }
-    pub fn update(&mut self, other: &Parameters) {
+    pub fn update(mut self, other: &Parameters) -> Self {
         for parameter in other.parameters.properties.iter() {
             self.parameters
                 .properties
                 .insert(parameter.0.clone(), parameter.1.clone());
         }
+        self
+    }
+    pub fn integrate(mut self, other: &Parameters) -> Self {
+        for parameter in other.parameters.properties.iter() {
+            if let Some(_) = self.parameters.properties.get(parameter.0) {
+                continue;
+            }
+            self.parameters
+                .properties
+                .insert(parameter.0.clone(), parameter.1.clone());
+        }
+        self
     }
 }
 
@@ -313,6 +325,13 @@ pub struct Tag {
     pub arguments: Arguments,
     /// The location of the tag in the source document.
     pub range: Range,
+}
+
+impl Tag {
+    pub fn integrate(mut self, other: &Parameters) -> Self {
+        self.parameters = self.parameters.integrate(other);
+        self
+    }
 }
 
 impl ToString for Tag {
@@ -404,7 +423,7 @@ impl Anchor {
     /// Create a new anchor from an existing one taking values from new Parameters and Arguments
     pub fn update(&self, parameters: &Parameters, arguments: &Arguments) -> Self {
         let mut anchor = self.clone();
-        anchor.parameters.update(parameters);
+        anchor.parameters = anchor.parameters.update(parameters);
         anchor.arguments = arguments.clone();
         anchor
     }

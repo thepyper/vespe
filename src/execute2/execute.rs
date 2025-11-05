@@ -359,16 +359,17 @@ impl Worker {
                     collector.set_latest_range(&tag.range);
                     let local_variables =
                         self.update_variables(&collector.variables(), &tag.parameters)?;
+                    let integrated_tag = tag.clone().integrate(&collector.default_parameters);
                     if is_collect {
                         let (do_next_pass, collector) = TagBehaviorDispatch::collect_tag(
                             self,
                             collector,
                             &local_variables,
-                            tag,
+                            &integrated_tag,
                         )?;
                         (do_next_pass, collector, vec![])
                     } else {
-                        TagBehaviorDispatch::execute_tag(self, collector, &local_variables, tag)?
+                        TagBehaviorDispatch::execute_tag(self, collector, &local_variables, &integrated_tag)?
                     }
                 }
                 Content::Anchor(anchor) => match anchor.kind {

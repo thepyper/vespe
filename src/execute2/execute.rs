@@ -147,8 +147,9 @@ impl Collector {
         Ok(self)
     }
 
-    pub fn push_item(&mut self, item: ModelContentItem) {
+    pub fn push_item(mut self, item: ModelContentItem) -> Self {
         self.context.push(item);
+        self
     }
 
     pub fn set_latest_range(&mut self, range: &Range) {

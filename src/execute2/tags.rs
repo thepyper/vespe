@@ -184,7 +184,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let input = worker.redirect_input(&anchor.parameters, collector.context().clone())?;
-        let mut mono_result = P::mono(
+        let mono_result = P::mono(
             worker,
             collector,
             &input,
@@ -193,10 +193,10 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             state,
             false,
         )?;
+        let mut collector = mono_result.collector;
         // If output has been redirected, place output redirected placeholder
         if let Some(_) = worker.is_output_redirected(&anchor.parameters)? {
-            mono_result
-                .collector
+            collector = collector
                 .push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
         }
         // If there is a new state, save it
@@ -205,14 +205,14 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // If there is some output, patch into new anchor
         let patches_2 = if let Some(output) = mono_result.new_output {
-            worker.inject_into_anchor(&mono_result.collector, anchor, &anchor_end, &output)?
+            worker.inject_into_anchor(&collector, anchor, &anchor_end, &output)?
         } else {
             vec![]
         };
         // Return collector and patches
         let mut patches = mono_result.new_patches;
         patches.extend(patches_2);
-        Ok((mono_result.do_next_pass, mono_result.collector, patches))
+        Ok((mono_result.do_next_pass, collector, patches))
     }
 
     fn collect_anchor(
@@ -224,7 +224,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let input = worker.redirect_input(&anchor.parameters, collector.context().clone())?;
-        let mut mono_result = P::mono(
+        let mono_result = P::mono(
             worker,
             collector,
             &input,
@@ -233,28 +233,28 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             state,
             true,
         )?;
+        let mut collector = mono_result.collector;
         // If output has been redirected, place output redirected placeholder
         if let Some(_) = worker.is_output_redirected(&anchor.parameters)? {
-            mono_result
-                .collector
+            collector = collector                
                 .push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
         }
         // If there is some patches, just discard them and new state as well as it cannot be applied
         if !mono_result.new_patches.is_empty() {
             tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor, mono_result.new_patches);
-            return Ok((true, mono_result.collector));
+            return Ok((true, collector));
         }
         // If there is new output, just discard it and new state as well as it cannot be injected
         if let Some(output) = mono_result.new_output {
             tracing::warn!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor, output);
-            return Ok((true, mono_result.collector));
+            return Ok((true, collector));
         };
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
             worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
         }
         // Return collector
-        Ok((mono_result.do_next_pass, mono_result.collector))
+        Ok((mono_result.do_next_pass, collector))
     }
 }
 

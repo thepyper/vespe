@@ -16,6 +16,7 @@
 //! - **`variables.rs`**: Manages variables and configuration available during execution.
 
 mod content;
+mod error;
 mod execute;
 //mod state;
 mod tag_answer;
@@ -26,6 +27,7 @@ mod tag_set;
 mod tags;
 mod utils;
 
+pub use self::error::{ExecuteError, Result};
 use content::*;
 use execute::*;
 use tag_answer::*;

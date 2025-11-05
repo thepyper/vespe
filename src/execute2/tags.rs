@@ -1,4 +1,4 @@
-use anyhow::Result;
+use super::{ExecuteError, Result};
 use enum_dispatch::enum_dispatch;
 use handlebars::template::Parameter;
 use serde::{Deserialize, Serialize};
@@ -268,7 +268,7 @@ impl TagBehaviorDispatch {
             CommandKind::Include => Ok(Box::new(StaticTagBehavior(IncludePolicy))),
             CommandKind::Set => Ok(Box::new(StaticTagBehavior(SetPolicy))),
             CommandKind::Forget => Ok(Box::new(StaticTagBehavior(ForgetPolicy))),
-            _ => Err(anyhow::anyhow!("Unsupported command: {:?}", command)),
+            _ => Err(ExecuteError::UnsupportedCommand(command)),
         }
     }
 

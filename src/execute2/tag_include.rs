@@ -1,4 +1,4 @@
-use anyhow::Result;
+use super::{ExecuteError, Result};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -18,12 +18,14 @@ impl StaticPolicy for IncludePolicy {
             .arguments
             .arguments
             .get(0)
-            .ok_or_else(|| anyhow::anyhow!("Missing argument for include tag"))?
+            .ok_or_else(|| ExecuteError::MissingParameter("include tag argument".to_string()))?
             .value
             .clone();
         match worker._execute(collector, &included_context_name, 0)? {
             Some(collector) => Ok(collector),
-            None => Err(anyhow::anyhow!("Included context returned no collector")),
+            None => Err(ExecuteError::Generic(
+                "Included context returned no collector".to_string(),
+            )),
         }
     }
 }

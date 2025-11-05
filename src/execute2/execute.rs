@@ -11,7 +11,7 @@ use crate::execute2::content::{ModelContent, ModelContentItem};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::Result;
+use super::{ExecuteError, Result};
 
 /// Executes a context and all its dependencies, processing all commands.
 ///
@@ -143,7 +143,7 @@ impl Collector {
     fn exit(mut self) -> Result<Self> {
         self.anchor_stack
             .pop()
-            .ok_or_else(|| anyhow::anyhow!("Pop on empty stack at {:?}", self.latest_range))?;
+            .ok_or_else(|| ExecuteError::EmptyAnchorStack(self.latest_range.clone()))?;
         Ok(self)
     }
 
@@ -188,9 +188,8 @@ impl Worker {
                 return Ok(collector.context().clone());
             }
             None => {
-                return Err(anyhow::anyhow!(
-                    "Could not execute context {}",
-                    context_name
+                return Err(ExecuteError::ContextNotFound(
+                    context_name.to_string(),
                 ));
             }
         }
@@ -202,9 +201,8 @@ impl Worker {
                 return Ok(collector.context().clone());
             }
             None => {
-                return Err(anyhow::anyhow!(
-                    "Could not collect context {}",
-                    context_name
+                return Err(ExecuteError::ContextNotFound(
+                    context_name.to_string(),
                 ));
             }
         }
@@ -299,7 +297,7 @@ impl Worker {
                 prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
             }
             Some(x) => {
-                return Err(anyhow::anyhow!("Bad prefix"));
+                return Err(ExecuteError::UnsupportedParameterValue(format!("bad prefix: {:?}", x)));
             }
             None => {}
         }
@@ -309,7 +307,7 @@ impl Worker {
                 prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
             }
             Some(x) => {
-                return Err(anyhow::anyhow!("Bad postfix"));
+                return Err(ExecuteError::UnsupportedParameterValue(format!("bad postfix: {:?}", x)));
             }
             None => {}
         }
@@ -320,13 +318,13 @@ impl Worker {
                 | JsonPlusEntity::DoubleQuotedString(x),
             ) => x,
             Some(x) => {
-                return Err(anyhow::anyhow!("Bad provider"));
+                return Err(ExecuteError::UnsupportedParameterValue(format!("bad provider: {:?}", x)));
             }
             None => {
-                return Err(anyhow::anyhow!("No provider"));
+                return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
-        crate::agent::shell::shell_call(&provider, &prompt.to_prompt()) // to_string())
+        crate::agent::shell::shell_call(&provider, &prompt.to_prompt()).map_err(|e| ExecuteError::ShellError(e.to_string()))
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
@@ -378,7 +376,7 @@ impl Worker {
                         collector = collector.set_latest_range(&anchor.range);
                         let anchor_end = anchor_index
                             .get_end(&anchor.uuid)
-                            .ok_or(anyhow::anyhow!("end anchor not found"))?;
+                            .ok_or(ExecuteError::EndAnchorNotFound(anchor.uuid))?;
                         let anchor_end = ast
                             .content
                             .get(anchor_end)
@@ -386,7 +384,7 @@ impl Worker {
                                 Content::Anchor(a) => Some(a),
                                 _ => None,
                             })
-                            .ok_or(anyhow::anyhow!("end anchor not found"))?;
+                            .ok_or(ExecuteError::EndAnchorNotFound(anchor.uuid))?;
                         let (do_next_pass, new_collector, patches) = if readonly {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
                                 self,
@@ -552,7 +550,7 @@ impl Worker {
                 return Ok(Some(output_path));
             }
             Some(x) => {
-                return Err(anyhow::anyhow!("Unsupported output {:?}", x));
+                return Err(ExecuteError::UnsupportedParameterValue(format!("output: {:?}", x)));
             }
             None => {
                 return Ok(None);
@@ -583,7 +581,7 @@ impl Worker {
                 self.execute(&x)
             }
             Some(x) => {
-                return Err(anyhow::anyhow!("Unsupported input {:?}", x));
+                return Err(ExecuteError::UnsupportedParameterValue(format!("input: {:?}", x)));
             }
             None => {
                 return Ok(input);

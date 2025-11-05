@@ -45,9 +45,9 @@ impl ModelContentItem {
     }
     pub fn to_prompt(&self) -> String {
         match self {
-            ModelContentItem::System(content) => format!("System Message:\n---\n{}\n---\n", content.text),
-            ModelContentItem::User(content) => format!("User Message:\n---{}\n---\n", content.text),
-            ModelContentItem::Agent(content) => format!("Agent Message:\n---\n{}\n---\n", content.text),
+            ModelContentItem::System(content) => format!("---\nSystem Message:\n{}\n---\n", content.text),
+            ModelContentItem::User(content) => format!("---\nUser Message:\n{}\n---\n", content.text),
+            ModelContentItem::Agent(content) => format!("---\nAgent Message:\n{}\n---\n", content.text),
         }
     }
 }

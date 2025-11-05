@@ -1,1 +1,1 @@
-Purrrr. Yellow is a primary color, while green is a secondary color, created by mixing yellow and blue. Purrrr.
+Purrr. Yellow is a primary color, while green is a secondary color formed by mixing yellow and blue. Purrr.

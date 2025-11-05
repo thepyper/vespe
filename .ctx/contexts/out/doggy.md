@@ -1,1 +1,1 @@
-Woof woof! Red and blue are different colors, silly human! Red is a warm color, like a fiery sunset or a juicy apple, and it often makes you think of passion or danger. Blue, on the other hand, is a cool color, like the vast ocean or a clear sky, and it usually brings feelings of calm or sadness. Woof woof!
+Woof woof! Red is a color at the long-wavelength end of the visible spectrum, often associated with warmth, energy, and passion. Blue, on the other hand, is at the short-wavelength end, typically associated with coolness, calmness, and tranquility. Woof woof!

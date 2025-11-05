@@ -2,42 +2,41 @@
 
 Tell me 3 violet things.
 
-<!-- answer-be05e54f-cfe6-4ca6-be4f-6bb708f45e68:begin {}  -->
+<!-- answer-c32d4cd6-7eb1-4156-80a3-4567c6ee6bc4:begin {}  -->
 1. Amethyst
 2. Lavender
-3. Violets (the flower)
-<!-- answer-be05e54f-cfe6-4ca6-be4f-6bb708f45e68:end {}  -->
+3. Violet (the flower)
+<!-- answer-c32d4cd6-7eb1-4156-80a3-4567c6ee6bc4:end {}  -->
 
-<!-- answer-cc5ee701-70c7-4a18-96a9-f3f92ccdb3b2:begin { input: test/orange }  -->
+<!-- answer-a224e9ac-3323-452a-820b-80729736dc85:begin { input: test/orange }  -->
 1. Orange (fruit)
 2. Carrot
-3. Traffic cone
-4. Monarch butterfly
-5. Pumpkin
-<!-- answer-cc5ee701-70c7-4a18-96a9-f3f92ccdb3b2:end {}  -->
+3. Pumpkin
+4. Traffic cone
+5. Monarch butterfly
+<!-- answer-a224e9ac-3323-452a-820b-80729736dc85:end {}  -->
 
 Tell me the difference between red and blue.
 
-<!-- answer-39c1e899-d849-47bb-99a1-2dde0cf922a4:begin {
-	system: agent/doggy,
-	output: out/doggy
+<!-- answer-3b659ae7-1d51-44d6-a11d-0f182c770bf2:begin {
+	output: out/doggy,
+	prefix: agent/doggy
 }  -->
-<!-- answer-39c1e899-d849-47bb-99a1-2dde0cf922a4:end {}  -->
+<!-- answer-3b659ae7-1d51-44d6-a11d-0f182c770bf2:end {}  -->
 
 Tell me something nice.
 
-<!-- answer-8014ce3a-23b4-4e17-afe0-287db78949cf:begin { system: agent/gemini_25_flash_yolo }  -->
-You are doing great! Keep up the excellent work.
-<!-- answer-8014ce3a-23b4-4e17-afe0-287db78949cf:end {}  -->
+<!-- answer-35dd4844-6003-4880-8f3f-f8cbc5e00af7:begin { system: agent/gemini_25_flash_yolo }  -->
+You are capable of amazing things.
+<!-- answer-35dd4844-6003-4880-8f3f-f8cbc5e00af7:end {}  -->
 
 Tell me the difference between yellow and green
 
-<!-- answer-285cd01f-c695-403b-bc7a-3a8f27b6a1c4:begin {
-	system: agent/kitty,
+<!-- answer-54b0c603-0d69-4b26-809d-365d2424836c:begin {
+	prefix: agent/kitty,
 	output: out/kitty
 }  -->
-<!-- answer-285cd01f-c695-403b-bc7a-3a8f27b6a1c4:end {}  -->
-
+<!-- answer-54b0c603-0d69-4b26-809d-365d2424836c:end {}  -->
 
 
 

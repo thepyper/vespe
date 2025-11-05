@@ -17,6 +17,9 @@ impl StaticPolicy for SetPolicy {
         tag: &Tag,
     ) -> Result<Collector> {
         tracing::debug!("tag_set::SetPolicy::collect_static_tag\nTag = {:?}\n", tag);
-        Ok(collector.update_variables(&local_variables))
+        let new_collector = collector.update_variables(&local_variables);
+        let new_collector = new_collector.set_default_parameters(&tag.parameters);
+        Ok(new_collector)
+        //Ok(collector.update_variables(&local_variables))
     }
 }

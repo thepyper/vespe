@@ -85,6 +85,8 @@ pub(crate) struct Collector {
     context: ModelContent,
     /// Execution-time variables and settings.
     variables: Variables,
+    /// Execution-time default parameters for tags
+    default_parameters: Parameters,
     /// Latest processed range
     latest_range: Range,
 }
@@ -112,6 +114,7 @@ impl Collector {
             anchor_stack: Vec::new(),
             context: ModelContent::new(),
             variables: Variables::new(),
+            default_parameters: Parameters::new(),
             latest_range: Range::null(),
         }
     }
@@ -133,6 +136,7 @@ impl Collector {
             anchor_stack: Vec::new(),
             context: self.context.clone(),
             variables: self.variables.clone(),
+            default_parameters: self.default_parameters.clone(),
             latest_range: self.latest_range.clone(),
         })
     }
@@ -143,6 +147,7 @@ impl Collector {
             anchor_stack: self.anchor_stack.clone(),
             context: ModelContent::new(),
             variables: self.variables.clone(),
+            default_parameters: self.default_parameters.clone(),
             latest_range: self.latest_range.clone(),
         }
     }
@@ -177,6 +182,11 @@ impl Collector {
         let mut collector = self.clone();
         collector.variables = new_variables.clone();
         collector
+    }
+
+    pub fn set_default_parameters(mut self, new_parameters: &Parameters) -> Self {
+        self.default_parameters = new_parameters.clone();
+        self
     }
 }
 

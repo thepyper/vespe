@@ -126,6 +126,7 @@ impl Collector {
     fn ascend(mut self, descent_collector: Collector) -> Self {
         // Merge descending collector context 
         self.context = descent_collector.context;
+        self.default_parameters = descent_collector.default_parameters;
         self
     }
 
@@ -277,8 +278,8 @@ impl Worker {
                     false => {
                         // Successfully collected everything without needing further processing
                         tracing::debug!(
-                            "execute::Worker::execute: Successfully collected context: {:?}",
-                            context_path
+                            "execute::Worker::execute: Successfully collected context: {:?} got {}",
+                            context_path, descent_collector.context().to_string()
                         );
                         return Ok(Some(collector.ascend(descent_collector)));
                     }
@@ -341,7 +342,7 @@ impl Worker {
         &self,
         mut collector: Collector,
         context_path: &Path,
-        is_collect: bool,
+        readonly: bool,
     ) -> Result<(bool, Collector)> {
         let context_content = self.file_access.read_file(context_path)?;
         let ast = crate::ast2::parse_document(&context_content)?;
@@ -364,7 +365,7 @@ impl Worker {
                 Content::Tag(tag) => {
                     collector = collector.set_latest_range(&tag.range);
                     let integrated_tag = tag.clone().integrate(&collector.default_parameters);
-                    if is_collect {
+                    if readonly {
                         let (do_next_pass, collector) =
                             TagBehaviorDispatch::collect_tag(self, collector, &integrated_tag)?;
                         (do_next_pass, collector, vec![])
@@ -386,7 +387,7 @@ impl Worker {
                                 _ => None,
                             })
                             .ok_or(anyhow::anyhow!("end anchor not found"))?;
-                        let (do_next_pass, new_collector, patches) = if is_collect {
+                        let (do_next_pass, new_collector, patches) = if readonly {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
                                 self,
                                 collector,
@@ -412,7 +413,7 @@ impl Worker {
             // Evaluate patches
             if patches.is_empty() {
                 // No patches to apply
-            } else if is_collect {
+            } else if readonly {
                 // This is collect pass, cannot produce patches, it's a bug!
                 panic!("Cannot produce patches during collect pass!");
             } else {

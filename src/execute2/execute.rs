@@ -7,7 +7,6 @@ use crate::path::PathResolver;
 use uuid::Uuid;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
-//use crate::execute2::variables::{self, Variables};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -77,8 +76,6 @@ pub(crate) struct Collector {
     anchor_stack: Vec<Anchor>,
     /// The accumulated content that will be sent to the model.
     context: ModelContent,
-    /// Execution-time variables and settings.
-    ///variables: Variables,
     /// Execution-time default parameters for tags
     default_parameters: Parameters,
     /// Latest processed range
@@ -94,10 +91,6 @@ impl Collector {
         &self.anchor_stack
     }
 
-    /// Creates a new, empty `Collector`.
-    ///
-    /// # Arguments
-    /// * `can_execute` - Sets the execution mode. `true` for full execution, `false` for collect-only.
     fn new() -> Self {
         Collector {
             visit_stack: Vec::new(),
@@ -114,10 +107,11 @@ impl Collector {
     /// it returns `None`. Otherwise, it returns a new `Collector` with the given path
     /// added to its stack and a cleared context, ready for the new file.
     fn descent(&self, context_path: &Path) -> Option<Self> {
+        // Check if context has already been visited
         if self.visit_stack.contains(&context_path.to_path_buf()) {
             return None;
         }
-
+        // Create descending collector
         let mut visit_stack = self.visit_stack.clone();
         visit_stack.push(context_path.to_path_buf());
         Some(Collector {
@@ -130,6 +124,7 @@ impl Collector {
     }
 
     fn ascend(mut self, descent_collector: Collector) -> Self {
+        // Merge descending collector context 
         self.context = descent_collector.context;
         self
     }
@@ -336,25 +331,7 @@ impl Worker {
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
         self._pass_internal(collector, context_path, true)
     }
-
-    fn apply_patches(context_content: &str, patches: &Vec<(Range, String)>) -> Result<String> {
-        let mut result = context_content.to_string();
-        for (range, replace) in patches.iter().rev() {
-            let start_byte = context_content
-                .char_indices()
-                .nth(range.begin.offset)
-                .map(|(i, _)| i)
-                .unwrap_or(context_content.len());
-            let end_byte = context_content
-                .char_indices()
-                .nth(range.end.offset)
-                .map(|(i, _)| i)
-                .unwrap_or(context_content.len());
-            result.replace_range(start_byte..end_byte, replace);
-        }
-        Ok(result)
-    }
-
+   
     fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
         let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
         self._pass_internal(collector, context_path, false)
@@ -452,6 +429,24 @@ impl Worker {
         }
         // No patches applied nor new pass triggered, then return definitive collector
         Ok((false, collector))
+    }
+
+    fn apply_patches(context_content: &str, patches: &Vec<(Range, String)>) -> Result<String> {
+        let mut result = context_content.to_string();
+        for (range, replace) in patches.iter().rev() {
+            let start_byte = context_content
+                .char_indices()
+                .nth(range.begin.offset)
+                .map(|(i, _)| i)
+                .unwrap_or(context_content.len());
+            let end_byte = context_content
+                .char_indices()
+                .nth(range.end.offset)
+                .map(|(i, _)| i)
+                .unwrap_or(context_content.len());
+            result.replace_range(start_byte..end_byte, replace);
+        }
+        Ok(result)
     }
 
     fn get_state_path(&self, command: CommandKind, uuid: &Uuid) -> Result<PathBuf> {

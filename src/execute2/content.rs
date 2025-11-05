@@ -43,6 +43,13 @@ impl ModelContentItem {
     pub fn agent(text: &str) -> Self {
         ModelContentItem::Agent(AgentModelContent { text: text.into() })
     }
+    pub fn to_prompt(&self) -> String {
+        match self {
+            ModelContentItem::System(content) => format!("System Message:\n---\n{}\n---\n", content.text),
+            ModelContentItem::User(content) => format!("User Message:\n---{}\n---\n", content.text),
+            ModelContentItem::Agent(content) => format!("Agent Message:\n---\n{}\n---\n", content.text),
+        }
+    }
 }
 
 impl ToString for ModelContentItem {
@@ -70,6 +77,14 @@ impl ModelContent {
 
     pub fn push(&mut self, item: ModelContentItem) {
         self.0.push(item);
+    }
+
+    pub fn to_prompt(&self) -> String {
+        self.0
+            .iter()
+            .map(|item| item.to_prompt())
+            .collect::<Vec<String>>()
+            .join("\n")
     }
 }
 

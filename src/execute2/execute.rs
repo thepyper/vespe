@@ -289,7 +289,7 @@ impl Worker {
         if let Some(x) = &variables.postfix {
             prompt.push(ModelContentItem::system(&x));
         }
-        crate::agent::shell::shell_call(&variables.provider, &prompt.to_string())
+        crate::agent::shell::shell_call(&variables.provider, &prompt.to_prompt()) // to_string())
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {

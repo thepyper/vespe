@@ -18,8 +18,6 @@ use super::tag_set::SetPolicy;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
-// 1. HOST INTERFACE (TagBehavior)
-// Tutti i metodi sono funzioni associate (statiche) come da tua intenzione.
 pub trait TagBehavior {
     fn execute_tag(
         &self,

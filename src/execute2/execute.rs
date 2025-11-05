@@ -420,6 +420,7 @@ impl Worker {
         let state_path = meta_path.join("state.json");
         Ok(state_path)
     }
+
     pub fn load_state<T: serde::de::DeserializeOwned>(
         &self,
         command: CommandKind,
@@ -430,6 +431,7 @@ impl Worker {
         let state: T = serde_json::from_str(&state)?;
         Ok(state)
     }
+
     pub fn save_state<T: serde::Serialize>(
         &self,
         command: CommandKind,
@@ -606,15 +608,4 @@ impl Worker {
         }
         Ok(new_variables)
     }
-
-    /*
-    fn modelcontent_to_string(&self, content: &Vec<ModelContent>) -> Result<String> {
-        Ok(content
-            .into_iter()
-            .flat_map(|mc| mc.0.clone())
-            .map(|item| item.to_string())
-            .collect::<Vec<String>>()
-            .join("\n"))
-    }
-            */
 }

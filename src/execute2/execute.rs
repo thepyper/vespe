@@ -134,21 +134,17 @@ impl Collector {
         self 
     }
 
-    // TODO doc (entra in anchor)
-    fn enter(&self, anchor: &Anchor) -> Self {
-        let mut collector = self.clone();
-        collector.anchor_stack.push(anchor.clone());
-        collector
+    fn enter(mut self, anchor: &Anchor) -> Self {
+        self.anchor_stack.push(anchor.clone());
+        self 
     }
 
-    // TODO doc (esci da anchor)
-    fn exit(&self) -> Result<Self> {
-        let mut collector = self.clone();
-        collector
+    fn exit(mut self) -> Result<Self> {
+        self 
             .anchor_stack
             .pop()
             .ok_or_else(|| anyhow::anyhow!("Pop on empty stack at {:?}", self.latest_range))?;
-        Ok(collector)
+        Ok(self)
     }
 
     pub fn push_item(&mut self, item: ModelContentItem) {

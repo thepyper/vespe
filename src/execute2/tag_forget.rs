@@ -1,6 +1,4 @@
-use super::{Result};
-
-
+use super::Result;
 
 use super::execute::{Collector, Worker};
 use super::tags::StaticPolicy;

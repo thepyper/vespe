@@ -1,7 +1,6 @@
 use serde::de::{self};
 use serde::{Deserialize, Serialize};
 
-
 /// Represents content originating from the system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemModelContent {

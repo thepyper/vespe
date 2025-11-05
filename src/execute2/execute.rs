@@ -124,7 +124,7 @@ impl Collector {
     }
 
     fn ascend(mut self, descent_collector: Collector) -> Self {
-        // Merge descending collector context 
+        // Merge descending collector context
         self.context = descent_collector.context;
         self.default_parameters = descent_collector.default_parameters;
         self
@@ -188,9 +188,7 @@ impl Worker {
                 return Ok(collector.context().clone());
             }
             None => {
-                return Err(ExecuteError::ContextNotFound(
-                    context_name.to_string(),
-                ));
+                return Err(ExecuteError::ContextNotFound(context_name.to_string()));
             }
         }
     }
@@ -201,9 +199,7 @@ impl Worker {
                 return Ok(collector.context().clone());
             }
             None => {
-                return Err(ExecuteError::ContextNotFound(
-                    context_name.to_string(),
-                ));
+                return Err(ExecuteError::ContextNotFound(context_name.to_string()));
             }
         }
     }
@@ -277,7 +273,8 @@ impl Worker {
                         // Successfully collected everything without needing further processing
                         tracing::debug!(
                             "execute::Worker::execute: Successfully collected context: {:?} got {}",
-                            context_path, descent_collector.context().to_string()
+                            context_path,
+                            descent_collector.context().to_string()
                         );
                         return Ok(Some(collector.ascend(descent_collector)));
                     }
@@ -297,7 +294,10 @@ impl Worker {
                 prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
             }
             Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!("bad prefix: {:?}", x)));
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "bad prefix: {:?}",
+                    x
+                )));
             }
             None => {}
         }
@@ -307,7 +307,10 @@ impl Worker {
                 prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
             }
             Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!("bad postfix: {:?}", x)));
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "bad postfix: {:?}",
+                    x
+                )));
             }
             None => {}
         }
@@ -318,19 +321,23 @@ impl Worker {
                 | JsonPlusEntity::DoubleQuotedString(x),
             ) => x,
             Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!("bad provider: {:?}", x)));
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "bad provider: {:?}",
+                    x
+                )));
             }
             None => {
                 return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
-        crate::agent::shell::shell_call(&provider, &prompt.to_prompt()).map_err(|e| ExecuteError::ShellError(e.to_string()))
+        crate::agent::shell::shell_call(&provider, &prompt.to_prompt())
+            .map_err(|e| ExecuteError::ShellError(e.to_string()))
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
         self._pass_internal(collector, context_path, true)
     }
-   
+
     fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
         let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
         self._pass_internal(collector, context_path, false)
@@ -550,7 +557,10 @@ impl Worker {
                 return Ok(Some(output_path));
             }
             Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!("output: {:?}", x)));
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "output: {:?}",
+                    x
+                )));
             }
             None => {
                 return Ok(None);
@@ -581,7 +591,10 @@ impl Worker {
                 self.execute(&x)
             }
             Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!("input: {:?}", x)));
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "input: {:?}",
+                    x
+                )));
             }
             None => {
                 return Ok(input);

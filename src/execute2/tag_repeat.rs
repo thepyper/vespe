@@ -1,7 +1,6 @@
 use super::{ExecuteError, Result};
 use serde::{Deserialize, Serialize};
 
-
 use super::content::ModelContent;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};

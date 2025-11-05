@@ -1,16 +1,7 @@
-use anyhow::Result;
-use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use crate::file::FileAccessor;
-use crate::path::PathResolver;
-
 use crate::ast2::*;
-use crate::file;
-use crate::path;
 
 pub struct AnchorIndex {
     begin: HashMap<Uuid, usize>, // uid -> content index

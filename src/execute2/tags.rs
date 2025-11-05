@@ -1,13 +1,10 @@
 use super::{ExecuteError, Result};
 
-use handlebars::template::Parameter;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use super::content::{ModelContent, ModelContentItem};
 use super::execute::Collector;
 use super::execute::Worker;
-//use super::variables::Variables;
 use super::REDIRECTED_OUTPUT_PLACEHOLDER;
 
 use super::tag_answer::AnswerPolicy;

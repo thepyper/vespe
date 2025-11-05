@@ -1,6 +1,5 @@
-use super::{Result};
+use super::Result;
 use serde::{Deserialize, Serialize};
-
 
 use super::content::ModelContent;
 use super::execute::{Collector, Worker};

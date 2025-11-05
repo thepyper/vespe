@@ -1,7 +1,5 @@
 use super::{ExecuteError, Result};
 
-
-
 use super::execute::{Collector, Worker};
 use super::tags::StaticPolicy;
 //use super::variables::Variables;

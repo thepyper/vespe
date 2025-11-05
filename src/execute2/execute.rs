@@ -125,18 +125,13 @@ impl Collector {
             anchor_stack: Vec::new(),
             context: self.context.clone(),
             default_parameters: self.default_parameters.clone(),
-            latest_range: self.latest_range.clone(),
+            latest_range: Range::null(),
         })
     }
 
-    pub fn forget(&self) -> Self {
-        Collector {
-            visit_stack: self.visit_stack.clone(),
-            anchor_stack: self.anchor_stack.clone(),
-            context: ModelContent::new(),
-            default_parameters: self.default_parameters.clone(),
-            latest_range: self.latest_range.clone(),
-        }
+    pub fn forget(mut self) -> Self {
+        self.context = ModelContent::new();
+        self 
     }
 
     // TODO doc (entra in anchor)

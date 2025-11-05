@@ -129,6 +129,11 @@ impl Collector {
         })
     }
 
+    fn ascend(mut self, descent_collector: Collector) -> Self {
+        self.context = descent_collector.context;
+        self
+    }
+
     pub fn forget(mut self) -> Self {
         self.context = ModelContent::new();
         self
@@ -221,7 +226,7 @@ impl Worker {
     ) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
-
+        
         match collector.descent(&context_path) {
             None => {
                 tracing::debug!(
@@ -230,11 +235,11 @@ impl Worker {
                 );
                 return Ok(Some(collector));
             }
-            Some(collector) => {
+            Some(descent_collector) => {
                 for i in 1..=max_rewrite_steps {
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
-                    let (do_next_pass, collector_1) =
-                        self.execute_pass(collector.clone(), &context_path)?;
+                    let (do_next_pass, _) =
+                        self.execute_pass(descent_collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -248,8 +253,8 @@ impl Worker {
                         }
                     };
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
-                    let (do_next_pass, collector_2) =
-                        self.collect_pass(collector.clone(), &context_path)?;
+                    let (do_next_pass, _) =
+                        self.collect_pass(descent_collector.clone(), &context_path)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -258,13 +263,14 @@ impl Worker {
                             );
                         }
                         false => {
-                            return Ok(Some(collector_2));
+                            // Ready for final collet pass
+                            break;
                         }
                     };
                 }
                 // Last re-read file, parse it, collect data
-                let (do_next_pass, collector) =
-                    self.collect_pass(collector.clone(), &context_path)?;
+                let (do_next_pass, descent_collector) =
+                    self.collect_pass(descent_collector, &context_path)?;
                 match do_next_pass {
                     true => {
                         tracing::debug!(
@@ -279,7 +285,7 @@ impl Worker {
                             "execute::Worker::execute: Successfully collected context: {:?}",
                             context_path
                         );
-                        return Ok(Some(collector));
+                        return Ok(Some(collector.ascend(descent_collector)));
                     }
                 };
             }

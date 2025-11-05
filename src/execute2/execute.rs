@@ -131,17 +131,16 @@ impl Collector {
 
     pub fn forget(mut self) -> Self {
         self.context = ModelContent::new();
-        self 
+        self
     }
 
     fn enter(mut self, anchor: &Anchor) -> Self {
         self.anchor_stack.push(anchor.clone());
-        self 
+        self
     }
 
     fn exit(mut self) -> Result<Self> {
-        self 
-            .anchor_stack
+        self.anchor_stack
             .pop()
             .ok_or_else(|| anyhow::anyhow!("Pop on empty stack at {:?}", self.latest_range))?;
         Ok(self)

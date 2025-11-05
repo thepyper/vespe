@@ -64,6 +64,10 @@ impl ModelContent {
         ModelContent(Vec::new())
     }
 
+    pub fn extend(&mut self, content: ModelContent) {
+        self.0.extend(content.0.into_iter());
+    }
+
     pub fn push(&mut self, item: ModelContentItem) {
         self.0.push(item);
     }

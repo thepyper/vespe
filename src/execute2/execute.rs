@@ -281,11 +281,15 @@ impl Worker {
         variables: &Variables,
         content: &ModelContent,
     ) -> Result<String> {       
-        let mut prompt = String::new();
-        prompt.push_str(&variables.prefix.clone().unwrap_or(String::new()));
-        prompt.push_str(&content.to_string());
-        prompt.push_str(&variables.postfix.clone().unwrap_or(String::new()));
-        crate::agent::shell::shell_call(&variables.provider, &prompt)
+        let mut prompt = ModelContent::new();
+        if let Some(x) = &variables.prefix {
+            prompt.push(ModelContentItem::system(&x));
+        }
+        prompt.extend(content.clone());
+        if let Some(x) = &variables.postfix {
+            prompt.push(ModelContentItem::system(&x));
+        }
+        crate::agent::shell::shell_call(&variables.provider, &prompt.to_string())
     }
 
     fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {

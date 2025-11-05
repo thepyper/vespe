@@ -1,5 +1,5 @@
 use thiserror::Error;
-use std::path::PathBuf;
+
 use uuid::Uuid;
 
 use crate::ast2::{Ast2Error, CommandKind, Range};

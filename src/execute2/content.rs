@@ -1,8 +1,6 @@
-use serde::{
-    de::{self, SeqAccess, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
-use std::fmt;
+use serde::de::{self};
+use serde::{Deserialize, Serialize};
+
 
 /// Represents content originating from the system.
 #[derive(Debug, Clone, Serialize, Deserialize)]

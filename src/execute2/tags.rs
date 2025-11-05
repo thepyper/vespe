@@ -1,5 +1,5 @@
 use super::{ExecuteError, Result};
-use enum_dispatch::enum_dispatch;
+
 use handlebars::template::Parameter;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

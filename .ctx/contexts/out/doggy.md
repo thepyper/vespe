@@ -1,5 +1,9 @@
-Woof woof! Red and blue are both primary colors, but they're at opposite ends of the visible light spectrum! Woof!
+Woof woof!
 
-Woof woof! Red has a longer wavelength and lower frequency, making it appear warm and energetic. Think of fire or sunsets! Woof!
+Red and blue are both primary colors, but they differ in several ways:
 
-Woof woof! Blue has a shorter wavelength and higher frequency, giving it a cool, calming feel. Like the ocean or the sky! Woof!
+*   **Wavelength:** Woof! Red light has a longer wavelength and lower frequency than blue light. Blue light has a shorter wavelength and higher frequency.
+*   **Temperature Perception:** Woof! Red is often perceived as a "warm" color, associated with heat and energy, while blue is considered a "cool" color, associated with water, ice, and calmness.
+*   **Psychological Effects:** Woof! Red can evoke feelings of passion, excitement, or anger, while blue often brings about feelings of tranquility, sadness, or stability.
+
+Woof woof!

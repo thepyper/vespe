@@ -151,8 +151,9 @@ impl Collector {
         self
     }
 
-    pub fn set_latest_range(&mut self, range: &Range) {
+    pub fn set_latest_range(mut self, range: &Range) -> Self {
         self.latest_range = range.clone();
+        self
     }
 
     pub fn set_default_parameters(mut self, new_parameters: &Parameters) -> Self {
@@ -366,7 +367,7 @@ impl Worker {
         for item in &ast.content {
             let (do_next_pass, next_collector, patches) = match item {
                 Content::Text(text) => {
-                    collector.set_latest_range(&text.range);
+                    collector = collector.set_latest_range(&text.range);
                     let content = if collector.anchor_stack.is_empty() {
                         // User writes outside anchors
                         ModelContentItem::user(&text.content)
@@ -378,7 +379,7 @@ impl Worker {
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {
-                    collector.set_latest_range(&tag.range);
+                    collector = collector.set_latest_range(&tag.range);
                     let integrated_tag = tag.clone().integrate(&collector.default_parameters);
                     if is_collect {
                         let (do_next_pass, collector) =
@@ -390,7 +391,7 @@ impl Worker {
                 }
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
-                        collector.set_latest_range(&anchor.range);
+                        collector = collector.set_latest_range(&anchor.range);
                         let anchor_end = anchor_index
                             .get_end(&anchor.uuid)
                             .ok_or(anyhow::anyhow!("end anchor not found"))?;

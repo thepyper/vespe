@@ -55,7 +55,7 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let response = worker.call_model(&local_variables, input)?; // vec![result.collector.context().clone()])?;
+                let response = worker.call_model(&local_variables, input)?; 
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);

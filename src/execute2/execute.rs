@@ -329,9 +329,16 @@ impl Worker {
             let (do_next_pass, next_collector, patches) = match item {
                 Content::Text(text) => {
                     collector.set_latest_range(&text.range);
+                    let content = if collector.anchor_stack.is_empty() {
+                        // User writes outside anchors
+                        ModelContentItem::user(&text.content)
+                    } else {
+                        // Agents write inside anchors
+                        ModelContentItem::agent(&text.content)
+                    };
                     collector
                         .context
-                        .push(ModelContentItem::user(&text.content));
+                        .push(content);
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {

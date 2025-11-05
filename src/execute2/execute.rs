@@ -226,7 +226,7 @@ impl Worker {
     ) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
-        
+
         match collector.descent(&context_path) {
             None => {
                 tracing::debug!(

@@ -30,9 +30,9 @@
 //!
 //! - **`tag_*.rs` (e.g., `tag_answer.rs`, `tag_include.rs`)**: Implementations of specific
 //!   tag behaviors. These are categorized into:
-//!     - **Static Tags** (`@include`, `@set`, `@forget`): Processed in a single pass,
-//!       directly modifying the `Collector`'s state or content.
-//!     - **Dynamic Tags** (`@answer`, `@repeat`): Involve a state machine and can trigger
+//!     - **Static Tags** (`@include`, `@set`, `@forget`, `@comment`): Processed in a single pass,
+//!       directly modifying the `Collector`'s state or content. `@comment` tags are ignored.
+//!     - **Dynamic Tags** (`@answer`, `@repeat`, `@inline`): Involve a state machine and can trigger
 //!       multiple execution passes. They transform into anchors (`<!-- @@...@@ -->`)
 //!       and manage their state (e.g., `JustCreated`, `NeedProcessing`, `NeedInjection`, `Completed`)
 //!       persisted in external JSON files. These tags can involve calling external models
@@ -47,7 +47,7 @@
 //!
 //! The engine processes a document by identifying tags and anchors. Static tags are
 //! resolved immediately. Dynamic tags initiate a state-driven process:
-//! 1.  An initial dynamic tag (`@answer`) is converted into an anchor (`<!-- @@answer...@@ -->`).
+//! 1.  An initial dynamic tag (e.g., `@answer`, `@inline`) is converted into an anchor (`<!-- @@...@@ -->`).
 //! 2.  The anchor's state progresses (e.g., `NeedProcessing`), potentially triggering
 //!     an external model call.
 //! 3.  The model's response is then injected back into the document (state `NeedInjection`).

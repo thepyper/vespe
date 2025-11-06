@@ -495,11 +495,44 @@ impl Worker {
         }
     }
 
+    /// Prepends a `ModelContent` to another.
+    ///
+    /// This utility function takes a `prefix` content and adds it to the beginning
+    /// of the main `content`.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - The main [`ModelContent`].
+    /// * `prefix` - The [`ModelContent`] to prepend.
+    ///
+    /// # Returns
+    ///
+    /// The combined `ModelContent` with the prefix at the start.
     pub fn prefix_content(&self, content: ModelContent, mut prefix: ModelContent) -> ModelContent {
         prefix.extend(content);
         prefix
     }
 
+    /// Prepends content to a `ModelContent` based on a `prefix` parameter.
+    ///
+    /// This function checks for a `prefix` parameter. If found, it executes the
+    /// context specified by the parameter's value and prepends the resulting content
+    /// as a `system` message to the main `content`.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - The main [`ModelContent`].
+    /// * `parameters` - The [`Parameters`] to check for a `prefix` value.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the potentially prefixed `ModelContent`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExecuteError::UnsupportedParameterValue`] if the `prefix` parameter
+    /// is not a string. Returns errors from the underlying context execution if the
+    /// specified prefix context fails to execute.
     pub fn prefix_content_from_parameters(
         &self,
         content: ModelContent,
@@ -520,6 +553,19 @@ impl Worker {
         }
     }
 
+    /// Appends a `ModelContent` to another.
+    ///
+    /// This utility function takes a `postfix` content and adds it to the end
+    /// of the main `content`.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - The main [`ModelContent`].
+    /// * `postfix` - The [`ModelContent`] to append.
+    ///
+    /// # Returns
+    ///
+    /// The combined `ModelContent` with the postfix at the end.
     pub fn postfix_content(
         &self,
         mut content: ModelContent,
@@ -529,6 +575,26 @@ impl Worker {
         content
     }
 
+    /// Appends content to a `ModelContent` based on a `postfix` parameter.
+    ///
+    /// This function checks for a `postfix` parameter. If found, it executes the
+    /// context specified by the parameter's value and appends the resulting content
+    /// as a `system` message to the main `content`.
+    ///
+    /// # Arguments
+    ///
+    /// * `content` - The main [`ModelContent`].
+    /// * `parameters` - The [`Parameters`] to check for a `postfix` value.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the potentially postfixed `ModelContent`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExecuteError::UnsupportedParameterValue`] if the `postfix` parameter
+    /// is not a string. Returns errors from the underlying context execution if the
+    /// specified postfix context fails to execute.
     pub fn postfix_content_from_parameters(
         &self,
         content: ModelContent,
@@ -1127,8 +1193,8 @@ impl Worker {
     /// Generates patches to mutate an existing anchor in the document.
     ///
     /// This function creates a patch that replaces the content of an anchor
-    /// with its string representation, effectively ensuring the anchor is correctly
-    /// formatted in the source document.
+    /// with its string representation. This is typically used to update an anchor's
+    /// parameters or state directly in the source file.
     ///
     /// # Arguments
     ///
@@ -1142,6 +1208,23 @@ impl Worker {
         Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
     }
 
+    /// Reads the raw content of a context file.
+    ///
+    /// This is a utility function that resolves a context name to its file path
+    /// and reads its entire content into a string.
+    ///
+    /// # Arguments
+    ///
+    /// * `context_name` - The name of the context to read.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the file's content as a `String`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExecuteError::PathResolutionError`] if the context name cannot be resolved.
+    /// Returns [`ExecuteError::IoError`] if the file cannot be read.
     pub fn read_context(&self, context_name: &str) -> Result<String> {
         let context_path = self.path_res.resolve_context(context_name)?;
         let context_content = self.file_access.read_file(&context_path)?;

@@ -44,6 +44,8 @@ pub struct AnswerState {
     pub status: AnswerStatus,
     /// The reply received from the external model.
     pub reply: String,
+    /// The context hash
+    pub context_hash: String,
 }
 
 /// Implements the dynamic policy for the `@answer` tag.
@@ -96,9 +98,10 @@ impl DynamicPolicy for AnswerPolicy {
         readonly: bool,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!(
-            "tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n",
+            "tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\nhash = {}\n",
             state,
-            readonly
+            readonly,
+            collector.context_hash(),
         );
         let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
         match state.status {
@@ -118,6 +121,7 @@ impl DynamicPolicy for AnswerPolicy {
                 let response = Self::process_response_with_choice(response, parameters)?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
+                state.context_hash = result.collector.context_hash();
                 result.new_state = Some(state);
                 result.do_next_pass = true;
             }
@@ -131,6 +135,15 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::Completed => {
                 // Nothing to do
+                let is_dynamic = parameters.get("dynamic").map(|x| x.as_bool().unwrap_or(false)).unwrap_or(false);
+                if !is_dynamic {
+                    // Do nothing
+                } else if result.collector.context_hash() != state.context_hash {
+                    // Repeat 
+                    state.status = AnswerStatus::Repeat;
+                    result.new_state = Some(state);
+                    result.do_next_pass = true;
+                }
             }
             AnswerStatus::Repeat => {
                 // Prepare the query

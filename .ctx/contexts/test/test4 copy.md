@@ -3,6 +3,10 @@
 
 @inline test/blue
 
+Tell me the color of pigs.
+
+@answer { dynamic }
+
 Which one is most able in bending?
 
 1. Bender

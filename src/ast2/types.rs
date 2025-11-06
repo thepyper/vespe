@@ -133,6 +133,21 @@ pub enum JsonPlusEntity {
 }
 
 impl JsonPlusEntity {
+    pub fn as_string_only(&self) -> Option<String> {
+        match self {
+            JsonPlusEntity::NudeString(x) | JsonPlusEntity::SingleQuotedString(x) | JsonPlusEntity::DoubleQuotedString(x) => Some(x.clone()),
+            _ => None,
+        }
+    }
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            JsonPlusEntity::Flag => Some(true),
+            JsonPlusEntity::Boolean(x) => Some(*x),
+            JsonPlusEntity::Integer(x) => Some(*x != 0),
+            JsonPlusEntity::Float(x) => Some(*x != 0.0f64),
+            _ => None,
+        }
+    }
     pub fn to_prompt(&self) -> String {
         match self {
             JsonPlusEntity::Flag => String::new(),

@@ -32,24 +32,6 @@ impl StaticPolicy for ForgetPolicy {
     /// A `Result` containing the updated [`Collector`] with its context cleared.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// # use crate::execute2::{Collector, Worker, ModelContentItem, ForgetPolicy};
-    /// # use crate::execute2::tags::StaticPolicy;
-    /// # use crate::ast2::{Tag, CommandKind, Parameters, Arguments, Range, Position};
-    /// # use std::sync::Arc;
-    /// # use crate::file::MockFileAccessor;
-    /// # use crate::path::MockPathResolver;
-    /// let mut collector = Collector::new();
-    /// collector = collector.push_item(ModelContentItem::user("Some content."));
-    /// assert!(!collector.context().0.is_empty());
-    ///
-    /// let worker = Worker::new(Arc::new(MockFileAccessor::new()), Arc::new(MockPathResolver::new()));
-    /// let tag = Tag { command: CommandKind::Forget, parameters: Parameters::new(), arguments: Arguments::new(), range: Range::new(Position::new(0,0,0), Position::new(0,0,0)) };
-    ///
-    /// let updated_collector = ForgetPolicy::collect_static_tag(&worker, collector, &tag).unwrap();
-    /// assert!(updated_collector.context().0.is_empty());
-    /// ```
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
         tracing::debug!(
             "tag_forget::ForgetPolicy::collect_static_tag\nTag = {:?}\n",

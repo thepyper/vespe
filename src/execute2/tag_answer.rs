@@ -4,12 +4,15 @@
 //! processing the model's response and injecting it into the document.
 use super::Result;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
 use crate::ast2::{Arguments, JsonPlusEntity, JsonPlusObject, Parameters};
+
+use handlebars::Handlebars;
 
 /// Represents the current status of an `@answer` tag's execution.
 ///
@@ -148,44 +151,45 @@ impl AnswerPolicy {
         parameters: &Parameters,
     ) -> Result<ModelContent> {
         let choices = match parameters.get("choose") {
-            Some(JsonPlusEntity::Array(x)) => {
-                let mut tags = Vec::new();
-                for tag in x {
-                    match tag {
+            Some(JsonPlusEntity::Array(choices_list)) => {
+                let mut choices = Vec::new();
+                for choice in choices_list {
+                    match choice {
                         JsonPlusEntity::Object(x) => {
                             return Err(ExecuteError::UnsupportedParameterValue(format!(
-                                "bad choice tag {:?}",
+                                "bad choice {:?}",
                                 x
                             )));
                         }
                         JsonPlusEntity::Array(x) => {
                             return Err(ExecuteError::UnsupportedParameterValue(format!(
-                                "bad choice tag {:?}",
+                                "bad choice {:?}",
                                 x
                             )));
                         }
                         x => {
-                            tags.push(x.to_string());
+                            choices.push(x.to_string());
                         }
                     }
                 }
-                Some(tags)
+                Some(choices)
             }
             Some(JsonPlusEntity::Object(x)) => {
-                let tags = x
+                let choices = x
                     .properties
                     .keys()
                     .map(|x| x.to_string())
                     .collect::<Vec<String>>();
-                Some(tags)
+                Some(choices)
             }
             _ => None,
         };
         match choices {
             Some(x) => {
-                let postfix = "hahaha TODO";
-
-                let postfix = ModelContentItem::system(postfix);
+                let tags = x.iter().map(|x| format!("§{}§", x)).collect::<Vec::<String>>();
+                let mut handlebars = Handlebars::new();
+                let postfix = handlebars.render_template(super::CHOICE_TEMPLATE, &json!({ choices: choices, tags: tags }))?;
+                let postfix = ModelContentItem::system(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(worker.postfix_content(content, postfix))
             }

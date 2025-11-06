@@ -108,6 +108,13 @@ pub enum ExecuteError {
         source: anyhow::Error,
     },
 
+    /// An error originating from the Abstract Syntax Tree (AST) parsing phase.
+    ///
+    /// This indicates issues encountered while parsing the input document into
+    /// an AST, typically due to malformed directives or syntax errors.
+    #[error("Handlebars render error: {0}")]
+    RenderError(#[from] handlebars::RenderError),
+
     /// A catch-all error for any `anyhow::Error` that occurs.
     ///
     /// This provides a convenient way to propagate errors from libraries that

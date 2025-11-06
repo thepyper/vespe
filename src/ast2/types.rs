@@ -206,6 +206,12 @@ impl JsonPlusEntity {
     }
 }
 
+impl ToString for JsonPlusEntity {
+    fn to_string(&self) -> String {
+        JsonPlusEntity::_to_string_0(&self, "", "")
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JsonPlusObject {
     pub properties: HashMap<String, JsonPlusEntity>,

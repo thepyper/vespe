@@ -500,12 +500,10 @@ impl Worker {
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
             }
-            Some(x) => {
-                Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "bad prefix: {:?}",
-                    x
-                )))
-            }
+            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
+                "bad prefix: {:?}",
+                x
+            ))),
             None => Ok(content),
         }
     }
@@ -531,12 +529,10 @@ impl Worker {
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))
             }
-            Some(x) => {
-                Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "bad postfix: {:?}",
-                    x
-                )))
-            }
+            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
+                "bad postfix: {:?}",
+                x
+            ))),
             None => Ok(content),
         }
     }

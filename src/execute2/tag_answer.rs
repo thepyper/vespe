@@ -5,11 +5,11 @@
 use super::Result;
 use serde::{Deserialize, Serialize};
 
-use super::content::ModelContent;
+use super::content::{ModelContent, ModelContentItem};
+use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
-//use super::variables::Variables;
-use crate::ast2::{Arguments, Parameters};
+use crate::ast2::{Arguments, JsonPlusEntity, JsonPlusObject, Parameters};
 
 /// Represents the current status of an `@answer` tag's execution.
 ///
@@ -110,6 +110,7 @@ impl DynamicPolicy for AnswerPolicy {
                 // Execute the model query
                 let prompt = worker.prefix_content_from_parameters(input.clone(), parameters)?;
                 let prompt = worker.postfix_content_from_parameters(prompt, parameters)?;
+                let prompt = Self::postfix_content_with_choice(worker, prompt, parameters)?;
                 let response = worker.call_model(parameters, &prompt)?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
@@ -137,5 +138,58 @@ impl DynamicPolicy for AnswerPolicy {
             }
         }
         Ok(result)
+    }
+}
+
+impl AnswerPolicy {
+    fn postfix_content_with_choice(
+        worker: &Worker,
+        content: ModelContent,
+        parameters: &Parameters,
+    ) -> Result<ModelContent> {
+        let choices = match parameters.get("choose") {
+            Some(JsonPlusEntity::Array(x)) => {
+                let mut tags = Vec::new();
+                for tag in x {
+                    match tag {
+                        JsonPlusEntity::Object(x) => {
+                            return Err(ExecuteError::UnsupportedParameterValue(format!(
+                                "bad choice tag {:?}",
+                                x
+                            )));
+                        }
+                        JsonPlusEntity::Array(x) => {
+                            return Err(ExecuteError::UnsupportedParameterValue(format!(
+                                "bad choice tag {:?}",
+                                x
+                            )));
+                        }
+                        x => {
+                            tags.push(x.to_string());
+                        }
+                    }
+                }
+                Some(tags)
+            }
+            Some(JsonPlusEntity::Object(x)) => {
+                let tags = x
+                    .properties
+                    .keys()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>();
+                Some(tags)
+            }
+            _ => None,
+        };
+        match choices {
+            Some(x) => {
+                let postfix = "hahaha TODO";
+
+                let postfix = ModelContentItem::system(postfix);
+                let postfix = ModelContent::from_item(postfix);
+                Ok(worker.postfix_content(content, postfix))
+            }
+            None => Ok(content),
+        }
     }
 }

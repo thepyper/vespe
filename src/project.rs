@@ -32,15 +32,7 @@ impl Project {
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
-            .context("Failed to write .ctx_root file")?;
-
-        /* TODO ???
-        if project.project_config.git_integration_enabled {
-            let mut commit = Commit::new();
-            commit.files.insert(ctx_root_file);
-            commit.commit("feat: Initialize .ctx project\nInitial commit of the .ctx project structure, including the .ctx directory and .ctx_root file.")?;
-        }
-        */
+            .context("Failed to write .ctx_root file")?;       
 
         let project_config = ProjectConfig::default();
 

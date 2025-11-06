@@ -15,7 +15,7 @@ pub struct AnchorIndex {
     /// Maps an anchor's UUID to the index of its beginning tag in the content vector.
     begin: HashMap<Uuid, usize>, // uid -> content index
     /// Maps an anchor's UUID to the index of its ending tag in the content vector.
-    end: HashMap<Uuid, usize>,   // uid -> content index
+    end: HashMap<Uuid, usize>, // uid -> content index
 }
 
 impl AnchorIndex {

@@ -231,7 +231,7 @@ impl ToString for JsonPlusObject {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Parameters {
     /// The map of parameter keys to their JSON values.
-    pub parameters: JsonPlusObject, // serde_json::Map<String, serde_json::Value>,
+    parameters: JsonPlusObject,
     /// The location of the parameter block in the source document.
     pub range: Range,
 }
@@ -240,9 +240,12 @@ impl Parameters {
     /// Creates a new, empty set of parameters.
     pub fn new() -> Self {
         Parameters {
-            parameters: JsonPlusObject::new(), // serde_json::Map::new(),
+            parameters: JsonPlusObject::new(),
             range: Range::null(),
         }
+    }
+    pub fn from_json_object_range(parameters: JsonPlusObject, range: Range) -> Self {
+        Parameters { parameters, range }
     }
     pub fn get(&self, key: &str) -> Option<&JsonPlusEntity> {
         self.parameters.properties.get(key)

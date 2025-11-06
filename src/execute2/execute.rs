@@ -512,7 +512,7 @@ impl Worker {
         content: &ModelContent,
     ) -> Result<String> {
         let mut prompt = ModelContent::new();
-        match parameters.parameters.properties.get("prefix") {
+        match parameters.get("prefix") {
             Some(JsonPlusEntity::NudeString(x)) => {
                 prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
             }
@@ -525,7 +525,7 @@ impl Worker {
             None => {}
         }
         prompt.extend(content.clone());
-        match parameters.parameters.properties.get("postfix") {
+        match parameters.get("postfix") {
             Some(JsonPlusEntity::NudeString(x)) => {
                 prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
             }
@@ -537,7 +537,7 @@ impl Worker {
             }
             None => {}
         }
-        let provider = match parameters.parameters.properties.get("provider") {
+        let provider = match parameters.get("provider") {
             Some(
                 JsonPlusEntity::NudeString(x)
                 | JsonPlusEntity::SingleQuotedString(x)
@@ -990,7 +990,7 @@ impl Worker {
     /// is not a valid string.
     /// Returns [`ExecuteError::PathResolutionError`] if the specified output path cannot be resolved.
     pub fn is_output_redirected(&self, parameters: &Parameters) -> Result<Option<PathBuf>> {
-        match &parameters.parameters.properties.get("output") {
+        match &parameters.get("output") {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let output_path = self.path_res.resolve_context(&x)?;
                 return Ok(Some(output_path));
@@ -1067,7 +1067,7 @@ impl Worker {
         parameters: &Parameters,
         input: ModelContent,
     ) -> Result<ModelContent> {
-        match &parameters.parameters.properties.get("input") {
+        match &parameters.get("input") {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let output_path = self.path_res.resolve_context(&x)?;
                 self.execute(&x)

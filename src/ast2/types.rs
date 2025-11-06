@@ -102,6 +102,8 @@ pub enum CommandKind {
     Set,
     /// Forget previous context
     Forget,
+    /// Allows writing things ignored by LLM
+    Comment,
 }
 
 impl ToString for CommandKind {
@@ -114,6 +116,7 @@ impl ToString for CommandKind {
             CommandKind::Repeat => "repeat",
             CommandKind::Set => "set",
             CommandKind::Forget => "forget",
+            CommandKind::Comment => "comment",
         }
         .to_string()
     }

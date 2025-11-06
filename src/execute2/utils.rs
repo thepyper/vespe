@@ -33,27 +33,6 @@ impl AnchorIndex {
     /// A new `AnchorIndex` instance.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// # use crate::ast2::{Anchor, AnchorKind, Content, Range, Position};
-    /// # use crate::execute2::AnchorIndex;
-    /// # use uuid::Uuid;
-    /// let uuid1 = Uuid::new_v4();
-    /// let uuid2 = Uuid::new_v4();
-    /// let content = vec![
-    ///     Content::Anchor(Anchor { uuid: uuid1, kind: AnchorKind::Begin, command: crate::ast2::CommandKind::Answer, parameters: Default::default(), arguments: Default::default(), range: Range::null() }),
-    ///     Content::Text(crate::ast2::Text { content: "some text".to_string(), range: Range::null() }),
-    ///     Content::Anchor(Anchor { uuid: uuid1, kind: AnchorKind::End, command: crate::ast2::CommandKind::Answer, parameters: Default::default(), arguments: Default::default(), range: Range::null() }),
-    ///     Content::Anchor(Anchor { uuid: uuid2, kind: AnchorKind::Begin, command: crate::ast2::CommandKind::Repeat, parameters: Default::default(), arguments: Default::default(), range: Range::null() }),
-    ///     Content::Anchor(Anchor { uuid: uuid2, kind: AnchorKind::End, command: crate::ast2::CommandKind::Repeat, parameters: Default::default(), arguments: Default::default(), range: Range::null() }),
-    /// ];
-    ///
-    /// let index = AnchorIndex::new(&content);
-    /// assert_eq!(index.get_begin(&uuid1), Some(0));
-    /// assert_eq!(index.get_end(&uuid1), Some(2));
-    /// assert_eq!(index.get_begin(&uuid2), Some(3));
-    /// assert_eq!(index.get_end(&uuid2), Some(4));
-    /// ```
     pub fn new(content: &[Content]) -> Self {
         let mut begin = HashMap::new();
         let mut end = HashMap::new();

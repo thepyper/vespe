@@ -12,6 +12,18 @@ Which is the tallest?
 	choose: [1,2,3]
 }
 
+Which one is most able in bending?
+
+1. Bender
+2. Fry
+
+@answer {
+	choose: {
+		bender: "Bender the Offender!!!!",
+		fry: "Fry the Wimpy.",
+	}
+}
+
 Tell me 3 violet things.
 
 @answer

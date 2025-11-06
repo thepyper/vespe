@@ -218,7 +218,7 @@ impl AnswerPolicy {
                         }
                     })
                     .collect::<Vec<String>>();
-                let mapped_choice = match choice_tags.len() {
+                let response = match choice_tags.len() {
                     1 => {
                         choice_tags.get(0).expect("There is one element!")
                     }
@@ -231,7 +231,7 @@ impl AnswerPolicy {
                 };
                 Ok(response.into())
             }
-            _ => {
+            x => {
                 Ok(response)
             },
         }

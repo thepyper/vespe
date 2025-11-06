@@ -1,16 +1,12 @@
 use crate::Project;
 use anyhow::Result;
-use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::{Path, PathBuf};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use std::path::{Path};
 use std::sync::mpsc::channel;
 use std::time::Duration;
-use tracing::{debug, error, info};
 
 pub fn watch(project: &Project) -> Result<()> {
-    println!("Starting watch mode...");
-
-    // Initial execution on all context files
-    initial_execute_all_contexts(project)?;
+    tracing::info!("Starting watch mode...");
 
     // Setup file watcher
     let (tx, rx) = channel();
@@ -18,8 +14,8 @@ pub fn watch(project: &Project) -> Result<()> {
     let contexts_dir = project.contexts_root();
     watcher.watch(contexts_dir.as_ref(), RecursiveMode::Recursive)?;
 
-    println!("Watching for changes in: {}", contexts_dir.display());
-    println!("Press Ctrl-C to stop.");
+    tracing::info!("Watching for changes in: {}", contexts_dir.display());
+    tracing::info!("Press Ctrl-C to stop.");
 
     // Handle Ctrl-C
     let (ctrlc_tx, ctrlc_rx) = channel();
@@ -33,7 +29,7 @@ pub fn watch(project: &Project) -> Result<()> {
     loop {
         // Check for Ctrl-C
         if ctrlc_rx.try_recv().is_ok() {
-            println!("Ctrl-C received. Stopping watch mode.");
+            tracing::info!("Ctrl-C received. Stopping watch mode.");
             break;
         }
 
@@ -44,34 +40,28 @@ pub fn watch(project: &Project) -> Result<()> {
                     for path in event.paths {
                         if is_context_file(project, &path) {
                             let context_name = path_to_context_name(project, &path)?;
-                            println!(
+                            tracing::info!(
                                 "Change detected in context file: {}. Re-executing...",
                                 context_name
                             );
                             if let Err(e) = project.execute_context(&context_name) {
-                                eprintln!("Error executing context {}: {}", context_name, e);
+                                tracing::error!("Error executing context {}: {}", context_name, e);
                             }
                         }
                     }
                 }
-                Err(e) => eprintln!("Watch error: {:?}", e),
+                Err(e) => tracing::error!("Watch error: {:?}", e),
             },
             Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
                 // No event, continue loop
             }
             Err(e) => {
-                eprintln!("Watch channel error: {:?}", e);
+                tracing::error!("Watch channel error: {:?}", e);
                 break;
             }
         }
     }
 
-    Ok(())
-}
-
-fn initial_execute_all_contexts(project: &Project) -> Result<()> {
-    // TODO redo!!!
-    println!("TODOOOOOOOOOOOOOOOOO...");
     Ok(())
 }
 

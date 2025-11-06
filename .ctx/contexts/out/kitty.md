@@ -1,1 +1,1 @@
-Purrrr. Yellow and green are both colors, but they differ in their position on the color spectrum and how they are perceived. Yellow is a primary color, often associated with sunlight and happiness, while green is a secondary color, created by mixing yellow and blue, and is commonly linked to nature and growth. Purrrr.
+Purrr. Yellow is a primary color, often associated with sunlight and happiness, while green is a secondary color, formed by mixing yellow and blue, and is commonly linked to nature and growth. Purrr.

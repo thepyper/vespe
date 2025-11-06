@@ -1129,4 +1129,10 @@ impl Worker {
     pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
         Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
     }
+
+    pub fn read_context(&self, context_name: &str) -> Result<String> {
+        let context_path    = self.path_res.resolve_context(context_name)?;
+        let context_content = self.file_access.read_file(&context_path)?;
+        Ok(context_content)
+    }
 }

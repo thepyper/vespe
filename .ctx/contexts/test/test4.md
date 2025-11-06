@@ -1,6 +1,8 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
+@inline test/blue
+
 Which one is most able in bending?
 
 1. Bender

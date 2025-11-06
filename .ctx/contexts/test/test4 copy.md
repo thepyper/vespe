@@ -1,16 +1,7 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
-Here is a list of high things:
-1. Everest
-2. My dog
-3. Tour Eifell
-
-Which is the tallest?
-
-@answer {
-	choose: [1,2,3]
-}
+@inline test/blue
 
 Which one is most able in bending?
 
@@ -22,6 +13,17 @@ Which one is most able in bending?
 		bender: "Bender the Offender!!!!",
 		fry: "Fry the Wimpy.",
 	}
+}
+
+Here is a list of high things:
+1. Everest
+2. My dog
+3. Tour Eifell
+
+Which is the tallest?
+
+@answer {
+	choose: [1,2,3]
 }
 
 Tell me 3 violet things.

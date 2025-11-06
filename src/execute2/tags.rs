@@ -14,6 +14,7 @@ use super::REDIRECTED_OUTPUT_PLACEHOLDER;
 use super::tag_answer::AnswerPolicy;
 use super::tag_forget::ForgetPolicy;
 use super::tag_include::IncludePolicy;
+use super::tag_inline::InlinePolicy;
 use super::tag_repeat::RepeatPolicy;
 use super::tag_set::SetPolicy;
 
@@ -597,6 +598,7 @@ impl TagBehaviorDispatch {
             CommandKind::Answer => Ok(Box::new(DynamicTagBehavior(AnswerPolicy))),
             CommandKind::Repeat => Ok(Box::new(DynamicTagBehavior(RepeatPolicy))),
             CommandKind::Include => Ok(Box::new(StaticTagBehavior(IncludePolicy))),
+            CommandKind::Inline => Ok(Box::new(DynamicTagBehavior(InlinePolicy))),
             CommandKind::Set => Ok(Box::new(StaticTagBehavior(SetPolicy))),
             CommandKind::Forget => Ok(Box::new(StaticTagBehavior(ForgetPolicy))),
             _ => Err(ExecuteError::UnsupportedCommand(command)),

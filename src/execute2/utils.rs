@@ -63,6 +63,7 @@ impl AnchorIndex {
     /// # Returns
     ///
     /// An `Option<usize>` containing the index if found, otherwise `None`.
+    #[allow(dead_code)]
     pub fn get_begin(&self, uid: &Uuid) -> Option<usize> {
         self.begin.get(uid).copied()
     }

@@ -115,6 +115,7 @@ impl DynamicPolicy for AnswerPolicy {
                 let prompt = worker.postfix_content_from_parameters(prompt, parameters)?;
                 let prompt = Self::postfix_content_with_choice(worker, prompt, parameters)?;
                 let response = worker.call_model(parameters, &prompt)?;
+                let response = Self::process_response_with_choice(response, parameters)?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);
@@ -186,18 +187,59 @@ impl AnswerPolicy {
         };
         match choices {
             Some(ref x) => {
-                let tags = x.iter().map(|x| format!("§{}§", x)).collect::<Vec::<String>>();
+                let choice_tags = x.iter().map(|x| Self::choice_tag_from_choice(x)).collect::<Vec::<String>>();
                 let mut handlebars = Handlebars::new();
                 let json_choices = match choices {
-                    Some(c) => serde_json::Value::Array(c.iter().cloned().map(serde_json::Value::String).collect()),
-                    None => serde_json::Value::Null,
+                    Some(c) => {
+                        serde_json::Value::Array(c.iter().cloned().map(serde_json::Value::String).collect())
+                    }
+                    None => {
+                        return Err(ExecuteError::UnsupportedParameterValue("no choice given".to_string()));
+                    }
                 };
-                let postfix = handlebars.render_template(super::CHOICE_TEMPLATE, &json!({ "choices": json_choices, "tags": tags }))?;
+                let postfix = handlebars.render_template(super::CHOICE_TEMPLATE, &json!({ "choices": json_choices, "choice_tags": choice_tags }))?;
                 let postfix = ModelContentItem::system(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(worker.postfix_content(content, postfix))
             }
             None => Ok(content),
         }
+    }
+    fn process_response_with_choice(response: ModelContent, parameters: &Parameters) -> Result<ModelContent> {
+        match parameters.get("choose") {
+            Some(JsonPlusEntity::Object(x)) => {
+                let response = response.to_string();
+                let choice_tags = x
+                    .properties
+                    .iter()
+                    .filter_map(|(key, value)| {
+                        match response.contains(Self::choice_tag_from_choice(key)) {
+                            true => Some(value),
+                            false => None 
+                        }
+                    })
+                    .collect::<Vec<String>>();
+                let mapped_choice = match choice_tags.len() {
+                    1 => {
+                        choice_tags.get(0).expected("There is one element!")
+                    }
+                    0 => {
+                        super::NO_CHOICE_MESSAGE.to_string()
+                    }
+                    _ => {
+                        super::MANY_CHOICES_MESSAGE.to_string()
+                    }
+                };
+                let response = ModelContentItem::agent(mapped_choice);
+                let response = ModelContent::from_item(response);
+                Ok(response)
+            }
+            _ => {
+                Ok(response)
+            },
+        }
+    }
+    fn choice_tag_from_choice(choice: &str) -> String {
+        format!("§{}§", choice)
     }
 }

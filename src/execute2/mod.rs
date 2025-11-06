@@ -88,4 +88,6 @@ pub use execute::collect_context;
 pub use execute::execute_context;
 
 const REDIRECTED_OUTPUT_PLACEHOLDER : &str = "Context here has been answered but output has been redirected, so do not respond anymore to context above this sentence.\n";
-const CHOICE_TEMPLATE : &str = "You MUST reply with ONLY ONE of the following choices: {{{choices}}}.\nyou MUST represent these in your output with ONLY ONE of the following tags {{{tags}}}.\n";
+const CHOICE_TEMPLATE : &str = "You MUST reply with ONLY ONE of the following choices: {{{choices}}}.\nYou MUST represent these in your output with ONLY ONE of the following tags {{{choice_tags}}}.\n";
+const NO_CHOICE_MESSAGE : &str = "No choice was taken.";
+const MANY_CHOICES_MESSAGE : &str = "Many choices were taken.";

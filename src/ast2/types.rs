@@ -164,18 +164,24 @@ impl JsonPlusEntity {
     fn _array_to_string_0(array: &Vec<JsonPlusEntity>, pre_indent: &str) -> String {
         let mut s = format!("[");
         let n = array.len();
-        let (separator, indent) = match n {
-            0 => ("", String::new()),
-            1 => (" ", String::new()),
-            _ => ("\n", format!("{}\t", pre_indent)),
+        let (separator, pre_indent, indent) = match n {
+            0 | 1 => (" ", "", "".into()),
+            _ => ("\n", pre_indent, format!("\t{}", pre_indent)),
         };
+        let mut first = true;
         for value in array {
+            if !first {
+                s.push_str(",");
+            }
+            first = false;
+            s.push_str(&separator);
             s.push_str(&indent);
             s.push_str(&value._to_string_0("", &indent));
-            s.push_str(",");
-            s.push_str(separator);
         }
-        s.push_str(&indent);
+        if !first {
+            s.push_str(&separator);
+            s.push_str(pre_indent);
+        }
         s.push_str("]");
         s
     }

@@ -16,6 +16,7 @@ use crate::execute2::content::{ModelContent, ModelContentItem};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use sha2::{Sha256, Digest};
 
 use super::{ExecuteError, Result};
 
@@ -82,6 +83,8 @@ pub(crate) struct Collector {
     anchor_stack: Vec<Anchor>,
     /// The accumulated content that will be sent to the model.
     context: ModelContent,
+    /// Running context hash
+    context_hasher: Sha256,
     /// Execution-time default parameters for tags
     default_parameters: Parameters,
     /// Latest processed range
@@ -99,6 +102,10 @@ impl Collector {
     /// A reference to the [`ModelContent`].
     pub fn context(&self) -> &ModelContent {
         &self.context
+    }
+
+    pub fn context_hash(&self) -> String {
+        format!("{:x}", self.context_hasher.clone().finalize())
     }
 
     /// Returns a reference to the current anchor stack.
@@ -125,6 +132,7 @@ impl Collector {
             visit_stack: Vec::new(),
             anchor_stack: Vec::new(),
             context: ModelContent::new(),
+            context_hasher: Sha256::new(),
             default_parameters: Parameters::new(),
             latest_range: Range::null(),
         }
@@ -167,6 +175,7 @@ impl Collector {
             visit_stack,
             anchor_stack: Vec::new(),
             context: self.context.clone(),
+            context_hasher: self.context_hasher.clone(),
             default_parameters: self.default_parameters.clone(),
             latest_range: Range::null(),
         })
@@ -188,6 +197,7 @@ impl Collector {
     fn ascend(mut self, descent_collector: Collector) -> Self {
         // Merge descending collector context
         self.context = descent_collector.context;
+        self.context_hasher = descent_collector.context_hasher;
         self.default_parameters = descent_collector.default_parameters;
         self
     }
@@ -202,6 +212,7 @@ impl Collector {
     /// The `Collector` with its `context` reset.
     pub fn forget(mut self) -> Self {
         self.context = ModelContent::new();
+        self.context_hasher = Sha256::new();
         self
     }
 
@@ -253,6 +264,7 @@ impl Collector {
     ///
     /// The `Collector` with the new item added to its context.
     pub fn push_item(mut self, item: ModelContentItem) -> Self {
+        self.context_hasher.update(item.to_prompt());
         self.context.push(item);
         self
     }
@@ -684,7 +696,7 @@ impl Worker {
                         // Agents write inside anchors
                         ModelContentItem::agent(&text.content)
                     };
-                    collector.context.push(content);
+                    collector = collector.push_item(content);
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {

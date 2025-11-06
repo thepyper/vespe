@@ -14,7 +14,6 @@ use crate::config::{EditorInterface, ProjectConfig};
 use crate::editor::{lockfile::FileBasedEditorCommunicator, EditorCommunicator};
 
 pub struct Project {
-    //root_path: PathBuf,
     editor_interface: Option<Arc<dyn EditorCommunicator>>,
     file_access: Arc<ProjectFileAccessor>,
     path_res: Arc<ProjectPathResolver>,

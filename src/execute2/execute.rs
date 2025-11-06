@@ -567,10 +567,8 @@ impl Worker {
     pub(crate) fn call_model(
         &self,
         parameters: &Parameters,
-        content: &ModelContent,
+        prompt: &ModelContent,
     ) -> Result<String> {
-        let prompt = self.prefix_content_from_parameters(content.clone(), parameters)?;
-        let prompt = self.postfix_content_from_parameters(prompt, parameters)?;
         let provider = match parameters.get("provider") {
             Some(
                 JsonPlusEntity::NudeString(x)

@@ -108,7 +108,9 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let response = worker.call_model(parameters, input)?;
+                let prompt = worker.prefix_content_from_parameters(input.clone(), parameters)?;
+                let prompt = worker.postfix_content_from_parameters(prompt, parameters)?;
+                let response = worker.call_model(parameters, &prompt)?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
                 result.new_state = Some(state);

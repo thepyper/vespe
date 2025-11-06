@@ -273,7 +273,7 @@ impl ToString for JsonPlusObject {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Parameters {
     /// The map of parameter keys to their JSON values.
-    parameters: JsonPlusObject,
+    pub(crate) parameters: JsonPlusObject,
     /// The location of the parameter block in the source document.
     pub range: Range,
 }

@@ -1,7 +1,19 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
-@inline test/blue
+@comment { _:"Here is a comment that LLM will not read" }
+
+@comment {
+	_1: "Here is a multiline comment that LLM will not read",
+	_2: "Hehehehe!!                                        ",
+}
+
+<!-- inline-04efeda8-7e36-4249-a918-0327e06f6548:begin { provider: "gemini -y -m gemini-2.5-flash" } test/blue -->
+Tell me 4 blue things.
+<!-- answer-af405a28-24f5-44b4-aedd-1df3d4d90e9e:begin { provider: "gemini -y -m gemini-2.5-flash" }  -->
+<!-- answer-af405a28-24f5-44b4-aedd-1df3d4d90e9e:end {}  -->
+
+<!-- inline-04efeda8-7e36-4249-a918-0327e06f6548:end {}  -->
 
 Tell me the color of pigs.
 

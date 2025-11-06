@@ -1,6 +1,13 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
+@comment { _:"Here is a comment that LLM will not read" }
+
+@comment {
+	_1: "Here is a multiline comment that LLM will not read",
+	_2: "Hehehehe!!                                        ",
+}
+
 @inline test/blue
 
 Tell me the color of pigs.

@@ -6,14 +6,12 @@ Which one is most able in bending?
 1. Bender
 2. Fry
 
-<!-- answer-86ddcc64-51ae-4d53-ad04-8b33a97d34d1:begin {
-	provider: "gemini -y -m gemini-2.5-flash",
+@answer {
 	choose: {
+		bender: "Bender the Offender!!!!",
 		fry: "Fry the Wimpy.",
-		bender: "Bender the Offender!!!!"
 	}
-}  -->
-<!-- answer-86ddcc64-51ae-4d53-ad04-8b33a97d34d1:end {}  -->
+}
 
 Here is a list of high things:
 1. Everest

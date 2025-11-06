@@ -213,7 +213,7 @@ impl AnswerPolicy {
                     .iter()
                     .filter_map(|(key, value)| {
                         match response.contains(&Self::choice_tag_from_choice(key)) {
-                            true => Some(value.to_string()),
+                            true => Some(value.to_prompt()),
                             false => None 
                         }
                     })
@@ -229,7 +229,7 @@ impl AnswerPolicy {
                         super::MANY_CHOICES_MESSAGE
                     }
                 };
-                Ok(response.into())
+                Ok(format!("{}\n", response))
             }
             x => {
                 Ok(response)

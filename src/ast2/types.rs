@@ -142,6 +142,25 @@ pub enum JsonPlusEntity {
 }
 
 impl JsonPlusEntity {
+    pub fn to_prompt(&self) -> String {
+        match self {
+            JsonPlusEntity::Flag => String::new(),
+            JsonPlusEntity::Boolean(x) => {
+                format!("{}", if *x { "true" } else { "false" })
+            }
+            JsonPlusEntity::Integer(x) => format!("{}", x),
+            JsonPlusEntity::Float(x) => format!("{}", x),
+            JsonPlusEntity::SingleQuotedString(x) => format!("{}", x),
+            JsonPlusEntity::DoubleQuotedString(x) => format!("{}", x),
+            JsonPlusEntity::NudeString(x) => format!("{}", x),
+            JsonPlusEntity::Object(x) => {
+                format!("{}", Self::_object_to_string_0(x, ""))
+            }
+            JsonPlusEntity::Array(x) => {
+                format!("{}", Self::_array_to_string_0(x, ""))
+            }
+        }
+    }
     fn _to_string_0(&self, prefix: &str, pre_indent: &str) -> String {
         match self {
             JsonPlusEntity::Flag => String::new(),

@@ -159,7 +159,7 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Init {} => {
-            let project = Project::init(&project_path)?;
+            let _ = Project::init(&project_path)?;
             println!(
                 "Initialized new .ctx project at: {}",
                 project_path.display()

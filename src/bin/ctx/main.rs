@@ -3,7 +3,6 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use vespe::project::Project;
 mod watch;
-use tracing::debug;
 
 use handlebars::Handlebars;
 use serde_json::json;
@@ -62,82 +61,7 @@ enum ContextCommands {
         #[arg(long)]
         today: bool,
     },
-    /// Lists all available contexts.
-    List {},
-    /// Displays the dependency tree for a context.
-    Tree {
-        /// The name of the context to display the tree for.
-        name: String,
-    },
 }
-
-#[derive(Subcommand)]
-enum SnippetCommands {
-    /// Creates a new snippet file.
-    New {
-        /// The name of the snippet file (e.g., "common/header").
-        name: String,
-        /// Optional initial content for the snippet file.
-        #[arg(long, value_name = "CONTENT")]
-        content: Option<String>,
-    },
-    /// Lists all available snippets.
-    List {},
-}
-
-/*fn print_context_tree(context: &Context, indent: usize) {
-     TODO redo
-    let indent_str = "  ".repeat(indent);
-    println!(
-        "{}{}",
-        indent_str,
-        //Yellow.paint(format!("Context: {}", context.name))
-    );
-
-    for (line_index, included_context) in &context.includes {
-        println!(
-            "{}{}",
-            indent_str,
-            //Green.paint(format!(
-                "  @include (line {}): {}",
-                line_index, included_context.name
-            ))
-        );
-        //print_context_tree(included_context, indent + 2);
-    }
-
-    for (line_index, summarized_context) in &context.summaries {
-        println!(
-            "{}{}",
-            indent_str,
-            //Purple.paint(format!(
-                "  @summary (line {}): {}",
-                line_index, summarized_context.name
-            ))
-        );
-        //print_context_tree(summarized_context, indent + 2);
-    }
-
-    for (line_index, inlined_snippet) in &context.inlines {
-        println!(
-            "{}{}",
-            indent_str,
-            //Cyan.paint(format!(
-                "  @inline (line {}): {}",
-                line_index, inlined_snippet.name
-            ))
-        );
-    }
-
-    for line_index in &context.answers {
-        println!(
-            "{}{}",
-            indent_str,
-            //Red.paint(format!("  @answer (line {})", line_index))
-        );
-    }
-
-}*/
 
 fn get_context_name(today: bool, name: Option<String>, format_str: &str) -> Result<String> {
     if today {
@@ -150,8 +74,6 @@ fn get_context_name(today: bool, name: Option<String>, format_str: &str) -> Resu
 fn main() -> Result<()> {
     vespe::init_telemetry();
 
-    debug!("Starting vespe CLI...");
-
     let cli = Cli::parse();
 
     let current_dir = std::env::current_dir()?;
@@ -160,7 +82,7 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Init {} => {
             let _ = Project::init(&project_path)?;
-            println!(
+            tracing::info!(
                 "Initialized new .ctx project at: {}",
                 project_path.display()
             );
@@ -190,29 +112,14 @@ fn main() -> Result<()> {
 
                     let file_path =
                         project.create_context_file(&context_name, Some(rendered_content))?;
-                    println!("Created new context file: {}", file_path.display());
+                    tracing::info!("Created new context file: {}", file_path.display());
                 }
                 ContextCommands::Execute { name, today } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
-                    println!("Executing context '{}'...", context_name);
+                    tracing::info!("Executing context '{}'...", context_name);
                     project.execute_context(&context_name)?;
-                    println!("Context '{}' executed successfully.", context_name);
-                }
-                ContextCommands::List {} => {
-                    let contexts = project.list_contexts()?;
-                    if contexts.is_empty() {
-                        println!("No contexts found.");
-                    } else {
-                        println!("Available contexts:");
-                        for context in contexts {
-                            println!("  - {} ({})", context.name, context.path.display());
-                        }
-                    }
-                }
-                ContextCommands::Tree { name: _name } => {
-                    // TODO redo let context_tree = project.get_context_tree(&name)?;
-                    //print_context_tree(&context_tree, 0);
-                }
+                    tracing::info!("Context '{}' executed successfully.", context_name);
+                }                   
             }
         }
         Commands::Watch {} => {

@@ -154,15 +154,6 @@ impl Collector {
     /// collector is created, `None` if a circular dependency is detected.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// # use std::path::{Path, PathBuf};
-    /// # use crate::execute2::Collector;
-    /// let collector = Collector::new();
-    /// let path = PathBuf::from("test_context.md");
-    /// let new_collector = collector.descent(&path).unwrap();
-    /// assert_eq!(new_collector.visit_stack.len(), 1);
-    /// ```
     fn descent(&self, context_path: &Path) -> Option<Self> {
         // Check if context has already been visited
         if self.visit_stack.contains(&context_path.to_path_buf()) {

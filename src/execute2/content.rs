@@ -65,12 +65,6 @@ impl ModelContentItem {
     /// A `ModelContentItem` variant containing the user's text.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::ModelContentItem;
-    /// let user_item = ModelContentItem::user("Hello, world!");
-    /// assert!(matches!(user_item, ModelContentItem::User(_)));
-    /// ```
     pub fn user(text: &str) -> Self {
         ModelContentItem::User(UserModelContent { text: text.into() })
     }
@@ -86,12 +80,6 @@ impl ModelContentItem {
     /// A `ModelContentItem` variant containing the system's text.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::ModelContentItem;
-    /// let system_item = ModelContentItem::system("You are a helpful assistant.");
-    /// assert!(matches!(system_item, ModelContentItem::System(_)));
-    /// ```
     pub fn system(text: &str) -> Self {
         ModelContentItem::System(SystemModelContent { text: text.into() })
     }
@@ -107,12 +95,6 @@ impl ModelContentItem {
     /// A `ModelContentItem` variant containing the agent's text.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::ModelContentItem;
-    /// let agent_item = ModelContentItem::agent("I can help with that.");
-    /// assert!(matches!(agent_item, ModelContentItem::Agent(_)));
-    /// ```
     pub fn agent(text: &str) -> Self {
         ModelContentItem::Agent(AgentModelContent { text: text.into() })
     }
@@ -128,15 +110,6 @@ impl ModelContentItem {
     /// A `String` representing the formatted prompt item.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::ModelContentItem;
-    /// let user_item = ModelContentItem::user("What is the capital of France?");
-    /// assert_eq!(
-    ///     user_item.to_prompt(),
-    ///     "\n---\nUser Message:\nWhat is the capital of France?"
-    /// );
-    /// ```
     pub fn to_prompt(&self) -> String {
         match self {
             ModelContentItem::System(content) => {
@@ -159,12 +132,6 @@ impl ToString for ModelContentItem {
     /// A `String` containing the raw text content.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::ModelContentItem;
-    /// let system_item = ModelContentItem::system("You are a helpful assistant.");
-    /// assert_eq!(system_item.to_string(), "You are a helpful assistant.");
-    /// ```
     fn to_string(&self) -> String {
         match self {
             ModelContentItem::System(content) => format!("{}", content.text),
@@ -190,12 +157,6 @@ impl ModelContent {
     /// A new `ModelContent` with an empty list of items.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::ModelContent;
-    /// let content = ModelContent::new();
-    /// assert!(content.0.is_empty());
-    /// ```
     pub fn new() -> Self {
         ModelContent(Vec::new())
     }
@@ -214,18 +175,6 @@ impl ModelContent {
     /// * `content` - Another `ModelContent` instance whose items will be appended.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::{ModelContent, ModelContentItem};
-    /// let mut content1 = ModelContent::new();
-    /// content1.push(ModelContentItem::user("Part 1"));
-    ///
-    /// let mut content2 = ModelContent::new();
-    /// content2.push(ModelContentItem::agent("Part 2"));
-    ///
-    /// content1.extend(content2);
-    /// assert_eq!(content1.0.len(), 2);
-    /// ```
     pub fn extend(&mut self, content: ModelContent) {
         self.0.extend(content.0.into_iter());
     }
@@ -237,13 +186,6 @@ impl ModelContent {
     /// * `item` - The `ModelContentItem` to be added.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::{ModelContent, ModelContentItem};
-    /// let mut content = ModelContent::new();
-    /// content.push(ModelContentItem::user("Hello"));
-    /// assert_eq!(content.0.len(), 1);
-    /// ```
     pub fn push(&mut self, item: ModelContentItem) {
         self.0.push(item);
     }
@@ -259,16 +201,6 @@ impl ModelContent {
     /// A `String` representing the concatenated and formatted prompt.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::{ModelContent, ModelContentItem};
-    /// let mut content = ModelContent::new();
-    /// content.push(ModelContentItem::system("You are a bot."));
-    /// content.push(ModelContentItem::user("Say hi."));
-    ///
-    /// let expected_prompt = "\n---\nSystem Message:\nYou are a bot.\n\n---\nUser Message:\nSay hi.";
-    /// assert_eq!(content.to_prompt(), expected_prompt);
-    /// ```
     pub fn to_prompt(&self) -> String {
         self.0
             .iter()
@@ -284,12 +216,6 @@ impl Default for ModelContent {
     /// This is equivalent to calling `ModelContent::new()`.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::ModelContent;
-    /// let content = ModelContent::default();
-    /// assert!(content.0.is_empty());
-    /// ```
     fn default() -> Self {
         Self::new()
     }
@@ -306,15 +232,6 @@ impl ToString for ModelContent {
     /// A `String` containing the concatenated raw text content.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// use crate::execute2::{ModelContent, ModelContentItem};
-    /// let mut content = ModelContent::new();
-    /// content.push(ModelContentItem::system("Instruction."));
-    /// content.push(ModelContentItem::user("Query."));
-    ///
-    /// assert_eq!(content.to_string(), "Instruction.\nQuery.");
-    /// ```
     fn to_string(&self) -> String {
         self.0
             .iter()

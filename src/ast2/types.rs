@@ -135,7 +135,9 @@ pub enum JsonPlusEntity {
 impl JsonPlusEntity {
     pub fn as_string_only(&self) -> Option<String> {
         match self {
-            JsonPlusEntity::NudeString(x) | JsonPlusEntity::SingleQuotedString(x) | JsonPlusEntity::DoubleQuotedString(x) => Some(x.clone()),
+            JsonPlusEntity::NudeString(x)
+            | JsonPlusEntity::SingleQuotedString(x)
+            | JsonPlusEntity::DoubleQuotedString(x) => Some(x.clone()),
             _ => None,
         }
     }

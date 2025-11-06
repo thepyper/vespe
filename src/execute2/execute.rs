@@ -14,9 +14,9 @@ use uuid::Uuid;
 
 use crate::execute2::content::{ModelContent, ModelContentItem};
 
+use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use sha2::{Sha256, Digest};
 
 use super::{ExecuteError, Result};
 
@@ -1143,7 +1143,7 @@ impl Worker {
     }
 
     pub fn read_context(&self, context_name: &str) -> Result<String> {
-        let context_path    = self.path_res.resolve_context(context_name)?;
+        let context_path = self.path_res.resolve_context(context_name)?;
         let context_content = self.file_access.read_file(&context_path)?;
         Ok(context_content)
     }

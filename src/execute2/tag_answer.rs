@@ -135,11 +135,14 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::Completed => {
                 // Nothing to do
-                let is_dynamic = parameters.get("dynamic").map(|x| x.as_bool().unwrap_or(false)).unwrap_or(false);
+                let is_dynamic = parameters
+                    .get("dynamic")
+                    .map(|x| x.as_bool().unwrap_or(false))
+                    .unwrap_or(false);
                 if !is_dynamic {
                     // Do nothing
                 } else if result.collector.context_hash() != state.context_hash {
-                    // Repeat 
+                    // Repeat
                     state.status = AnswerStatus::Repeat;
                     result.new_state = Some(state);
                     result.do_next_pass = true;
@@ -200,17 +203,25 @@ impl AnswerPolicy {
         };
         match choices {
             Some(ref x) => {
-                let choice_tags = x.iter().map(|x| Self::choice_tag_from_choice(x)).collect::<Vec::<String>>();
+                let choice_tags = x
+                    .iter()
+                    .map(|x| Self::choice_tag_from_choice(x))
+                    .collect::<Vec<String>>();
                 let mut handlebars = Handlebars::new();
                 let json_choices = match choices {
-                    Some(c) => {
-                        serde_json::Value::Array(c.iter().cloned().map(serde_json::Value::String).collect())
-                    }
+                    Some(c) => serde_json::Value::Array(
+                        c.iter().cloned().map(serde_json::Value::String).collect(),
+                    ),
                     None => {
-                        return Err(ExecuteError::UnsupportedParameterValue("no choice given".to_string()));
+                        return Err(ExecuteError::UnsupportedParameterValue(
+                            "no choice given".to_string(),
+                        ));
                     }
                 };
-                let postfix = handlebars.render_template(super::CHOICE_TEMPLATE, &json!({ "choices": json_choices, "choice_tags": choice_tags }))?;
+                let postfix = handlebars.render_template(
+                    super::CHOICE_TEMPLATE,
+                    &json!({ "choices": json_choices, "choice_tags": choice_tags }),
+                )?;
                 let postfix = ModelContentItem::system(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(worker.postfix_content(content, postfix))
@@ -227,26 +238,18 @@ impl AnswerPolicy {
                     .filter_map(|(key, value)| {
                         match response.contains(&Self::choice_tag_from_choice(key)) {
                             true => Some(value.to_prompt()),
-                            false => None 
+                            false => None,
                         }
                     })
                     .collect::<Vec<String>>();
                 let response = match choice_tags.len() {
-                    1 => {
-                        choice_tags.get(0).expect("There is one element!")
-                    }
-                    0 => {
-                        super::NO_CHOICE_MESSAGE
-                    }
-                    _ => {
-                        super::MANY_CHOICES_MESSAGE
-                    }
+                    1 => choice_tags.get(0).expect("There is one element!"),
+                    0 => super::NO_CHOICE_MESSAGE,
+                    _ => super::MANY_CHOICES_MESSAGE,
                 };
                 Ok(format!("{}\n", response))
             }
-            x => {
-                Ok(response)
-            },
+            x => Ok(response),
         }
     }
     fn choice_tag_from_choice(choice: &str) -> String {

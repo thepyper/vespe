@@ -1,4 +1,3 @@
-
 use super::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -83,7 +82,12 @@ impl DynamicPolicy for InlinePolicy {
         let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
         match state.status {
             InlineStatus::JustCreated => {
-                let context_name = arguments.arguments.get(0).expect("TODO gestire errore!!").value.clone();                
+                let context_name = arguments
+                    .arguments
+                    .get(0)
+                    .expect("TODO gestire errore!!")
+                    .value
+                    .clone();
                 // Prepare the query
                 state.status = InlineStatus::Completed;
                 result.new_state = Some(state);
@@ -104,4 +108,3 @@ impl DynamicPolicy for InlinePolicy {
         Ok(result)
     }
 }
-

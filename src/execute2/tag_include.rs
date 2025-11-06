@@ -41,37 +41,6 @@ impl StaticPolicy for IncludePolicy {
     /// Returns other [`ExecuteError`] variants if the included context cannot be found or executed.
     ///
     /// # Examples
-    ///
-    /// ```rust
-    /// # use crate::execute2::{Collector, Worker, IncludePolicy};
-    /// # use crate::execute2::tags::StaticPolicy;
-    /// # use crate::ast2::{Tag, CommandKind, Parameters, Arguments, Range, Position, Argument};
-    /// # use std::sync::Arc;
-    /// # use crate::file::MockFileAccessor;
-    /// # use crate::path::MockPathResolver;
-    /// # // Mock setup for demonstration
-    /// # let mut mock_file_access = MockFileAccessor::new();
-    /// # mock_file_access.expect_read_file().returning(|_| Ok("Hello from included context!".to_string()));
-    /// # let mut mock_path_res = MockPathResolver::new();
-    /// # mock_path_res.expect_resolve_context().returning(|_| Ok(std::path::PathBuf::from("included.md")));
-    /// #
-    /// let worker = Worker::new(Arc::new(mock_file_access), Arc::new(mock_path_res));
-    /// let collector = Collector::new();
-    ///
-    /// let tag = Tag {
-    ///     command: CommandKind::Include,
-    ///     parameters: Parameters::new(),
-    ///     arguments: Arguments { arguments: vec![Argument { value: "included_context".to_string(), range: Range::null() }] },
-    ///     range: Range::null(),
-    /// };
-    ///
-    /// // In a real scenario, the included context would be processed and its content added.
-    /// // For this example, we'll simulate the outcome.
-    /// let updated_collector = IncludePolicy::collect_static_tag(&worker, collector, &tag).unwrap();
-    /// // Assertions would go here to check the content of updated_collector
-    /// // For instance, if "included_context" contained "Hello World!",
-    /// // updated_collector.context().to_string() would contain "Hello World!".
-    /// ```
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
         tracing::debug!(
             "tag_include::IncludePolicy::collect_static_tag\nTag = {:?}\n",

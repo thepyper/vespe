@@ -543,7 +543,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         worker: &Worker,
         collector: Collector,
         anchor: &Anchor,
-        anchor_end: Position,
+        _anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let input = worker.redirect_input(&anchor.parameters, collector.context().clone())?;

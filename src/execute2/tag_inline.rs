@@ -1,5 +1,5 @@
 //! Implements the behavior for the dynamic `@inline` tag.
-//! 
+//!
 //! The `@inline` tag is used to dynamically include content from another context file.
 //! Unlike the static `@include` tag, `@inline` is stateful, allowing its content
 //! to be re-evaluated or "repeated" during the execution flow. This is useful when
@@ -8,11 +8,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::Result;
-use super::error::{ExecuteError};
-use super::content::{ModelContent};
+use super::content::ModelContent;
+use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
+use super::Result;
 use crate::ast2::{Arguments, Parameters};
 
 /// Represents the execution status of an `@inline` tag.
@@ -118,4 +118,3 @@ impl DynamicPolicy for InlinePolicy {
         Ok(result)
     }
 }
-

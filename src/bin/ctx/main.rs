@@ -119,7 +119,7 @@ fn main() -> Result<()> {
                     tracing::info!("Executing context '{}'...", context_name);
                     project.execute_context(&context_name)?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
-                }                   
+                }
             }
         }
         Commands::Watch {} => {

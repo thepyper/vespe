@@ -12,11 +12,11 @@ use super::execute::Worker;
 use super::REDIRECTED_OUTPUT_PLACEHOLDER;
 
 use super::tag_answer::AnswerPolicy;
+use super::tag_comment::CommentPolicy;
 use super::tag_forget::ForgetPolicy;
 use super::tag_include::IncludePolicy;
 use super::tag_inline::InlinePolicy;
 use super::tag_repeat::RepeatPolicy;
-use super::tag_comment::CommentPolicy;
 use super::tag_set::SetPolicy;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
@@ -474,9 +474,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = match worker.load_state::<P::State>(anchor.command, &anchor.uuid) {
-            Ok(state) => { 
-                state
-            },
+            Ok(state) => state,
             Err(e) => {
                 tracing::warn!("Anchor has been corrupted, deactivating it, error {:?}", e);
                 return Ok((false, collector, vec![]));

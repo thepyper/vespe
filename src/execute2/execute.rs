@@ -1165,9 +1165,7 @@ impl Worker {
         input: ModelContent,
     ) -> Result<ModelContent> {
         match &parameters.get("input") {
-            Some(JsonPlusEntity::NudeString(x)) => {
-                self.execute(&x)
-            }
+            Some(JsonPlusEntity::NudeString(x)) => self.execute(&x),
             Some(x) => {
                 return Err(ExecuteError::UnsupportedParameterValue(format!(
                     "input: {:?}",

@@ -1,7 +1,7 @@
 use crate::Project;
 use anyhow::Result;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::{Path};
+use std::path::Path;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 

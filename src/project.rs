@@ -1,5 +1,5 @@
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
-use crate::file::ProjectFileAccessor;
+use crate::file::{FileAccessor, ProjectFileAccessor};
 use crate::git::Commit;
 use crate::path::{PathResolver, ProjectPathResolver};
 use std::sync::Arc;
@@ -13,12 +13,6 @@ use std::path::{Path, PathBuf};
 use crate::config::{EditorInterface, ProjectConfig};
 use crate::editor::{lockfile::FileBasedEditorCommunicator, EditorCommunicator};
 
-#[derive(Debug)] // Add Debug trait for easy printing
-pub struct ContextInfo {
-    pub name: String,
-    pub path: PathBuf,
-}
-
 pub struct Project {
     //root_path: PathBuf,
     editor_interface: Option<Arc<dyn EditorCommunicator>>,
@@ -27,10 +21,9 @@ pub struct Project {
     project_config: ProjectConfig,
 }
 
-#[allow(dead_code)]
 impl Project {
-    pub fn init(path: &Path) -> Result<()> {
-        let ctx_dir = path.join(CTX_DIR_NAME);
+    pub fn init(root_path: &Path) -> Result<()> {
+        let ctx_dir = root_path.join(CTX_DIR_NAME);
         if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
             anyhow::bail!("ctx project already initialized in this directory.");
         }
@@ -49,7 +42,21 @@ impl Project {
         }
         */
 
-        // TODO project.save_project_config()?;
+        let project_config = ProjectConfig::default();
+
+        let file_access = Arc::new(ProjectFileAccessor::new(None));
+        let path_res = Arc::new(ProjectPathResolver::new(root_path.to_path_buf()));
+
+        let project = Project {
+            editor_interface: None,
+            file_access,
+            path_res,
+            project_config,
+        };
+
+        project.save_project_config()?;
+        project.commit(Some("Initialized vespe project.".into()))?;
+
         Ok(())
     }
 
@@ -101,7 +108,7 @@ impl Project {
             self.path_res.clone(),
             context_name,
         )?;
-        self.file_access.commit()?;
+        self.commit(Some(format!("Executed context {}.", context_name)))?;
         Ok(())
     }
 
@@ -141,35 +148,6 @@ impl Project {
         }
 
         Ok(file_path)
-    }   
-
-    pub fn list_contexts(&self) -> Result<Vec<ContextInfo>> {
-        /* TODO REDO
-        let mut contexts = Vec::new();
-        let contexts_root = self.contexts_root();
-
-        if !contexts_root.exists() {
-            return Ok(contexts); // Return empty if directory doesn't exist
-        }
-
-        let mut md_files = Vec::new();
-        Self::collect_md_files_recursively(&contexts_root, &contexts_root, &mut md_files)?;
-
-        for path in md_files {
-            // Calculate the relative path from contexts_root to get the context name
-            let relative_path = path.strip_prefix(&contexts_root)?;
-            if let Some(file_stem) = relative_path.file_stem() {
-                if let Some(name) = file_stem.to_str() {
-                    contexts.push(ContextInfo {
-                        name: name.to_string(),
-                        path: path.clone(),
-                    });
-                }
-            }
-        }
-        Ok(contexts)
-        */
-        Ok(vec![])
     }
 
     pub fn save_project_config(&self) -> Result<()> {
@@ -179,7 +157,11 @@ impl Project {
         )
         .context(format!("Failed to create metadata directory",))?;
         let serialized = serde_json::to_string_pretty(&self.project_config)?;
-        std::fs::write(&config_path, serialized).context("Failed to write project config file")?;
+        self.file_access.write_file(
+            &config_path,
+            &serialized,
+            Some("Saved project config file."),
+        )?;
         Ok(())
     }
 
@@ -188,6 +170,14 @@ impl Project {
             Ok(content) => Ok(serde_json::from_str(&content)?),
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(ProjectConfig::default()),
             Err(e) => Err(anyhow::Error::new(e).context("Failed to read project config file")),
+        }
+    }
+
+    pub fn commit(&self, title_message: Option<String>) -> Result<()> {
+        if self.project_config.git_integration_enabled {
+            self.file_access.commit(title_message)
+        } else {
+            Ok(())
         }
     }
 }

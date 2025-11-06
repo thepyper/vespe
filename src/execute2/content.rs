@@ -4,7 +4,6 @@
 //! are `ModelContentItem`, representing a single part of a conversation, and
 //! `ModelContent`, which aggregates multiple `ModelContentItem`s into a complete prompt.
 
-use serde::de::{self};
 use serde::{Deserialize, Serialize};
 
 /// Represents content originating from the system.

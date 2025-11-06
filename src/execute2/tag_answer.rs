@@ -10,7 +10,7 @@ use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
-use crate::ast2::{Arguments, JsonPlusEntity, JsonPlusObject, Parameters};
+use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
 
 use handlebars::Handlebars;
 

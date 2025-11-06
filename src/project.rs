@@ -1,16 +1,14 @@
-use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
+use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
 use crate::file::ProjectFileAccessor;
 use crate::git::Commit;
 use crate::path::{PathResolver, ProjectPathResolver};
 use std::sync::Arc;
 
-use anyhow::anyhow;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use tracing::debug;
 
 use crate::config::{EditorInterface, ProjectConfig};
 use crate::editor::{lockfile::FileBasedEditorCommunicator, EditorCommunicator};

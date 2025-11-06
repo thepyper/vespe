@@ -75,17 +75,6 @@ mod tags;
 mod utils;
 
 pub use self::error::{ExecuteError, Result};
-use content::*;
-use execute::*;
-use tag_answer::*;
-use tag_forget::*;
-use tag_include::*;
-use tag_inline::*;
-use tag_comment::*;
-use tag_repeat::*;
-use tag_set::*;
-use tags::*;
-use utils::*;
 
 pub use execute::collect_context;
 pub use execute::execute_context;

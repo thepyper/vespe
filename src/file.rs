@@ -2,7 +2,6 @@ use anyhow::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tracing::{debug, error};
 use uuid::{uuid, Uuid};
 
 use super::editor::EditorCommunicator;

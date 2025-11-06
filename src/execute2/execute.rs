@@ -483,6 +483,64 @@ impl Worker {
         }
     }
 
+    pub fn prefix_content(&self, content: ModelContent, mut prefix: ModelContent) -> ModelContent {
+        prefix.extend(content);
+        prefix
+    }
+
+    pub fn prefix_content_from_parameters(
+        &self,
+        content: ModelContent,
+        parameters: &Parameters,
+    ) -> Result<ModelContent> {
+        match parameters.get("prefix") {
+            Some(JsonPlusEntity::NudeString(x)) => {
+                let prefix = self.execute(x)?.to_string();
+                let prefix = ModelContentItem::system(&prefix);
+                let prefix = ModelContent::from_item(prefix);
+                Ok(self.prefix_content(content, prefix))
+            }
+            Some(x) => {
+                Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "bad prefix: {:?}",
+                    x
+                )))
+            }
+            None => Ok(content),
+        }
+    }
+
+    pub fn postfix_content(
+        &self,
+        mut content: ModelContent,
+        postfix: ModelContent,
+    ) -> ModelContent {
+        content.extend(postfix);
+        content
+    }
+
+    pub fn postfix_content_from_parameters(
+        &self,
+        content: ModelContent,
+        parameters: &Parameters,
+    ) -> Result<ModelContent> {
+        match parameters.get("postfix") {
+            Some(JsonPlusEntity::NudeString(x)) => {
+                let postfix = self.execute(x)?.to_string();
+                let postfix = ModelContentItem::system(&postfix);
+                let postfix = ModelContent::from_item(postfix);
+                Ok(self.postfix_content(content, postfix))
+            }
+            Some(x) => {
+                Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "bad postfix: {:?}",
+                    x
+                )))
+            }
+            None => Ok(content),
+        }
+    }
+
     /// Calls an external model (LLM) with the provided content and parameters.
     ///
     /// This function constructs a prompt using the given `content` and any `prefix`
@@ -511,32 +569,8 @@ impl Worker {
         parameters: &Parameters,
         content: &ModelContent,
     ) -> Result<String> {
-        let mut prompt = ModelContent::new();
-        match parameters.get("prefix") {
-            Some(JsonPlusEntity::NudeString(x)) => {
-                prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
-            }
-            Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "bad prefix: {:?}",
-                    x
-                )));
-            }
-            None => {}
-        }
-        prompt.extend(content.clone());
-        match parameters.get("postfix") {
-            Some(JsonPlusEntity::NudeString(x)) => {
-                prompt.push(ModelContentItem::system(&self.execute(x)?.to_string()));
-            }
-            Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "bad postfix: {:?}",
-                    x
-                )));
-            }
-            None => {}
-        }
+        let prompt = self.prefix_content_from_parameters(content.clone(), parameters)?;
+        let prompt = self.postfix_content_from_parameters(prompt, parameters)?;
         let provider = match parameters.get("provider") {
             Some(
                 JsonPlusEntity::NudeString(x)

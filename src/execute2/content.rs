@@ -200,6 +200,10 @@ impl ModelContent {
         ModelContent(Vec::new())
     }
 
+    pub fn from_item(item: ModelContentItem) -> Self {
+        ModelContent(vec![item])
+    }
+
     /// Extends the current `ModelContent` with items from another `ModelContent` instance.
     ///
     /// The items from the `content` parameter are appended to the end of the

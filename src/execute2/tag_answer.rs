@@ -205,34 +205,31 @@ impl AnswerPolicy {
             None => Ok(content),
         }
     }
-    fn process_response_with_choice(response: ModelContent, parameters: &Parameters) -> Result<ModelContent> {
+    fn process_response_with_choice(response: String, parameters: &Parameters) -> Result<String> {
         match parameters.get("choose") {
             Some(JsonPlusEntity::Object(x)) => {
-                let response = response.to_string();
                 let choice_tags = x
                     .properties
                     .iter()
                     .filter_map(|(key, value)| {
-                        match response.contains(Self::choice_tag_from_choice(key)) {
-                            true => Some(value),
+                        match response.contains(&Self::choice_tag_from_choice(key)) {
+                            true => Some(value.to_string()),
                             false => None 
                         }
                     })
                     .collect::<Vec<String>>();
                 let mapped_choice = match choice_tags.len() {
                     1 => {
-                        choice_tags.get(0).expected("There is one element!")
+                        choice_tags.get(0).expect("There is one element!")
                     }
                     0 => {
-                        super::NO_CHOICE_MESSAGE.to_string()
+                        super::NO_CHOICE_MESSAGE
                     }
                     _ => {
-                        super::MANY_CHOICES_MESSAGE.to_string()
+                        super::MANY_CHOICES_MESSAGE
                     }
                 };
-                let response = ModelContentItem::agent(mapped_choice);
-                let response = ModelContent::from_item(response);
-                Ok(response)
+                Ok(response.into())
             }
             _ => {
                 Ok(response)

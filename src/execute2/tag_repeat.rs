@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::content::ModelContent;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
+use super::tag_inline::{InlineState, InlineStatus};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
 
 use crate::ast2::{Arguments, CommandKind, Parameters};
@@ -17,7 +18,7 @@ use crate::ast2::{Arguments, CommandKind, Parameters};
 /// This enum tracks the lifecycle of the `@repeat` tag, primarily to ensure
 /// that its action (triggering a repeat) is performed once.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
-enum RepeatStatus {
+pub enum RepeatStatus {
     /// The `@repeat` tag has just been created and needs to perform its action.
     #[default]
     JustCreated,
@@ -91,7 +92,7 @@ impl DynamicPolicy for RepeatPolicy {
         match state.status {
             RepeatStatus::JustCreated => {
                 // Find anchor to repeat if any
-                let patches = match result.collector.anchor_stack().last() {
+                match result.collector.anchor_stack().last() {
                     Some(anchor) => {
                         let is_anchor_repeatable = match anchor.command {
                             CommandKind::Answer => {
@@ -102,6 +103,18 @@ impl DynamicPolicy for RepeatPolicy {
                                     anchor.command,
                                     &anchor.uuid,
                                     &answer_state,
+                                    None,
+                                )?;
+                                true
+                            }
+                            CommandKind::Inline => {
+                                let mut inline_state = worker
+                                    .load_state::<InlineState>(anchor.command, &anchor.uuid)?;
+                                inline_state.status = InlineStatus::Repeat;
+                                worker.save_state::<InlineState>(
+                                    anchor.command,
+                                    &anchor.uuid,
+                                    &inline_state,
                                     None,
                                 )?;
                                 true

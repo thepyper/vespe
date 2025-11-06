@@ -473,7 +473,15 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
+        let state = match worker.load_state::<P::State>(anchor.command, &anchor.uuid) {
+            Ok(state) => { 
+                state
+            },
+            Err(e) => {
+                tracing::warn!("Anchor has been corrupted, deactivating it, error {:?}", e);
+                return Ok((false, collector, vec![]));
+            }
+        };
         let input = worker.redirect_input(&anchor.parameters, collector.context().clone())?;
         let mono_result = P::mono(
             worker,

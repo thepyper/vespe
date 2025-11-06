@@ -185,10 +185,14 @@ impl AnswerPolicy {
             _ => None,
         };
         match choices {
-            Some(x) => {
+            Some(ref x) => {
                 let tags = x.iter().map(|x| format!("§{}§", x)).collect::<Vec::<String>>();
                 let mut handlebars = Handlebars::new();
-                let postfix = handlebars.render_template(super::CHOICE_TEMPLATE, &json!({ choices: choices, tags: tags }))?;
+                let json_choices = match choices {
+                    Some(c) => serde_json::Value::Array(c.iter().cloned().map(serde_json::Value::String).collect()),
+                    None => serde_json::Value::Null,
+                };
+                let postfix = handlebars.render_template(super::CHOICE_TEMPLATE, &json!({ "choices": json_choices, "tags": tags }))?;
                 let postfix = ModelContentItem::system(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(worker.postfix_content(content, postfix))

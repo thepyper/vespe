@@ -48,10 +48,6 @@ portable-pty = "0.9.0"
 name = "ctx"
 path = "src/bin/ctx/main.rs"
 
-[[bin]]
-name = "vtty_test"
-path = "src/bin/vtty_test.rs"
-
 [dev-dependencies]
 sha2 = "0.10"
 walkdir = "2.3"

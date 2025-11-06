@@ -33,7 +33,7 @@ impl StaticPolicy for SetPolicy {
     /// A `Result` containing the updated [`Collector`] with the new default parameters.
     ///
     /// # Examples
-    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
+    fn collect_static_tag(_worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
         tracing::debug!("tag_set::SetPolicy::collect_static_tag\nTag = {:?}\n", tag);
         Ok(collector.set_default_parameters(&tag.parameters))
     }

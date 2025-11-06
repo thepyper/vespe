@@ -93,7 +93,7 @@ impl DynamicPolicy for AnswerPolicy {
         collector: Collector,
         input: &ModelContent,
         parameters: &Parameters,
-        arguments: &Arguments,
+        _arguments: &Arguments,
         mut state: Self::State,
         readonly: bool,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
@@ -207,7 +207,7 @@ impl AnswerPolicy {
                     .iter()
                     .map(|x| Self::choice_tag_from_choice(x))
                     .collect::<Vec<String>>();
-                let mut handlebars = Handlebars::new();
+                let handlebars = Handlebars::new();
                 let json_choices = match choices {
                     Some(c) => serde_json::Value::Array(
                         c.iter().cloned().map(serde_json::Value::String).collect(),
@@ -249,7 +249,7 @@ impl AnswerPolicy {
                 };
                 Ok(format!("{}\n", response))
             }
-            x => Ok(response),
+            _ => Ok(response),
         }
     }
     fn choice_tag_from_choice(choice: &str) -> String {

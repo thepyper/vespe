@@ -32,7 +32,7 @@ impl StaticPolicy for ForgetPolicy {
     /// A `Result` containing the updated [`Collector`] with its context cleared.
     ///
     /// # Examples
-    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
+    fn collect_static_tag(_worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
         tracing::debug!(
             "tag_forget::ForgetPolicy::collect_static_tag\nTag = {:?}\n",
             tag

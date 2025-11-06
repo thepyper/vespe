@@ -11,7 +11,6 @@ use anyhow::Result;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use tracing::debug;
-use uuid::Uuid;
 
 use crate::config::{EditorInterface, ProjectConfig};
 use crate::editor::{lockfile::FileBasedEditorCommunicator, EditorCommunicator};
@@ -116,51 +115,6 @@ impl Project {
         self.path_res.contexts_root()
     }
 
-    // TODO remove
-    /*
-    pub fn project_home(&self) -> PathBuf {
-        self.root_path.join(CTX_DIR_NAME)
-    }
-
-    pub fn metadata_home(&self) -> PathBuf {
-        self.project_home().join(METADATA_DIR_NAME)
-    }
-
-    pub fn contexts_root(&self) -> PathBuf {
-        self.project_home().join(CONTEXTS_DIR_NAME)
-    }
-        */
-    /*
-    pub fn snippets_root(&self) -> PathBuf {
-        self.project_home().join(SNIPPETS_DIR_NAME)
-    }
-    */
-    /*
-        pub fn resolve_context(&self, name: &str) -> PathBuf {
-            self.contexts_root().join(format!("{}.md", name))
-        }
-    */
-    /*
-    pub fn resolve_snippet(&self, name: &str) -> PathBuf {
-        self.snippets_root().join(format!("{}.md", name))
-    }
-    */
-
-    /*
-    pub fn resolve_metadata(&self, anchor_kind: &str, uid: &Uuid) -> Result<PathBuf> {
-        let anchor_metadata_dir =
-            self.metadata_home()
-                .join(format!("{}-{}", anchor_kind, uid.to_string()));
-        std::fs::create_dir_all(&anchor_metadata_dir).context(format!(
-            "Failed to create metadata directory for anchor {}-{}: {}",
-            anchor_kind,
-            uid,
-            anchor_metadata_dir.display()
-        ))?;
-        Ok(anchor_metadata_dir)
-    }
-    */
-
     pub fn project_config_path(&self) -> PathBuf {
         self.path_res.metadata_home().join("project_config.json")
     }
@@ -189,35 +143,7 @@ impl Project {
         }
 
         Ok(file_path)
-    }
-
-    /*
-    pub fn create_snippet_file(
-        &self,
-        name: &str,
-        initial_content: Option<String>,
-    ) -> Result<PathBuf> {
-        let file_path = self.snippets_root().join(format!("{}.md", name));
-        if file_path.exists() {
-            anyhow::bail!("Snippet file already exists: {}", file_path.display());
-        }
-        let parent_dir = file_path
-            .parent()
-            .context("Failed to get parent directory")?;
-        std::fs::create_dir_all(parent_dir)
-            .context("Failed to create parent directories for snippet file")?;
-        let content = initial_content.unwrap_or_else(|| "".to_string());
-        std::fs::write(&file_path, content).context("Failed to create snippet file")?;
-
-        if self.project_config.git_integration_enabled {
-            let mut commit = Commit::new();
-            commit.files.insert(file_path.clone());
-            commit.commit(&format!("feat: Create new snippet '{}'", name))?;
-        }
-
-        Ok(file_path)
-    }
-    */
+    }   
 
     pub fn list_contexts(&self) -> Result<Vec<ContextInfo>> {
         /* TODO REDO
@@ -247,50 +173,6 @@ impl Project {
         */
         Ok(vec![])
     }
-
-    /*
-    pub fn list_snippets(&self) -> Result<Vec<SnippetInfo>> {
-        let mut snippets = Vec::new();
-        let snippets_root = self.snippets_root();
-
-        if !snippets_root.exists() {
-            return Ok(snippets); // Return empty if directory doesn't exist
-        }
-
-        let mut md_files = Vec::new();
-        Self::collect_md_files_recursively(&snippets_root, &snippets_root, &mut md_files)?;
-
-        for path in md_files {
-            // Calculate the relative path from snippets_root to get the snippet name
-            let relative_path = path.strip_prefix(&snippets_root)?;
-            if let Some(file_stem) = relative_path.file_stem() {
-                if let Some(name) = file_stem.to_str() {
-                    snippets.push(SnippetInfo {
-                        name: name.to_string(),
-                        path: path.clone(),
-                    });
-                }
-            }
-        }
-        Ok(snippets)
-    }
-
-    pub fn load_snippet(&self, name: &str) -> Result<Snippet> {
-        let file_path = self.resolve_snippet(name);
-        let content = std::fs::read_to_string(&file_path).context(format!(
-            "Failed to read snippet file: {}",
-            file_path.display()
-        ))?;
-        let lines = crate::semantic::parse_document(self, &content)
-            .map_err(|e| anyhow!("Failed to parse snippet document: {}", e))
-            .context("Failed to parse document")?;
-
-        Ok(Snippet {
-            name: name.to_string(),
-            content: lines,
-        })
-    }
-    */
 
     pub fn save_project_config(&self) -> Result<()> {
         let config_path = self.project_config_path();

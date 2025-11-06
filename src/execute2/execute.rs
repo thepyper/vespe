@@ -982,7 +982,7 @@ impl Worker {
     /// Returns [`ExecuteError::IoError`] if an output redirection file cannot be written.
     pub fn tag_to_anchor(
         &self,
-        collector: &Collector,
+        _collector: &Collector,
         tag: &Tag,
         output: &str,
     ) -> Result<(Uuid, Vec<(Range, String)>)> {
@@ -1037,7 +1037,7 @@ impl Worker {
     /// Returns [`ExecuteError::IoError`] if an output redirection file cannot be written.
     pub fn inject_into_anchor(
         &self,
-        collector: &Collector,
+        _collector: &Collector,
         anchor: &Anchor,
         anchor_end: &Position,
         output: &str,
@@ -1166,7 +1166,6 @@ impl Worker {
     ) -> Result<ModelContent> {
         match &parameters.get("input") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let output_path = self.path_res.resolve_context(&x)?;
                 self.execute(&x)
             }
             Some(x) => {

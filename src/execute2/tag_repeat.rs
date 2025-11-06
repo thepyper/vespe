@@ -77,7 +77,7 @@ impl DynamicPolicy for RepeatPolicy {
     fn mono(
         worker: &Worker,
         collector: Collector,
-        input: &ModelContent,
+        _input: &ModelContent,
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,

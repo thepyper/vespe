@@ -256,11 +256,18 @@ impl From<&JsonPlusEntity> for serde_json::Value {
             JsonPlusEntity::Boolean(x) => (*x).into(),
             JsonPlusEntity::Integer(x) => (*x).into(),
             JsonPlusEntity::Float(x) => (*x).into(),
-            JsonPlusEntity::SingleQuotedString(x) => (*x).into(),
-            JsonPlusEntity::DoubleQuotedString(x) => (*x).into(),
-            JsonPlusEntity::NudeString(x) => (*x).into(),
-            JsonPlusEntity::Array(x) => Value::Array(x.iter().map(|x| x.into()).collect::<Vec::<Value>>()),
-            JsonPlusEntity::Object(x) => Value::Object(x.properties.iter().map(|(x, y)| (x, y.into())).collect::<Map::<String,Value>>()),
+            JsonPlusEntity::SingleQuotedString(x) => x.clone().into(),
+            JsonPlusEntity::DoubleQuotedString(x) => x.clone().into(),
+            JsonPlusEntity::NudeString(x) => x.clone().into(),
+            JsonPlusEntity::Array(x) => {
+                Value::Array(x.iter().map(|x| x.into()).collect::<Vec<Value>>())
+            }
+            JsonPlusEntity::Object(x) => Value::Object(
+                x.properties
+                    .iter()
+                    .map(|(x, y)| (x.clone(), y.into()))
+                    .collect::<Map<String, Value>>(),
+            ),
         }
     }
 }

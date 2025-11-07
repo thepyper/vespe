@@ -31,7 +31,7 @@ impl Project {
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
-            .context("Failed to write .ctx_root file")?;       
+            .context("Failed to write .ctx_root file")?;
 
         let project_config = ProjectConfig::default();
 

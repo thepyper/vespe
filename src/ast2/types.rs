@@ -154,6 +154,12 @@ impl JsonPlusEntity {
             _ => None,
         }
     }
+    pub fn as_object(&self) -> Option<&JsonPlusObject> {
+        match self {
+            JsonPlusEntity::Object(x) => Some(x),
+            _ => None,
+        }
+    }
     pub fn to_prompt(&self) -> String {
         match self {
             JsonPlusEntity::Flag => String::new(),

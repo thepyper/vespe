@@ -10,15 +10,15 @@ use crate::ast2::{
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
-use uuid::Uuid;
-
+use super::{ExecuteError, Result};
 use crate::execute2::content::{ModelContent, ModelContentItem};
 
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use handlebars::Handlebars;
+use uuid::Uuid;
 
-use super::{ExecuteError, Result};
 
 /// Executes a context and all its dependencies, processing all commands.
 ///
@@ -344,7 +344,7 @@ impl Worker {
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various execution failures.
     pub fn execute(&self, context_name: &str) -> Result<ModelContent> {
-        match self._execute(Collector::new(), context_name, 100)? {
+        match self._execute(Collector::new(), context_name, 77, &Parameters::new())? {
             Some(collector) => {
                 return Ok(collector.context().clone());
             }
@@ -375,7 +375,7 @@ impl Worker {
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various collection failures.
     pub fn collect(&self, context_name: &str) -> Result<ModelContent> {
-        match self._execute(Collector::new(), context_name, 0)? {
+        match self._execute(Collector::new(), context_name, 0, &Parameters::new())? {
             Some(collector) => {
                 return Ok(collector.context().clone());
             }
@@ -416,6 +416,7 @@ impl Worker {
         collector: Collector,
         context_name: &str,
         max_rewrite_steps: usize,
+        parameters: &Parameters,
     ) -> Result<Option<Collector>> {
         tracing::debug!("Worker::execute for context: {}", context_name);
         let context_path = self.path_res.resolve_context(context_name)?;
@@ -432,7 +433,7 @@ impl Worker {
                 for i in 1..=max_rewrite_steps {
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
                     let (do_next_pass, _) =
-                        self.execute_pass(descent_collector.clone(), &context_path)?;
+                        self.execute_pass(descent_collector.clone(), &context_path, parameters)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -447,7 +448,7 @@ impl Worker {
                     };
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
                     let (do_next_pass, _) =
-                        self.collect_pass(descent_collector.clone(), &context_path)?;
+                        self.collect_pass(descent_collector.clone(), &context_path, parameters)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -463,7 +464,7 @@ impl Worker {
                 }
                 // Last re-read file, parse it, collect data
                 let (do_next_pass, descent_collector) =
-                    self.collect_pass(descent_collector, &context_path)?;
+                    self.collect_pass(descent_collector, &context_path, parameters)?;
                 match do_next_pass {
                     true => {
                         tracing::debug!(
@@ -675,8 +676,8 @@ impl Worker {
     ///
     /// Returns various [`ExecuteError`] variants if file operations, AST parsing,
     /// or tag/anchor processing fail.
-    fn collect_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
-        self._pass_internal(collector, context_path, true)
+    fn collect_pass(&self, collector: Collector, context_path: &Path, parameters: &Parameters) -> Result<(bool, Collector)> {
+        self._pass_internal(collector, context_path, true, parameters)
     }
 
     /// Executes a single modifying pass over the context file.
@@ -700,9 +701,9 @@ impl Worker {
     ///
     /// Returns various [`ExecuteError`] variants if file operations, AST parsing,
     /// or tag/anchor processing fail.
-    fn execute_pass(&self, collector: Collector, context_path: &Path) -> Result<(bool, Collector)> {
+    fn execute_pass(&self, collector: Collector, context_path: &Path, parameters: &Parameters) -> Result<(bool, Collector)> {
         let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
-        self._pass_internal(collector, context_path, false)
+        self._pass_internal(collector, context_path, false, parameters)
     }
 
     /// Internal function to perform a single pass (either read-only or modifying) over a context file.
@@ -737,8 +738,10 @@ impl Worker {
         mut collector: Collector,
         context_path: &Path,
         readonly: bool,
+        parameters: &Parameters,
     ) -> Result<(bool, Collector)> {
         let context_content = self.file_access.read_file(context_path)?;
+        let context_content = self.process_context_with_parameters(context_content, parameters)?;
         let ast = crate::ast2::parse_document(&context_content)?;
         let anchor_index = super::utils::AnchorIndex::new(&ast.content);
 
@@ -1214,8 +1217,26 @@ impl Worker {
     /// Returns [`ExecuteError::PathResolutionError`] if the context name cannot be resolved.
     /// Returns [`ExecuteError::IoError`] if the file cannot be read.
     pub fn read_context(&self, context_name: &str) -> Result<String> {
-        let context_path = self.path_res.resolve_context(context_name)?;
+        self.read_context_from_path(&self.path_res.resolve_context(context_name)?)
+    }
+
+    pub fn read_context_from_path(&self, context_path: &Path) -> Result<String> {
         let context_content = self.file_access.read_file(&context_path)?;
         Ok(context_content)
+    }
+
+    pub fn process_context_with_parameters(&self, context: String, parameters: &Parameters) -> Result<String> {
+        let context = match parameters.get("data") {
+            Some(JsonPlusEntity::Object(x)) => {
+                 let handlebars = Handlebars::new();
+                handlebars.render_template(
+                    &context, x.into()
+                )?
+            }
+            _ => {
+                context
+            }
+        };
+        Ok(context)
     }
 }

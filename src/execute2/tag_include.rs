@@ -53,7 +53,7 @@ impl StaticPolicy for IncludePolicy {
             .ok_or_else(|| ExecuteError::MissingParameter("include tag argument".to_string()))?
             .value
             .clone();
-        match worker._execute(collector, &included_context_name, 0)? {
+        match worker._execute(collector, &included_context_name, 0, &tag.parameters)? {
             Some(collector) => Ok(collector),
             None => Err(ExecuteError::Generic(
                 "Included context returned no collector".to_string(),

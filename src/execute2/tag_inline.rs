@@ -82,7 +82,7 @@ impl DynamicPolicy for InlinePolicy {
         worker: &Worker,
         collector: Collector,
         _input: &ModelContent,
-        _parameters: &Parameters,
+        parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,
         _readonly: bool,
@@ -101,7 +101,9 @@ impl DynamicPolicy for InlinePolicy {
                 // Load content from the specified context
                 state.status = InlineStatus::Completed;
                 result.new_state = Some(state);
-                result.new_output = Some(worker.read_context(&context_name)?);
+                let context = worker.read_context(&context_name)?;
+                let context = worker.process_context_with_parameters(context, parameters)?;
+                result.new_output = Some(context);
                 result.do_next_pass = true;
             }
             InlineStatus::Completed => {

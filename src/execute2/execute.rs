@@ -1229,8 +1229,10 @@ impl Worker {
         let context = match parameters.get("data") {
             Some(JsonPlusEntity::Object(x)) => {
                  let handlebars = Handlebars::new();
+                 let data : serde_json::Value = x.into();
+                 tracing::debug!("data: {:?}", data);
                 handlebars.render_template(
-                    &context, x.into()
+                    &context, &data
                 )?
             }
             _ => {

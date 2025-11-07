@@ -268,12 +268,12 @@ impl From<&JsonPlusEntity> for serde_json::Value {
             JsonPlusEntity::Array(x) => {
                 Value::Array(x.iter().map(|x| x.into()).collect::<Vec<Value>>())
             }
-            JsonPlusEntity::Object(x) => Value::Object(
+            JsonPlusEntity::Object(x) => x.into(), /* Value::Object(
                 x.properties
                     .iter()
                     .map(|(x, y)| (x.clone(), y.into()))
                     .collect::<Map<String, Value>>(),
-            ),
+            ),*/
         }
     }
 }
@@ -281,6 +281,17 @@ impl From<&JsonPlusEntity> for serde_json::Value {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JsonPlusObject {
     pub properties: HashMap<String, JsonPlusEntity>,
+}
+
+impl From<&JsonPlusObject> for serde_json::Value {
+    fn from(jpo: &JsonPlusObject) -> Self {        
+        Value::Object(
+                jpo.properties
+                    .iter()
+                    .map(|(x, y)| (x.clone(), y.into()))
+                    .collect::<Map<String, Value>>(),
+        )
+    }
 }
 
 impl JsonPlusObject {

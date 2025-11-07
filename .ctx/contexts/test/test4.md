@@ -1,6 +1,21 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
+<!-- inline-001c2f03-9f96-4c01-97e7-f6604bd67366:begin {
+	data: {
+		count: 2,
+		color: 'lime'
+	},
+	provider: "gemini -y -m gemini-2.5-flash"
+} test/color -->
+Tell me 2 lime things.
+<!-- answer-37ff0634-cc55-4058-8b4a-a1a89a8bd01e:begin { provider: "gemini -y -m gemini-2.5-flash" }  -->
+<!-- answer-37ff0634-cc55-4058-8b4a-a1a89a8bd01e:end {}  -->
+
+<!-- inline-001c2f03-9f96-4c01-97e7-f6604bd67366:end {}  -->
+
+@include { data: { color: 'indigo' } } test/color2 
+
 @comment { _:"Here is a comment that LLM will not read" }
 
 @comment {
@@ -8,12 +23,7 @@
 	_2: "Hehehehe!!                                        ",
 }
 
-<!-- inline-04efeda8-7e36-4249-a918-0327e06f6548:begin { provider: "gemini -y -m gemini-2.5-flash" } test/blue -->
-Tell me 4 blue things.
-<!-- answer-af405a28-24f5-44b4-aedd-1df3d4d90e9e:begin { provider: "gemini -y -m gemini-2.5-flash" }  -->
-<!-- answer-af405a28-24f5-44b4-aedd-1df3d4d90e9e:end {}  -->
-
-<!-- inline-04efeda8-7e36-4249-a918-0327e06f6548:end {}  -->
+@inline test/blue
 
 Tell me the color of pigs.
 

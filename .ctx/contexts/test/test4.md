@@ -1,20 +1,10 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
-<!-- inline-001c2f03-9f96-4c01-97e7-f6604bd67366:begin {
-	data: {
-		count: 2,
-		color: 'lime'
-	},
-	provider: "gemini -y -m gemini-2.5-flash"
-} test/color -->
-Tell me 2 lime things.
-<!-- answer-37ff0634-cc55-4058-8b4a-a1a89a8bd01e:begin { provider: "gemini -y -m gemini-2.5-flash" }  -->
-<!-- answer-37ff0634-cc55-4058-8b4a-a1a89a8bd01e:end {}  -->
-
-<!-- inline-001c2f03-9f96-4c01-97e7-f6604bd67366:end {}  -->
-
 @include { data: { color: 'indigo' } } test/color2 
+@answer
+
+@inline { data: { color: 'lime', count: 2 } } test/color 
 
 @comment { _:"Here is a comment that LLM will not read" }
 

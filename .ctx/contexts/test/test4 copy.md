@@ -1,9 +1,10 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
-@inline { data: { color: 'lime', cnt: 2 } } test/color 
-
 @include { data: { color: 'indigo' } } test/color2 
+@answer
+
+@inline { data: { color: 'lime', count: 2 } } test/color 
 
 @comment { _:"Here is a comment that LLM will not read" }
 

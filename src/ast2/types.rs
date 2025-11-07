@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use uuid::{uuid, Uuid};
@@ -245,6 +246,22 @@ impl JsonPlusEntity {
 impl ToString for JsonPlusEntity {
     fn to_string(&self) -> String {
         JsonPlusEntity::_to_string_0(&self, "", "")
+    }
+}
+
+impl From<&JsonPlusEntity> for serde_json::Value {
+    fn from(jpe: &JsonPlusEntity) -> Self {
+        match jpe {
+            JsonPlusEntity::Flag => true.into(),
+            JsonPlusEntity::Boolean(x) => (*x).into(),
+            JsonPlusEntity::Integer(x) => (*x).into(),
+            JsonPlusEntity::Float(x) => (*x).into(),
+            JsonPlusEntity::SingleQuotedString(x) => (*x).into(),
+            JsonPlusEntity::DoubleQuotedString(x) => (*x).into(),
+            JsonPlusEntity::NudeString(x) => (*x).into(),
+            JsonPlusEntity::Array(x) => Value::Array(x.iter().map(|x| x.into()).collect::<Vec::<Value>>()),
+            JsonPlusEntity::Object(x) => Value::Object(x.properties.iter().map(|(x, y)| (x, y.into())).collect::<Map::<String,Value>>()),
+        }
     }
 }
 

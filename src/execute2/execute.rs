@@ -4,21 +4,20 @@
 //! managing the execution state and accumulating results. The module implements
 //! a multi-pass execution strategy to handle dynamic content generation and
 //! modification.
+use super::{ExecuteError, Result};
 use crate::ast2::{
     Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, Parameters, Position, Range, Tag,
 };
+use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
-use super::{ExecuteError, Result};
-use crate::execute2::content::{ModelContent, ModelContentItem};
 
+use handlebars::Handlebars;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use handlebars::Handlebars;
 use uuid::Uuid;
-
 
 /// Executes a context and all its dependencies, processing all commands.
 ///
@@ -37,11 +36,12 @@ pub fn execute_context(
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
     context_name: &str,
+    parameters: &Parameters,
 ) -> Result<ModelContent> {
     tracing::debug!("Executing context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    exe.execute(context_name)
+    exe.execute(context_name, parameters)
 }
 
 /// Collects a context's content without executing any commands that modify state or call models.
@@ -61,12 +61,13 @@ pub fn collect_context(
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
     context_name: &str,
+    parameters: &Parameters,
 ) -> Result<ModelContent> {
     tracing::debug!("Collecting context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
 
-    exe.collect(context_name)
+    exe.collect(context_name, parameters)
 }
 
 /// Central state object for the execution engine.
@@ -343,8 +344,8 @@ impl Worker {
     ///
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various execution failures.
-    pub fn execute(&self, context_name: &str) -> Result<ModelContent> {
-        match self._execute(Collector::new(), context_name, 77, &Parameters::new())? {
+    pub fn execute(&self, context_name: &str, parameters: &Parameters) -> Result<ModelContent> {
+        match self._execute(Collector::new(), context_name, 77, parameters)? {
             Some(collector) => {
                 return Ok(collector.context().clone());
             }
@@ -374,8 +375,8 @@ impl Worker {
     ///
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various collection failures.
-    pub fn collect(&self, context_name: &str) -> Result<ModelContent> {
-        match self._execute(Collector::new(), context_name, 0, &Parameters::new())? {
+    pub fn collect(&self, context_name: &str, parameters: &Parameters) -> Result<ModelContent> {
+        match self._execute(Collector::new(), context_name, 0, parameters)? {
             Some(collector) => {
                 return Ok(collector.context().clone());
             }
@@ -532,7 +533,7 @@ impl Worker {
     ) -> Result<ModelContent> {
         match parameters.get("prefix") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let prefix = self.execute(x)?.to_string();
+                let prefix = self.execute(x, &Parameters::new())?.to_string();
                 let prefix = ModelContentItem::system(&prefix);
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
@@ -594,7 +595,7 @@ impl Worker {
     ) -> Result<ModelContent> {
         match parameters.get("postfix") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let postfix = self.execute(x)?.to_string();
+                let postfix = self.execute(x, &Parameters::new())?.to_string();
                 let postfix = ModelContentItem::system(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))
@@ -676,7 +677,12 @@ impl Worker {
     ///
     /// Returns various [`ExecuteError`] variants if file operations, AST parsing,
     /// or tag/anchor processing fail.
-    fn collect_pass(&self, collector: Collector, context_path: &Path, parameters: &Parameters) -> Result<(bool, Collector)> {
+    fn collect_pass(
+        &self,
+        collector: Collector,
+        context_path: &Path,
+        parameters: &Parameters,
+    ) -> Result<(bool, Collector)> {
         self._pass_internal(collector, context_path, true, parameters)
     }
 
@@ -701,7 +707,12 @@ impl Worker {
     ///
     /// Returns various [`ExecuteError`] variants if file operations, AST parsing,
     /// or tag/anchor processing fail.
-    fn execute_pass(&self, collector: Collector, context_path: &Path, parameters: &Parameters) -> Result<(bool, Collector)> {
+    fn execute_pass(
+        &self,
+        collector: Collector,
+        context_path: &Path,
+        parameters: &Parameters,
+    ) -> Result<(bool, Collector)> {
         let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
         self._pass_internal(collector, context_path, false, parameters)
     }
@@ -1168,7 +1179,7 @@ impl Worker {
         input: ModelContent,
     ) -> Result<ModelContent> {
         match &parameters.get("input") {
-            Some(JsonPlusEntity::NudeString(x)) => self.execute(&x),
+            Some(JsonPlusEntity::NudeString(x)) => self.execute(&x, &Parameters::new()),
             Some(x) => {
                 return Err(ExecuteError::UnsupportedParameterValue(format!(
                     "input: {:?}",
@@ -1225,19 +1236,19 @@ impl Worker {
         Ok(context_content)
     }
 
-    pub fn process_context_with_parameters(&self, context: String, parameters: &Parameters) -> Result<String> {
+    pub fn process_context_with_parameters(
+        &self,
+        context: String,
+        parameters: &Parameters,
+    ) -> Result<String> {
         let context = match parameters.get("data") {
             Some(JsonPlusEntity::Object(x)) => {
-                 let handlebars = Handlebars::new();
-                 let data : serde_json::Value = x.into();
-                 tracing::debug!("data: {:?}", data);
-                handlebars.render_template(
-                    &context, &data
-                )?
+                let handlebars = Handlebars::new();
+                let data: serde_json::Value = x.into();
+                tracing::debug!("data: {:?}", data);
+                handlebars.render_template(&context, &data)?
             }
-            _ => {
-                context
-            }
+            _ => context,
         };
         Ok(context)
     }

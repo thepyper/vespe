@@ -119,7 +119,11 @@ fn main() -> Result<()> {
                 }
                 ContextCommands::Execute { name, today, args } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
-                    tracing::info!("Executing context '{}' with args {:?}...", context_name, args);
+                    tracing::info!(
+                        "Executing context '{}' with args {:?}...",
+                        context_name,
+                        args
+                    );
                     project.execute_context(&context_name, Some(args))?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                 }

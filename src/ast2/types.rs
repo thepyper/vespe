@@ -268,12 +268,7 @@ impl From<&JsonPlusEntity> for serde_json::Value {
             JsonPlusEntity::Array(x) => {
                 Value::Array(x.iter().map(|x| x.into()).collect::<Vec<Value>>())
             }
-            JsonPlusEntity::Object(x) => x.into(), /* Value::Object(
-                x.properties
-                    .iter()
-                    .map(|(x, y)| (x.clone(), y.into()))
-                    .collect::<Map<String, Value>>(),
-            ),*/
+            JsonPlusEntity::Object(x) => x.into(),
         }
     }
 }
@@ -284,12 +279,12 @@ pub struct JsonPlusObject {
 }
 
 impl From<&JsonPlusObject> for serde_json::Value {
-    fn from(jpo: &JsonPlusObject) -> Self {        
+    fn from(jpo: &JsonPlusObject) -> Self {
         Value::Object(
-                jpo.properties
-                    .iter()
-                    .map(|(x, y)| (x.clone(), y.into()))
-                    .collect::<Map<String, Value>>(),
+            jpo.properties
+                .iter()
+                .map(|(x, y)| (x.clone(), y.into()))
+                .collect::<Map<String, Value>>(),
         )
     }
 }
@@ -332,6 +327,9 @@ impl Parameters {
     }
     pub fn get(&self, key: &str) -> Option<&JsonPlusEntity> {
         self.parameters.properties.get(key)
+    }
+    pub fn insert(&mut self, key: String, value: JsonPlusEntity) {
+        self.parameters.properties.insert(key, value);
     }
     pub fn update(mut self, other: &Parameters) -> Self {
         for parameter in other.parameters.properties.iter() {

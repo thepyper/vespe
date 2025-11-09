@@ -93,7 +93,7 @@ impl Project {
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    pub fn execute_context(&self, context_name: &str) -> Result<()> {
+    pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {
         crate::execute2::execute_context(
             self.file_access.clone(),
             self.path_res.clone(),

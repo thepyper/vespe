@@ -60,6 +60,9 @@ enum ContextCommands {
         /// If specified, the context name will be automatically generated as "diary/YYYY-mm-DD".
         #[arg(long)]
         today: bool,
+        /// The arguments to pass to the context.
+        #[arg()]
+        args: Vec<String>,
     },
 }
 
@@ -114,10 +117,10 @@ fn main() -> Result<()> {
                         project.create_context_file(&context_name, Some(rendered_content))?;
                     tracing::info!("Created new context file: {}", file_path.display());
                 }
-                ContextCommands::Execute { name, today } => {
+                ContextCommands::Execute { name, today, args } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
-                    tracing::info!("Executing context '{}'...", context_name);
-                    project.execute_context(&context_name)?;
+                    tracing::info!("Executing context '{}' with args {:?}...", context_name, args);
+                    project.execute_context(&context_name, Some(args))?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                 }
             }

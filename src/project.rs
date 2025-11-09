@@ -1,4 +1,4 @@
-use crate::ast2::{JsonPlusEntity, Parameters};
+use crate::ast2::{JsonPlusEntity, JsonPlusObject, Parameters};
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
 use crate::file::{FileAccessor, ProjectFileAccessor};
 use crate::git::Commit;
@@ -9,6 +9,7 @@ use std::sync::Arc;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 
+use std::collections::HashMap;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
@@ -98,9 +99,14 @@ impl Project {
     pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {
         let mut parameters = Parameters::new();
         if let Some(args) = args {
-            args.iter().enumerate().for_each(|(i, x)| {
-                parameters.insert(format!("${}", i + 1), JsonPlusEntity::NudeString(x.clone()))
-            });
+            let data = args
+                .iter()
+                .enumerate()
+                .map(|(i, x)| (format!("${}", i + 1), JsonPlusEntity::NudeString(x.clone())))
+                .collect::<HashMap<String, JsonPlusEntity>>();
+            let data = JsonPlusObject::from_hash_map(data);
+            let data = JsonPlusEntity::Object(data);
+            parameters.insert("data".to_string(), data);
         }
         crate::execute2::execute_context(
             self.file_access.clone(),

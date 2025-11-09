@@ -1,7 +1,7 @@
 @include rules
 @include agent/gemini_25_flash_yolo
 
-@include { data: { color: 'indigo' } } test/color2 
+@include { data: { color: '{{$1}}' } } test/color2 
 @answer
 
 @inline { data: { color: 'lime', count: 2 } } test/color 

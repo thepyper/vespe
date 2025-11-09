@@ -419,7 +419,11 @@ impl Worker {
         max_rewrite_steps: usize,
         parameters: &Parameters,
     ) -> Result<Option<Collector>> {
-        tracing::debug!("Worker::execute for context: {}", context_name);
+        tracing::debug!(
+            "Worker::execute for context: {} with parameters {:?}",
+            context_name,
+            parameters
+        );
         let context_path = self.path_res.resolve_context(context_name)?;
 
         match collector.descent(&context_path) {

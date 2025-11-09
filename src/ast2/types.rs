@@ -295,6 +295,9 @@ impl JsonPlusObject {
             properties: HashMap::new(),
         }
     }
+    pub fn from_hash_map(properties: HashMap<String, JsonPlusEntity>) -> Self {
+        JsonPlusObject { properties }
+    }
 }
 
 impl ToString for JsonPlusObject {

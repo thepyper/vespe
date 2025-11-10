@@ -1,6 +1,14 @@
-Here are the extracted names with minimal context:
+Here are the extracted names:
 
-*   **TurboBarrow Ltd**: The recipient company of the formal inquiry.
-*   **[Your Company Name]**: A placeholder for the sender's company.
-*   **Tony**: The sender of the email.
-*   **WranglerBanger Ltd**: The company Tony works for.
+**People:**
+*   Tony
+
+**Companies:**
+*   TurboBarrow Ltd
+*   [Your Company Name] (placeholder for the sender's company)
+*   WranglerBanger Ltd
+
+**Divisions/Departments:**
+*   Operations
+*   Procurement
+*   Ergonomics

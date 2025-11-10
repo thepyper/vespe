@@ -1,17 +1,19 @@
 
-<!-- answer-bd02d5c8-7dcd-4e51-884a-910ea37b9af9:begin {
+<!-- answer-476db160-9bba-4a6f-a728-0c1d9338521a:begin {
+	postfix: instructions/summarize,
+	prefix: agent/secretary,
 	provider: 'gemini -y -m gemini-2.5-flash',
-	output: output/summary,
-	prefix: input/email,
-	postfix: instructions/summarize
+	input: input/email,
+	output: output/summary
 }  -->
-<!-- answer-bd02d5c8-7dcd-4e51-884a-910ea37b9af9:end {}  -->
+<!-- answer-476db160-9bba-4a6f-a728-0c1d9338521a:end {}  -->
 
-<!-- answer-893de9ea-241f-46ae-aa2e-ede25c98a076:begin {
+<!-- answer-878e4f45-3a00-46f2-b5e2-45916ac945f9:begin {
+	input: input/email,
+	prefix: agent/secretary,
+	postfix: instructions/names,
 	provider: 'gemini -y -m gemini-2.5-flash',
-	prefix: input/email,
-	output: output/names,
-	postfix: instructions/names
+	output: output/names
 }  -->
-<!-- answer-893de9ea-241f-46ae-aa2e-ede25c98a076:end {}  -->
+<!-- answer-878e4f45-3a00-46f2-b5e2-45916ac945f9:end {}  -->
 

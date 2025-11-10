@@ -229,13 +229,64 @@ Note that json+ syntax is anyway required, so you can use strings for example to
 }
 ```
 
-## Cli usage
+## CLI Usage
 
-comandi:
-- init - crea un project (git enabled se in git repo)
-- context
-    - create - crea un context
-    - execute - esegue un context (documentare anche special handlebars variable: $1 $2 $3 $args $input, e che output = context raccolto)
-- watch - esegue ogni context che viene modificato 
+`ctx` provides a simple yet powerful command-line interface to manage your projects and contexts.
 
+### `ctx init`
+
+Initializes a new `ctx` project in the current directory or a specified path. This command creates the `.ctx` directory where all your contexts and configurations are stored.
+
+**Usage:**
+
+```shell
+ctx init [--project-root <PATH>]
+```
+
+*   `--project-root <PATH>`: (Optional) The path to the directory where the project should be initialized. Defaults to the current directory.
+
+### `ctx context new`
+
+Creates a new context file within your project.
+
+**Usage:**
+
+```shell
+ctx context new [NAME] [--today] [--context-template <FILE>]
+```
+
+*   `[NAME]`: The name for the new context (e.g., `my-feature/story`). This will create a corresponding Markdown file.
+*   `--today`: A convenient flag to create a diary-style context for the current date (e.g., `diary/2025-11-10.md`).
+*   `--context-template <FILE>`: (Optional) Path to a custom Handlebars template file to use for the new context.
+
+### `ctx context execute`
+
+Executes a context file. `ctx` processes the tags within the file, sends prompts to the configured LLM, and injects the results back into the document.
+
+**Usage:**
+
+```shell
+# Execute a context by name
+ctx context execute [NAME] [--today] [ARGS]...
+
+# Pipe content into a context
+cat my-data.txt | ctx context execute [NAME]
+```
+
+*   `[NAME]`: The name of the context to execute.
+*   `--today`: A flag to execute the context for the current date.
+*   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{arg1}}`, `{{arg2}}`).
+*   **Piped Input**: The `execute` command can also receive text from `stdin`. This input is available within the context via the `{{input}}` Handlebars variable.
+
+### `ctx watch`
+
+Starts a watcher that monitors your context files for any changes. When a file is modified, `ctx` automatically re-executes it, providing a live-editing experience.
+
+**Usage:**
+
+```shell
+ctx watch [--project-root <PATH>]
+```
+
+This is very useful for iterative development, allowing you to see the results of your changes in real-time.
 

@@ -6,28 +6,59 @@
 
 At its core, `ctx` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.ctx` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
 
-## Getting Started
+## Getting Started: A Quick Glimpse
 
-here is a minimal example
-create a project:
+Let's dive right in with a simple example.
 
->ctx project init
+1.  **Initialize your project:**
 
-then create a context:
+    Open your terminal and run:
 
->ctx context create hello
+    ```shell
+    ctx project init
+    ```
 
-then edit context, write:
+    This creates a `.ctx` directory in your project, where all your contexts will be stored.
 
->Tell me something nice!
->@answer { provider: "gemini -y -m gemini-2.5-flash" }
+2.  **Create your first context:**
 
-you obtain:
+    A "context" is just a Markdown file where you can interact with the AI. Let's create one called `hello`:
 
->Tell me something nice!
-><!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:begin { provider: "gemini -y -m gemini-2.5-flash" } -->
->You are doing great!
-><!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:end -->
+    ```shell
+    ctx context create hello
+    ```
+
+    This will create a file named `hello.md` inside the `.ctx/contexts` directory.
+
+3.  **Add a prompt and an AI command:**
+
+    Open `hello.md` in your favorite editor and add the following lines:
+
+    ```markdown
+    Tell me something nice!
+
+    @answer { provider: "gemini -y -m gemini-1.5-flash" }
+    ```
+
+4.  **Run `ctx` to get a response:**
+
+    Now, execute the context:
+
+    ```shell
+    ctx run hello
+    ```
+
+    `ctx` will process the file, send the prompt to the Gemini model, and inject the answer directly into your `hello.md` file. It will look something like this:
+
+    ```markdown
+    Tell me something nice!
+
+    <!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:begin { provider: "gemini -y -m gemini-1.5-flash" } -->
+    You are an amazing person, and you're capable of achieving wonderful things!
+    <!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:end -->
+    ```
+
+And that's it! You've just used `ctx` to collaborate with an LLM on a document.
 
 ## Core Commands (Tags)
 

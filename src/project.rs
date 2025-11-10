@@ -1,5 +1,6 @@
 use crate::ast2::{JsonPlusEntity, JsonPlusObject};
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
+use crate::execute2::ModelContent;
 use crate::file::{FileAccessor, ProjectFileAccessor};
 use crate::git::Commit;
 use crate::path::{PathResolver, ProjectPathResolver};
@@ -97,7 +98,11 @@ impl Project {
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {
+    pub fn execute_context(
+        &self,
+        context_name: &str,
+        args: Option<Vec<String>>,
+    ) -> Result<ModelContent> {
         let mut data = match args {
             Some(args) => {
                 let mut data = args
@@ -121,14 +126,14 @@ impl Project {
             "$input".to_string(),
             JsonPlusEntity::DoubleQuotedString(input),
         );
-        crate::execute2::execute_context(
+        let content = crate::execute2::execute_context(
             self.file_access.clone(),
             self.path_res.clone(),
             context_name,
             Some(&data),
         )?;
         self.commit(Some(format!("Executed context {}.", context_name)))?;
-        Ok(())
+        Ok(content)
     }
 
     pub fn project_home(&self) -> PathBuf {

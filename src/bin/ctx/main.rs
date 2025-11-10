@@ -124,8 +124,9 @@ fn main() -> Result<()> {
                         context_name,
                         args
                     );
-                    project.execute_context(&context_name, Some(args))?;
+                    let content = project.execute_context(&context_name, Some(args))?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
+                    print!("{}", content.to_string());
                 }
             }
         }

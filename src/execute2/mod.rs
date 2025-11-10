@@ -75,6 +75,7 @@ mod tags;
 mod utils;
 
 pub use self::error::{ExecuteError, Result};
+pub use content::{ModelContent, ModelContentItem};
 
 pub use execute::collect_context;
 pub use execute::execute_context;

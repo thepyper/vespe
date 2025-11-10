@@ -56,8 +56,8 @@ enum ContextCommands {
         #[arg(long)]
         today: bool,
     },
-    /// Executes a context.
-    Execute {
+    /// Runs a context.
+    Run {
         /// The name of the context to execute.
         #[arg(value_name = "NAME")]
         name: Option<String>,
@@ -125,7 +125,7 @@ fn main() -> Result<()> {
                         project.create_context_file(&context_name, Some(rendered_content))?;
                     tracing::info!("Created new context file: {}", file_path.display());
                 }
-                ContextCommands::Execute { name, today, args } => {
+                ContextCommands::Run { name, today, args } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
                     tracing::info!(
                         "Executing context '{}' with args {:?}...",

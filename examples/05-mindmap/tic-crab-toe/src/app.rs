@@ -1,4 +1,4 @@
-use crate::screens::CurrentScreen;
+use crate::screens::{CurrentScreen, splash_screen::SplashScreen};
 use crate::event::AppEvent;
 use crossterm::event::KeyCode;
 
@@ -7,6 +7,7 @@ use crossterm::event::KeyCode;
 pub struct App {
     /// The current active screen of the application.
     pub current_screen: CurrentScreen,
+    pub splash_screen: SplashScreen,
     /// A flag to signal the application to exit.
     pub should_quit: bool,
     /// The currently selected option in the main menu.
@@ -17,7 +18,8 @@ impl App {
     /// Creates a new `App` instance with initial state.
     pub fn new() -> Self {
         Self {
-            current_screen: CurrentScreen::Splash,
+            current_screen: CurrentScreen::SplashScreen,
+            splash_screen: SplashScreen::new(),
             should_quit: false,
             menu_selection: 1, // Default to the first option
         }
@@ -25,6 +27,15 @@ impl App {
 
     /// Updates the application's state based on the received event.
     pub fn update(&mut self, event: AppEvent) {
+        match self.current_screen {
+            CurrentScreen::SplashScreen => {
+                self.splash_screen.update_animation();
+                if self.splash_screen.is_finished() {
+                    self.current_screen = CurrentScreen::MainMenu;
+                }
+            }
+            _ => {}
+        }
         match event {
             AppEvent::Input(key_event) => {
                 match key_event.code {

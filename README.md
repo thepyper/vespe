@@ -93,16 +93,141 @@ Consider the `@answer` tag from our "Getting Started" example:
 
 This flexible syntax makes writing `ctx` commands feel natural and unobtrusive within your Markdown files.
 
-## Core Commands (Tags)
+## Core Tags
 
-Overview dei comandi
+`ctx` provides a set of powerful tags to control the interaction with LLMs and manage your content.
 
-@answer - chiama llm per rispondere al contesto sovrastante (uso di default)
-@include - include un contesto
-@inline - copia ed incolla nel contesto attuale un altro contesto
-@forget - dimentica tutto il contesto sovrastante
-@set - imposta parametri di default per i tag successivi
-@repeat - ripete la anchor in cui e' contenuto copiando i propri parametri a quelli dell'ancora
-@comment - no-op per scrivere commenti non visti da llm
+### @answer
+
+The `@answer` tag is the primary way to interact with an LLM. It sends the content preceding it as a prompt and injects the model's response into the document.
+
+**Usage:**
+```markdown
+What is the capital of France?
+
+@answer { provider: "gemini -y" }
+```
+
+**Dynamic Answers:**
+You can make an answer dynamic, so it automatically updates if the preceding context changes.
+
+```markdown
+@answer { provider: "gemini -y", dynamic: true }
+```
+
+**Multiple Choices:**
+Force the LLM to choose from a predefined set of options. `ctx` will insert the content associated with the chosen option.
+
+```markdown
+What is the best programming language?
+
+@answer {
+  provider: "gemini -y",
+  choose: {
+    "Rust": "Rust is the best because of its safety and performance.",
+    "Python": "Python is the best for its simplicity and vast libraries."
+  }
+}
+```
+
+### @include
+
+The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
+
+**Usage:**
+```markdown
+@include "my_common_prompts/preamble.md"
+
+Now, do something specific.
+
+@answer { provider: "gemini -y" }
+```
+
+You can also pass data to the included file, which can be used for templating with Handlebars syntax.
+
+**`data-example.md`:**
+```markdown
+Hello, {{name}}!
+```
+
+**`main.md`:**
+```markdown
+@include "data-example.md" { data: { name: "World" } }
+```
+This will resolve to "Hello, World!".
+
+### @inline
+
+The `@inline` tag dynamically includes content from another file. Unlike `@include`, this creates a dynamic anchor that can be re-executed, for example, by a `@repeat` tag. This is useful for content that needs to be refreshed.
+
+**Usage:**
+```markdown
+@inline "path/to/dynamic_content.md"
+```
+
+Like `@include`, it also supports passing `data` for templating.
+
+### @repeat
+
+The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). This allows for creating iterative workflows where a model refines its output.
+
+**Usage:**
+```markdown
+<!-- answer-some-uuid:begin { provider: "gemini -y" } -->
+Initial answer from the model.
+
+Critique this answer and suggest improvements.
+@repeat
+<!-- answer-some-uuid:end -->
+```
+In the next run, the `@answer` block will be executed again, with the critique included in the prompt.
+
+`@repeat` can also modify the parameters of the anchor it is repeating.
+
+### @set
+
+The `@set` tag defines default parameters for all subsequent tags in the current context. This helps to avoid repetition.
+
+**Usage:**
+```markdown
+@set { provider: "gemini -y -m gemini-1.5-pro" }
+
+What is the meaning of life?
+@answer
+<!-- This will use the provider set above -->
+
+Tell me a joke.
+@answer
+<!-- This will also use the same provider -->
+```
+
+### @forget
+
+The `@forget` tag clears all the context that came before it. This is like starting a fresh conversation with the LLM within the same file.
+
+**Usage:**
+```markdown
+--- First Conversation ---
+Prompt for the first question.
+@answer { provider: "gemini -y" }
+
+@forget
+
+--- Second Conversation ---
+This prompt is sent without the context of the first one.
+@answer { provider: "gemini -y" }
+```
+
+### @comment
+
+The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `ctx` engine and is not sent to the LLM.
+
+**Usage:**
+```markdown
+@comment {
+  This is a note for myself.
+  The LLM will not see this.
+}
+```
 
 

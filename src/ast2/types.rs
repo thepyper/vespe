@@ -298,6 +298,9 @@ impl JsonPlusObject {
     pub fn from_hash_map(properties: HashMap<String, JsonPlusEntity>) -> Self {
         JsonPlusObject { properties }
     }
+    pub fn insert(&mut self, key: String, value: JsonPlusEntity) {
+        self.properties.insert(key, value);
+    }
 }
 
 impl ToString for JsonPlusObject {

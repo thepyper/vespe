@@ -96,19 +96,23 @@ impl Project {
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {        
+    pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {
         let data = match args {
             Some(args) => {
-                let data = args
-            .iter()
-            .enumerate()
-            .map(|(i, x)| (format!("${}", i + 1), JsonPlusEntity::NudeString(x.clone())))
-            .collect::<HashMap<String, JsonPlusEntity>>();
-        let data = JsonPlusObject::from_hash_map(data);
-        data
+                let mut data = args
+                    .iter()
+                    .enumerate()
+                    .map(|(i, x)| (format!("${}", i + 1), JsonPlusEntity::NudeString(x.clone())))
+                    .collect::<HashMap<String, JsonPlusEntity>>();
+                data.insert(
+                    "$args".to_string(),
+                    JsonPlusEntity::DoubleQuotedString(args.join(" ")),
+                );
+                let data = JsonPlusObject::from_hash_map(data);
+                data
             }
-            None => JsonPlusObject::new()
-        };        
+            None => JsonPlusObject::new(),
+        };
         crate::execute2::execute_context(
             self.file_access.clone(),
             self.path_res.clone(),

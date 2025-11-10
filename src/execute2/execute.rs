@@ -6,7 +6,8 @@
 //! modification.
 use super::{ExecuteError, Result};
 use crate::ast2::{
-    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters, Position, Range, Tag,
+    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters, Position,
+    Range, Tag,
 };
 use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::tags::TagBehaviorDispatch;
@@ -344,7 +345,11 @@ impl Worker {
     ///
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various execution failures.
-    pub fn execute(&self, context_name: &str, data: Option<&JsonPlusObject>) -> Result<ModelContent> {
+    pub fn execute(
+        &self,
+        context_name: &str,
+        data: Option<&JsonPlusObject>,
+    ) -> Result<ModelContent> {
         match self._execute(Collector::new(), context_name, 77, data)? {
             Some(collector) => {
                 return Ok(collector.context().clone());
@@ -375,7 +380,11 @@ impl Worker {
     ///
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various collection failures.
-    pub fn collect(&self, context_name: &str, data: Option<&JsonPlusObject>) -> Result<ModelContent> {
+    pub fn collect(
+        &self,
+        context_name: &str,
+        data: Option<&JsonPlusObject>,
+    ) -> Result<ModelContent> {
         match self._execute(Collector::new(), context_name, 0, data)? {
             Some(collector) => {
                 return Ok(collector.context().clone());
@@ -755,10 +764,10 @@ impl Worker {
         readonly: bool,
         data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
-        let context_content = self.file_access.read_file(context_path)?;        
+        let context_content = self.file_access.read_file(context_path)?;
         let context_content = match data {
             Some(data) => self.process_context_with_data(context_content, data)?,
-            None => context_content
+            None => context_content,
         };
         let ast = crate::ast2::parse_document(&context_content)?;
         let anchor_index = super::utils::AnchorIndex::new(&ast.content);

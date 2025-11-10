@@ -7,7 +7,7 @@ use super::{ExecuteError, Result};
 use super::execute::{Collector, Worker};
 use super::tags::StaticPolicy;
 //use super::variables::Variables;
-use crate::ast2::{Tag, JsonPlusEntity};
+use crate::ast2::{JsonPlusEntity, Tag};
 
 /// Implements the static policy for the `@include` tag.
 ///

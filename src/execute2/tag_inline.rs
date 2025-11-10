@@ -13,7 +13,7 @@ use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
 use super::Result;
-use crate::ast2::{Arguments, Parameters, JsonPlusEntity};
+use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
 
 /// Represents the execution status of an `@inline` tag.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -102,7 +102,9 @@ impl DynamicPolicy for InlinePolicy {
                 result.new_state = Some(state);
                 let context = worker.read_context(&context_name)?;
                 let context = match parameters.get("data") {
-                    Some(JsonPlusEntity::Object(data)) => worker.process_context_with_data(context, data)?,
+                    Some(JsonPlusEntity::Object(data)) => {
+                        worker.process_context_with_data(context, data)?
+                    }
                     Some(_) => {
                         return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
                     }

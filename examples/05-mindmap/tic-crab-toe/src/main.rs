@@ -1,6 +1,5 @@
 use std::{io, time::Duration};
 use crossterm::{
-    event::{self, Event as CrosstermEvent, KeyCode},
     execute,
     terminal::{
         disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -11,6 +10,16 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     widgets::{Block, Borders, Paragraph},
     Terminal,
+};
+
+mod app;
+mod event;
+mod screens;
+
+use crate::{
+    app::App,
+    event::EventHandler,
+    screens::CurrentScreen,
 };
 
 // A simple macro for deferring cleanup actions.
@@ -46,6 +55,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     terminal.clear()?;
 
+    // Create app and event handler
+    let mut app = App::new();
+    let event_handler = EventHandler::new(Duration::from_millis(250)); // Tick every 250ms
+
     // Main application loop
     loop {
         terminal.draw(|f| {
@@ -56,22 +69,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .split(size);
 
             let block = Block::default().title("Tic-Crab-Toe").borders(Borders::ALL);
-            let greeting = Paragraph::new("Hello, Tic-Crab-Toe! Press any key to exit.");
             f.render_widget(block, size);
+
+            let message = match app.current_screen {
+                CurrentScreen::Splash => "Splash Screen",
+                CurrentScreen::MainMenu => "Main Menu",
+                _ => "Game Screen", // Placeholder for Playing and GameOver
+            };
+            let greeting = Paragraph::new(format!("{} - Press 'q' to exit.", message));
             f.render_widget(greeting, chunks[0]);
         })?;
 
         // Event handling
-        if event::poll(Duration::from_millis(100))? {
-            if let CrosstermEvent::Key(key) = event::read()? {
-                if KeyCode::Char('q') == key.code { // For now, 'q' to quit
-                    break;
-                }
-                // Any key press will exit for this initial test
-                break;
-            }
+        let event = event_handler.next();
+        app.update(event);
+
+        if app.should_quit {
+            break;
         }
     }
 
     Ok(())
 }
+

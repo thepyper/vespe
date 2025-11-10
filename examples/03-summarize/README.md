@@ -6,7 +6,7 @@ prefix (system prompt) taken from another context, postfix (instructions) taken 
 
 .ctx/contexts/main_executed.md					- this is the same context after an example execution 
 
-.ctx/contexts/agent/secretary.md				- this context gives llm personality o a loyal secretary 
+.ctx/contexts/agent/secretary.md				- this context gives llm personality of a loyal secretary 
 
 .ctx/contexts/input/email.md					- this context contains an imaginary email received
 

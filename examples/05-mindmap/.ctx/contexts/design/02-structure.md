@@ -4,13 +4,13 @@
     provider: 'gemini -y -m gemini-2.5-flash'
 }
 
-Write a good prompt for an agent that will help me in defining the project structure.
+Write a system prompt for the agent that will help me in defining the project structure.
 
-<!-- answer-90355a9c-9ec5-493d-8a41-dcd6023a102b:begin {
-	output: agent/struct_define,
-	provider: 'gemini -y -m gemini-2.5-flash'
+<!-- answer-cd101fa2-0058-42ac-800d-d187344afcb4:begin {
+	provider: 'gemini -y -m gemini-2.5-flash',
+	output: agent/struct_define
 }  -->
-<!-- answer-90355a9c-9ec5-493d-8a41-dcd6023a102b:end {}  -->
+<!-- answer-cd101fa2-0058-42ac-800d-d187344afcb4:end {}  -->
 
 
 

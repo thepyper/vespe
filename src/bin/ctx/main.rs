@@ -1,12 +1,16 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use std::io::Read;
+use std::io::{self, Read};
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 use std::path::PathBuf;
-use vespe::project::Project;
-mod watch;
-
 use handlebars::Handlebars;
 use serde_json::json;
+
+use vespe::project::Project;
+
+mod watch;
 
 const DIARY_CONTEXT_FORMAT: &str = "diary/%Y-%m-%d";
 const DEFAULT_CONTEXT_TEMPLATE: &str = r#"
@@ -92,6 +96,10 @@ fn main() -> Result<()> {
         }
         Commands::Context { command } => {
             let project = Project::find(&project_path)?;
+            tracing::info!(
+                "Found .ctx project at: {}",
+                project.project_home().display()
+            );
             match command {
                 ContextCommands::New { name, today } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
@@ -124,11 +132,9 @@ fn main() -> Result<()> {
                         context_name,
                         args
                     );
-                    let mut stdin = std::io::stdin();
-                    let mut input = String::new();
-                    stdin.read_to_string(&mut input)?;
+                    let input = read_input()?;
                     let content =
-                        project.execute_context(&context_name, Some(input), Some(args))?;
+                        project.execute_context(&context_name, input, Some(args))?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }
@@ -141,4 +147,20 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn read_input() -> Result<Option<String>> {
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        let mut input = String::new();
+        io::stdin().read_to_string(&mut input).unwrap();
+        let _ = tx.send(input);
+    });
+
+    match rx.recv_timeout(Duration::from_millis(250)) {
+        Ok(data) => Ok(Some(data)),
+        Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
+        Err(e) => Err(e.into()),
+    }
 }

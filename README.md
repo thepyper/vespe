@@ -41,7 +41,7 @@ Let's dive right in with a simple example.
 
 1.  **Initialize your project:**
 
-    Open your terminal and run:
+    Open your terminal, navigate to your project and run:
 
     ```shell
     ctx project init

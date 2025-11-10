@@ -6,6 +6,15 @@
 
 At its core, `ctx` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.ctx` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
 
+## Installation
+
+necessita rust
+
+    ```shell
+    git clone https://github.com/thepyper/vespe.git
+    cargo install --path .
+    ```
+
 ## Getting Started: A Quick Glimpse
 
 Let's dive right in with a simple example.

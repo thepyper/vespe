@@ -1,8 +1,8 @@
 Woof woof!
 
-Red and blue are primary colors, but they're quite different, woof!
+Red and blue are both primary colors of light, but they differ in their **wavelengths** within the visible spectrum.
 
-*   **Red** is a warm color, often associated with energy, passion, and danger. It has a longer wavelength in the visible light spectrum. Think of fire, blood, or a stop sign, woof!
-*   **Blue** is a cool color, often associated with calmness, stability, and sadness. It has a shorter wavelength in the visible light spectrum. Think of the sky, the ocean, or a feeling of peace, woof!
+*   **Red:** Has the longest wavelength and lowest frequency of visible light. It's often associated with warmth, passion, danger, and energy.
+*   **Blue:** Has a shorter wavelength and higher frequency than red. It's commonly associated with coolness, calmness, water, and the sky.
 
-Woof woof!
+Woof!

@@ -62,14 +62,36 @@ And that's it! You've just used `ctx` to collaborate with an LLM on a document.
 
 ## Tag Syntax
 
-sintassi generica di un tag e'
+The power of `ctx` lies in its simple yet powerful tag syntax. Each tag follows a consistent structure that is easy to read and write.
 
-@tag {parametri json+} argomenti posizionali
+The general syntax for a tag is:
 
-json+ e' un json piu' comodo da scrivere:
+```
+@tag_name {key1: "value1", key2: value2} positional_argument
+```
 
-- key puo' non avere virgolette
-- value puo' non avere virgolette
+Let's break it down:
+
+*   **`@tag_name`**: This is the command you want to execute (e.g., `@answer`, `@include`). It always starts with an `@` symbol.
+*   **`{...}` (Parameters)**: This is a JSON-like object containing key-value pairs that configure the tag's behavior. `ctx` uses a more flexible version of JSON for convenience:
+    *   Quotes around keys are optional (e.g., `provider` is the same as `"provider"`).
+    *   Quotes around string values are optional if the value doesn't contain spaces or special characters.
+*   **Positional Arguments**: Some tags can also take additional arguments after the parameter block. For example, `@include` takes a file path.
+
+### Example
+
+Consider the `@answer` tag from our "Getting Started" example:
+
+```markdown
+@answer { provider: "gemini -y -m gemini-2.5-flash" }
+```
+
+*   **Tag Name**: `@answer`
+*   **Parameters**: `{ provider: "gemini -y -m gemini-2.5-flash" }`
+    *   The key is `provider`.
+    *   The value is `"gemini -y -m gemini-2.5-flash"`. In this case, quotes are necessary because the value contains spaces.
+
+This flexible syntax makes writing `ctx` commands feel natural and unobtrusive within your Markdown files.
 
 ## Core Commands (Tags)
 

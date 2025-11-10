@@ -4,7 +4,7 @@
 }
 
 @set {
-    provider: 'gemini -y -m gemini-2.5.flash'
+    provider: 'gemini -y -m gemini-2.5-flash'
 }
 
 @inline { data: { color: 'blue' } } template/about_color

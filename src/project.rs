@@ -38,7 +38,9 @@ impl Project {
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
             .context("Failed to write .ctx_root file")?;
 
-        let project_config = ProjectConfig::default();
+        let mut project_config = ProjectConfig::default();
+
+        project_config.git_integration_enabled = super::git::is_in_git_repository(&ctx_dir)?;
 
         let file_access = Arc::new(ProjectFileAccessor::new(None));
         let path_res = Arc::new(ProjectPathResolver::new(root_path.to_path_buf()));

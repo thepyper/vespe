@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 #[allow(unused_imports)]
-use git2::{Index, Oid, Repository, Signature, Status, StatusOptions, Tree}; // Added StatusOptions, Status
+use std::path::Path;
+use git2::{Repository, Signature, StatusOptions}; 
 use std::collections::HashSet;
 use std::path::PathBuf;
 use tracing::debug; // Added HashSet
@@ -159,6 +160,25 @@ pub fn git_commit_files(files_to_commit: &[PathBuf], message: &str) -> Result<()
 
     debug!("Commit created with id {}", new_commit_oid);
     Ok(())
+}
+
+pub fn is_in_git_repository(path: &Path) -> Result<bool, git2::Error> {
+    // Tenta di scoprire un repository Git a partire dalla directory attuale
+    // `Repository::discover` cerca verso l'alto nella gerarchia delle directory.
+    match Repository::discover(&path) {
+        Ok(_) => Ok(true), // Un repository è stato trovato
+        Err(e) => {
+            // Se l'errore indica che non è stato trovato un repository,
+            // allora la directory non è in un repo Git.
+            // Altrimenti, è un altro tipo di errore.
+            if e.code() == git2::ErrorCode::NotFound {
+                Ok(false)
+            } else {
+                // Altri errori (es. permessi, repository corrotto, ecc.)
+                Err(e)
+            }
+        }
+    }
 }
 
 pub struct Commit {

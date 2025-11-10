@@ -45,7 +45,7 @@ Let's dive right in with a simple example.
     Now, execute the context:
 
     ```shell
-    ctx run hello
+    ctx context execute hello
     ```
 
     `ctx` will process the file, send the prompt to the Gemini model, and inject the answer directly into your `hello.md` file. It will look something like this:
@@ -228,5 +228,14 @@ Note that json+ syntax is anyway required, so you can use strings for example to
   _2: "The LLM will not see this.     ",
 }
 ```
+
+## Cli usage
+
+comandi:
+- init - crea un project (git enabled se in git repo)
+- context
+    - create - crea un context
+    - execute - esegue un context (documentare anche special handlebars variable: $1 $2 $3 $args $input, e che output = context raccolto)
+- watch - esegue ogni context che viene modificato 
 
 

@@ -8,15 +8,15 @@ re-start a new conversation from scratch in the same file.
 
 .ctx/contexts/agent/secretary.md				- this context gives llm personality o a loyal secretary 
 
-.ctx/contexts/input/email.md					- this context contains an imaginary email received
+.ctx/contexts/input/email_1.md					- this context contains an imaginary email received
 
-.ctx/contexts/instructions/summarize.md			- this context contains instructions to summarize a context 
+.ctx/contexts/input/email_2.md					- this context contains an imaginary email received
 
-.ctx/contexts/instructions/names.md				- this context contains instructions to extract names from a context
+.ctx/contexts/output/email_1.md				    - this context contains the output of the choose instructions applied to the email 
 
-.ctx/contexts/output/summarize.md				- this context contains the output of the summarize instructions applied to the email 
+.ctx/contexts/output/email_2.md			    	- this context contains the output of the summarize instructions applied to the email 
 
-.ctx/contexts/output/names.md					- this context contains the output of the names instructions applied to the email 
+.ctx/contexts/output/insights.md				- this context contains the output of the insights question 
 
  
 

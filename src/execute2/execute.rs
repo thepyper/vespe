@@ -110,6 +110,12 @@ impl Collector {
         format!("{:x}", self.context_hasher.clone().finalize())
     }
 
+    pub fn hash(&self, input: &str) -> String {
+        let mut context_hasher = Sha256::new();
+        context_hasher.update(input);
+        format!("{:x}", context_hasher.finalize())
+    }
+
     /// Returns a reference to the current anchor stack.
     ///
     /// The anchor stack keeps track of nested anchors, which is crucial for
@@ -1211,9 +1217,9 @@ impl Worker {
     /// Returns other [`ExecuteError`] variants if the redirected context execution fails.
     pub fn redirect_input(
         &self,
+        collector: &Collector,
         parameters: &Parameters,
-        input: ModelContent,
-    ) -> Result<ModelContent> {
+    ) -> Result<(ModelContent, String)> {
         match &parameters.get("input") {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let data = match parameters.get("input_data") {
@@ -1226,7 +1232,9 @@ impl Worker {
                     }
                     None => None,
                 };
-                self.execute(&x, data)
+                let input = self.execute(&x, data)?;
+                let input_hash = collector.hash(&input.to_string());
+                Ok((input, input_hash))
             }
             Some(x) => {
                 return Err(ExecuteError::UnsupportedParameterValue(format!(
@@ -1235,7 +1243,7 @@ impl Worker {
                 )));
             }
             None => {
-                return Ok(input);
+                return Ok((collector.context().clone(), collector.context_hash()));
             }
         }
     }

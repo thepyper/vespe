@@ -248,6 +248,7 @@ pub trait DynamicPolicy {
         worker: &Worker,
         collector: Collector,
         input: &ModelContent,
+        input_hash: String,
         parameters: &Parameters,
         arguments: &Arguments,
         state: Self::State,
@@ -390,11 +391,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
-        let input = worker.redirect_input(&tag.parameters, collector.context().clone())?;
+        let (input, input_hash) = worker.redirect_input(&collector, &tag.parameters)?;
         let mono_result = P::mono(
             worker,
             collector,
             &input,
+            input_hash, 
             &tag.parameters,
             &tag.arguments,
             state,
@@ -480,11 +482,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
                 return Ok((false, collector, vec![]));
             }
         };
-        let input = worker.redirect_input(&anchor.parameters, collector.context().clone())?;
+        let (input, input_hash) = worker.redirect_input(&collector, &anchor.parameters)?;
         let mono_result = P::mono(
             worker,
             collector,
             &input,
+            input_hash,
             &anchor.parameters,
             &anchor.arguments,
             state,
@@ -544,11 +547,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         _anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let input = worker.redirect_input(&anchor.parameters, collector.context().clone())?;
+        let (input, input_hash) = worker.redirect_input(&collector, &anchor.parameters)?;
         let mono_result = P::mono(
             worker,
             collector,
             &input,
+            input_hash,
             &anchor.parameters,
             &anchor.arguments,
             state,

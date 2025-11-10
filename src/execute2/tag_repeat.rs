@@ -78,6 +78,7 @@ impl DynamicPolicy for RepeatPolicy {
         worker: &Worker,
         collector: Collector,
         _input: &ModelContent,
+        _input_hash: String,
         parameters: &Parameters,
         arguments: &Arguments,
         mut state: Self::State,

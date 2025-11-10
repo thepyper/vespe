@@ -92,6 +92,7 @@ impl DynamicPolicy for AnswerPolicy {
         worker: &Worker,
         collector: Collector,
         input: &ModelContent,
+        input_hash: String,
         parameters: &Parameters,
         _arguments: &Arguments,
         mut state: Self::State,

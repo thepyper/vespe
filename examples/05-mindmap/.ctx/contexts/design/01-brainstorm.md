@@ -102,4 +102,12 @@ For a project like Tic-Crab-Toe, even though it's simple, I would lean towards *
 Both `crossterm` and `ratatui` are excellent, well-supported choices. The decision largely depends on the desired level of abstraction and how much you want to manage the UI rendering manually versus declaratively. For a new project, `ratatui` generally provides a more pleasant development experience for TUIs.
 <!-- answer-20b84ca7-d844-4c10-ba12-87e21bcb7cb4:end {}  -->
 
+I think I'm aligned with this choice. So, let's choose ratatui + crossterm.
 
+Write down a report for this choice, pointing to te most important why and hows that we discussed.
+
+<!-- answer-6f21419f-4b05-4fd3-a8be-75c79c961d89:begin {
+	output: design/dependencies,
+	provider: 'gemini -y -m gemini-2.5-flash'
+}  -->
+<!-- answer-6f21419f-4b05-4fd3-a8be-75c79c961d89:end {}  -->

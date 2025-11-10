@@ -1,3 +1,7 @@
+@comment {
+    _1: "Run this with 'ctx context run main'.",
+}
+
 @include agent/gemini_25_flash_yolo
 
 Tell me something about blue.

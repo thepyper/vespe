@@ -6,6 +6,6 @@ Tell me something about blue.
 
 Tell me something about red.
 
-@answer { prefix: agetn/creepy_crow }
+@answer { prefix: agent/creepy_crow }
 
 

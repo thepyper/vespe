@@ -122,7 +122,7 @@ impl DynamicPolicy for AnswerPolicy {
                 let response = Self::process_response_with_choice(response, parameters)?;
                 state.reply = response;
                 state.status = AnswerStatus::NeedInjection;
-                state.context_hash = result.collector.context_hash();
+                state.context_hash = input_hash;
                 result.new_state = Some(state);
                 result.do_next_pass = true;
             }
@@ -142,7 +142,7 @@ impl DynamicPolicy for AnswerPolicy {
                     .unwrap_or(false);
                 if !is_dynamic {
                     // Do nothing
-                } else if result.collector.context_hash() != state.context_hash {
+                } else if state.context_hash != input_hash {
                     // Repeat
                     state.status = AnswerStatus::Repeat;
                     result.new_state = Some(state);

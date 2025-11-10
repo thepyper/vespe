@@ -98,9 +98,6 @@ impl Project {
     }
 
     pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {
-        let mut stdin = std::io::stdin();
-        let mut input = String::new();
-        stdin.read_to_string(&mut input)?;
         let mut data = match args {
             Some(args) => {
                 let mut data = args
@@ -117,6 +114,9 @@ impl Project {
             }
             None => JsonPlusObject::new(),
         };
+        let mut stdin = std::io::stdin();
+        let mut input = String::new();
+        stdin.read_to_string(&mut input)?;
         data.insert(
             "$input".to_string(),
             JsonPlusEntity::DoubleQuotedString(input),

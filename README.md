@@ -37,7 +37,7 @@ Let's dive right in with a simple example.
     ```markdown
     Tell me something nice!
 
-    @answer { provider: "gemini -y -m gemini-1.5-flash" }
+    @answer { provider: "gemini -y -m gemini-2.5-flash" }
     ```
 
 4.  **Run `ctx` to get a response:**
@@ -53,12 +53,23 @@ Let's dive right in with a simple example.
     ```markdown
     Tell me something nice!
 
-    <!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:begin { provider: "gemini -y -m gemini-1.5-flash" } -->
+    <!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:begin { provider: "gemini -y -m gemini-2.5-flash" } -->
     You are an amazing person, and you're capable of achieving wonderful things!
     <!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:end -->
     ```
 
 And that's it! You've just used `ctx` to collaborate with an LLM on a document.
+
+## Tag Syntax
+
+sintassi generica di un tag e'
+
+@tag {parametri json+} argomenti posizionali
+
+json+ e' un json piu' comodo da scrivere:
+
+- key puo' non avere virgolette
+- value puo' non avere virgolette
 
 ## Core Commands (Tags)
 

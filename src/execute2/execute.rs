@@ -549,9 +549,12 @@ impl Worker {
                 let data = match parameters.get("prefix_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
                     Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!("bad prefix_data: {:?}", x)));
+                        return Err(ExecuteError::UnsupportedParameterValue(format!(
+                            "bad prefix_data: {:?}",
+                            x
+                        )));
                     }
-                    None => None
+                    None => None,
                 };
                 let prefix = self.execute(x, data)?.to_string();
                 let prefix = ModelContentItem::system(&prefix);
@@ -618,9 +621,12 @@ impl Worker {
                 let data = match parameters.get("postfix_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
                     Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!("bad postfix_data: {:?}", x)));
+                        return Err(ExecuteError::UnsupportedParameterValue(format!(
+                            "bad postfix_data: {:?}",
+                            x
+                        )));
                     }
-                    None => None
+                    None => None,
                 };
                 let postfix = self.execute(x, data)?.to_string();
                 let postfix = ModelContentItem::system(&postfix);
@@ -1209,7 +1215,19 @@ impl Worker {
         input: ModelContent,
     ) -> Result<ModelContent> {
         match &parameters.get("input") {
-            Some(JsonPlusEntity::NudeString(x)) => self.execute(&x, None),
+            Some(JsonPlusEntity::NudeString(x)) => {
+                let data = match parameters.get("input_data") {
+                    Some(JsonPlusEntity::Object(data)) => Some(data),
+                    Some(x) => {
+                        return Err(ExecuteError::UnsupportedParameterValue(format!(
+                            "bad input_data: {:?}",
+                            x
+                        )));
+                    }
+                    None => None,
+                };
+                self.execute(&x, data)
+            }
             Some(x) => {
                 return Err(ExecuteError::UnsupportedParameterValue(format!(
                     "input: {:?}",

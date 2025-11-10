@@ -1,4 +1,8 @@
 
+@comment {
+    _1: "Run this with 'ctx context run main'.",
+}
+
 <!-- answer-476db160-9bba-4a6f-a728-0c1d9338521a:begin {
 	postfix: instructions/summarize,
 	prefix: agent/secretary,

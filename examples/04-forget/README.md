@@ -12,7 +12,7 @@ re-start a new conversation from scratch in the same file.
 
 .ctx/contexts/input/email_2.md					- this context contains an imaginary email received
 
-.ctx/contexts/output/email_1.md				    - this context contains the output of the choose instructions applied to the email 
+.ctx/contexts/output/email_1.md				    - this context contains the output of the choice applied to the email 
 
 .ctx/contexts/output/email_2.md			    	- this context contains the output of the summarize instructions applied to the email 
 

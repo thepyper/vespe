@@ -112,10 +112,29 @@ impl ModelContentItem {
     pub fn to_prompt(&self) -> String {
         match self {
             ModelContentItem::System(content) => {
-                format!("\n---\nSystem Message:\n{}", content.text)
+                let text = content.text.trim();
+                if !text.is_empty() {
+                    format!("\n---\nSystem Message:\n{}\n", text) 
+                } else {
+                    text.into()
+                }                
             }
-            ModelContentItem::User(content) => format!("\n---\nUser Message:\n{}", content.text),
-            ModelContentItem::Agent(content) => format!("\n---\nAgent Message:\n{}", content.text),
+            ModelContentItem::User(content) => {
+                let text = content.text.trim();
+                if !text.is_empty() {
+                    format!("\n---\nUser Message:\n{}\n", text)
+                } else {
+                    text.into()
+                }                
+            }
+            ModelContentItem::Agent(content) => {
+                let text = content.text.trim();
+                if !text.is_empty() {
+                    format!("\n---\nAgent Message:\n{}\n", text)
+                } else {
+                    text.into()
+                }    
+            }            
         }
     }
 }

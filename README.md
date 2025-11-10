@@ -169,18 +169,17 @@ Like `@include`, it also supports passing `data` for templating.
 
 ### @repeat
 
-The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). This allows for creating iterative workflows where a model refines its output.
+The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). Context will be re-read so any correction to query can be made. The repeated tag will inherith parameters from the @repeat tag.
 
 **Usage:**
 ```markdown
 <!-- answer-some-uuid:begin { provider: "gemini -y" } -->
 Initial answer from the model.
 
-Critique this answer and suggest improvements.
-@repeat
+@repeat { provider: "gemini -m gemini-2.5-flash" }
 <!-- answer-some-uuid:end -->
 ```
-In the next run, the `@answer` block will be executed again, with the critique included in the prompt.
+In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.
 
 `@repeat` can also modify the parameters of the anchor it is repeating.
 
@@ -190,7 +189,7 @@ The `@set` tag defines default parameters for all subsequent tags in the current
 
 **Usage:**
 ```markdown
-@set { provider: "gemini -y -m gemini-1.5-pro" }
+@set { provider: "gemini -y -m gemini-2.5-pro" }
 
 What is the meaning of life?
 @answer

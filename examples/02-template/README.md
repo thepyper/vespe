@@ -4,7 +4,9 @@ command-line argument; fourth instance takes parameter from the whole positional
 last instance takes parameter from standard input.
 
 .ctx/contexts/main.md							- this is the context as it is before being answered
+
 .ctx/contexts/main_executed.md					- this is the same context after an example execution 
+
 .ctx/contexts/template/about_color.md			- this context is instantiated with @inline in main context 
  
 

@@ -8,12 +8,32 @@ At its core, `ctx` operates on a collection of textual documents, referred to as
 
 ## Installation
 
-necessita rust
+To use `ctx`, you'll need to have **Rust** and its package manager, **Cargo**, installed on your system.
+
+### Prerequisites
+
+*   **Rust & Cargo**: If you don't have Rust and Cargo installed, you can get them by following the instructions on the official Rust website: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
+
+### Steps
+
+1.  **Clone the Repository**:
+    First, clone the `vespe` repository to your local machine:
 
     ```shell
     git clone https://github.com/thepyper/vespe.git
+    cd vespe
+    ```
+
+2.  **Install `ctx`**:
+    Navigate into the cloned directory and use Cargo to install the `ctx` command-line tool. This will compile the project and place the `ctx` executable in your Cargo bin directory, making it available globally in your shell's PATH.
+
+    ```shell
     cargo install --path .
     ```
+
+    If you encounter any issues, ensure your Cargo bin directory is in your system's PATH. You can usually find instructions for this in the Rust installation guide.
+
+After these steps, you should be able to run `ctx` from any directory in your terminal.
 
 ## Getting Started: A Quick Glimpse
 

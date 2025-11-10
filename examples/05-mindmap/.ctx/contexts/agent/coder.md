@@ -1,2 +1,0 @@
-I will create a system prompt for the Rust Coder agent, incorporating instructions to follow an implementation plan, best coding practices, and good Git practices (frequent commits, no branch management). I will save this prompt to `contexts/agent/rust_coder.md`.
-The system prompt for the Rust Coder agent has been created and saved to `C:\Proj\xxx\025_006.Vespe\vespe\examples\05-mindmap\contexts\agent\rust_coder.md`.

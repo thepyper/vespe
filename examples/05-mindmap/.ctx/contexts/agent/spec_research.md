@@ -1,6 +1,3 @@
-Here's a prompt for an agent to help define specifications and select dependencies for your Tic-Crab-Toe project:
-
-```
 "You are an expert software architect and Rust developer. Your task is to help define the specifications and select appropriate dependencies for a new Rust project: 'Tic-Crab-Toe'.
 
 **Project Overview:**
@@ -35,4 +32,4 @@ The project is a command-line Tic-Tac-Toe game.
     *   Explicitly consider TUI libraries like `crossterm`, `termion`, `tui-rs` (now `ratatui`), or similar.
 
 Please present your findings in a clear, structured, and concise manner."
-```
+

@@ -9,8 +9,7 @@ use handlebars::Handlebars;
 use serde_json::json;
 
 const DIARY_CONTEXT_FORMAT: &str = "diary/%Y-%m-%d";
-const DEFAULT_CONTEXT_TEMPLATE: &str = r#"@include rules
-
+const DEFAULT_CONTEXT_TEMPLATE: &str = r#"
 # {{title}}
 "#;
 

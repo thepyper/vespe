@@ -546,7 +546,14 @@ impl Worker {
     ) -> Result<ModelContent> {
         match parameters.get("prefix") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let prefix = self.execute(x, None)?.to_string();
+                let data = match parameters.get("prefix_data") {
+                    Some(JsonPlusEntity::Object(data)) => Some(data),
+                    Some(x) => {
+                        return Err(ExecuteError::UnsupportedParameterValue(format!("bad prefix_data: {:?}", x)));
+                    }
+                    None => None
+                };
+                let prefix = self.execute(x, data)?.to_string();
                 let prefix = ModelContentItem::system(&prefix);
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
@@ -608,7 +615,14 @@ impl Worker {
     ) -> Result<ModelContent> {
         match parameters.get("postfix") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let postfix = self.execute(x, None)?.to_string();
+                let data = match parameters.get("postfix_data") {
+                    Some(JsonPlusEntity::Object(data)) => Some(data),
+                    Some(x) => {
+                        return Err(ExecuteError::UnsupportedParameterValue(format!("bad postfix_data: {:?}", x)));
+                    }
+                    None => None
+                };
+                let postfix = self.execute(x, data)?.to_string();
                 let postfix = ModelContentItem::system(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))

@@ -7,7 +7,6 @@ use crossterm::event::KeyCode;
 pub struct App {
     /// The current active screen of the application.
     pub current_screen: CurrentScreen,
-    pub splash_screen: SplashScreen,
     /// A flag to signal the application to exit.
     pub should_quit: bool,
     /// The currently selected option in the main menu.
@@ -18,8 +17,7 @@ impl App {
     /// Creates a new `App` instance with initial state.
     pub fn new() -> Self {
         Self {
-            current_screen: CurrentScreen::SplashScreen,
-            splash_screen: SplashScreen::new(),
+            current_screen: CurrentScreen::SplashScreen(SplashScreen::new()),
             should_quit: false,
             menu_selection: 1, // Default to the first option
         }
@@ -27,10 +25,10 @@ impl App {
 
     /// Updates the application's state based on the received event.
     pub fn update(&mut self, event: AppEvent) {
-        match self.current_screen {
-            CurrentScreen::SplashScreen => {
-                self.splash_screen.update_animation();
-                if self.splash_screen.is_finished() {
+        match &mut self.current_screen {
+            CurrentScreen::SplashScreen(splash_screen) => {
+                splash_screen.update_animation();
+                if splash_screen.is_finished() {
                     self.current_screen = CurrentScreen::MainMenu;
                 }
             }

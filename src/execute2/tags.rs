@@ -231,6 +231,8 @@ pub trait DynamicPolicy {
     /// * `worker` - A reference to the [`Worker`] instance.
     /// * `collector` - The current [`Collector`] state.
     /// * `input` - The [`ModelContent`] collected so far, serving as input to the dynamic tag.
+    /// * `input_hash` - The SHA256 hash of the `input` content. This is used to detect
+    ///                  changes in the input that might require re-execution.
     /// * `parameters` - The [`Parameters`] associated with the tag or anchor.
     /// * `arguments` - The [`Arguments`] associated with the tag or anchor.
     /// * `state` - The current state of the dynamic tag.

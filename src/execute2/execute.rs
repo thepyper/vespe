@@ -1197,22 +1197,27 @@ impl Worker {
     ///
     /// If an `input` parameter is present in the `parameters`, this function attempts
     /// to resolve the input path and execute that context, effectively replacing
-    /// the `input` `ModelContent` with the result of the redirected execution.
-    /// If no `input` parameter is found, the original `input` `ModelContent` is returned.
+    /// the current `ModelContent` with the result of the redirected execution.
+    /// If no `input` parameter is found, the original `ModelContent` from the `collector`
+    /// and its hash are returned.
     ///
     /// # Arguments
     ///
-    /// * `parameters` - The [`Parameters`] which may contain an `input` path.
-    /// * `input` - The original [`ModelContent`] that might be replaced.
+    /// * `collector` - The current [`Collector`] state, used to retrieve the current
+    ///                 `ModelContent` if no redirection occurs, and to hash the content.
+    /// * `parameters` - The [`Parameters`] which may contain an `input` path and
+    ///                  optional `input_data` for the redirected context.
     ///
     /// # Returns
     ///
-    /// A `Result` containing the `ModelContent` (either the original or the redirected/executed content).
+    /// A `Result` containing a tuple `(ModelContent, String)`. The `ModelContent` is
+    /// either the original from the collector or the content from the redirected/executed
+    /// context. The `String` is the SHA256 hash of the returned `ModelContent`.
     ///
     /// # Errors
     ///
-    /// Returns [`ExecuteError::UnsupportedParameterValue`] if the `input` parameter
-    /// is not a valid string.
+    /// Returns [`ExecuteError::UnsupportedParameterValue`] if the `input` or `input_data`
+    /// parameters have invalid values.
     /// Returns [`ExecuteError::PathResolutionError`] if the specified input path cannot be resolved.
     /// Returns other [`ExecuteError`] variants if the redirected context execution fails.
     pub fn redirect_input(

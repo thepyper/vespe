@@ -2,7 +2,6 @@ use crate::ast2::{JsonPlusEntity, JsonPlusObject};
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
 use crate::execute2::ModelContent;
 use crate::file::{FileAccessor, ProjectFileAccessor};
-use crate::git::Commit;
 use crate::path::{PathResolver, ProjectPathResolver};
 
 use std::sync::Arc;
@@ -41,7 +40,7 @@ impl Project {
 
         project_config.git_integration_enabled = super::git::is_in_git_repository(&ctx_dir)?;
 
-        let file_access = Arc::new(ProjectFileAccessor::new(None));
+        let file_access = Arc::new(ProjectFileAccessor::new(root_path, None));
         let path_res = Arc::new(ProjectPathResolver::new(root_path.to_path_buf()));
 
         let project = Project {
@@ -80,7 +79,10 @@ impl Project {
                         _ => None,
                     };
 
-                let file_access = Arc::new(ProjectFileAccessor::new(editor_interface.clone()));
+                let file_access = Arc::new(ProjectFileAccessor::new(
+                    &root_path,
+                    editor_interface.clone(),
+                ));
                 let path_res = Arc::new(ProjectPathResolver::new(root_path.clone()));
 
                 return Ok(Project {
@@ -156,19 +158,10 @@ impl Project {
         if file_path.exists() {
             anyhow::bail!("Context file already exists: {}", file_path.display());
         }
-        let parent_dir = file_path
-            .parent()
-            .context("Failed to get parent directory")?;
-        std::fs::create_dir_all(parent_dir)
-            .context("Failed to create parent directories for context file")?;
         let content = initial_content.unwrap_or_else(|| "".to_string());
-        std::fs::write(&file_path, content).context("Failed to create context file")?;
+        self.file_access.write_file(&file_path, &content, None)?;
 
-        if self.project_config.git_integration_enabled {
-            let mut commit = Commit::new();
-            commit.files.insert(file_path.clone());
-            commit.commit(&format!("feat: Create new context '{}'", name))?;
-        }
+        self.commit(Some(format!("Created new context {}", name)))?;
 
         Ok(file_path)
     }

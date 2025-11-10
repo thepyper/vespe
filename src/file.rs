@@ -27,6 +27,8 @@ struct ProjectFileAccessorMutable {
 }
 
 pub struct ProjectFileAccessor {
+    /// Project root path
+    root_path: PathBuf,
     /// Editor interface to use
     editor_interface: Option<Arc<dyn EditorCommunicator>>,
     /// Mutable part of the struct to allow fine-grained lock strategy, only lock when needed
@@ -34,8 +36,9 @@ pub struct ProjectFileAccessor {
 }
 
 impl ProjectFileAccessor {
-    pub fn new(editor_interface: Option<Arc<dyn EditorCommunicator>>) -> Self {
+    pub fn new(root_path: &Path, editor_interface: Option<Arc<dyn EditorCommunicator>>) -> Self {
         ProjectFileAccessor {
+            root_path: root_path.to_path_buf(),
             editor_interface,
             mutable: Mutex::new(ProjectFileAccessorMutable {
                 modified_files: HashSet::new(),
@@ -68,6 +71,7 @@ impl ProjectFileAccessor {
             };
             let message_2 = mutable.modified_files_comments.join("\n");
             let _ = git_commit_files(
+                &self.root_path,
                 &mutable
                     .modified_files
                     .iter()

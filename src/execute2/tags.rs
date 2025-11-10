@@ -398,7 +398,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             worker,
             collector,
             &input,
-            input_hash, 
+            input_hash,
             &tag.parameters,
             &tag.arguments,
             state,

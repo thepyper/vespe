@@ -6,13 +6,17 @@ use std::path::Path;
 use std::path::PathBuf;
 use tracing::debug; // Added HashSet
 
-pub fn git_commit_files(files_to_commit: &[PathBuf], message: &str) -> Result<()> {
+pub fn git_commit_files(
+    root_path: &Path,
+    files_to_commit: &[PathBuf],
+    message: &str,
+) -> Result<()> {
     debug!(
         "Running git_commit_files wth message {} on files {:?}",
         message, files_to_commit
     );
 
-    let repo = Repository::open(".").context("Failed to open repository")?;
+    let repo = Repository::discover(root_path).context("Failed to open repository")?;
     let workdir = repo.workdir().context("Repository has no workdir")?;
 
     // Convert files_to_commit to a HashSet for efficient lookup
@@ -162,10 +166,10 @@ pub fn git_commit_files(files_to_commit: &[PathBuf], message: &str) -> Result<()
     Ok(())
 }
 
-pub fn is_in_git_repository(path: &Path) -> Result<bool, git2::Error> {
+pub fn is_in_git_repository(root_path: &Path) -> Result<bool, git2::Error> {
     // Tenta di scoprire un repository Git a partire dalla directory attuale
     // `Repository::discover` cerca verso l'alto nella gerarchia delle directory.
-    match Repository::discover(&path) {
+    match Repository::discover(&root_path) {
         Ok(_) => Ok(true), // Un repository è stato trovato
         Err(e) => {
             // Se l'errore indica che non è stato trovato un repository,
@@ -178,24 +182,5 @@ pub fn is_in_git_repository(path: &Path) -> Result<bool, git2::Error> {
                 Err(e)
             }
         }
-    }
-}
-
-pub struct Commit {
-    pub files: HashSet<PathBuf>,
-}
-
-impl Commit {
-    pub fn new() -> Self {
-        Commit {
-            files: HashSet::new(),
-        }
-    }
-    pub fn commit(&self, message: &str) -> Result<()> {
-        if self.files.is_empty() {
-            return Ok(());
-        }
-        let files = self.files.iter().cloned().collect::<Vec<PathBuf>>();
-        git_commit_files(&files, message)
     }
 }

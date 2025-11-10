@@ -6,9 +6,28 @@
 
 At its core, `ctx` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.ctx` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
 
-## Practical Examples
+## Getting Started
 
-*(Space reserved for practical examples. You can add snippets demonstrating how to use `ctx` for brainstorming, drafting, or refining content with LLMs.)*
+here is a minimal example
+create a project:
+
+>ctx project init
+
+then create a context:
+
+>ctx context create hello
+
+then edit context, write:
+
+>Tell me something nice!
+>@answer { provider: "gemini -y -m gemini-2.5-flash" }
+
+you obtain:
+
+>Tell me something nice!
+><!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:begin { provider: "gemini -y -m gemini-2.5-flash" } -->
+>You are doing great!
+><!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:end -->
 
 ## Core Commands (Tags)
 

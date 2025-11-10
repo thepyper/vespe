@@ -95,16 +95,14 @@ This flexible syntax makes writing `ctx` commands feel natural and unobtrusive w
 
 ## Core Commands (Tags)
 
-`ctx` extends Markdown with a set of intuitive tags that control its behavior and interaction with LLMs:
+Overview dei comandi
 
-*   **`@include <file_path>`**: Incorporates content from another context file, allowing for modular and organized documents.
-*   **`@set <variable_name>=<value>`**: Defines and assigns values to variables within your context, enabling dynamic content and configuration. This tag updates the local variables of the current context.
-*   **`@answer <query>`**: Sends a query to a configured LLM and injects its response directly into your document. This is the primary mechanism for AI collaboration, managing the state of the interaction through multiple passes.
-*   **`@repeat`**: (Further details on usage to be added)
-*   **`@decide`**: (Further details on usage to be added)
-*   **`@choose`**: (Further details on usage to be added)
-*   **`@derive`**: (Further details on usage to be added)
+@answer - chiama llm per rispondere al contesto sovrastante (uso di default)
+@include - include un contesto
+@inline - copia ed incolla nel contesto attuale un altro contesto
+@forget - dimentica tutto il contesto sovrastante
+@set - imposta parametri di default per i tag successivi
+@repeat - ripete la anchor in cui e' contenuto copiando i propri parametri a quelli dell'ancora
+@comment - no-op per scrivere commenti non visti da llm
 
-More tags are planned and will be documented here as they are implemented.
 
-By leveraging these commands, you can guide LLMs to generate content, summarize information, answer questions, and much more, all while maintaining a clear, human-readable document structure.

@@ -112,3 +112,19 @@ Right, I'll stage the new files: `src/app.rs`, `src/event.rs`, `src/screens/mod.
 Staged. Committing.
 Step 2 changes committed. Step 2 complete. Awaiting next instruction.
 <!-- answer-f16c91c6-f57e-4db6-9cfb-766357277ec8:end {}  -->
+
+
+Ok, as a check, I runned the app, and displays the empty splash screen. Only option is to exit with q. Is this the expected behaviour?
+
+<!-- answer-a3ca5428-c1ce-4980-82ad-f70441144471:begin {
+	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/rust_coder
+}  -->
+Yes, that is the expected behavior for Step 2.
+
+*   The application should start on the "Splash Screen" (displaying placeholder text like "Splash Screen").
+*   Pressing 'q' should exit the application.
+
+The "funny" ASCII art and "blinking" effect for the splash screen are part of **Step 3: Implement Splash Screen**, which we haven't started yet.
+<!-- answer-a3ca5428-c1ce-4980-82ad-f70441144471:end {}  -->
+

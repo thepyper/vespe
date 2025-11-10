@@ -133,10 +133,11 @@ What is the best programming language?
 ### @include
 
 The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
+File lookup happens in .ctx directory, and .md extension is added to given path.
 
 **Usage:**
 ```markdown
-@include "my_common_prompts/preamble.md"
+@include my_common_prompts/preamble
 
 Now, do something specific.
 
@@ -152,24 +153,24 @@ Hello, {{name}}!
 
 **`main.md`:**
 ```markdown
-@include "data-example.md" { data: { name: "World" } }
+@include data-example { data: { name: "World" } }
 ```
 This will resolve to "Hello, World!".
 
 ### @inline
 
-The `@inline` tag dynamically includes content from another file. Unlike `@include`, this creates a dynamic anchor that can be re-executed, for example, by a `@repeat` tag. This is useful for content that needs to be refreshed.
+The `@inline` tag dynamically includes content from another file. Unlike `@include`, this creates a dynamic anchor and file is inlined in current context. This can be re-executed by a `@repeat` tag. This is useful to instantiate templates.
 
 **Usage:**
 ```markdown
-@inline "path/to/dynamic_content.md"
+@inline path/to/template
 ```
 
 Like `@include`, it also supports passing `data` for templating.
 
 ### @repeat
 
-The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). Context will be re-read so any correction to query can be made. The repeated tag will inherith parameters from the @repeat tag.
+The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). Context will be re-read so any correction to query can be made. `@repeat` can also modify the parameters of the anchor it is repeating: the repeated anchor will inherith parameters from the @repeat tag.
 
 **Usage:**
 ```markdown
@@ -180,8 +181,6 @@ Initial answer from the model.
 <!-- answer-some-uuid:end -->
 ```
 In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.
-
-`@repeat` can also modify the parameters of the anchor it is repeating.
 
 ### @set
 
@@ -220,12 +219,13 @@ This prompt is sent without the context of the first one.
 ### @comment
 
 The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `ctx` engine and is not sent to the LLM.
+Note that json+ syntax is anyway required, so you can use strings for example to annotate comments.
 
 **Usage:**
 ```markdown
 @comment {
-  This is a note for myself.
-  The LLM will not see this.
+  _1: "This is a note for myself.     ",
+  _2: "The LLM will not see this.     ",
 }
 ```
 

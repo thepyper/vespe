@@ -235,7 +235,7 @@ Note that json+ syntax is anyway required, so you can use strings for example to
 
 ### `ctx init`
 
-Initializes a new `ctx` project in the current directory or a specified path. This command creates the `.ctx` directory where all your contexts and configurations are stored.
+Initializes a new `ctx` project in the current directory or a specified path. This command creates the `.ctx` directory where all your contexts and configurations are stored. Git integration is enabled to project if the specified path is in a git repository.
 
 **Usage:**
 
@@ -261,7 +261,7 @@ ctx context new [NAME] [--today] [--context-template <FILE>]
 
 ### `ctx context execute`
 
-Executes a context file. `ctx` processes the tags within the file, sends prompts to the configured LLM, and injects the results back into the document.
+Executes a context file. `ctx` processes the tags within the file and outputs the context when all tags have been executed.
 
 **Usage:**
 
@@ -275,8 +275,8 @@ cat my-data.txt | ctx context execute [NAME]
 
 *   `[NAME]`: The name of the context to execute.
 *   `--today`: A flag to execute the context for the current date.
-*   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{arg1}}`, `{{arg2}}`).
-*   **Piped Input**: The `execute` command can also receive text from `stdin`. This input is available within the context via the `{{input}}` Handlebars variable.
+*   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{$1}}` for first argument, `{{$2}}` for second argument, and so on; {{$args}} for all of the arguments space-separated).
+*   **Piped Input**: The `execute` command can also receive text from `stdin`. This input is available within the context via the `{{$input}}` Handlebars variable.
 
 ### `ctx watch`
 

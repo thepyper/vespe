@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use std::io::Read;
 use std::path::PathBuf;
 use vespe::project::Project;
 mod watch;
@@ -124,7 +125,11 @@ fn main() -> Result<()> {
                         context_name,
                         args
                     );
-                    let content = project.execute_context(&context_name, Some(args))?;
+                    let mut stdin = std::io::stdin();
+                    let mut input = String::new();
+                    stdin.read_to_string(&mut input)?;
+                    let content =
+                        project.execute_context(&context_name, Some(input), Some(args))?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }

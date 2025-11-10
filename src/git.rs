@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
+use git2::{Repository, Signature, StatusOptions};
+use std::collections::HashSet;
 #[allow(unused_imports)]
 use std::path::Path;
-use git2::{Repository, Signature, StatusOptions}; 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use tracing::debug; // Added HashSet
 

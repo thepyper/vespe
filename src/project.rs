@@ -5,7 +5,6 @@ use crate::file::{FileAccessor, ProjectFileAccessor};
 use crate::git::Commit;
 use crate::path::{PathResolver, ProjectPathResolver};
 
-use std::io::Read;
 use std::sync::Arc;
 
 use anyhow::Context as AnyhowContext;
@@ -103,6 +102,7 @@ impl Project {
     pub fn execute_context(
         &self,
         context_name: &str,
+        input: Option<String>,
         args: Option<Vec<String>>,
     ) -> Result<ModelContent> {
         let mut data = match args {
@@ -121,12 +121,9 @@ impl Project {
             }
             None => JsonPlusObject::new(),
         };
-        let mut stdin = std::io::stdin();
-        let mut input = String::new();
-        stdin.read_to_string(&mut input)?;
         data.insert(
             "$input".to_string(),
-            JsonPlusEntity::DoubleQuotedString(input),
+            JsonPlusEntity::DoubleQuotedString(input.unwrap_or(String::new())),
         );
         let content = crate::execute2::execute_context(
             self.file_access.clone(),

@@ -60,7 +60,7 @@ Let's dive right in with a simple example.
     A "context" is just a Markdown file where you can interact with the AI. Let's create one called `hello`:
 
     ```shell
-    ctx context create hello
+    ctx context new hello
     ```
 
     This will create a file named `hello.md` inside the `.ctx/contexts` directory.

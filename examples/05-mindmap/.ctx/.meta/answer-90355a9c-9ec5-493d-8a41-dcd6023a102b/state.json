@@ -1,0 +1,5 @@
+{
+  "status": "Completed",
+  "reply": "Please provide a prompt for an agent to define the project structure for a Rust TUI game named \"Tic-Crab-Toe\". The game will use `ratatui` for the declarative UI and `crossterm` as its backend for low-level terminal control and event handling.\n\nThe project structure should accommodate the following components:\n*   An `App` struct to manage the overall application state (game board, current player, game state, UI elements).\n*   A dedicated module (e.g., `ui.rs`) for rendering the `App` state using `ratatui` widgets.\n*   A separate module (e.g., `game_logic.rs`) for the core game rules (making moves, checking for wins/draws).\n*   Input handling, which will involve processing `crossterm` events and updating the `App` state.\n\nThe agent should propose a clear, modular, and idiomatic Rust project structure, including relevant directories and files.\n",
+  "context_hash": "03857b4ab6c2461e1043b5fd8e9ba47e8c733cdf97bc073b9164ab1cae9dcf96"
+}

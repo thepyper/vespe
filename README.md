@@ -80,7 +80,7 @@ Let's dive right in with a simple example.
     Now, execute the context:
 
     ```shell
-    ctx context execute hello
+    ctx context run hello
     ```
 
     `ctx` will process the file, send the prompt to the Gemini model, and inject the answer directly into your `hello.md` file. It will look something like this:

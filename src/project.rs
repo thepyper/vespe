@@ -1,4 +1,4 @@
-use crate::ast2::{JsonPlusEntity, JsonPlusObject, Parameters};
+use crate::ast2::{JsonPlusEntity, JsonPlusObject};
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
 use crate::file::{FileAccessor, ProjectFileAccessor};
 use crate::git::Commit;
@@ -96,23 +96,24 @@ impl Project {
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {
-        let mut parameters = Parameters::new();
-        if let Some(args) = args {
-            let data = args
-                .iter()
-                .enumerate()
-                .map(|(i, x)| (format!("${}", i + 1), JsonPlusEntity::NudeString(x.clone())))
-                .collect::<HashMap<String, JsonPlusEntity>>();
-            let data = JsonPlusObject::from_hash_map(data);
-            let data = JsonPlusEntity::Object(data);
-            parameters.insert("data".to_string(), data);
-        }
+    pub fn execute_context(&self, context_name: &str, args: Option<Vec<String>>) -> Result<()> {        
+        let data = match args {
+            Some(args) => {
+                let data = args
+            .iter()
+            .enumerate()
+            .map(|(i, x)| (format!("${}", i + 1), JsonPlusEntity::NudeString(x.clone())))
+            .collect::<HashMap<String, JsonPlusEntity>>();
+        let data = JsonPlusObject::from_hash_map(data);
+        data
+            }
+            None => JsonPlusObject::new()
+        };        
         crate::execute2::execute_context(
             self.file_access.clone(),
             self.path_res.clone(),
             context_name,
-            &parameters,
+            Some(&data),
         )?;
         self.commit(Some(format!("Executed context {}.", context_name)))?;
         Ok(())

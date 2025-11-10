@@ -7,7 +7,7 @@ use super::{ExecuteError, Result};
 use super::execute::{Collector, Worker};
 use super::tags::StaticPolicy;
 //use super::variables::Variables;
-use crate::ast2::Tag;
+use crate::ast2::{Tag, JsonPlusEntity};
 
 /// Implements the static policy for the `@include` tag.
 ///
@@ -53,7 +53,14 @@ impl StaticPolicy for IncludePolicy {
             .ok_or_else(|| ExecuteError::MissingParameter("include tag argument".to_string()))?
             .value
             .clone();
-        match worker._execute(collector, &included_context_name, 0, &tag.parameters)? {
+        let data = match tag.parameters.get("data") {
+            Some(JsonPlusEntity::Object(data)) => Some(data),
+            Some(_) => {
+                return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
+            }
+            None => None,
+        };
+        match worker._execute(collector, &included_context_name, 0, data)? {
             Some(collector) => Ok(collector),
             None => Err(ExecuteError::Generic(
                 "Included context returned no collector".to_string(),

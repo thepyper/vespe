@@ -6,7 +6,7 @@
 //! modification.
 use super::{ExecuteError, Result};
 use crate::ast2::{
-    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, Parameters, Position, Range, Tag,
+    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters, Position, Range, Tag,
 };
 use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::tags::TagBehaviorDispatch;
@@ -36,12 +36,12 @@ pub fn execute_context(
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
     context_name: &str,
-    parameters: &Parameters,
+    data: Option<&JsonPlusObject>,
 ) -> Result<ModelContent> {
     tracing::debug!("Executing context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
-    exe.execute(context_name, parameters)
+    exe.execute(context_name, data)
 }
 
 /// Collects a context's content without executing any commands that modify state or call models.
@@ -61,13 +61,13 @@ pub fn collect_context(
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
     context_name: &str,
-    parameters: &Parameters,
+    data: Option<&JsonPlusObject>,
 ) -> Result<ModelContent> {
     tracing::debug!("Collecting context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
 
-    exe.collect(context_name, parameters)
+    exe.collect(context_name, data)
 }
 
 /// Central state object for the execution engine.
@@ -344,8 +344,8 @@ impl Worker {
     ///
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various execution failures.
-    pub fn execute(&self, context_name: &str, parameters: &Parameters) -> Result<ModelContent> {
-        match self._execute(Collector::new(), context_name, 77, parameters)? {
+    pub fn execute(&self, context_name: &str, data: Option<&JsonPlusObject>) -> Result<ModelContent> {
+        match self._execute(Collector::new(), context_name, 77, data)? {
             Some(collector) => {
                 return Ok(collector.context().clone());
             }
@@ -375,8 +375,8 @@ impl Worker {
     ///
     /// Returns [`ExecuteError::ContextNotFound`] if the specified context cannot be resolved.
     /// Returns other [`ExecuteError`] variants for various collection failures.
-    pub fn collect(&self, context_name: &str, parameters: &Parameters) -> Result<ModelContent> {
-        match self._execute(Collector::new(), context_name, 0, parameters)? {
+    pub fn collect(&self, context_name: &str, data: Option<&JsonPlusObject>) -> Result<ModelContent> {
+        match self._execute(Collector::new(), context_name, 0, data)? {
             Some(collector) => {
                 return Ok(collector.context().clone());
             }
@@ -417,12 +417,12 @@ impl Worker {
         collector: Collector,
         context_name: &str,
         max_rewrite_steps: usize,
-        parameters: &Parameters,
+        data: Option<&JsonPlusObject>,
     ) -> Result<Option<Collector>> {
         tracing::debug!(
-            "Worker::execute for context: {} with parameters {:?}",
+            "Worker::execute for context: {} with data {:?}",
             context_name,
-            parameters
+            data,
         );
         let context_path = self.path_res.resolve_context(context_name)?;
 
@@ -438,7 +438,7 @@ impl Worker {
                 for i in 1..=max_rewrite_steps {
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
                     let (do_next_pass, _) =
-                        self.execute_pass(descent_collector.clone(), &context_path, parameters)?;
+                        self.execute_pass(descent_collector.clone(), &context_path, data)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -453,7 +453,7 @@ impl Worker {
                     };
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
                     let (do_next_pass, _) =
-                        self.collect_pass(descent_collector.clone(), &context_path, parameters)?;
+                        self.collect_pass(descent_collector.clone(), &context_path, data)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -469,7 +469,7 @@ impl Worker {
                 }
                 // Last re-read file, parse it, collect data
                 let (do_next_pass, descent_collector) =
-                    self.collect_pass(descent_collector, &context_path, parameters)?;
+                    self.collect_pass(descent_collector, &context_path, data)?;
                 match do_next_pass {
                     true => {
                         tracing::debug!(
@@ -537,7 +537,7 @@ impl Worker {
     ) -> Result<ModelContent> {
         match parameters.get("prefix") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let prefix = self.execute(x, &Parameters::new())?.to_string();
+                let prefix = self.execute(x, None)?.to_string();
                 let prefix = ModelContentItem::system(&prefix);
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
@@ -599,7 +599,7 @@ impl Worker {
     ) -> Result<ModelContent> {
         match parameters.get("postfix") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let postfix = self.execute(x, &Parameters::new())?.to_string();
+                let postfix = self.execute(x, None)?.to_string();
                 let postfix = ModelContentItem::system(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))
@@ -685,9 +685,9 @@ impl Worker {
         &self,
         collector: Collector,
         context_path: &Path,
-        parameters: &Parameters,
+        data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
-        self._pass_internal(collector, context_path, true, parameters)
+        self._pass_internal(collector, context_path, true, data)
     }
 
     /// Executes a single modifying pass over the context file.
@@ -715,10 +715,10 @@ impl Worker {
         &self,
         collector: Collector,
         context_path: &Path,
-        parameters: &Parameters,
+        data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
         let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
-        self._pass_internal(collector, context_path, false, parameters)
+        self._pass_internal(collector, context_path, false, data)
     }
 
     /// Internal function to perform a single pass (either read-only or modifying) over a context file.
@@ -753,10 +753,13 @@ impl Worker {
         mut collector: Collector,
         context_path: &Path,
         readonly: bool,
-        parameters: &Parameters,
+        data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
-        let context_content = self.file_access.read_file(context_path)?;
-        let context_content = self.process_context_with_parameters(context_content, parameters)?;
+        let context_content = self.file_access.read_file(context_path)?;        
+        let context_content = match data {
+            Some(data) => self.process_context_with_data(context_content, data)?,
+            None => context_content
+        };
         let ast = crate::ast2::parse_document(&context_content)?;
         let anchor_index = super::utils::AnchorIndex::new(&ast.content);
 
@@ -1183,7 +1186,7 @@ impl Worker {
         input: ModelContent,
     ) -> Result<ModelContent> {
         match &parameters.get("input") {
-            Some(JsonPlusEntity::NudeString(x)) => self.execute(&x, &Parameters::new()),
+            Some(JsonPlusEntity::NudeString(x)) => self.execute(&x, None),
             Some(x) => {
                 return Err(ExecuteError::UnsupportedParameterValue(format!(
                     "input: {:?}",
@@ -1240,20 +1243,15 @@ impl Worker {
         Ok(context_content)
     }
 
-    pub fn process_context_with_parameters(
+    pub fn process_context_with_data(
         &self,
         context: String,
-        parameters: &Parameters,
+        data: &JsonPlusObject,
     ) -> Result<String> {
-        let context = match parameters.get("data") {
-            Some(JsonPlusEntity::Object(x)) => {
-                let handlebars = Handlebars::new();
-                let data: serde_json::Value = x.into();
-                tracing::debug!("data: {:?}", data);
-                handlebars.render_template(&context, &data)?
-            }
-            _ => context,
-        };
+        let handlebars = Handlebars::new();
+        let data: serde_json::Value = data.into();
+        tracing::debug!("data: {:?}", data);
+        let context = handlebars.render_template(&context, &data)?;
         Ok(context)
     }
 }

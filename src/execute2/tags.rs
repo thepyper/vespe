@@ -168,6 +168,37 @@ pub trait StaticPolicy {
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
 }
 
+enum TagOrAnchor
+{
+    Tag(Tag),
+    Anchor(Anchor),
+}
+
+pub struct DynamicPolicyMonoInput<'a, State> {
+    readonly: bool,
+    worker: &'a Worker,
+    collector: Collector,
+    state: State,
+    tag_or_anchor: TagOrAnchor,
+    input: ModelContent,
+    input_hash: String,
+}
+
+impl<'a, T> DynamicPolicyMonoInput<'a, T> {
+    pub fn parameters(&self) -> &Parameters {
+        match &self.tag_or_anchor {
+            TagOrAnchor::Tag(tag) => &tag.parameters,
+            TagOrAnchor::Anchor(anchor) => &anchor.parameters,
+        }
+    }
+    pub fn arguments(&self) -> &Arguments {
+        match &self.tag_or_anchor {
+            TagOrAnchor::Tag(tag) => &tag.arguments,
+            TagOrAnchor::Anchor(anchor) => &anchor.arguments,
+        }
+    }
+}
+
 /// The result of a single execution step for a dynamic policy.
 ///
 /// This struct encapsulates all possible outcomes of a `mono` call for a dynamic tag,

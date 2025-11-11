@@ -34,7 +34,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initializes a new .ctx project in the current or specified directory.
+    /// Initializes a new .vespe project in the current or specified directory.
     Init {},
     /// Manages contexts within the project.
     Context {

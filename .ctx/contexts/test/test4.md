@@ -1,1 +1,0 @@
-@inline test/test4_template

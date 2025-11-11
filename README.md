@@ -1,29 +1,29 @@
-# ctx: Your Collaborative Mind-Mapping Tool with LLMs
+# vespe: Your Collaborative Mind-Mapping Tool with LLMs
 
-`ctx` is a powerful command-line interface (CLI) tool designed to facilitate a seamless, collaborative mind-mapping experience between users and Large Language Models (LLMs). It enables you to co-create, refine, and expand your ideas by treating your documents as dynamic, interactive canvases.
+`vespe` is a powerful command-line interface (CLI) tool designed to facilitate a seamless, collaborative mind-mapping experience between users and Large Language Models (LLMs). It enables you to co-create, refine, and expand your ideas by treating your documents as dynamic, interactive canvases.
 
 ## How it Works
 
-At its core, `ctx` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.ctx` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
+At its core, `vespe` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.vespe` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
 
 ## Philosophy
 
-`ctx` is built on a few core principles:
+`vespe` is built on a few core principles:
 
-*   **Text as a Canvas**: Your documents are not just static files; they are interactive canvases for collaboration with AI. `ctx` empowers you to weave AI-generated content directly into your notes, drafts, and mind maps.
+*   **Text as a Canvas**: Your documents are not just static files; they are interactive canvases for collaboration with AI. `vespe` empowers you to weave AI-generated content directly into your notes, drafts, and mind maps.
 *   **Seamless Integration**: The tool is designed to be unobtrusive. The tag-based syntax is simple and integrates naturally with Markdown, so you can focus on your ideas, not on the tooling.
-*   **You are in Control**: `ctx` gives you fine-grained control over the interaction with LLMs. You can choose the provider, shape the prompts, and direct the output.
+*   **You are in Control**: `vespe` gives you fine-grained control over the interaction with LLMs. You can choose the provider, shape the prompts, and direct the output.
 *   **Iterative and Dynamic**: The `watch` mode and the tag system encourage an iterative workflow. You can refine your prompts, re-run contexts, and evolve your documents in real-time.
-*   **Local First**: `ctx` is a local tool that works with your local files. It can be used with local LLMs (like Ollama) for a completely offline experience.
+*   **Local First**: `vespe` is a local tool that works with your local files. It can be used with local LLMs (like Ollama) for a completely offline experience.
 
 ## Installation
 
-To use `ctx`, you'll need to have **Rust** and its package manager, **Cargo**, installed on your system.
+To use `vespe`, you'll need to have **Rust** and its package manager, **Cargo**, installed on your system.
 
 ### Prerequisites
 
-*   **Rust & Cargo**: Required to build and install the `ctx` CLI. You can get them from the [official Rust website](https://www.rust-lang.org/tools/install).
-*   **A Command-Line LLM**: `ctx` works by calling an external command to interact with a Large Language Model. You need to have at least one LLM accessible from your shell.
+*   **Rust & Cargo**: Required to build and install the `vespe` CLI. You can get them from the [official Rust website](https://www.rust-lang.org/tools/install).
+*   **A Command-Line LLM**: `vespe` works by calling an external command to interact with a Large Language Model. You need to have at least one LLM accessible from your shell.
 
     Here are a few examples of how you can set this up:
 
@@ -42,8 +42,8 @@ To use `ctx`, you'll need to have **Rust** and its package manager, **Cargo**, i
     cd vespe
     ```
 
-2.  **Install `ctx`**:
-    Navigate into the cloned directory and use Cargo to install the `ctx` command-line tool. This will compile the project and place the `ctx` executable in your Cargo bin directory, making it available globally in your shell's PATH.
+2.  **Install `vespe`**:
+    Navigate into the cloned directory and use Cargo to install the `vespe` command-line tool. This will compile the project and place the `vespe` executable in your Cargo bin directory, making it available globally in your shell's PATH.
 
     ```shell
     cargo install --path .
@@ -51,7 +51,7 @@ To use `ctx`, you'll need to have **Rust** and its package manager, **Cargo**, i
 
     If you encounter any issues, ensure your Cargo bin directory is in your system's PATH. You can usually find instructions for this in the Rust installation guide.
 
-After these steps, you should be able to run `ctx` from any directory in your terminal.
+After these steps, you should be able to run `vespe` from any directory in your terminal.
 
 ## NO-WARRANTY
 
@@ -68,20 +68,20 @@ Let's dive right in with a simple example.
     Open your terminal, navigate to your project and run:
 
     ```shell
-    ctx project init
+    vespe project init
     ```
 
-    This creates a `.ctx` directory in your project, where all your contexts will be stored.
+    This creates a `.vespe` directory in your project, where all your contexts will be stored.
 
 2.  **Create your first context:**
 
     A "context" is just a Markdown file where you can interact with the AI. Let's create one called `hello`:
 
     ```shell
-    ctx context new hello
+    vespe context new hello
     ```
 
-    This will create a file named `hello.md` inside the `.ctx/contexts` directory.
+    This will create a file named `hello.md` inside the `.vespe/contexts` directory.
 
 3.  **Add a prompt and an AI command:**
 
@@ -93,15 +93,15 @@ Let's dive right in with a simple example.
     @answer { provider: "gemini -y -m gemini-2.5-flash" }
     ```
 
-4.  **Run `ctx` to get a response:**
+4.  **Run `vespe` to get a response:**
 
     Now, execute the context:
 
     ```shell
-    ctx context run hello
+    vespe context run hello
     ```
 
-    `ctx` will process the file, send the prompt to the Gemini model, and inject the answer directly into your `hello.md` file. It will look something like this:
+    `vespe` will process the file, send the prompt to the Gemini model, and inject the answer directly into your `hello.md` file. It will look something like this:
 
     ```markdown
     Tell me something nice!
@@ -111,11 +111,11 @@ Let's dive right in with a simple example.
     <!-- answer-a98dc897-1e4b-4361-b530-5c602f358cef:end -->
     ```
 
-And that's it! You've just used `ctx` to collaborate with an LLM on a document.
+And that's it! You've just used `vespe` to collaborate with an LLM on a document.
 
 ## Tag Syntax
 
-The power of `ctx` lies in its simple yet powerful tag syntax. Each tag follows a consistent structure that is easy to read and write.
+The power of `vespe` lies in its simple yet powerful tag syntax. Each tag follows a consistent structure that is easy to read and write.
 
 The general syntax for a tag is:
 
@@ -126,7 +126,7 @@ The general syntax for a tag is:
 Let's break it down:
 
 *   **`@tag_name`**: This is the command you want to execute (e.g., `@answer`, `@include`). It always starts with an `@` symbol.
-*   **`{...}` (Parameters)**: This is a JSON-like object containing key-value pairs that configure the tag's behavior. `ctx` uses a more flexible version of JSON for convenience:
+*   **`{...}` (Parameters)**: This is a JSON-like object containing key-value pairs that configure the tag's behavior. `vespe` uses a more flexible version of JSON for convenience:
     *   Quotes around keys are optional (e.g., `provider` is the same as `"provider"`).
     *   Quotes around string values are optional if the value doesn't contain spaces or special characters.
 *   **Positional Arguments**: Some tags can also take additional arguments after the parameter block. For example, `@include` takes a file path.
@@ -144,11 +144,11 @@ Consider the `@answer` tag from our "Getting Started" example:
     *   The key is `provider`.
     *   The value is `"gemini -y -m gemini-2.5-flash"`. In this case, quotes are necessary because the value contains spaces.
 
-This flexible syntax makes writing `ctx` commands feel natural and unobtrusive within your Markdown files.
+This flexible syntax makes writing `vespe` commands feel natural and unobtrusive within your Markdown files.
 
 ## Core Tags
 
-`ctx` provides a set of powerful tags to control the interaction with LLMs and manage your content.
+`vespe` provides a set of powerful tags to control the interaction with LLMs and manage your content.
 
 ### @answer
 
@@ -169,7 +169,7 @@ You can make an answer dynamic, so it automatically updates if the preceding con
 ```
 
 **Multiple Choices:**
-Force the LLM to choose from a predefined set of options. `ctx` will insert the content associated with the chosen option.
+Force the LLM to choose from a predefined set of options. `vespe` will insert the content associated with the chosen option.
 
 ```markdown
 What is the best programming language?
@@ -259,12 +259,12 @@ Summarize the following text and save it to a file.
 }
 ```
 
-The LLM's summary will be saved in `.ctx/output/summary.md`.
+The LLM's summary will be saved in `.vespe/output/summary.md`.
 
 ### @include
 
 The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
-File lookup happens in .ctx directory, and .md extension is added to given path.
+File lookup happens in .vespe directory, and .md extension is added to given path.
 
 **Usage:**
 ```markdown
@@ -356,7 +356,7 @@ The `@task` and `@done` tags work together to manage sequential tasks, like foll
 1.  **`@task`**: Place this tag at the beginning of your sequential plan. It creates a dynamic anchor that will wrap the completed steps. The content before the `@task` tag acts as the main instruction or goal for the entire sequence.
 2.  **`@done`**: Place this tag immediately after the `@answer` for the step you want to execute.
 
-When `ctx` runs, the `@done` tag does two things:
+When `vespe` runs, the `@done` tag does two things:
 *   It signals that the current step is complete.
 *   It moves the completed step (including the prompt and the LLM's answer) *inside* the `@task` anchor.
 
@@ -400,7 +400,7 @@ For the next execution, you would move the `@answer` and `@done` tags to be afte
 
 ### @comment
 
-The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `ctx` engine and is not sent to the LLM.
+The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `vespe` engine and is not sent to the LLM.
 Note that json+ syntax is anyway required, so you can use strings for example to annotate comments.
 
 **Usage:**
@@ -413,46 +413,46 @@ Note that json+ syntax is anyway required, so you can use strings for example to
 
 ## CLI Usage
 
-`ctx` provides a simple yet powerful command-line interface to manage your projects and contexts.
+`vespe` provides a simple yet powerful command-line interface to manage your projects and contexts.
 
-### `ctx init`
+### `vespe init`
 
-Initializes a new `ctx` project in the current directory or a specified path. This command creates the `.ctx` directory where all your contexts and configurations are stored. Git integration is enabled to project if the specified path is in a git repository.
+Initializes a new `vespe` project in the current directory or a specified path. This command creates the `.vespe` directory where all your contexts and configurations are stored. Git integration is enabled to project if the specified path is in a git repository.
 
 **Usage:**
 
 ```shell
-ctx init [--project-root <PATH>]
+vespe init [--project-root <PATH>]
 ```
 
 *   `--project-root <PATH>`: (Optional) The path to the directory where the project should be initialized. Defaults to the current directory.
 
-### `ctx context new`
+### `vespe context new`
 
 Creates a new context file within your project.
 
 **Usage:**
 
 ```shell
-ctx context new [NAME] [--today] [--context-template <FILE>]
+vespe context new [NAME] [--today] [--context-template <FILE>]
 ```
 
 *   `[NAME]`: The name for the new context (e.g., `my-feature/story`). This will create a corresponding Markdown file.
 *   `--today`: A convenient flag to create a diary-style context for the current date (e.g., `diary/2025-11-10.md`).
 *   `--context-template <FILE>`: (Optional) Path to a custom Handlebars template file to use for the new context.
 
-### `ctx context run`
+### `vespe context run`
 
-Executes a context file. `ctx` processes the tags within the file and outputs the context when all tags have been executed.
+Executes a context file. `vespe` processes the tags within the file and outputs the context when all tags have been executed.
 
 **Usage:**
 
 ```shell
 # Execute a context by name
-ctx context run [NAME] [--today] [ARGS]...
+vespe context run [NAME] [--today] [ARGS]...
 
 # Pipe content into a context
-cat my-data.txt | ctx context run [NAME]
+cat my-data.txt | vespe context run [NAME]
 ```
 
 *   `[NAME]`: The name of the context to execute.
@@ -460,14 +460,14 @@ cat my-data.txt | ctx context run [NAME]
 *   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{$1}}` for first argument, `{{$2}}` for second argument, and so on; {{$args}} for all of the arguments space-separated).
 *   **Piped Input**: The `run` command can also receive text from `stdin`. This input is available within the context via the `{{$input}}` Handlebars variable.
 
-### `ctx watch`
+### `vespe watch`
 
-Starts a watcher that monitors your context files for any changes. When a file is modified, `ctx` automatically re-executes it, providing a live-editing experience.
+Starts a watcher that monitors your context files for any changes. When a file is modified, `vespe` automatically re-executes it, providing a live-editing experience.
 
 **Usage:**
 
 ```shell
-ctx watch [--project-root <PATH>]
+vespe watch [--project-root <PATH>]
 ```
 
 This is very useful for iterative development, allowing you to see the results of your changes in real-time.
@@ -478,4 +478,4 @@ This project is licensed under the AGPL-3.0 license. See the [LICENSE-AGPL3.md](
 
 ## Contributing
 
-Contributions are welcome! If you want to contribute to `ctx`, please feel free to open an issue or submit a pull request.
+Contributions are welcome! If you want to contribute to `vespe`, please feel free to open an issue or submit a pull request.

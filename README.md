@@ -491,6 +491,10 @@ All contexts in `vespe` are processed as [Handlebars](https://handlebarsjs.com/)
 *   `{{$args}}`: Represents all positional command-line arguments as a space-separated string. Using the previous example, `{{$args}}` would be `arg1 arg2`.
 *   `{{$input}}`: Represents the input received from `stdin`. If you pipe content to `vespe context run`, this variable will hold that content.
 
+## Examples
+
+You can find many examples in the `examples/` directory.
+
 ## CLI Usage
 
 `vespe` provides a simple yet powerful command-line interface to manage your projects and contexts.

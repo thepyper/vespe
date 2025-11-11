@@ -246,7 +246,7 @@ This will construct a prompt where the LLM is first instructed to act like a pir
 
 **Output Redirection:**
 
--   `output: "path/to/file"`: Redirects the LLM's response to a specified file instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
+-   `output: "path/to/context"`: Redirects the LLM's response to a specified context instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
 
 *Example:*
 
@@ -255,11 +255,11 @@ Summarize the following text and save it to a file.
 
 @answer {
   provider: "gemini -y",
-  output: "summary.txt"
+  output: output/summary
 }
 ```
 
-The LLM's summary will be saved in `summary.txt`.
+The LLM's summary will be saved in `.ctx/output/summary.md`.
 
 ### @include
 

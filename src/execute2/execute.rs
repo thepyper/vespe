@@ -315,6 +315,10 @@ impl Collector {
         self
     }
 
+    pub fn latest_task(&self) -> Option<Anchor> {
+        self.latest_task.clone()
+    }
+
     pub fn set_latest_task(mut self, task_anchor: &Anchor) -> Self {
         self.latest_task = Some(task_anchor.clone());
         self

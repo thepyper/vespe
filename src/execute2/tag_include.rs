@@ -5,8 +5,7 @@
 use super::{ExecuteError, Result};
 
 use super::execute::{Collector, Worker};
-use super::tags::StaticPolicy;
-//use super::variables::Variables;
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 use crate::ast2::{JsonPlusEntity, Tag};
 
 /// Implements the static policy for the `@include` tag.
@@ -41,30 +40,30 @@ impl StaticPolicy for IncludePolicy {
     /// Returns other [`ExecuteError`] variants if the included context cannot be found or executed.
     ///
     /// # Examples
-    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
-        tracing::debug!(
-            "tag_include::IncludePolicy::collect_static_tag\nTag = {:?}\n",
-            tag
-        );
-        let included_context_name = tag
-            .arguments
+    fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
+        let mut result = StaticPolicyMonoResult::new(inputs.collector.clone());
+        let included_context_name = inputs
+            .arguments()
             .arguments
             .get(0)
             .ok_or_else(|| ExecuteError::MissingParameter("include tag argument".to_string()))?
             .value
             .clone();
-        let data = match tag.parameters.get("data") {
+        let data = match inputs.parameters().get("data") {
             Some(JsonPlusEntity::Object(data)) => Some(data),
             Some(_) => {
                 return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
             }
             None => None,
-        };
-        match worker._execute(collector, &included_context_name, 0, data)? {
-            Some(collector) => Ok(collector),
-            None => Err(ExecuteError::Generic(
+        };        
+        result.collector = match inputs.worker._execute(inputs.collector.clone(), &included_context_name, 0, data)? {
+            Some(collector) => collector,
+            None => {
+                return Err(ExecuteError::Generic(
                 "Included context returned no collector".to_string(),
-            )),
-        }
+                ));
+            },
+        };
+        Ok(result)
     }
 }

@@ -5,8 +5,7 @@
 use super::Result;
 
 use super::execute::{Collector, Worker};
-use super::tags::StaticPolicy;
-//use super::variables::Variables;
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 use crate::ast2::Tag;
 
 /// Implements the static policy for the `@set` tag.
@@ -33,8 +32,9 @@ impl StaticPolicy for SetPolicy {
     /// A `Result` containing the updated [`Collector`] with the new default parameters.
     ///
     /// # Examples
-    fn collect_static_tag(_worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
-        tracing::debug!("tag_set::SetPolicy::collect_static_tag\nTag = {:?}\n", tag);
-        Ok(collector.set_default_parameters(&tag.parameters))
+    fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
+        let mut result = StaticPolicyMonoResult::new(inputs.collector.clone());
+        result.collector = result.collector.set_default_parameters(inputs.parameters());
+        Ok(result)
     }
 }

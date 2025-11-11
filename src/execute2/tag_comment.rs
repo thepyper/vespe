@@ -8,7 +8,7 @@
 use super::Result;
 
 use super::execute::{Collector, Worker};
-use super::tags::StaticPolicy;
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 use crate::ast2::Tag;
 
 /// Implements the static policy for the `@comment` tag.
@@ -32,8 +32,9 @@ impl StaticPolicy for CommentPolicy {
     /// # Returns
     ///
     /// The original, unmodified `Collector`.
-    fn collect_static_tag(_worker: &Worker, collector: Collector, _tag: &Tag) -> Result<Collector> {
+    fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
+        let result = StaticPolicyMonoResult::new(inputs.collector.clone());
         // The @comment tag does nothing, so we just return the collector as is.
-        Ok(collector)
+        Ok(result)
     }
 }

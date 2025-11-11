@@ -145,6 +145,47 @@ pub trait TagBehavior {
     ) -> Result<(bool, Collector)>;
 }
 
+pub struct StaticPolicyMonoResult {
+    /// Indicates if another execution pass is required after this step.
+    pub do_next_pass: bool,
+    /// The updated [`Collector`] state.
+    pub collector: Collector,
+    /// A vector of patches to be applied to the source file.
+    pub new_patches: Vec<(Range, String)>,
+}
+
+impl StaticPolicyMonoResult {    
+    pub fn new(collector: Collector) -> Self {
+        StaticPolicyMonoResult {
+            do_next_pass: false,
+            collector,
+            new_patches: vec![],
+        }
+    }
+}
+
+pub struct StaticPolicyMonoInput<'a> {
+    pub readonly: bool,
+    pub worker: &'a Worker,
+    pub collector: Collector,
+    pub tag_or_anchor: TagOrAnchor<'a>,
+}
+
+impl<'a> StaticPolicyMonoInput<'a> {
+    pub fn parameters(&self) -> &Parameters {
+        match &self.tag_or_anchor {
+            TagOrAnchor::Tag(tag) => &tag.parameters,
+            TagOrAnchor::Anchor(anchor) => &anchor.parameters,
+        }
+    }
+    pub fn arguments(&self) -> &Arguments {
+        match &self.tag_or_anchor {
+            TagOrAnchor::Tag(tag) => &tag.arguments,
+            TagOrAnchor::Anchor(anchor) => &anchor.arguments,
+        }
+    }
+}
+
 /// Trait for defining the behavior of static tags.
 ///
 /// Static tags are processed in a single pass and do not involve complex state
@@ -168,7 +209,7 @@ pub trait StaticPolicy {
     /// # Errors
     ///
     /// Returns an [`ExecuteError`] if any operation fails during tag processing.
-    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
+    fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult>;
 }
 
 enum TagOrAnchor<'a>
@@ -364,8 +405,14 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         _document: &str,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        let collector = P::collect_static_tag(worker, collector, tag)?;
-        Ok((false, collector, vec![]))
+        let mono_inputs = StaticPolicyMonoInput {
+            readonly: false,
+            worker,
+            collector,
+            tag_or_anchor: TagOrAnchor::Tag(tag),
+        };
+        let mono_result = P::mono(mono_inputs)?;
+        Ok((mono_result.do_next_pass, mono_result.collector, mono_result.new_patches))
     }
 
     /// Collects a static tag, updating the collector.
@@ -392,8 +439,14 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         collector: Collector,
         tag: &Tag,
     ) -> Result<(bool, Collector)> {
-        let collector = P::collect_static_tag(worker, collector, tag)?;
-        Ok((false, collector))
+        let mono_inputs = StaticPolicyMonoInput {
+            readonly: true,
+            worker,
+            collector,
+            tag_or_anchor: TagOrAnchor::Tag(tag),
+        };
+        let mono_result = P::mono(mono_inputs)?;
+        Ok((false, mono_result.collector))
     }
 }
 

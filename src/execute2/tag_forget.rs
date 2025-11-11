@@ -5,8 +5,7 @@
 use super::Result;
 
 use super::execute::{Collector, Worker};
-use super::tags::StaticPolicy;
-//use super::variables::Variables;
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 use crate::ast2::Tag;
 
 /// Implements the static policy for the `@forget` tag.
@@ -32,11 +31,8 @@ impl StaticPolicy for ForgetPolicy {
     /// A `Result` containing the updated [`Collector`] with its context cleared.
     ///
     /// # Examples
-    fn collect_static_tag(_worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
-        tracing::debug!(
-            "tag_forget::ForgetPolicy::collect_static_tag\nTag = {:?}\n",
-            tag
-        );
-        Ok(collector.forget())
+    fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
+        let mut result = StaticPolicyMonoResult::new(inputs.collector.clone());
+        Ok(result)
     }
 }

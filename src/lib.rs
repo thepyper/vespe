@@ -11,7 +11,7 @@ pub mod project;
 
 pub fn init_telemetry() {
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::INFO)
         .with_writer(std::io::stderr)
         .init();
 }

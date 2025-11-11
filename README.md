@@ -161,12 +161,7 @@ What is the capital of France?
 @answer { provider: "gemini -y" }
 ```
 
-**Dynamic Answers:**
-You can make an answer dynamic, so it automatically updates if the preceding context changes.
 
-```markdown
-@answer { provider: "gemini -y", dynamic: true }
-```
 
 ### @answer Advanced
 
@@ -185,6 +180,13 @@ What is the best programming language?
     "Python": "Python is the best for its simplicity and vast libraries."
   }
 }
+```
+
+**Dynamic Answers:**
+You can make an answer dynamic, so it automatically updates if the preceding context changes.
+
+```markdown
+@answer { provider: "gemini -y", dynamic: true }
 ```
 
 **Advanced Prompt Control:**

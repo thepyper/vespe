@@ -833,14 +833,20 @@ impl Worker {
             let (do_next_pass, next_collector, patches) = match item {
                 Content::Text(text) => {
                     collector = collector.set_latest_range(&text.range);
-                    let content = if collector.anchor_stack.is_empty() {
-                        // User writes outside anchors
-                        ModelContentItem::user(&text.content)
+                    if collector.is_in_task_anchor() {
+                        // Do not collect text inside task anchor
+                        // TODO spostare altrove? logica di task in pass? come fare?
                     } else {
-                        // Agents write inside anchors
-                        ModelContentItem::agent(&text.content)
-                    };
-                    collector = collector.push_item(content);
+                        // Normal collection
+                        let content = if collector.anchor_stack.is_empty() {
+                            // User writes outside anchors
+                            ModelContentItem::user(&text.content)
+                        } else {
+                            // Agents write inside anchors
+                            ModelContentItem::agent(&text.content)
+                        };
+                        collector = collector.push_item(content);
+                    }
                     (false, collector, vec![])
                 }
                 Content::Tag(tag) => {

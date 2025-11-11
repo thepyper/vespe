@@ -347,6 +347,12 @@ This prompt is sent without the context of the first one.
 @answer { provider: "gemini -y" }
 ```
 
+### @task / @done
+
+TODO documentali
+- @task si mette ad inizio di un task sequenziale, fatto di steps (un plan numerato ad esempio)
+- @done si mette dopo che uno step e' stato eseguito, l'effetto e' che la ancora task ingloba lo step eseguito, e lo toglie dal context llm
+
 ### @comment
 
 The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `ctx` engine and is not sent to the LLM.

@@ -12,9 +12,15 @@ To use `ctx`, you'll need to have **Rust** and its package manager, **Cargo**, i
 
 ### Prerequisites
 
-*   **Rust & Cargo**: If you don't have Rust and Cargo installed, you can get them by following the instructions on the official Rust website: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
+*   **Rust & Cargo**: Required to build and install the `ctx` CLI. You can get them from the [official Rust website](https://www.rust-lang.org/tools/install).
+*   **A Command-Line LLM**: `ctx` works by calling an external command to interact with a Large Language Model. You need to have at least one LLM accessible from your shell.
 
-- TODO: prerequisito anche avere degli llm accessibili da command line, tipo gemini, ollama, etc. mettere qualche esempio
+    Here are a few examples of how you can set this up:
+
+    *   **Google Gemini**: You can use the `gemini` CLI. Make sure it's installed and configured in your system's PATH. The `@answer` provider command would look like `{ provider: "gemini -y" }`.
+    *   **Ollama**: If you run models locally with Ollama, you can use its CLI. The provider command might be `{ provider: "ollama run mistral" }`.
+
+    Essentially, any command that can take a prompt from standard input and return a response to standard output will work as a `provider`.
 
 ### Steps
 

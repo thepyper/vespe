@@ -107,6 +107,8 @@ pub enum CommandKind {
     Comment,
     /// Used to segment long tasks into steps
     Task,
+    /// Used in tandem with task
+    Done,
 }
 
 impl ToString for CommandKind {
@@ -121,6 +123,7 @@ impl ToString for CommandKind {
             CommandKind::Forget => "forget",
             CommandKind::Comment => "comment",
             CommandKind::Task => "task",
+            CommandKind::Done => "done",
         }
         .to_string()
     }

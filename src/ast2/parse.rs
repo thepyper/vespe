@@ -443,6 +443,7 @@ pub(crate) fn _try_parse_command_kind<'doc>(
         ("forget", CommandKind::Forget),
         ("comment", CommandKind::Comment),
         ("task", CommandKind::Task),
+        ("done", CommandKind::Done),
     ];
 
     for (name, kind) in tags_list {

@@ -258,7 +258,7 @@ This section details advanced parameters for the `@answer` tag, allowing for fin
 Force the LLM to choose from a predefined set of options. `vespe` will insert the content associated with the chosen option.
 
 ```markdown
-What is the best programming language?
+What is the best programming language for my project?
 
 @answer {
   provider: "gemini -y",
@@ -270,7 +270,7 @@ What is the best programming language?
 ```
 
 **Dynamic Answers:**
-You can make an answer dynamic, so it automatically updates if the preceding context changes.
+You can make an answer dynamic, so it automatically updates if the input context changes.
 
 ```markdown
 @answer { provider: "gemini -y", dynamic: true }
@@ -298,7 +298,7 @@ You can use it in another file like this:
 ```markdown
 @answer {
   provider: "gemini -y",
-  input: "my_prompts/question",
+  input: my_prompts/question,
   input_data: { topic: "Rust" }
 }
 ```
@@ -330,8 +330,8 @@ What is the capital of France?
 
 @answer {
   provider: "gemini -y",
-  prefix: "my_prompts/persona",
-  postfix: "my_prompts/format"
+  prefix: my_prompts/persona,
+  postfix: my_prompts/format
 }
 ```
 
@@ -391,8 +391,6 @@ I'm going to make coffee by following these steps. I will tell you when I'm done
 @task
 
 1. Open the moka pot.
-@answer { provider: "gemini -y" }
-@done
 
 2. Clean the moka pot.
 
@@ -404,6 +402,72 @@ I'm going to make coffee by following these steps. I will tell you when I'm done
 I'm going to make coffee by following these steps. I will tell you when I'm done with a step.
 
 <!-- task-some-uuid:begin -->
+<!-- task-some-uuid:end -->
+
+1. Open the moka pot.
+
+2. Clean the moka pot.
+
+3. Fill the base with water.
+```
+
+Now we're ready to answer the first step:
+
+```markdown
+I'm going to make coffee by following these steps. I will tell you when I'm done with a step.
+
+<!-- task-some-uuid:begin -->
+<!-- task-some-uuid:end -->
+
+1. Open the moka pot.
+@answer
+
+2. Clean the moka pot.
+
+3. Fill the base with water.
+```
+
+**After the second run, the file becomes:**
+```markdown
+I'm going to make coffee by following these steps. I will tell you when I'm done with a step.
+
+<!-- task-some-uuid:begin -->
+<!-- task-some-uuid:end -->
+
+1. Open the moka pot.
+<!-- answer-another-uuid:begin -->
+Okay, the moka pot is open.
+<!-- answer-another-uuid:end -->
+
+2. Clean the moka pot.
+
+3. Fill the base with water.
+```
+
+Now first step is done, then we can archive it in the task anchor by using `@done`:
+```markdown
+I'm going to make coffee by following these steps. I will tell you when I'm done with a step.
+
+<!-- task-some-uuid:begin -->
+<!-- task-some-uuid:end -->
+
+1. Open the moka pot.
+<!-- answer-another-uuid:begin -->
+Okay, the moka pot is open.
+<!-- answer-another-uuid:end -->
+@done
+
+2. Clean the moka pot.
+
+3. Fill the base with water.
+```
+
+**After the third run, the file becomes:**
+```markdown
+I'm going to make coffee by following these steps. I will tell you when I'm done with a step.
+
+<!-- task-some-uuid:begin -->
+
 1. Open the moka pot.
 <!-- answer-another-uuid:begin -->
 Okay, the moka pot is open.
@@ -414,6 +478,7 @@ Okay, the moka pot is open.
 
 3. Fill the base with water.
 ```
+
 For the next execution, you would move the `@answer` and `@done` tags to be after step 2. The LLM would be prompted with the main instruction and "2. Clean the moka pot.", but it would not see the context from step 1.
 
 ## CLI Usage

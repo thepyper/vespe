@@ -20,6 +20,38 @@ At its core, `vespe` operates on a collection of textual documents, referred to 
 *   **Iterative and Dynamic**: The `watch` mode and the tag system encourage an iterative workflow. You can refine your prompts, re-run contexts, and evolve your documents in real-time.
 *   **Local First**: `vespe` is a local tool that works with your local files. It can be used with local LLMs (like Ollama) for a completely offline experience.
 
+## Table of Contents
+- [How it Works](#how-it-works)
+- [Philosophy](#philosophy)
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [Steps](#steps)
+- [Getting Started: A Quick Glimpse](#getting-started-a-quick-glimpse)
+- [Tag Syntax](#tag-syntax)
+  - [Example](#example)
+- [Core Tags](#core-tags)
+  - [answer](#answer)
+  - [include](#include)
+  - [set](#set)
+  - [forget](#forget)
+  - [comment](#comment)
+  - [repeat](#repeat)
+  - [answer Advanced](#answer-advanced)
+  - [inline](#inline)
+  - [task / @done](#task--done)
+- [Templating with Handlebars](#templating-with-handlebars)
+  - [Special Variables](#special-variables)
+- [Examples](#examples)
+- [CLI Usage](#cli-usage)
+  - [`vespe init`](#vespe-init)
+  - [`vespe context new`](#vespe-context-new)
+  - [`vespe context run`](#vespe-context-run)
+  - [`vespe watch`](#vespe-watch)
+- [Piping Data into Contexts](#piping-data-into-contexts)
+- [License](#license)
+- [NO-WARRANTY](#no-warranty)
+- [Contributing](#contributing)
+
 ## Installation
 
 To use `vespe`, you'll need to have **Rust** and its package manager, **Cargo**, installed on your system.

@@ -9,7 +9,7 @@ use super::content::ModelContent;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tag_inline::{InlineState, InlineStatus};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 
 use crate::ast2::{Arguments, CommandKind, Parameters};
 
@@ -90,7 +90,8 @@ impl DynamicPolicy for RepeatPolicy {
                     Some(anchor) => {
                         let is_anchor_repeatable = match anchor.command {
                             CommandKind::Answer => {
-                                let mut answer_state = inputs.worker
+                                let mut answer_state = inputs
+                                    .worker
                                     .load_state::<AnswerState>(anchor.command, &anchor.uuid)?;
                                 answer_state.status = AnswerStatus::Repeat;
                                 inputs.worker.save_state::<AnswerState>(
@@ -102,7 +103,8 @@ impl DynamicPolicy for RepeatPolicy {
                                 true
                             }
                             CommandKind::Inline => {
-                                let mut inline_state = inputs.worker
+                                let mut inline_state = inputs
+                                    .worker
                                     .load_state::<InlineState>(anchor.command, &anchor.uuid)?;
                                 inline_state.status = InlineStatus::Repeat;
                                 inputs.worker.save_state::<InlineState>(
@@ -117,7 +119,8 @@ impl DynamicPolicy for RepeatPolicy {
                         };
                         if is_anchor_repeatable {
                             // Mutate anchor parameters
-                            let mutated_anchor = anchor.update(inputs.parameters(), inputs.arguments());
+                            let mutated_anchor =
+                                anchor.update(inputs.parameters(), inputs.arguments());
                             result
                                 .new_patches
                                 .extend(inputs.worker.mutate_anchor(&mutated_anchor)?);

@@ -13,13 +13,13 @@ use super::REDIRECTED_OUTPUT_PLACEHOLDER;
 
 use super::tag_answer::AnswerPolicy;
 use super::tag_comment::CommentPolicy;
+use super::tag_done::DonePolicy;
 use super::tag_forget::ForgetPolicy;
 use super::tag_include::IncludePolicy;
 use super::tag_inline::InlinePolicy;
 use super::tag_repeat::RepeatPolicy;
 use super::tag_set::SetPolicy;
 use super::tag_task::TaskPolicy;
-use super::tag_done::DonePolicy;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
@@ -146,8 +146,7 @@ pub trait TagBehavior {
 }
 
 #[derive(Clone)]
-enum TagOrAnchor<'a>
-{
+enum TagOrAnchor<'a> {
     Tag(&'a Tag),
     Anchor(&'a Anchor),
 }
@@ -176,7 +175,7 @@ pub struct StaticPolicyMonoResult {
     pub new_patches: Vec<(Range, String)>,
 }
 
-impl StaticPolicyMonoResult {    
+impl StaticPolicyMonoResult {
     pub fn from_inputs(inputs: StaticPolicyMonoInput) -> (Self, StaticPolicyMonoInputResidual) {
         let tag_or_anchor = inputs.tag_or_anchor.clone();
         let parameters = match &tag_or_anchor {
@@ -194,11 +193,11 @@ impl StaticPolicyMonoResult {
             parameters,
             arguments,
         };
-        let result =  StaticPolicyMonoResult {
-                do_next_pass: false,
-                collector: inputs.collector,
-                new_patches: vec![],
-            };
+        let result = StaticPolicyMonoResult {
+            do_next_pass: false,
+            collector: inputs.collector,
+            new_patches: vec![],
+        };
         (result, residual)
     }
 }
@@ -423,7 +422,11 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
             tag_or_anchor: TagOrAnchor::Tag(tag),
         };
         let mono_result = P::mono(mono_inputs)?;
-        Ok((mono_result.do_next_pass, mono_result.collector, mono_result.new_patches))
+        Ok((
+            mono_result.do_next_pass,
+            mono_result.collector,
+            mono_result.new_patches,
+        ))
     }
 
     /// Collects a static tag, updating the collector.

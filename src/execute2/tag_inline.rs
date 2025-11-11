@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::content::ModelContent;
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use super::Result;
 use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
 
@@ -95,7 +95,8 @@ impl DynamicPolicy for InlinePolicy {
         let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector.clone()); // TODO better
         match inputs.state.status {
             InlineStatus::JustCreated => {
-                let context_name = inputs.arguments()
+                let context_name = inputs
+                    .arguments()
                     .arguments
                     .get(0)
                     .ok_or_else(|| ExecuteError::MissingParameter("context_name".to_string()))?

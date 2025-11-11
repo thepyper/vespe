@@ -1,12 +1,12 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use handlebars::Handlebars;
+use serde_json::json;
 use std::io::{self, Read};
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use std::path::PathBuf;
-use handlebars::Handlebars;
-use serde_json::json;
 
 use vespe::project::Project;
 
@@ -133,8 +133,7 @@ fn main() -> Result<()> {
                         args
                     );
                     let input = read_input()?;
-                    let content =
-                        project.execute_context(&context_name, input, Some(args))?;
+                    let content = project.execute_context(&context_name, input, Some(args))?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }

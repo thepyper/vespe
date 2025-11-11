@@ -8,7 +8,9 @@
 use super::Result;
 
 use super::execute::{Collector, Worker};
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, StaticPolicyMonoInputResidual};
+use super::tags::{
+    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoInputResidual, StaticPolicyMonoResult,
+};
 use crate::ast2::Tag;
 
 /// Implements the static policy for the `@comment` tag.

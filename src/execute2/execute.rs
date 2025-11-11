@@ -830,7 +830,12 @@ impl Worker {
                             TagBehaviorDispatch::collect_tag(self, collector, &integrated_tag)?;
                         (do_next_pass, collector, vec![])
                     } else {
-                        TagBehaviorDispatch::execute_tag(self, collector, &document, &integrated_tag)?
+                        TagBehaviorDispatch::execute_tag(
+                            self,
+                            collector,
+                            &document,
+                            &integrated_tag,
+                        )?
                     }
                 }
                 Content::Anchor(anchor) => match anchor.kind {

@@ -5,7 +5,9 @@
 use super::{ExecuteError, Result};
 
 use super::execute::{Collector, Worker};
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, StaticPolicyMonoInputResidual};
+use super::tags::{
+    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoInputResidual, StaticPolicyMonoResult,
+};
 use crate::ast2::{JsonPlusEntity, Tag};
 
 /// Implements the static policy for the `@include` tag.
@@ -55,15 +57,19 @@ impl StaticPolicy for IncludePolicy {
                 return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
             }
             None => None,
-        };        
-        result.collector = match residual.worker._execute(result.collector, &included_context_name, 0, data)? {
-            Some(collector) => collector,
-            None => {
-                return Err(ExecuteError::Generic(
-                "Included context returned no collector".to_string(),
-                ));
-            },
         };
+        result.collector =
+            match residual
+                .worker
+                ._execute(result.collector, &included_context_name, 0, data)?
+            {
+                Some(collector) => collector,
+                None => {
+                    return Err(ExecuteError::Generic(
+                        "Included context returned no collector".to_string(),
+                    ));
+                }
+            };
         Ok(result)
     }
 }

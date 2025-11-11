@@ -66,13 +66,13 @@ mod error;
 mod execute;
 mod tag_answer;
 mod tag_comment;
+mod tag_done;
 mod tag_forget;
 mod tag_include;
 mod tag_inline;
 mod tag_repeat;
 mod tag_set;
 mod tag_task;
-mod tag_done;
 mod tags;
 mod utils;
 
@@ -82,7 +82,8 @@ pub use content::{ModelContent, ModelContentItem};
 pub use execute::collect_context;
 pub use execute::execute_context;
 
-const TASK_ANCHOR_PLACEHOLDER : &str = "Content here has been used, so has been removed as it is no more useful.";
+const TASK_ANCHOR_PLACEHOLDER: &str =
+    "Content here has been used, so has been removed as it is no more useful.";
 const REDIRECTED_OUTPUT_PLACEHOLDER : &str = "Context here has been answered but output has been redirected, so do not respond anymore to context above this sentence.\n";
 const CHOICE_TEMPLATE : &str = "You MUST reply with ONLY ONE of the following choices: {{{choices}}}.\nYou MUST represent these in your output with ONLY ONE of the following tags {{{choice_tags}}}.\n";
 const NO_CHOICE_MESSAGE: &str = "No choice was taken.";

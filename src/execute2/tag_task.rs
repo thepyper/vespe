@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use super::Result;
 use crate::ast2::{Arguments, JsonPlusEntity, Parameters, Range};
 
@@ -63,7 +63,9 @@ impl DynamicPolicy for TaskPolicy {
             }
             TaskStatus::Waiting => {
                 // Nothing to do
-                result.collector = result.collector.push_item(ModelContentItem::system(super::TASK_ANCHOR_PLACEHOLDER));
+                result.collector = result
+                    .collector
+                    .push_item(ModelContentItem::system(super::TASK_ANCHOR_PLACEHOLDER));
             }
             TaskStatus::Eating => {
                 // Eat a piece of text

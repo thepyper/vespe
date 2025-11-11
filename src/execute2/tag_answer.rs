@@ -9,7 +9,7 @@ use serde_json::json;
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
 
 use handlebars::Handlebars;
@@ -90,7 +90,7 @@ impl DynamicPolicy for AnswerPolicy {
     /// with parameters.
     fn mono(
         mut inputs: DynamicPolicyMonoInput<Self::State>,
-/*
+        /*
         worker: &Worker,
         collector: Collector,
         input: &ModelContent,
@@ -116,9 +116,14 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let prompt = inputs.worker.prefix_content_from_parameters(inputs.input.clone(), inputs.parameters())?;
-                let prompt = inputs.worker.postfix_content_from_parameters(prompt, inputs.parameters())?;
-                let prompt = Self::postfix_content_with_choice(inputs.worker, prompt, inputs.parameters())?;
+                let prompt = inputs
+                    .worker
+                    .prefix_content_from_parameters(inputs.input.clone(), inputs.parameters())?;
+                let prompt = inputs
+                    .worker
+                    .postfix_content_from_parameters(prompt, inputs.parameters())?;
+                let prompt =
+                    Self::postfix_content_with_choice(inputs.worker, prompt, inputs.parameters())?;
                 let response = inputs.worker.call_model(inputs.parameters(), &prompt)?;
                 let response = Self::process_response_with_choice(response, inputs.parameters())?;
                 inputs.state.reply = response;
@@ -137,7 +142,8 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::Completed => {
                 // Nothing to do
-                let is_dynamic = inputs.parameters()
+                let is_dynamic = inputs
+                    .parameters()
                     .get("dynamic")
                     .map(|x| x.as_bool().unwrap_or(false))
                     .unwrap_or(false);

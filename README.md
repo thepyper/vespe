@@ -14,6 +14,8 @@ To use `ctx`, you'll need to have **Rust** and its package manager, **Cargo**, i
 
 *   **Rust & Cargo**: If you don't have Rust and Cargo installed, you can get them by following the instructions on the official Rust website: [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
 
+- TODO: prerequisito anche avere degli llm accessibili da command line, tipo gemini, ollama, etc. mettere qualche esempio
+
 ### Steps
 
 1.  **Clone the Repository**:
@@ -294,7 +296,7 @@ ctx context new [NAME] [--today] [--context-template <FILE>]
 *   `--today`: A convenient flag to create a diary-style context for the current date (e.g., `diary/2025-11-10.md`).
 *   `--context-template <FILE>`: (Optional) Path to a custom Handlebars template file to use for the new context.
 
-### `ctx context execute`
+### `ctx context run`
 
 Executes a context file. `ctx` processes the tags within the file and outputs the context when all tags have been executed.
 
@@ -302,16 +304,16 @@ Executes a context file. `ctx` processes the tags within the file and outputs th
 
 ```shell
 # Execute a context by name
-ctx context execute [NAME] [--today] [ARGS]...
+ctx context run [NAME] [--today] [ARGS]...
 
 # Pipe content into a context
-cat my-data.txt | ctx context execute [NAME]
+cat my-data.txt | ctx context run [NAME]
 ```
 
 *   `[NAME]`: The name of the context to execute.
 *   `--today`: A flag to execute the context for the current date.
 *   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{$1}}` for first argument, `{{$2}}` for second argument, and so on; {{$args}} for all of the arguments space-separated).
-*   **Piped Input**: The `execute` command can also receive text from `stdin`. This input is available within the context via the `{{$input}}` Handlebars variable.
+*   **Piped Input**: The `run` command can also receive text from `stdin`. This input is available within the context via the `{{$input}}` Handlebars variable.
 
 ### `ctx watch`
 

@@ -163,6 +163,92 @@ What is the capital of France?
 
 
 
+
+### @include
+
+The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
+File lookup happens in .vespe directory, and .md extension is added to given path.
+
+**Usage:**
+```markdown
+@include my_common_prompts/preamble
+
+Now, do something specific.
+
+@answer { provider: "gemini -y" }
+```
+
+You can also pass data to the included file, which can be used for templating with Handlebars syntax.
+
+**`data-example.md`:**
+```markdown
+Hello, {{name}}!
+```
+
+**`main.md`:**
+```markdown
+@include data-example { data: { name: "World" } }
+```
+This will resolve to "Hello, World!".
+
+### @inline
+
+The `@inline` tag dynamically includes content from another file. Unlike `@include`, this creates a dynamic anchor and file is inlined in current context. This can be re-executed by a `@repeat` tag. This is useful to instantiate templates.
+
+**Usage:**
+```markdown
+@inline path/to/template
+```
+
+Like `@include`, it also supports passing `data` for templating.
+
+### @repeat
+
+The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). Context will be re-read so any correction to query can be made. `@repeat` can also modify the parameters of the anchor it is repeating: the repeated anchor will inherith parameters from the @repeat tag.
+
+**Usage:**
+```markdown
+<!-- answer-some-uuid:begin { provider: "gemini -y" } -->
+Initial answer from the model.
+
+@repeat { provider: "ollama run qwen2.5:1.5b" }
+<!-- answer-some-uuid:end -->
+```
+In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.
+
+### @set
+
+The `@set` tag defines default parameters for all subsequent tags in the current context. This helps to avoid repetition.
+
+**Usage:**
+```markdown
+@set { provider: "gemini -y -m gemini-2.5-pro" }
+
+What is the meaning of life?
+@answer
+<!-- This will use the provider set above -->
+
+Tell me a joke.
+@answer
+<!-- This will also use the same provider -->
+```
+
+### @forget
+
+The `@forget` tag clears all the context that came before it. This is like starting a fresh conversation with the LLM within the same file.
+
+**Usage:**
+```markdown
+--- First Conversation ---
+Prompt for the first question.
+@answer { provider: "gemini -y" }
+
+@forget
+
+--- Second Conversation ---
+This prompt is sent without the context of the first one.
+@answer { provider: "gemini -y" }
+
 ### @answer Advanced
 
 This section details advanced parameters for the `@answer` tag, allowing for fine-tuned control over prompt construction and output management.
@@ -267,90 +353,6 @@ Summarize the following text and save it to a file.
 
 The LLM's summary will be saved in `.vespe/output/summary.md`.
 
-### @include
-
-The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
-File lookup happens in .vespe directory, and .md extension is added to given path.
-
-**Usage:**
-```markdown
-@include my_common_prompts/preamble
-
-Now, do something specific.
-
-@answer { provider: "gemini -y" }
-```
-
-You can also pass data to the included file, which can be used for templating with Handlebars syntax.
-
-**`data-example.md`:**
-```markdown
-Hello, {{name}}!
-```
-
-**`main.md`:**
-```markdown
-@include data-example { data: { name: "World" } }
-```
-This will resolve to "Hello, World!".
-
-### @inline
-
-The `@inline` tag dynamically includes content from another file. Unlike `@include`, this creates a dynamic anchor and file is inlined in current context. This can be re-executed by a `@repeat` tag. This is useful to instantiate templates.
-
-**Usage:**
-```markdown
-@inline path/to/template
-```
-
-Like `@include`, it also supports passing `data` for templating.
-
-### @repeat
-
-The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). Context will be re-read so any correction to query can be made. `@repeat` can also modify the parameters of the anchor it is repeating: the repeated anchor will inherith parameters from the @repeat tag.
-
-**Usage:**
-```markdown
-<!-- answer-some-uuid:begin { provider: "gemini -y" } -->
-Initial answer from the model.
-
-@repeat { provider: "ollama run qwen2.5:1.5b" }
-<!-- answer-some-uuid:end -->
-```
-In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.
-
-### @set
-
-The `@set` tag defines default parameters for all subsequent tags in the current context. This helps to avoid repetition.
-
-**Usage:**
-```markdown
-@set { provider: "gemini -y -m gemini-2.5-pro" }
-
-What is the meaning of life?
-@answer
-<!-- This will use the provider set above -->
-
-Tell me a joke.
-@answer
-<!-- This will also use the same provider -->
-```
-
-### @forget
-
-The `@forget` tag clears all the context that came before it. This is like starting a fresh conversation with the LLM within the same file.
-
-**Usage:**
-```markdown
---- First Conversation ---
-Prompt for the first question.
-@answer { provider: "gemini -y" }
-
-@forget
-
---- Second Conversation ---
-This prompt is sent without the context of the first one.
-@answer { provider: "gemini -y" }
 ```
 
 ### @task / @done

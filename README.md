@@ -161,9 +161,6 @@ What is the capital of France?
 @answer { provider: "gemini -y" }
 ```
 
-
-
-
 ### @include
 
 The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
@@ -190,31 +187,6 @@ Hello, {{name}}!
 @include data-example { data: { name: "World" } }
 ```
 This will resolve to "Hello, World!".
-
-### @inline
-
-The `@inline` tag dynamically includes content from another file. Unlike `@include`, this creates a dynamic anchor and file is inlined in current context. This can be re-executed by a `@repeat` tag. This is useful to instantiate templates.
-
-**Usage:**
-```markdown
-@inline path/to/template
-```
-
-Like `@include`, it also supports passing `data` for templating.
-
-### @repeat
-
-The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). Context will be re-read so any correction to query can be made. `@repeat` can also modify the parameters of the anchor it is repeating: the repeated anchor will inherith parameters from the @repeat tag.
-
-**Usage:**
-```markdown
-<!-- answer-some-uuid:begin { provider: "gemini -y" } -->
-Initial answer from the model.
-
-@repeat { provider: "ollama run qwen2.5:1.5b" }
-<!-- answer-some-uuid:end -->
-```
-In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.
 
 ### @set
 
@@ -249,6 +221,34 @@ Prompt for the first question.
 This prompt is sent without the context of the first one.
 @answer { provider: "gemini -y" }
 ```
+
+### @comment
+
+The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `vespe` engine and is not sent to the LLM.
+Note that json+ syntax is anyway required, so you can use strings for example to annotate comments.
+
+**Usage:**
+```markdown
+@comment {
+  _1: "This is a note for myself.     ",
+  _2: "The LLM will not see this.     ",
+}
+```
+
+### @repeat
+
+The `@repeat` tag forces the re-execution of the dynamic anchor it is placed within (like `@answer` or `@inline`). Context will be re-read so any correction to query can be made. `@repeat` can also modify the parameters of the anchor it is repeating: the repeated anchor will inherith parameters from the @repeat tag.
+
+**Usage:**
+```markdown
+<!-- answer-some-uuid:begin { provider: "gemini -y" } -->
+Initial answer from the model.
+
+@repeat { provider: "ollama run qwen2.5:1.5b" }
+<!-- answer-some-uuid:end -->
+```
+In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.
+
 
 ### @answer Advanced
 
@@ -354,7 +354,16 @@ Summarize the following text and save it to a file.
 
 The LLM's summary will be saved in `.vespe/output/summary.md`.
 
+### @inline
+
+The `@inline` tag dynamically includes content from another file. Unlike `@include`, this creates a dynamic anchor and file is inlined in current context. This can be re-executed by a `@repeat` tag. This is useful to instantiate templates.
+
+**Usage:**
+```markdown
+@inline path/to/template
 ```
+
+Like `@include`, it also supports passing `data` for templating.
 
 ### @task / @done
 
@@ -406,19 +415,6 @@ Okay, the moka pot is open.
 3. Fill the base with water.
 ```
 For the next execution, you would move the `@answer` and `@done` tags to be after step 2. The LLM would be prompted with the main instruction and "2. Clean the moka pot.", but it would not see the context from step 1.
-
-### @comment
-
-The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `vespe` engine and is not sent to the LLM.
-Note that json+ syntax is anyway required, so you can use strings for example to annotate comments.
-
-**Usage:**
-```markdown
-@comment {
-  _1: "This is a note for myself.     ",
-  _2: "The LLM will not see this.     ",
-}
-```
 
 ## CLI Usage
 

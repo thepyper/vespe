@@ -110,8 +110,8 @@ pub trait TagBehavior {
         worker: &Worker,
         collector: Collector,
         document: &str,
-        anchor: &Anchor,
-        anchor_end: Position,
+        anchor_begin: &Anchor,
+        anchor_end: &Anchor,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
 
     /// Collects the content associated with an anchor in a read-only pass.
@@ -140,15 +140,15 @@ pub trait TagBehavior {
         worker: &Worker,
         collector: Collector,
         document: &str,
-        anchor: &Anchor,
-        anchor_end: Position,
+        anchor_begin: &Anchor,
+        anchor_end: &Anchor,
     ) -> Result<(bool, Collector)>;
 }
 
 #[derive(Clone)]
 enum TagOrAnchor<'a> {
     Tag(&'a Tag),
-    Anchor(&'a Anchor),
+    Anchor((&'a Anchor, &'a Anchor)),
 }
 
 pub struct StaticPolicyMonoInput<'a> {
@@ -180,11 +180,11 @@ impl StaticPolicyMonoResult {
         let tag_or_anchor = inputs.tag_or_anchor.clone();
         let parameters = match &tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.parameters,
-            TagOrAnchor::Anchor(anchor) => &anchor.parameters,
+            TagOrAnchor::Anchor((anchor, _)) => &anchor.parameters,
         };
         let arguments = match &tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.arguments,
-            TagOrAnchor::Anchor(anchor) => &anchor.arguments,
+            TagOrAnchor::Anchor((anchor, _)) => &anchor.arguments,
         };
         let residual = StaticPolicyMonoInputResidual {
             readonly: inputs.readonly,
@@ -243,13 +243,13 @@ impl<'a, T> DynamicPolicyMonoInput<'a, T> {
     pub fn parameters(&self) -> &Parameters {
         match &self.tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.parameters,
-            TagOrAnchor::Anchor(anchor) => &anchor.parameters,
+            TagOrAnchor::Anchor((anchor, _)) => &anchor.parameters,
         }
     }
     pub fn arguments(&self) -> &Arguments {
         match &self.tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.arguments,
-            TagOrAnchor::Anchor(anchor) => &anchor.arguments,
+            TagOrAnchor::Anchor((anchor, _)) => &anchor.arguments,
         }
     }
 }
@@ -291,11 +291,11 @@ impl<'a, T> DynamicPolicyMonoResult<T> {
         let tag_or_anchor = inputs.tag_or_anchor.clone();
         let parameters = match &tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.parameters,
-            TagOrAnchor::Anchor(anchor) => &anchor.parameters,
+            TagOrAnchor::Anchor((anchor, _)) => &anchor.parameters,
         };
         let arguments = match &tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.arguments,
-            TagOrAnchor::Anchor(anchor) => &anchor.arguments,
+            TagOrAnchor::Anchor((anchor, _)) => &anchor.arguments,
         };
         let residual = DynamicPolicyMonoInputResidual {
             readonly: inputs.readonly,
@@ -388,8 +388,8 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         _worker: &Worker,
         _collector: Collector,
         _document: &str,
-        _anchor: &Anchor,
-        _anchor_end: Position,
+        _anchor_begin: &Anchor,
+        _anchor_end: &Anchor,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         panic!("StaticTag does not support execute_anchor");
     }
@@ -406,8 +406,8 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         _worker: &Worker,
         _collector: Collector,
         _document: &str,
-        _anchor: &Anchor,
-        _anchor_end: Position,
+        _anchor_begin: &Anchor,
+        _anchor_end: &Anchor,
     ) -> Result<(bool, Collector)> {
         panic!("StaticTag does not support collect_anchor");
     }
@@ -608,41 +608,41 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         worker: &Worker,
         collector: Collector,
         document: &str,
-        anchor: &Anchor,
-        anchor_end: Position,
+        anchor_begin: &Anchor,
+        anchor_end: &Anchor,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        let state = match worker.load_state::<P::State>(anchor.command, &anchor.uuid) {
+        let state = match worker.load_state::<P::State>(anchor_begin.command, &anchor_begin.uuid) {
             Ok(state) => state,
             Err(e) => {
                 tracing::warn!("Anchor has been corrupted, deactivating it, error {:?}", e);
                 return Ok((false, collector, vec![]));
             }
         };
-        let (input, input_hash) = worker.redirect_input(&collector, &anchor.parameters)?;
+        let (input, input_hash) = worker.redirect_input(&collector, &anchor_begin.parameters)?;
         let mono_inputs = DynamicPolicyMonoInput::<P::State> {
             readonly: false,
             worker,
             collector,
             document,
             state,
-            tag_or_anchor: TagOrAnchor::Anchor(anchor),
+            tag_or_anchor: TagOrAnchor::Anchor((anchor_begin, anchor_end)),
             input,
             input_hash,
         };
         let mono_result = P::mono(mono_inputs)?;
         let mut collector = mono_result.collector;
         // If output has been redirected, place output redirected placeholder
-        if let Some(_) = worker.is_output_redirected(&anchor.parameters)? {
+        if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
             collector =
                 collector.push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
         }
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
-            worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
+            worker.save_state::<P::State>(anchor_begin.command, &anchor_begin.uuid, &new_state, None)?;
         }
         // If there is some output, patch into new anchor
         let patches_2 = if let Some(output) = mono_result.new_output {
-            worker.inject_into_anchor(&collector, anchor, &anchor_end, &output)?
+            worker.inject_into_anchor(&collector, anchor_begin, &anchor_end, &output)?
         } else {
             vec![]
         };
@@ -681,41 +681,41 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         worker: &Worker,
         collector: Collector,
         document: &str,
-        anchor: &Anchor,
-        _anchor_end: Position,
+        anchor_begin: &Anchor,
+        anchor_end: &Anchor,
     ) -> Result<(bool, Collector)> {
-        let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
-        let (input, input_hash) = worker.redirect_input(&collector, &anchor.parameters)?;
+        let state = worker.load_state::<P::State>(anchor_begin.command, &anchor_begin.uuid)?;
+        let (input, input_hash) = worker.redirect_input(&collector, &anchor_begin.parameters)?;
         let mono_inputs = DynamicPolicyMonoInput::<P::State> {
             readonly: true,
             worker,
             collector,
             document,
             state,
-            tag_or_anchor: TagOrAnchor::Anchor(anchor),
+            tag_or_anchor: TagOrAnchor::Anchor((anchor_begin, anchor_end)),
             input,
             input_hash,
         };
         let mono_result = P::mono(mono_inputs)?;
         let mut collector = mono_result.collector;
         // If output has been redirected, place output redirected placeholder
-        if let Some(_) = worker.is_output_redirected(&anchor.parameters)? {
+        if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
             collector =
                 collector.push_item(ModelContentItem::system(REDIRECTED_OUTPUT_PLACEHOLDER));
         }
         // If there is some patches, just discard them and new state as well as it cannot be applied
         if !mono_result.new_patches.is_empty() {
-            tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor, mono_result.new_patches);
+            tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor_begin, mono_result.new_patches);
             return Ok((true, collector));
         }
         // If there is new output, just discard it and new state as well as it cannot be injected
         if let Some(output) = mono_result.new_output {
-            tracing::warn!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor, output);
+            tracing::warn!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor_begin, output);
             return Ok((true, collector));
         };
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
-            worker.save_state::<P::State>(anchor.command, &anchor.uuid, &new_state, None)?;
+            worker.save_state::<P::State>(anchor_begin.command, &anchor_begin.uuid, &new_state, None)?;
         }
         // Return collector
         Ok((mono_result.do_next_pass, collector))
@@ -827,11 +827,11 @@ impl TagBehaviorDispatch {
         worker: &Worker,
         collector: Collector,
         document: &str,
-        anchor: &Anchor,
-        anchor_end: Position,
+        anchor_begin: &Anchor,
+        anchor_end: &Anchor,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
-        let behavior = Self::get_behavior(anchor.command)?;
-        behavior.execute_anchor(worker, collector, document, anchor, anchor_end)
+        let behavior = Self::get_behavior(anchor_begin.command)?;
+        behavior.execute_anchor(worker, collector, document, anchor_begin, anchor_end)
     }
 
     /// Dispatches the `collect_anchor` call to the correct [`TagBehavior`] implementation.
@@ -854,10 +854,10 @@ impl TagBehaviorDispatch {
         worker: &Worker,
         collector: Collector,
         document: &str,
-        anchor: &Anchor,
-        anchor_end: Position,
+        anchor_begin: &Anchor,
+        anchor_end: &Anchor,
     ) -> Result<(bool, Collector)> {
-        let behavior = Self::get_behavior(anchor.command)?;
-        behavior.collect_anchor(worker, collector, document, anchor, anchor_end)
+        let behavior = Self::get_behavior(anchor_begin.command)?;
+        behavior.collect_anchor(worker, collector, document, anchor_begin, anchor_end)
     }
 }

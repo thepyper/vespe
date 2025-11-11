@@ -858,7 +858,7 @@ impl Worker {
                                 collector,
                                 &document,
                                 anchor,
-                                anchor_end.range.begin,
+                                anchor_end,
                             )?;
                             (do_next_pass, collector, vec![])
                         } else {
@@ -867,7 +867,7 @@ impl Worker {
                                 collector,
                                 &document,
                                 anchor,
-                                anchor_end.range.begin,
+                                anchor_end,
                             )?
                         };
                         (do_next_pass, new_collector.enter(anchor), patches)
@@ -1111,17 +1111,17 @@ impl Worker {
     pub fn inject_into_anchor(
         &self,
         _collector: &Collector,
-        anchor: &Anchor,
-        anchor_end: &Position,
+        anchor_begin: &Anchor,
+        anchor_end: &Anchor,
         output: &str,
     ) -> Result<Vec<(Range, String)>> {
-        match self.redirect_output(&anchor.parameters, output)? {
+        match self.redirect_output(&anchor_begin.parameters, output)? {
             true => {
                 // Output redirected, delete anchor contents
                 Ok(vec![(
                     Range {
-                        begin: anchor.range.end,
-                        end: *anchor_end,
+                        begin: anchor_begin.range.end,
+                        end: anchor_end.range.begin,
                     },
                     String::new(),
                 )])
@@ -1130,8 +1130,8 @@ impl Worker {
                 // Output not redirected, patch anchor contents
                 Ok(vec![(
                     Range {
-                        begin: anchor.range.end,
-                        end: *anchor_end,
+                        begin: anchor_begin.range.end,
+                        end: anchor_end.range.begin,
                     },
                     output.to_string(),
                 )])

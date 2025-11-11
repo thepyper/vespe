@@ -5,7 +5,7 @@
 use super::{ExecuteError, Result};
 
 use super::execute::{Collector, Worker};
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, StaticPolicyMonoInputResidual};
 use crate::ast2::{JsonPlusEntity, Tag};
 
 /// Implements the static policy for the `@include` tag.
@@ -41,22 +41,22 @@ impl StaticPolicy for IncludePolicy {
     ///
     /// # Examples
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
-        let mut result = StaticPolicyMonoResult::new(inputs.collector.clone());
-        let included_context_name = inputs
-            .arguments()
+        let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
+        let included_context_name = residual
+            .arguments
             .arguments
             .get(0)
             .ok_or_else(|| ExecuteError::MissingParameter("include tag argument".to_string()))?
             .value
             .clone();
-        let data = match inputs.parameters().get("data") {
+        let data = match residual.parameters.get("data") {
             Some(JsonPlusEntity::Object(data)) => Some(data),
             Some(_) => {
                 return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
             }
             None => None,
         };        
-        result.collector = match inputs.worker._execute(inputs.collector.clone(), &included_context_name, 0, data)? {
+        result.collector = match residual.worker._execute(result.collector, &included_context_name, 0, data)? {
             Some(collector) => collector,
             None => {
                 return Err(ExecuteError::Generic(

@@ -5,7 +5,7 @@
 use super::Result;
 
 use super::execute::{Collector, Worker};
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, StaticPolicyMonoInputResidual};
 use crate::ast2::Tag;
 
 /// Implements the static policy for the `@set` tag.
@@ -33,8 +33,8 @@ impl StaticPolicy for SetPolicy {
     ///
     /// # Examples
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
-        let mut result = StaticPolicyMonoResult::new(inputs.collector.clone());
-        result.collector = result.collector.set_default_parameters(inputs.parameters());
+        let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
+        result.collector = result.collector.set_default_parameters(residual.parameters);
         Ok(result)
     }
 }

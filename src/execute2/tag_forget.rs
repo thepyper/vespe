@@ -5,7 +5,7 @@
 use super::Result;
 
 use super::execute::{Collector, Worker};
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, StaticPolicyMonoInputResidual};
 use crate::ast2::Tag;
 
 /// Implements the static policy for the `@forget` tag.
@@ -32,7 +32,8 @@ impl StaticPolicy for ForgetPolicy {
     ///
     /// # Examples
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
-        let mut result = StaticPolicyMonoResult::new(inputs.collector.clone());
+        let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
+        result.collector = result.collector.forget();
         Ok(result)
     }
 }

@@ -145,6 +145,28 @@ pub trait TagBehavior {
     ) -> Result<(bool, Collector)>;
 }
 
+#[derive(Clone)]
+enum TagOrAnchor<'a>
+{
+    Tag(&'a Tag),
+    Anchor(&'a Anchor),
+}
+
+pub struct StaticPolicyMonoInput<'a> {
+    pub readonly: bool,
+    pub worker: &'a Worker,
+    pub collector: Collector,
+    pub tag_or_anchor: TagOrAnchor<'a>,
+}
+
+pub struct StaticPolicyMonoInputResidual<'a> {
+    pub readonly: bool,
+    pub worker: &'a Worker,
+    pub tag_or_anchor: TagOrAnchor<'a>,
+    pub parameters: &'a Parameters,
+    pub arguments: &'a Arguments,
+}
+
 pub struct StaticPolicyMonoResult {
     /// Indicates if another execution pass is required after this step.
     pub do_next_pass: bool,
@@ -155,34 +177,29 @@ pub struct StaticPolicyMonoResult {
 }
 
 impl StaticPolicyMonoResult {    
-    pub fn new(collector: Collector) -> Self {
-        StaticPolicyMonoResult {
-            do_next_pass: false,
-            collector,
-            new_patches: vec![],
-        }
-    }
-}
-
-pub struct StaticPolicyMonoInput<'a> {
-    pub readonly: bool,
-    pub worker: &'a Worker,
-    pub collector: Collector,
-    pub tag_or_anchor: TagOrAnchor<'a>,
-}
-
-impl<'a> StaticPolicyMonoInput<'a> {
-    pub fn parameters(&self) -> &Parameters {
-        match &self.tag_or_anchor {
+    pub fn from_inputs(inputs: StaticPolicyMonoInput) -> (Self, StaticPolicyMonoInputResidual) {
+        let tag_or_anchor = inputs.tag_or_anchor.clone();
+        let parameters = match &tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.parameters,
             TagOrAnchor::Anchor(anchor) => &anchor.parameters,
-        }
-    }
-    pub fn arguments(&self) -> &Arguments {
-        match &self.tag_or_anchor {
+        };
+        let arguments = match &tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.arguments,
             TagOrAnchor::Anchor(anchor) => &anchor.arguments,
-        }
+        };
+        let residual = StaticPolicyMonoInputResidual {
+            readonly: inputs.readonly,
+            worker: inputs.worker,
+            tag_or_anchor,
+            parameters,
+            arguments,
+        };
+        let result =  StaticPolicyMonoResult {
+                do_next_pass: false,
+                collector: inputs.collector,
+                new_patches: vec![],
+            };
+        (result, residual)
     }
 }
 
@@ -210,12 +227,6 @@ pub trait StaticPolicy {
     ///
     /// Returns an [`ExecuteError`] if any operation fails during tag processing.
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult>;
-}
-
-enum TagOrAnchor<'a>
-{
-    Tag(&'a Tag),
-    Anchor(&'a Anchor),
 }
 
 pub struct DynamicPolicyMonoInput<'a, State> {

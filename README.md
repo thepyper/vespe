@@ -428,11 +428,3 @@ This project is licensed under the AGPL-3.0 license. See the [LICENSE-AGPL3.md](
 ## Contributing
 
 Contributions are welcome! If you want to contribute to `ctx`, please feel free to open an issue or submit a pull request.
-
-### Development
-
-To set up the development environment, you'll need Rust and Cargo.
-
-1.  Clone the repository.
-2.  Build the project with `cargo build`.
-3.  Run the tests with `cargo test`.

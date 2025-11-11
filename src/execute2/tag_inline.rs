@@ -92,23 +92,23 @@ impl DynamicPolicy for InlinePolicy {
         */
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!("tag_inline::InlinePolicy::mono\nState = {:?}", inputs.state);
-        let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector.clone()); // TODO better
-        match inputs.state.status {
+        let (mut result, mut residual) = DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+        match residual.state.status {
             InlineStatus::JustCreated => {
-                let context_name = inputs
-                    .arguments()
+                let context_name = residual
+                    .arguments
                     .arguments
                     .get(0)
                     .ok_or_else(|| ExecuteError::MissingParameter("context_name".to_string()))?
                     .value
                     .clone();
                 // Load content from the specified context
-                inputs.state.status = InlineStatus::Completed;
-                result.new_state = Some(inputs.state.clone()); // TODO better
-                let context = inputs.worker.read_context(&context_name)?;
-                let context = match inputs.parameters().get("data") {
+                residual.state.status = InlineStatus::Completed;
+                result.new_state = Some(residual.state);  
+                let context = residual.worker.read_context(&context_name)?;
+                let context = match residual.parameters.get("data") {
                     Some(JsonPlusEntity::Object(data)) => {
-                        inputs.worker.process_context_with_data(context, data)?
+                        residual.worker.process_context_with_data(context, data)?
                     }
                     Some(_) => {
                         return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
@@ -123,8 +123,8 @@ impl DynamicPolicy for InlinePolicy {
             }
             InlineStatus::Repeat => {
                 // Reset state to force a reload in the next pass
-                inputs.state.status = InlineStatus::JustCreated;
-                result.new_state = Some(inputs.state);
+                residual.state.status = InlineStatus::JustCreated;
+                result.new_state = Some(residual.state);
                 result.new_output = Some(String::new());
                 result.do_next_pass = true;
             }

@@ -77,24 +77,19 @@ impl DynamicPolicy for RepeatPolicy {
     fn mono(
         mut inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
-        tracing::debug!(
-            "tag_repeat::RepeatPolicy::mono\nState = {:?}\nreadonly = {}\n",
-            inputs.state,
-            inputs.readonly
-        );
-        let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector.clone()); // TODO better?
-        match inputs.state.status {
+        let (mut result, mut residual) = DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+        match residual.state.status {
             RepeatStatus::JustCreated => {
                 // Find anchor to repeat if any
                 match result.collector.anchor_stack().last() {
                     Some(anchor) => {
                         let is_anchor_repeatable = match anchor.command {
                             CommandKind::Answer => {
-                                let mut answer_state = inputs
+                                let mut answer_state = residual
                                     .worker
                                     .load_state::<AnswerState>(anchor.command, &anchor.uuid)?;
                                 answer_state.status = AnswerStatus::Repeat;
-                                inputs.worker.save_state::<AnswerState>(
+                                residual.worker.save_state::<AnswerState>(
                                     anchor.command,
                                     &anchor.uuid,
                                     &answer_state,
@@ -103,11 +98,11 @@ impl DynamicPolicy for RepeatPolicy {
                                 true
                             }
                             CommandKind::Inline => {
-                                let mut inline_state = inputs
+                                let mut inline_state = residual
                                     .worker
                                     .load_state::<InlineState>(anchor.command, &anchor.uuid)?;
                                 inline_state.status = InlineStatus::Repeat;
-                                inputs.worker.save_state::<InlineState>(
+                                residual.worker.save_state::<InlineState>(
                                     anchor.command,
                                     &anchor.uuid,
                                     &inline_state,
@@ -120,10 +115,10 @@ impl DynamicPolicy for RepeatPolicy {
                         if is_anchor_repeatable {
                             // Mutate anchor parameters
                             let mutated_anchor =
-                                anchor.update(inputs.parameters(), inputs.arguments());
+                                anchor.update(residual.parameters, residual.arguments);
                             result
                                 .new_patches
-                                .extend(inputs.worker.mutate_anchor(&mutated_anchor)?);
+                                .extend(residual.worker.mutate_anchor(&mutated_anchor)?);
                         }
                     }
                     None => {
@@ -133,8 +128,8 @@ impl DynamicPolicy for RepeatPolicy {
                     }
                 };
                 // Prepare the query
-                inputs.state.status = RepeatStatus::Completed;
-                result.new_state = Some(inputs.state);
+                residual.state.status = RepeatStatus::Completed;
+                result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
             RepeatStatus::Completed => {

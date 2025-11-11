@@ -254,6 +254,18 @@ impl<'a, T> DynamicPolicyMonoInput<'a, T> {
     }
 }
 
+pub struct DynamicPolicyMonoInputResidual<'a, State> {
+    pub readonly: bool,
+    pub worker: &'a Worker,
+    pub document: &'a str,
+    pub state: State,
+    pub tag_or_anchor: TagOrAnchor<'a>,
+    pub parameters: &'a Parameters,
+    pub arguments: &'a Arguments,
+    pub input: ModelContent,
+    pub input_hash: String,
+}
+
 /// The result of a single execution step for a dynamic policy.
 ///
 /// This struct encapsulates all possible outcomes of a `mono` call for a dynamic tag,
@@ -272,28 +284,37 @@ pub struct DynamicPolicyMonoResult<State> {
     pub new_patches: Vec<(Range, String)>,
 }
 
-impl<T> DynamicPolicyMonoResult<T> {
-    /// Creates a new `DynamicPolicyMonoResult` with default values.
-    ///
-    /// Initializes `do_next_pass` to `false`, `new_state` and `new_output` to `None`,
-    /// and `new_patches` as an empty vector. The `collector` is set to the provided value.
-    ///
-    /// # Arguments
-    ///
-    /// * `collector` - The initial [`Collector`] state for the result.
-    ///
-    /// # Returns
-    ///
-    /// A new `DynamicPolicyMonoResult` instance.
-    pub fn new<State>(collector: Collector) -> DynamicPolicyMonoResult<State> {
-        DynamicPolicyMonoResult {
+impl<'a, T> DynamicPolicyMonoResult<T> {
+    pub fn from_inputs(inputs: DynamicPolicyMonoInput<'a, T>) -> (Self, DynamicPolicyMonoInputResidual<'a, T>) {
+        let tag_or_anchor = inputs.tag_or_anchor.clone();
+        let parameters = match &tag_or_anchor {
+            TagOrAnchor::Tag(tag) => &tag.parameters,
+            TagOrAnchor::Anchor(anchor) => &anchor.parameters,
+        };
+        let arguments = match &tag_or_anchor {
+            TagOrAnchor::Tag(tag) => &tag.arguments,
+            TagOrAnchor::Anchor(anchor) => &anchor.arguments,
+        };
+        let residual = DynamicPolicyMonoInputResidual {
+            readonly: inputs.readonly,
+            worker: inputs.worker,
+            document: inputs.document,
+            state: inputs.state,
+            tag_or_anchor,
+            parameters,
+            arguments,
+            input: inputs.input,
+            input_hash: inputs.input_hash,
+        };
+        let result = DynamicPolicyMonoResult::<T> {
             do_next_pass: false,
-            collector,
+            collector: inputs.collector,
             new_state: None,
             new_output: None,
             new_patches: vec![],
-        }
-    }
+        };
+        (result, residual)
+    }    
 }
 
 /// Trait for defining the behavior of dynamic tags.

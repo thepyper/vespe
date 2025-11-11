@@ -105,62 +105,62 @@ impl DynamicPolicy for AnswerPolicy {
             inputs.state,
             inputs.readonly,
         );
-        let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector.clone());
-        match inputs.state.status {
+        let (mut result, mut residual) = DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+        match residual.state.status {
             AnswerStatus::JustCreated => {
                 // Prepare the query
-                inputs.state.status = AnswerStatus::NeedProcessing;
-                inputs.state.reply = String::new();
-                result.new_state = Some(inputs.state.clone());
+                residual.state.status = AnswerStatus::NeedProcessing;
+                residual.state.reply = String::new();
+                result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let prompt = inputs
+                let prompt = residual
                     .worker
-                    .prefix_content_from_parameters(inputs.input.clone(), inputs.parameters())?;
-                let prompt = inputs
+                    .prefix_content_from_parameters(residual.input, residual.parameters)?;
+                let prompt = residual
                     .worker
-                    .postfix_content_from_parameters(prompt, inputs.parameters())?;
+                    .postfix_content_from_parameters(prompt, residual.parameters)?;
                 let prompt =
-                    Self::postfix_content_with_choice(inputs.worker, prompt, inputs.parameters())?;
-                let response = inputs.worker.call_model(inputs.parameters(), &prompt)?;
-                let response = Self::process_response_with_choice(response, inputs.parameters())?;
-                inputs.state.reply = response;
-                inputs.state.status = AnswerStatus::NeedInjection;
-                inputs.state.context_hash = inputs.input_hash;
-                result.new_state = Some(inputs.state.clone());
+                    Self::postfix_content_with_choice(residual.worker, prompt, residual.parameters)?;
+                let response = residual.worker.call_model(residual.parameters, &prompt)?;
+                let response = Self::process_response_with_choice(response, residual.parameters)?;
+                residual.state.reply = response;
+                residual.state.status = AnswerStatus::NeedInjection;
+                residual.state.context_hash = residual.input_hash;
+                result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
             AnswerStatus::NeedInjection => {
                 // Inject the reply into the document
-                let output = inputs.state.reply.clone();
-                inputs.state.status = AnswerStatus::Completed;
-                result.new_state = Some(inputs.state.clone());
+                let output = residual.state.reply.clone();
+                residual.state.status = AnswerStatus::Completed;
+                result.new_state = Some(residual.state);
                 result.new_output = Some(output);
                 result.do_next_pass = true;
             }
             AnswerStatus::Completed => {
                 // Nothing to do
-                let is_dynamic = inputs
-                    .parameters()
+                let is_dynamic = residual
+                    .parameters
                     .get("dynamic")
                     .map(|x| x.as_bool().unwrap_or(false))
                     .unwrap_or(false);
                 if !is_dynamic {
                     // Do nothing
-                } else if inputs.state.context_hash != inputs.input_hash {
+                } else if residual.state.context_hash != residual.input_hash {
                     // Repeat
-                    inputs.state.status = AnswerStatus::Repeat;
-                    result.new_state = Some(inputs.state.clone());
+                    residual.state.status = AnswerStatus::Repeat;
+                    result.new_state = Some(residual.state);
                     result.do_next_pass = true;
                 }
             }
             AnswerStatus::Repeat => {
                 // Prepare the query
-                inputs.state.status = AnswerStatus::NeedProcessing;
-                inputs.state.reply = String::new();
-                result.new_state = Some(inputs.state.clone());
+                residual.state.status = AnswerStatus::NeedProcessing;
+                residual.state.reply = String::new();
+                result.new_state = Some(residual.state);
                 result.new_output = Some(String::new());
                 result.do_next_pass = true;
             }

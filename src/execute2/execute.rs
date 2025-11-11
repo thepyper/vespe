@@ -91,6 +91,8 @@ pub(crate) struct Collector {
     default_parameters: Parameters,
     /// Latest processed range
     latest_range: Range,
+    /// Latest task begin anchor
+    latest_task: Option<Anchor>,    
 }
 
 impl Collector {
@@ -153,6 +155,7 @@ impl Collector {
             context_hasher: Sha256::new(),
             default_parameters: Parameters::new(),
             latest_range: Range::null(),
+            latest_task: None,
         }
     }
 
@@ -187,6 +190,7 @@ impl Collector {
             context_hasher: self.context_hasher.clone(),
             default_parameters: self.default_parameters.clone(),
             latest_range: Range::null(),
+            latest_task: None,
         })
     }
 
@@ -308,6 +312,11 @@ impl Collector {
     /// The `Collector` with the updated default parameters.
     pub fn set_default_parameters(mut self, new_parameters: &Parameters) -> Self {
         self.default_parameters = new_parameters.clone();
+        self
+    }
+
+    pub fn set_latest_task(mut self, task_anchor: &Anchor) -> Self {
+        self.latest_task = Some(task_anchor.clone());
         self
     }
 }
@@ -841,6 +850,12 @@ impl Worker {
                 Content::Anchor(anchor) => match anchor.kind {
                     AnchorKind::Begin => {
                         collector = collector.set_latest_range(&anchor.range);
+                        match anchor.command {
+                            CommandKind::Task => {
+                                collector = collector.set_latest_task(&anchor);
+                            }
+                            _ => {}
+                        };
                         let anchor_end = anchor_index
                             .get_end(&anchor.uuid)
                             .ok_or(ExecuteError::EndAnchorNotFound(anchor.uuid))?;

@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::content::ModelContent;
+use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
@@ -29,7 +29,7 @@ pub enum TaskStatus {
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct TaskState {
     /// The current status of the `@task` anchor.
-    pub status: InlineStatus,
+    pub status: TaskStatus,
 }
 
 /// Implements the dynamic policy for the `@task` tag.
@@ -49,8 +49,8 @@ impl DynamicPolicy for TaskPolicy {
         collector: Collector,
         _input: &ModelContent,
         _input_hash: String,
-        parameters: &Parameters,
-        arguments: &Arguments,
+        _parameters: &Parameters,
+        _arguments: &Arguments,
         mut state: Self::State,
         _readonly: bool,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
@@ -66,6 +66,7 @@ impl DynamicPolicy for TaskPolicy {
             }
             TaskStatus::Completed => {
                 // Nothing to do
+                result.collector = result.collector.push_item(ModelContentItem::system(super::TASK_ANCHOR_PLACEHOLDER));
             }
         }
         Ok(result)

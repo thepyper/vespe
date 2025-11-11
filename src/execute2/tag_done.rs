@@ -15,6 +15,7 @@ impl StaticPolicy for DonePolicy {
     // TODO doc
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
         let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
+        tracing::debug!("tag_done::DonePolicy: {:?}", residual);
         let tag = match residual.tag_or_anchor {
             TagOrAnchor::Tag(tag) => tag,
             _ => {
@@ -28,16 +29,21 @@ impl StaticPolicy for DonePolicy {
                         let mut task_state = residual
                             .worker
                             .load_state::<TaskState>(anchor.command, &anchor.uuid)?;
-                        task_state.status = TaskStatus::Eating;
-                        task_state.eating_end = tag.range.begin;
-                        residual.worker.save_state::<TaskState>(
-                            anchor.command,
-                            &anchor.uuid,
-                            &task_state,
-                            None,
-                        )?;
-                        result.new_patches = vec![(tag.range, String::new())];
-                        result.do_next_pass = true;
+                        match task_state.status {
+                            TaskStatus::Waiting => {
+                                task_state.status = TaskStatus::Eating;
+                                task_state.eating_end = tag.range.begin;
+                                residual.worker.save_state::<TaskState>(
+                                    anchor.command,
+                                    &anchor.uuid,
+                                    &task_state,
+                                    None,
+                                )?;
+                                result.new_patches = vec![(tag.range, String::new())];
+                                result.do_next_pass = true;
+                            },
+                            _ => {}
+                        }
                     }
                     _ => {
                         panic!("not a task anchor!=!=!="); // TODO better error
@@ -48,6 +54,7 @@ impl StaticPolicy for DonePolicy {
                 panic!("no previous task anchor!=!=!="); // TODO better error
             }
         }
+        tracing::debug!("tag_done res {:?}", result);
         Ok(result)
     }
 }

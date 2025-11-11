@@ -1,0 +1,8 @@
+{
+  "status": "Eating",
+  "eating_end": {
+    "offset": 500,
+    "line": 13,
+    "column": 1
+  }
+}

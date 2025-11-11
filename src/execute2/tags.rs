@@ -145,12 +145,13 @@ pub trait TagBehavior {
     ) -> Result<(bool, Collector)>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TagOrAnchor<'a> {
     Tag(&'a Tag),
     Anchor((&'a Anchor, &'a Anchor)),
 }
 
+#[derive(Debug)]
 pub struct StaticPolicyMonoInput<'a> {
     pub readonly: bool,
     pub worker: &'a Worker,
@@ -158,6 +159,7 @@ pub struct StaticPolicyMonoInput<'a> {
     pub tag_or_anchor: TagOrAnchor<'a>,
 }
 
+#[derive(Debug)]
 pub struct StaticPolicyMonoInputResidual<'a> {
     pub readonly: bool,
     pub worker: &'a Worker,
@@ -228,6 +230,7 @@ pub trait StaticPolicy {
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult>;
 }
 
+#[derive(Debug)]
 pub struct DynamicPolicyMonoInput<'a, State> {
     pub readonly: bool,
     pub worker: &'a Worker,
@@ -254,6 +257,7 @@ impl<'a, T> DynamicPolicyMonoInput<'a, T> {
     }
 }
 
+#[derive(Debug)]
 pub struct DynamicPolicyMonoInputResidual<'a, State> {
     pub readonly: bool,
     pub worker: &'a Worker,

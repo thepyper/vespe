@@ -77,7 +77,7 @@ pub fn collect_context(
 /// variables and the call stack to prevent infinite recursion.
 /// It is passed by value through the execution flow, ensuring a functional-style,
 /// predictable state management.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Collector {
     /// A stack of visited context file paths to detect and prevent circular includes.
     visit_stack: Vec<PathBuf>,
@@ -335,6 +335,12 @@ pub(crate) struct Worker {
     path_res: Arc<dyn PathResolver>,
 }
 
+impl std::fmt::Debug for Worker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
+    }
+}
+
 impl Worker {
     /// Creates a new `Worker` with the necessary tools.
     ///
@@ -474,14 +480,15 @@ impl Worker {
             }
             Some(descent_collector) => {
                 for i in 1..=max_rewrite_steps {
+                    tracing::debug!("execute::Worker::execute: Running pass {}/{}.", i, max_rewrite_steps);
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
                     let (do_next_pass, _) =
                         self.execute_pass(descent_collector.clone(), &context_path, data)?;
                     match do_next_pass {
                         true => {
                             tracing::debug!(
-                                "execute::Worker::execute: After {} modifying pass, needs another pass for context: {:?}",
-                                i, context_path
+                                "execute::Worker::execute: After {}/{} modifying pass, needs another pass for context: {:?}",
+                                i, max_rewrite_steps, context_path
                             );
                         }
                         false => {
@@ -492,11 +499,12 @@ impl Worker {
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
                     let (do_next_pass, _) =
                         self.collect_pass(descent_collector.clone(), &context_path, data)?;
+                    tracing::debug!("+++++++++++++++++++++++++++++ pass {} -> {}", i, do_next_pass);
                     match do_next_pass {
                         true => {
                             tracing::debug!(
-                                "execute::Worker::execute: After {} readonly pass, needs another pass for context: {:?}",
-                                i, context_path
+                                "execute::Worker::execute: After {}/{} readonly pass, needs another pass for context: {:?}",
+                                i, max_rewrite_steps, context_path
                             );
                         }
                         false => {
@@ -902,11 +910,13 @@ impl Worker {
                 return Ok((true, collector));
             }
             // Check if collector has been discarded, then exit and trigger another pass
+            tracing::debug!("***************** {} dnp", do_next_pass);
             if do_next_pass {
                 return Ok((true, collector));
             }
         }
         // No patches applied nor new pass triggered, then return definitive collector
+        tracing::debug!("------------------------------ nnp");
         Ok((false, collector))
     }
 

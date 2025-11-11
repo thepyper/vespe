@@ -1,17 +1,10 @@
-Let's pretend to make a coffee, imagine actions and write them out as required:
+Let's pretend to make a coffee, imagine actions and write them out as required (only listed actions, do not skip forward):
 
-<!-- task-7a7d5370-e5b8-4589-a363-c07252d22ed2:begin {}  -->
+@task
 
 1. Open moka
 
-<!-- answer-52c9f68f-a2ca-4158-b94e-844a2594
-1. Open moka
-
-<!-- answer-52c9f68f-a2ca-4158-b94e-844a2594f726:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
-Okay, "Open moka" acknowledged.
-
-What's the next step in making coffee?
-<!-- answer-52c9f68f-a2ca-4158-b94e-844a2594f726:end {}  -->
+@answer { provider: 'gemini -y -m gemini-2.5-flash' }
 @done
 
 2. Clean moka

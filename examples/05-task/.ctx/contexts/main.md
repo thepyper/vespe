@@ -1,4 +1,4 @@
-Let's pretend to make a coffee, imagine actions and write them out as required:
+Let's pretend to make a coffee, imagine actions and write them out as required (only listed actions, do not skip forward):
 
 1. Open moka
 

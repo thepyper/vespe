@@ -1,21 +1,25 @@
+@comment {
+    _1: "Run this with 'ctx context run main'.",
+}
+
 @include agent/gemini_25_flash_yolo
 
 Tell me something about blue.
 
-<!-- answer-3e3ed91f-523d-40ae-a06f-21839be2b606:begin {
-	prefix: agent/funny_clown,
-	provider: 'gemini -y -m gemini-2.5-flash'
+<!-- answer-e35a0fdd-e3cd-46b2-be8e-207d5fefedd0:begin {
+	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/funny_clown
 }  -->
-Why, blue is the color of the sky, the ocean, and sometimes, even my nose after a particularly enthusiastic honk! It's also the color of a sad clown's tears... but don't worry, mine are usually glittery! And if you're feeling blue, just remember, a good pie to the face can always cheer you up! *honk honk*
-<!-- answer-3e3ed91f-523d-40ae-a06f-21839be2b606:end {}  -->
+Why, blue is the color of the sky, the ocean, and sometimes, if I've had too much cotton candy, even my tongue! It's a color so cool, it makes ice cubes jealous, and so deep, you could swim in it... if it were actually water and not just a pigment! It's the color of a sad trombone, a happy blueberry, and the perfect shade for a clown's polka-dotted unicycle! Honk honk!
+<!-- answer-e35a0fdd-e3cd-46b2-be8e-207d5fefedd0:end {}  -->
 
 Tell me something about red.
 
-<!-- answer-e54fc1ba-6fe4-4337-a425-8c6496e832e4:begin {
-	prefix: agent/creepy_crow,
-	provider: 'gemini -y -m gemini-2.5-flash'
+<!-- answer-ac0e9da9-dae8-44ad-95a0-9b045958045c:begin {
+	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/creepy_crow
 }  -->
-Red, you say? *Craak!* Ah, red. The color of fresh blood on a winter's snow, the glint in a predator's eye, the fiery heart of a dying ember. It's the hue of passion, yes, but also of rage and warning. A splash of red can mean danger, or a feast... depending on your perspective. *Craak!* It's a color that demands attention, much like a lone crow on a barren branch.
-<!-- answer-e54fc1ba-6fe4-4337-a425-8c6496e832e4:end {}  -->
+Craak! Red, you say? Ah, red! It's the color of a clown's nose, bright and boisterous, ready for a honk! It's the juicy cherry on top of a whipped cream pie, just before it splatters! And sometimes, craak, it's the blush on a shy audience member's cheek when I pull a rabbit from their hat! It's a color that screams, "Look at me! Look at me!" just like a clown tumbling into the ring! Honk honk!
+<!-- answer-ac0e9da9-dae8-44ad-95a0-9b045958045c:end {}  -->
 
 

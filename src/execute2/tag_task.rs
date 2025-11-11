@@ -13,7 +13,7 @@ use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
 use super::Result;
-use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
+use crate::ast2::{Arguments, JsonPlusEntity, Parameters, Range};
 
 /// Represents the execution status of an `@task` tag.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -22,7 +22,9 @@ pub enum TaskStatus {
     #[default]
     JustCreated,
     // TODO doc
-    Completed,
+    Waiting,
+    // TODO doc
+    Eating,
 }
 
 /// Holds the persistent state for an `@task` anchor.
@@ -30,6 +32,8 @@ pub enum TaskStatus {
 pub struct TaskState {
     /// The current status of the `@task` anchor.
     pub status: TaskStatus,
+    /// The range to reach in next Eating step
+    pub eating_range: Range,
 }
 
 /// Implements the dynamic policy for the `@task` tag.
@@ -59,14 +63,18 @@ impl DynamicPolicy for TaskPolicy {
         match state.status {
             TaskStatus::JustCreated => {
                 // Load content from the specified context
-                state.status = TaskStatus::Completed;
+                state.status = TaskStatus::Waiting;
                 result.new_state = Some(state);
                 result.new_output = Some(String::new());
                 result.do_next_pass = true;
             }
-            TaskStatus::Completed => {
+            TaskStatus::Waiting => {
                 // Nothing to do
                 result.collector = result.collector.push_item(ModelContentItem::system(super::TASK_ANCHOR_PLACEHOLDER));
+            }
+            TaskStatus::Eating => {
+                // Eat a piece of text
+                // TODO
             }
         }
         Ok(result)

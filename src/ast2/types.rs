@@ -57,6 +57,12 @@ impl Ord for Range {
     }
 }
 
+impl Default for Range {
+    fn default() -> Self {
+        Range::null()
+    }
+}
+
 impl Range {
     /// Creates a "null" or invalid range.
     pub fn null() -> Self {

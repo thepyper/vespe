@@ -128,6 +128,7 @@ impl Collector {
         &self.anchor_stack
     }
 
+    // TODO doc
     pub fn is_in_task_anchor(&self) -> bool {
         for anchor in &self.anchor_stack {
             if anchor.command == CommandKind::Task {

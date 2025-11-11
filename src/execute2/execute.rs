@@ -896,7 +896,7 @@ impl Worker {
                 panic!("Cannot produce patches during collect pass!");
             } else {
                 // Apply patches and trigger new pass
-                let new_content = Self::apply_patches(&document, &patches)?;
+                let new_content = Self::apply_patches(&document, patches)?;
                 self.file_access
                     .write_file(context_path, &new_content, None)?;
                 return Ok((true, collector));
@@ -930,9 +930,11 @@ impl Worker {
     /// This function does not directly return errors, but panics if byte offsets
     /// derived from character offsets are out of bounds, which should not happen
     /// with valid `Range` objects.
-    fn apply_patches(document: &str, patches: &Vec<(Range, String)>) -> Result<String> {
+    fn apply_patches(document: &str, mut patches: Vec<(Range, String)>) -> Result<String> {
         let mut result = document.to_string();
+        patches.sort();
         for (range, replace) in patches.iter().rev() {
+            tracing::debug!("Replacing range {:?} with ***{}***", range, replace);
             let start_byte = document
                 .char_indices()
                 .nth(range.begin.offset)

@@ -37,6 +37,7 @@ impl StaticPolicy for DonePolicy {
                             None,
                         )?;
                         result.new_patches = vec![(tag.range, String::new())];
+                        result.do_next_pass = true;
                     }
                     _ => {
                         panic!("not a task anchor!=!=!="); // TODO better error

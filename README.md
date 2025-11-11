@@ -168,6 +168,10 @@ You can make an answer dynamic, so it automatically updates if the preceding con
 @answer { provider: "gemini -y", dynamic: true }
 ```
 
+### @answer Advanced
+
+This section details advanced parameters for the `@answer` tag, allowing for fine-tuned control over prompt construction and output management.
+
 **Multiple Choices:**
 Force the LLM to choose from a predefined set of options. `vespe` will insert the content associated with the chosen option.
 

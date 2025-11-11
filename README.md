@@ -173,7 +173,83 @@ What is the best programming language?
 }
 ```
 
-- TODO documenta input, output, input_data, prefix, postfix, postfix_data, prefix_data (raggruppa sensatamente fai qualche esempio)
+**Advanced Prompt Control:**
+
+You can fine-tune the prompt sent to the LLM and manage the output using a set of advanced parameters.
+
+**Input Redirection:**
+
+-   `input: "path/to/context"`: Replaces the current prompt with the content of another context file. This is useful for running a standard prompt from a different file.
+-   `input_data: { ... }`: Used with `input` to pass data to the specified context file, which is treated as a Handlebars template.
+
+*Example:*
+
+Let's say you have a file `my_prompts/question.md`:
+
+```markdown
+Tell me about {{topic}}.
+```
+
+You can use it in another file like this:
+
+```markdown
+@answer {
+  provider: "gemini -y",
+  input: "my_prompts/question",
+  input_data: { topic: "Rust" }
+}
+```
+
+This will send "Tell me about Rust." to the LLM.
+
+**Prompt Augmentation:**
+
+-   `prefix: "path/to/context"`: Prepends the content of another file to the current prompt as a `system` message. This is ideal for setting a persona or providing instructions to the LLM.
+-   `prefix_data: { ... }`: Used with `prefix` to pass data to the prefix file.
+-   `postfix: "path/to/context"`: Appends the content of another file to the current prompt as a `system` message. Useful for adding constraints or formatting instructions.
+-   `postfix_data: { ... }`: Used with `postfix` to pass data to the postfix file.
+
+*Example:*
+
+`my_prompts/persona.md`:
+```markdown
+You are a helpful assistant that speaks like a pirate.
+```
+
+`my_prompts/format.md`:
+```markdown
+Please answer in less than 20 words.
+```
+
+`main.md`:
+```markdown
+What is the capital of France?
+
+@answer {
+  provider: "gemini -y",
+  prefix: "my_prompts/persona",
+  postfix: "my_prompts/format"
+}
+```
+
+This will construct a prompt where the LLM is first instructed to act like a pirate, then given the question, and finally told to keep the answer short.
+
+**Output Redirection:**
+
+-   `output: "path/to/file"`: Redirects the LLM's response to a specified file instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
+
+*Example:*
+
+```markdown
+Summarize the following text and save it to a file.
+
+@answer {
+  provider: "gemini -y",
+  output: "summary.txt"
+}
+```
+
+The LLM's summary will be saved in `summary.txt`.
 
 ### @include
 

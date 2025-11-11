@@ -21,5 +21,5 @@ regex = "1.10.0"
 sha2 = "0.10"
 
 [[bin]]
-name = "ctx"
-path = "src/bin/ctx/main.rs"
+name = "vespe"
+path = "src/bin/vespe/main.rs"

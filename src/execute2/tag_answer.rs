@@ -90,15 +90,6 @@ impl DynamicPolicy for AnswerPolicy {
     /// with parameters.
     fn mono(
         mut inputs: DynamicPolicyMonoInput<Self::State>,
-        /*
-        worker: &Worker,
-        collector: Collector,
-        input: &ModelContent,
-        input_hash: String,
-        parameters: &Parameters,
-        _arguments: &Arguments,
-        mut state: Self::State,
-        readonly: bool, */
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!(
             "tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n",

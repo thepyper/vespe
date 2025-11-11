@@ -6,6 +6,16 @@
 
 At its core, `ctx` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.ctx` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
 
+## Philosophy
+
+`ctx` is built on a few core principles:
+
+*   **Text as a Canvas**: Your documents are not just static files; they are interactive canvases for collaboration with AI. `ctx` empowers you to weave AI-generated content directly into your notes, drafts, and mind maps.
+*   **Seamless Integration**: The tool is designed to be unobtrusive. The tag-based syntax is simple and integrates naturally with Markdown, so you can focus on your ideas, not on the tooling.
+*   **You are in Control**: `ctx` gives you fine-grained control over the interaction with LLMs. You can choose the provider, shape the prompts, and direct the output.
+*   **Iterative and Dynamic**: The `watch` mode and the tag system encourage an iterative workflow. You can refine your prompts, re-run contexts, and evolve your documents in real-time.
+*   **Local First**: `ctx` is a local tool that works with your local files. It can be used with local LLMs (like Ollama) for a completely offline experience.
+
 ## Installation
 
 To use `ctx`, you'll need to have **Rust** and its package manager, **Cargo**, installed on your system.
@@ -411,3 +421,18 @@ ctx watch [--project-root <PATH>]
 
 This is very useful for iterative development, allowing you to see the results of your changes in real-time.
 
+## License
+
+This project is licensed under the AGPL-3.0 license. See the [LICENSE-AGPL3.md](LICENSE-AGPL3.md) file for details.
+
+## Contributing
+
+Contributions are welcome! If you want to contribute to `ctx`, please feel free to open an issue or submit a pull request.
+
+### Development
+
+To set up the development environment, you'll need Rust and Cargo.
+
+1.  Clone the repository.
+2.  Build the project with `cargo build`.
+3.  Run the tests with `cargo test`.

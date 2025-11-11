@@ -481,6 +481,18 @@ Okay, the moka pot is open.
 
 For the next execution, you would move the `@answer` and `@done` tags to be after step 2. The LLM would be prompted with the main instruction and "2. Clean the moka pot.", but it would not see the context from step 1.
 
+## Templating with Handlebars
+
+All contexts in `vespe` are processed as Handlebars templates. This means you can use Handlebars syntax to create dynamic and reusable content within your Markdown files.
+
+### Special Variables
+
+`vespe` provides several special variables that can be used within your Handlebars templates:
+
+*   `{{_}}`: Represents the first positional command-line argument passed to `vespe context run`. For example, if you run `vespe context run my-context arg1 arg2`, `{{_}}` will be `arg1`.
+*   `{{__}}`: Represents all positional command-line arguments as a space-separated string. Using the previous example, `{{__}}` would be `arg1 arg2`.
+*   `{{___}}`: Represents the input received from `stdin`. If you pipe content to `vespe context run`, this variable will hold that content.
+
 ## CLI Usage
 
 `vespe` provides a simple yet powerful command-line interface to manage your projects and contexts.

@@ -8,12 +8,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::content::{ModelContent, ModelContentItem};
-use super::error::ExecuteError;
-use super::execute::{Collector, Worker};
+use super::content::ModelContentItem;
+use super::execute::Worker;
 use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, TagOrAnchor};
 use super::Result;
-use crate::ast2::{Arguments, JsonPlusEntity, Parameters, Range, Position};
+use crate::ast2::{Range, Position};
 
 /// Represents the execution status of an `@task` tag.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -49,7 +48,7 @@ impl DynamicPolicy for TaskPolicy {
     ///
     // TODO doc
     fn mono(
-        mut inputs: DynamicPolicyMonoInput<Self::State>,
+        inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!("tag_task::TaskPolicy::mono\nState = {:?}", inputs.state);
         let (mut result, mut residual) =

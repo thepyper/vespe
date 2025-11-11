@@ -1,10 +1,8 @@
 //! This module implements the `DonePolicy` for the `@done` tag. The `@done`
 //! ... TODO doc
-use super::{ExecuteError, Result};
+use super::Result;
 
-use super::execute::{Collector, Worker};
 use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
-use crate::ast2::{JsonPlusEntity, Tag};
 
 /// Implements the static policy for the `@done` tag.
 ///

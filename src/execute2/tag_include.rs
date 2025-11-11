@@ -4,11 +4,10 @@
 //! reusability of context definitions.
 use super::{ExecuteError, Result};
 
-use super::execute::{Collector, Worker};
 use super::tags::{
-    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoInputResidual, StaticPolicyMonoResult,
+    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult,
 };
-use crate::ast2::{JsonPlusEntity, Tag};
+use crate::ast2::JsonPlusEntity;
 
 /// Implements the static policy for the `@include` tag.
 ///

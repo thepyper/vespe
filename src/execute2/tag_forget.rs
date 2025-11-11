@@ -4,11 +4,9 @@
 //! the context provided to an external model.
 use super::Result;
 
-use super::execute::{Collector, Worker};
 use super::tags::{
-    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoInputResidual, StaticPolicyMonoResult,
+    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult,
 };
-use crate::ast2::Tag;
 
 /// Implements the static policy for the `@forget` tag.
 ///

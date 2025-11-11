@@ -8,9 +8,9 @@ use serde_json::json;
 
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
-use super::execute::{Collector, Worker};
+use super::execute::Worker;
 use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
-use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
+use crate::ast2::{JsonPlusEntity, Parameters};
 
 use handlebars::Handlebars;
 
@@ -89,7 +89,7 @@ impl DynamicPolicy for AnswerPolicy {
     /// Returns an [`ExecuteError`] if the model call fails or if there are issues
     /// with parameters.
     fn mono(
-        mut inputs: DynamicPolicyMonoInput<Self::State>,
+        inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!(
             "tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n",

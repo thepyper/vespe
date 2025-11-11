@@ -8,12 +8,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::content::ModelContent;
 use super::error::ExecuteError;
-use super::execute::{Collector, Worker};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use super::Result;
-use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
+use crate::ast2::JsonPlusEntity;
 
 /// Represents the execution status of an `@inline` tag.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -79,7 +77,7 @@ impl DynamicPolicy for InlinePolicy {
     /// Returns an [`ExecuteError`] if the context name is missing from the arguments
     /// or if the file cannot be read.
     fn mono(
-        mut inputs: DynamicPolicyMonoInput<Self::State>,
+        inputs: DynamicPolicyMonoInput<Self::State>,
         /*
         worker: &Worker,
         collector: Collector,

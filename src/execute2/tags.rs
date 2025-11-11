@@ -21,7 +21,7 @@ use super::tag_repeat::RepeatPolicy;
 use super::tag_set::SetPolicy;
 use super::tag_task::TaskPolicy;
 
-use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
+use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Range, Tag};
 
 /// Defines the behavior for processing a tag or an anchor.
 ///

@@ -5,13 +5,11 @@
 use super::{ExecuteError, Result};
 use serde::{Deserialize, Serialize};
 
-use super::content::ModelContent;
-use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tag_inline::{InlineState, InlineStatus};
 use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 
-use crate::ast2::{Arguments, CommandKind, Parameters};
+use crate::ast2::CommandKind;
 
 /// Represents the current status of an `@repeat` tag's execution.
 ///
@@ -75,7 +73,7 @@ impl DynamicPolicy for RepeatPolicy {
     /// Returns other [`ExecuteError`] variants if state loading/saving fails or
     /// anchor mutation fails.
     fn mono(
-        mut inputs: DynamicPolicyMonoInput<Self::State>,
+        inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         let (mut result, mut residual) =
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);

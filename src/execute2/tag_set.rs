@@ -4,11 +4,9 @@
 //! tags and anchors, providing a way to configure behavior globally or locally.
 use super::Result;
 
-use super::execute::{Collector, Worker};
 use super::tags::{
-    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoInputResidual, StaticPolicyMonoResult,
+    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult,
 };
-use crate::ast2::Tag;
 
 /// Implements the static policy for the `@set` tag.
 ///

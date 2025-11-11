@@ -6,7 +6,7 @@
 //! modification.
 use super::{ExecuteError, Result};
 use crate::ast2::{
-    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters, Position,
+    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters,
     Range, Tag,
 };
 use crate::execute2::content::{ModelContent, ModelContentItem};

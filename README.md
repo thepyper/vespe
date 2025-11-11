@@ -349,10 +349,54 @@ This prompt is sent without the context of the first one.
 
 ### @task / @done
 
-TODO documentali
-- @task si mette ad inizio di un task sequenziale, fatto di steps (un plan numerato ad esempio)
-- @done si mette dopo che uno step e' stato eseguito, l'effetto e' che la ancora task ingloba lo step eseguito, e lo toglie dal context llm
-vedi examples/05-task per esempio di utilizzo
+The `@task` and `@done` tags work together to manage sequential tasks, like following a plan or a list of steps. They allow you to execute a large task one step at a time, ensuring the LLM only focuses on the current action while preserving the history of what's already been completed.
+
+**How it Works:**
+
+1.  **`@task`**: Place this tag at the beginning of your sequential plan. It creates a dynamic anchor that will wrap the completed steps. The content before the `@task` tag acts as the main instruction or goal for the entire sequence.
+2.  **`@done`**: Place this tag immediately after the `@answer` for the step you want to execute.
+
+When `ctx` runs, the `@done` tag does two things:
+*   It signals that the current step is complete.
+*   It moves the completed step (including the prompt and the LLM's answer) *inside* the `@task` anchor.
+
+The effect is that for the next run, the completed step is "hidden" from the LLM's context. The LLM will only see the main instruction and the *next* step in the sequence, preventing confusion and keeping the focus on the current action.
+
+**Usage Example:**
+
+Imagine a file where you are working through a checklist.
+
+**Initial setup (before the first run):**
+```markdown
+I'm going to make coffee by following these steps. I will tell you when I'm done with a step.
+
+@task
+
+1. Open the moka pot.
+@answer { provider: "gemini -y" }
+@done
+
+2. Clean the moka pot.
+
+3. Fill the base with water.
+```
+
+**After the first run, the file becomes:**
+```markdown
+I'm going to make coffee by following these steps. I will tell you when I'm done with a step.
+
+<!-- task-some-uuid:begin -->
+1. Open the moka pot.
+<!-- answer-another-uuid:begin -->
+Okay, the moka pot is open.
+<!-- answer-another-uuid:end -->
+<!-- task-some-uuid:end -->
+
+2. Clean the moka pot.
+
+3. Fill the base with water.
+```
+For the next execution, you would move the `@answer` and `@done` tags to be after step 2. The LLM would be prompted with the main instruction and "2. Clean the moka pot.", but it would not see the context from step 1.
 
 ### @comment
 

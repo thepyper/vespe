@@ -308,7 +308,7 @@ The `@repeat` tag forces the re-execution of the dynamic anchor it is placed wit
 <!-- answer-some-uuid:begin { provider: "gemini -y" } -->
 Initial answer from the model.
 
-@repeat { provider: "gemini -y -m gemini-2.5-flash" }
+@repeat { provider: "ollama run qwen2.5:1.5b" }
 <!-- answer-some-uuid:end -->
 ```
 In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.

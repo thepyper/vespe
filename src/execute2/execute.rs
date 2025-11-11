@@ -6,8 +6,8 @@
 //! modification.
 use super::{ExecuteError, Result};
 use crate::ast2::{
-    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters,
-    Range, Tag,
+    Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters, Range,
+    Tag,
 };
 use crate::execute2::content::{ModelContent, ModelContentItem};
 use crate::execute2::tags::TagBehaviorDispatch;
@@ -92,7 +92,7 @@ pub(crate) struct Collector {
     /// Latest processed range
     latest_range: Range,
     /// Latest task begin anchor
-    latest_task: Option<Anchor>,    
+    latest_task: Option<Anchor>,
 }
 
 impl Collector {
@@ -873,20 +873,12 @@ impl Worker {
                             .ok_or(ExecuteError::EndAnchorNotFound(anchor.uuid))?;
                         let (do_next_pass, new_collector, patches) = if readonly {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
-                                self,
-                                collector,
-                                &document,
-                                anchor,
-                                anchor_end,
+                                self, collector, &document, anchor, anchor_end,
                             )?;
                             (do_next_pass, collector, vec![])
                         } else {
                             TagBehaviorDispatch::execute_anchor(
-                                self,
-                                collector,
-                                &document,
-                                anchor,
-                                anchor_end,
+                                self, collector, &document, anchor, anchor_end,
                             )?
                         };
                         (do_next_pass, new_collector.enter(anchor), patches)
@@ -958,16 +950,16 @@ impl Worker {
 
     pub fn get_range<'a>(document: &'a str, range: &Range) -> Result<&'a str> {
         let start_byte = document
-                .char_indices()
-                .nth(range.begin.offset)
-                .map(|(i, _)| i)
-                .unwrap_or(document.len());
-            let end_byte = document
-                .char_indices()
-                .nth(range.end.offset)
-                .map(|(i, _)| i)
-                .unwrap_or(document.len());
-        Ok(&document[start_byte..end_byte])                
+            .char_indices()
+            .nth(range.begin.offset)
+            .map(|(i, _)| i)
+            .unwrap_or(document.len());
+        let end_byte = document
+            .char_indices()
+            .nth(range.end.offset)
+            .map(|(i, _)| i)
+            .unwrap_or(document.len());
+        Ok(&document[start_byte..end_byte])
     }
 
     /// Constructs the file system path for storing the state of a dynamic command.

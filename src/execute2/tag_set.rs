@@ -4,9 +4,7 @@
 //! tags and anchors, providing a way to configure behavior globally or locally.
 use super::Result;
 
-use super::tags::{
-    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult,
-};
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 
 /// Implements the static policy for the `@set` tag.
 ///

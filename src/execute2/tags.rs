@@ -638,7 +638,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
-            worker.save_state::<P::State>(anchor_begin.command, &anchor_begin.uuid, &new_state, None)?;
+            worker.save_state::<P::State>(
+                anchor_begin.command,
+                &anchor_begin.uuid,
+                &new_state,
+                None,
+            )?;
         }
         // If there is some output, patch into new anchor
         let patches_2 = if let Some(output) = mono_result.new_output {
@@ -715,7 +720,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         };
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
-            worker.save_state::<P::State>(anchor_begin.command, &anchor_begin.uuid, &new_state, None)?;
+            worker.save_state::<P::State>(
+                anchor_begin.command,
+                &anchor_begin.uuid,
+                &new_state,
+                None,
+            )?;
         }
         // Return collector
         Ok((mono_result.do_next_pass, collector))

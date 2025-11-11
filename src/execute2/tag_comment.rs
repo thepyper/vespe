@@ -7,9 +7,7 @@
 
 use super::Result;
 
-use super::tags::{
-    StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult,
-};
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 
 /// Implements the static policy for the `@comment` tag.
 ///

@@ -12,7 +12,7 @@ use super::content::ModelContentItem;
 use super::execute::Worker;
 use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, TagOrAnchor};
 use super::Result;
-use crate::ast2::{Range, Position};
+use crate::ast2::{Position, Range};
 
 /// Represents the execution status of an `@task` tag.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -70,15 +70,16 @@ impl DynamicPolicy for TaskPolicy {
             TaskStatus::Eating => {
                 // Eat a piece of text
                 let (existing_output, eaten_output) = match residual.tag_or_anchor {
-                    TagOrAnchor::Anchor((a0, a1)) => {
-                        (Range {
+                    TagOrAnchor::Anchor((a0, a1)) => (
+                        Range {
                             begin: a0.range.end,
                             end: a1.range.begin,
-                        }, Range {
+                        },
+                        Range {
                             begin: a1.range.end,
                             end: residual.state.eating_end,
-                        })
-                    }
+                        },
+                    ),
                     _ => {
                         panic!("tag!?!?!?");
                     }

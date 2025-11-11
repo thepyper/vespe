@@ -19,6 +19,7 @@ use super::tag_inline::InlinePolicy;
 use super::tag_repeat::RepeatPolicy;
 use super::tag_set::SetPolicy;
 use super::tag_task::TaskPolicy;
+use super::tag_done::DonePolicy;
 
 use crate::ast2::{Anchor, Arguments, CommandKind, Parameters, Position, Range, Tag};
 
@@ -617,6 +618,7 @@ impl TagBehaviorDispatch {
             CommandKind::Forget => Ok(Box::new(StaticTagBehavior(ForgetPolicy))),
             CommandKind::Comment => Ok(Box::new(StaticTagBehavior(CommentPolicy))),
             CommandKind::Task => Ok(Box::new(DynamicTagBehavior(TaskPolicy))),
+            CommandKind::Done => Ok(Box::new(StaticTagBehavior(DonePolicy))),
             _ => Err(ExecuteError::UnsupportedCommand(command)),
         }
     }

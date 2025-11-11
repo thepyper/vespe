@@ -72,6 +72,7 @@ mod tag_inline;
 mod tag_repeat;
 mod tag_set;
 mod tag_task;
+mod tag_done;
 mod tags;
 mod utils;
 

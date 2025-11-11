@@ -22,16 +22,16 @@ impl StaticPolicy for DonePolicy {
                 panic!("!?!?!? cannot be anchor in static tag !?!?!?"); // better error TODO
             }
         };
-        if !residual.readonly {
-            match result.collector.latest_task() {
-                Some(anchor) => {
-                    match anchor.command {
-                        CommandKind::Task => {
-                            let mut task_state = residual
-                                .worker
-                                .load_state::<TaskState>(anchor.command, &anchor.uuid)?;
-                            match task_state.status {
-                                TaskStatus::Waiting => {
+        match result.collector.latest_task() {
+            Some(anchor) => {
+                match anchor.command {
+                    CommandKind::Task => {
+                        let mut task_state = residual
+                            .worker
+                            .load_state::<TaskState>(anchor.command, &anchor.uuid)?;
+                        match task_state.status {
+                            TaskStatus::Waiting => {
+                                if !residual.readonly {
                                     task_state.status = TaskStatus::Eating;
                                     task_state.eating_end = tag.range.begin;
                                     residual.worker.save_state::<TaskState>(
@@ -41,21 +41,21 @@ impl StaticPolicy for DonePolicy {
                                         None,
                                     )?;
                                     result.new_patches = vec![(tag.range, String::new())];
-                                    result.do_next_pass = true;
-                                },
-                                _ => {}
-                            }
-                        }
-                        _ => {
-                            panic!("not a task anchor!=!=!="); // TODO better error
+                                }
+                                result.do_next_pass = true;
+                            },
+                            _ => {}
                         }
                     }
-                }
-                None => {
-                    panic!("no previous task anchor!=!=!="); // TODO better error
+                    _ => {
+                        panic!("not a task anchor!=!=!="); // TODO better error
+                    }
                 }
             }
-        }
+            None => {
+                panic!("no previous task anchor!=!=!="); // TODO better error
+            }
+        }        
         tracing::debug!("tag_done res {:?}", result);
         Ok(result)
     }

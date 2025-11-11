@@ -715,13 +715,11 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // If there is some patches, just discard them and new state as well as it cannot be applied
         if !mono_result.new_patches.is_empty() {
-            tracing::warn!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor_begin, mono_result.new_patches);
-            return Ok((true, collector));
+            panic!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor_begin, mono_result.new_patches);
         }
         // If there is new output, just discard it and new state as well as it cannot be injected
         if let Some(output) = mono_result.new_output {
-            tracing::warn!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor_begin, output);
-            return Ok((true, collector));
+            panic!("Warning, anchor produced some output even on readonly phase.\nAnchor = {:?}\nOutput = {:?}\n", anchor_begin, output);
         };
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {

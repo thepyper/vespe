@@ -105,6 +105,8 @@ pub enum CommandKind {
     Forget,
     /// Allows writing things ignored by LLM
     Comment,
+    /// Used to segment long tasks into steps
+    Task,
 }
 
 impl ToString for CommandKind {
@@ -118,6 +120,7 @@ impl ToString for CommandKind {
             CommandKind::Set => "set",
             CommandKind::Forget => "forget",
             CommandKind::Comment => "comment",
+            CommandKind::Task => "task",
         }
         .to_string()
     }

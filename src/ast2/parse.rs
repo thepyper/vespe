@@ -442,6 +442,7 @@ pub(crate) fn _try_parse_command_kind<'doc>(
         ("set", CommandKind::Set),
         ("forget", CommandKind::Forget),
         ("comment", CommandKind::Comment),
+        ("task", CommandKind::Task),
     ];
 
     for (name, kind) in tags_list {

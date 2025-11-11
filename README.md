@@ -1,4 +1,4 @@
-# vespe: Your Collaborative Mind-Mapping Tool with LLMs
+# vespe: Collaborative Textual Mind-Mapping with LLMs
 
 `vespe` is a powerful command-line interface (CLI) tool designed to facilitate a seamless, collaborative mind-mapping experience between users and Large Language Models (LLMs). It enables you to co-create, refine, and expand your ideas by treating your documents as dynamic, interactive canvases.
 

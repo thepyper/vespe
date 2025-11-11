@@ -27,7 +27,7 @@ To use `vespe`, you'll need to have **Rust** and its package manager, **Cargo**,
 
     Here are a few examples of how you can set this up:
 
-    *   **Google Gemini**: You can use the `gemini` CLI. Make sure it's installed and configured in your system's PATH. The `@answer` provider command would look like `{ provider: "gemini -y" }`.
+    *   **Google Gemini**: You can use the `gemini` CLI. Make sure it's installed and configured in your system's PATH. You can get it from the [gemini-cli repository](https://github.com/google-gemini/gemini-cli). The `@answer` provider command would look like `{ provider: "gemini -y" }`.
     *   **Ollama**: If you run models locally with Ollama, you can use its CLI. The provider command might be `{ provider: "ollama run mistral" }`.
 
     Essentially, any command that can take a prompt from standard input and return a response to standard output will work as a `provider`.

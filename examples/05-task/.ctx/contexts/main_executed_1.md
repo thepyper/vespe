@@ -1,10 +1,17 @@
 Let's pretend to make a coffee, imagine actions and write them out as required (only listed actions, do not skip forward):
 
-@task
+<!-- task-27929309-3fe1-422c-b6dd-6333607de39d:begin {}  -->
+<!-- task-27929309-3fe1-422c-b6dd-6333607de39d:end {}  -->
 
 1. Open moka
 
-@answer { provider: 'gemini -y -m gemini-2.5-flash' }
+<!-- answer-c3d12293-6f9f-4c91-a5ed-742ff42fe72c:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
+Okay, I've noted the first action:
+
+1. Open moka
+
+What's the next step?
+<!-- answer-c3d12293-6f9f-4c91-a5ed-742ff42fe72c:end {}  -->
 @done
 
 2. Clean moka

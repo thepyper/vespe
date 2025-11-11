@@ -352,6 +352,7 @@ This prompt is sent without the context of the first one.
 TODO documentali
 - @task si mette ad inizio di un task sequenziale, fatto di steps (un plan numerato ad esempio)
 - @done si mette dopo che uno step e' stato eseguito, l'effetto e' che la ancora task ingloba lo step eseguito, e lo toglie dal context llm
+vedi examples/05-task per esempio di utilizzo
 
 ### @comment
 

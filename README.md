@@ -173,6 +173,8 @@ What is the best programming language?
 }
 ```
 
+- TODO documenta input, output, input_data, prefix, postfix, postfix_data, prefix_data (raggruppa sensatamente fai qualche esempio)
+
 ### @include
 
 The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
@@ -220,7 +222,7 @@ The `@repeat` tag forces the re-execution of the dynamic anchor it is placed wit
 <!-- answer-some-uuid:begin { provider: "gemini -y" } -->
 Initial answer from the model.
 
-@repeat { provider: "gemini -m gemini-2.5-flash" }
+@repeat { provider: "gemini -y -m gemini-2.5-flash" }
 <!-- answer-some-uuid:end -->
 ```
 In the next run, the `@answer` block will be executed again, with different parameters and re-reading the surrounding context.

@@ -800,12 +800,12 @@ impl Worker {
         readonly: bool,
         data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
-        let context_content = self.file_access.read_file(context_path)?;
-        let context_content = match data {
-            Some(data) => self.process_context_with_data(context_content, data)?,
-            None => context_content,
+        let document = self.file_access.read_file(context_path)?;
+        let document = match data {
+            Some(data) => self.process_context_with_data(document, data)?,
+            None => document,
         };
-        let ast = crate::ast2::parse_document(&context_content)?;
+        let ast = crate::ast2::parse_document(&document)?;
         let anchor_index = super::utils::AnchorIndex::new(&ast.content);
 
         for item in &ast.content {
@@ -830,7 +830,7 @@ impl Worker {
                             TagBehaviorDispatch::collect_tag(self, collector, &integrated_tag)?;
                         (do_next_pass, collector, vec![])
                     } else {
-                        TagBehaviorDispatch::execute_tag(self, collector, &integrated_tag)?
+                        TagBehaviorDispatch::execute_tag(self, collector, &document, &integrated_tag)?
                     }
                 }
                 Content::Anchor(anchor) => match anchor.kind {
@@ -851,6 +851,7 @@ impl Worker {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
                                 self,
                                 collector,
+                                &document,
                                 anchor,
                                 anchor_end.range.begin,
                             )?;
@@ -859,6 +860,7 @@ impl Worker {
                             TagBehaviorDispatch::execute_anchor(
                                 self,
                                 collector,
+                                &document,
                                 anchor,
                                 anchor_end.range.begin,
                             )?
@@ -878,7 +880,7 @@ impl Worker {
                 panic!("Cannot produce patches during collect pass!");
             } else {
                 // Apply patches and trigger new pass
-                let new_content = Self::apply_patches(&context_content, &patches)?;
+                let new_content = Self::apply_patches(&document, &patches)?;
                 self.file_access
                     .write_file(context_path, &new_content, None)?;
                 return Ok((true, collector));

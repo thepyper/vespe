@@ -9,7 +9,7 @@ use serde_json::json;
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
 use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
 
 use handlebars::Handlebars;
@@ -89,6 +89,8 @@ impl DynamicPolicy for AnswerPolicy {
     /// Returns an [`ExecuteError`] if the model call fails or if there are issues
     /// with parameters.
     fn mono(
+        mut inputs: DynamicPolicyMonoInput<Self::State>,
+/*
         worker: &Worker,
         collector: Collector,
         input: &ModelContent,
@@ -96,64 +98,63 @@ impl DynamicPolicy for AnswerPolicy {
         parameters: &Parameters,
         _arguments: &Arguments,
         mut state: Self::State,
-        readonly: bool,
+        readonly: bool, */
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!(
-            "tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\nhash = {}\n",
-            state,
-            readonly,
-            collector.context_hash(),
+            "tag_answer::AnswerPolicy::mono\nState = {:?}\nreadonly = {}\n",
+            inputs.state,
+            inputs.readonly,
         );
-        let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
-        match state.status {
+        let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector.clone());
+        match inputs.state.status {
             AnswerStatus::JustCreated => {
                 // Prepare the query
-                state.status = AnswerStatus::NeedProcessing;
-                state.reply = String::new();
-                result.new_state = Some(state);
+                inputs.state.status = AnswerStatus::NeedProcessing;
+                inputs.state.reply = String::new();
+                result.new_state = Some(inputs.state.clone());
                 result.do_next_pass = true;
             }
             AnswerStatus::NeedProcessing => {
                 // Execute the model query
-                let prompt = worker.prefix_content_from_parameters(input.clone(), parameters)?;
-                let prompt = worker.postfix_content_from_parameters(prompt, parameters)?;
-                let prompt = Self::postfix_content_with_choice(worker, prompt, parameters)?;
-                let response = worker.call_model(parameters, &prompt)?;
-                let response = Self::process_response_with_choice(response, parameters)?;
-                state.reply = response;
-                state.status = AnswerStatus::NeedInjection;
-                state.context_hash = input_hash;
-                result.new_state = Some(state);
+                let prompt = inputs.worker.prefix_content_from_parameters(inputs.input.clone(), inputs.parameters())?;
+                let prompt = inputs.worker.postfix_content_from_parameters(prompt, inputs.parameters())?;
+                let prompt = Self::postfix_content_with_choice(inputs.worker, prompt, inputs.parameters())?;
+                let response = inputs.worker.call_model(inputs.parameters(), &prompt)?;
+                let response = Self::process_response_with_choice(response, inputs.parameters())?;
+                inputs.state.reply = response;
+                inputs.state.status = AnswerStatus::NeedInjection;
+                inputs.state.context_hash = inputs.input_hash;
+                result.new_state = Some(inputs.state.clone());
                 result.do_next_pass = true;
             }
             AnswerStatus::NeedInjection => {
                 // Inject the reply into the document
-                let output = state.reply.clone();
-                state.status = AnswerStatus::Completed;
-                result.new_state = Some(state);
+                let output = inputs.state.reply.clone();
+                inputs.state.status = AnswerStatus::Completed;
+                result.new_state = Some(inputs.state.clone());
                 result.new_output = Some(output);
                 result.do_next_pass = true;
             }
             AnswerStatus::Completed => {
                 // Nothing to do
-                let is_dynamic = parameters
+                let is_dynamic = inputs.parameters()
                     .get("dynamic")
                     .map(|x| x.as_bool().unwrap_or(false))
                     .unwrap_or(false);
                 if !is_dynamic {
                     // Do nothing
-                } else if state.context_hash != input_hash {
+                } else if inputs.state.context_hash != inputs.input_hash {
                     // Repeat
-                    state.status = AnswerStatus::Repeat;
-                    result.new_state = Some(state);
+                    inputs.state.status = AnswerStatus::Repeat;
+                    result.new_state = Some(inputs.state.clone());
                     result.do_next_pass = true;
                 }
             }
             AnswerStatus::Repeat => {
                 // Prepare the query
-                state.status = AnswerStatus::NeedProcessing;
-                state.reply = String::new();
-                result.new_state = Some(state);
+                inputs.state.status = AnswerStatus::NeedProcessing;
+                inputs.state.reply = String::new();
+                result.new_state = Some(inputs.state.clone());
                 result.new_output = Some(String::new());
                 result.do_next_pass = true;
             }

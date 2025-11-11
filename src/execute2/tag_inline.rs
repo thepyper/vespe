@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::content::ModelContent;
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
 use super::Result;
 use crate::ast2::{Arguments, JsonPlusEntity, Parameters};
 
@@ -79,6 +79,8 @@ impl DynamicPolicy for InlinePolicy {
     /// Returns an [`ExecuteError`] if the context name is missing from the arguments
     /// or if the file cannot be read.
     fn mono(
+        mut inputs: DynamicPolicyMonoInput<Self::State>,
+        /*
         worker: &Worker,
         collector: Collector,
         _input: &ModelContent,
@@ -87,24 +89,25 @@ impl DynamicPolicy for InlinePolicy {
         arguments: &Arguments,
         mut state: Self::State,
         _readonly: bool,
+        */
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
-        tracing::debug!("tag_inline::InlinePolicy::mono\nState = {:?}", state,);
-        let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
-        match state.status {
+        tracing::debug!("tag_inline::InlinePolicy::mono\nState = {:?}", inputs.state);
+        let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector.clone()); // TODO better
+        match inputs.state.status {
             InlineStatus::JustCreated => {
-                let context_name = arguments
+                let context_name = inputs.arguments()
                     .arguments
                     .get(0)
                     .ok_or_else(|| ExecuteError::MissingParameter("context_name".to_string()))?
                     .value
                     .clone();
                 // Load content from the specified context
-                state.status = InlineStatus::Completed;
-                result.new_state = Some(state);
-                let context = worker.read_context(&context_name)?;
-                let context = match parameters.get("data") {
+                inputs.state.status = InlineStatus::Completed;
+                result.new_state = Some(inputs.state.clone()); // TODO better
+                let context = inputs.worker.read_context(&context_name)?;
+                let context = match inputs.parameters().get("data") {
                     Some(JsonPlusEntity::Object(data)) => {
-                        worker.process_context_with_data(context, data)?
+                        inputs.worker.process_context_with_data(context, data)?
                     }
                     Some(_) => {
                         return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
@@ -119,8 +122,8 @@ impl DynamicPolicy for InlinePolicy {
             }
             InlineStatus::Repeat => {
                 // Reset state to force a reload in the next pass
-                state.status = InlineStatus::JustCreated;
-                result.new_state = Some(state);
+                inputs.state.status = InlineStatus::JustCreated;
+                result.new_state = Some(inputs.state);
                 result.new_output = Some(String::new());
                 result.do_next_pass = true;
             }

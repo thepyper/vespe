@@ -53,6 +53,7 @@ pub trait TagBehavior {
         &self,
         worker: &Worker,
         collector: Collector,
+        document: &str,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
 
@@ -108,6 +109,7 @@ pub trait TagBehavior {
         &self,
         worker: &Worker,
         collector: Collector,
+        document: &str,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
@@ -137,6 +139,7 @@ pub trait TagBehavior {
         &self,
         worker: &Worker,
         collector: Collector,
+        document: &str,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector)>;
@@ -168,20 +171,21 @@ pub trait StaticPolicy {
     fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector>;
 }
 
-enum TagOrAnchor
+enum TagOrAnchor<'a>
 {
-    Tag(Tag),
-    Anchor(Anchor),
+    Tag(&'a Tag),
+    Anchor(&'a Anchor),
 }
 
 pub struct DynamicPolicyMonoInput<'a, State> {
-    readonly: bool,
-    worker: &'a Worker,
-    collector: Collector,
-    state: State,
-    tag_or_anchor: TagOrAnchor,
-    input: ModelContent,
-    input_hash: String,
+    pub readonly: bool,
+    pub worker: &'a Worker,
+    pub collector: Collector,
+    pub document: &'a str,
+    pub state: State,
+    pub tag_or_anchor: TagOrAnchor<'a>,
+    pub input: ModelContent,
+    pub input_hash: String,
 }
 
 impl<'a, T> DynamicPolicyMonoInput<'a, T> {
@@ -280,14 +284,15 @@ pub trait DynamicPolicy {
     ///
     /// Returns an [`ExecuteError`] if any operation fails during the dynamic policy's execution.
     fn mono(
-        worker: &Worker,
+        inputs: DynamicPolicyMonoInput<Self::State>,
+        /* worker: &Worker,
         collector: Collector,
         input: &ModelContent,
         input_hash: String,
         parameters: &Parameters,
         arguments: &Arguments,
         state: Self::State,
-        readonly: bool,
+        readonly: bool, */
     ) -> Result<DynamicPolicyMonoResult<Self::State>>;
 }
 
@@ -308,6 +313,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         &self,
         _worker: &Worker,
         _collector: Collector,
+        _document: &str,
         _anchor: &Anchor,
         _anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
@@ -325,6 +331,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         &self,
         _worker: &Worker,
         _collector: Collector,
+        _document: &str,
         _anchor: &Anchor,
         _anchor_end: Position,
     ) -> Result<(bool, Collector)> {
@@ -354,6 +361,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         &self,
         worker: &Worker,
         collector: Collector,
+        _document: &str,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let collector = P::collect_static_tag(worker, collector, tag)?;
@@ -423,20 +431,22 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         &self,
         worker: &Worker,
         collector: Collector,
+        document: &str,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state: P::State = P::State::default();
         let (input, input_hash) = worker.redirect_input(&collector, &tag.parameters)?;
-        let mono_result = P::mono(
+        let mono_inputs = DynamicPolicyMonoInput::<P::State> {
+            readonly: false,
             worker,
             collector,
-            &input,
-            input_hash,
-            &tag.parameters,
-            &tag.arguments,
+            document,
             state,
-            false,
-        )?;
+            tag_or_anchor: TagOrAnchor::Tag(tag),
+            input,
+            input_hash,
+        };
+        let mono_result = P::mono(mono_inputs)?;
         // Mutate tag into a new anchor
         let (uuid, patches_2) = worker.tag_to_anchor(
             &mono_result.collector,
@@ -507,6 +517,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         &self,
         worker: &Worker,
         collector: Collector,
+        document: &str,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
@@ -518,16 +529,17 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             }
         };
         let (input, input_hash) = worker.redirect_input(&collector, &anchor.parameters)?;
-        let mono_result = P::mono(
+        let mono_inputs = DynamicPolicyMonoInput::<P::State> {
+            readonly: false,
             worker,
             collector,
-            &input,
-            input_hash,
-            &anchor.parameters,
-            &anchor.arguments,
+            document,
             state,
-            false,
-        )?;
+            tag_or_anchor: TagOrAnchor::Anchor(anchor),
+            input,
+            input_hash,
+        };
+        let mono_result = P::mono(mono_inputs)?;
         let mut collector = mono_result.collector;
         // If output has been redirected, place output redirected placeholder
         if let Some(_) = worker.is_output_redirected(&anchor.parameters)? {
@@ -578,21 +590,23 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         &self,
         worker: &Worker,
         collector: Collector,
+        document: &str,
         anchor: &Anchor,
         _anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor.command, &anchor.uuid)?;
         let (input, input_hash) = worker.redirect_input(&collector, &anchor.parameters)?;
-        let mono_result = P::mono(
+        let mono_inputs = DynamicPolicyMonoInput::<P::State> {
+            readonly: true,
             worker,
             collector,
-            &input,
-            input_hash,
-            &anchor.parameters,
-            &anchor.arguments,
+            document,
             state,
-            true,
-        )?;
+            tag_or_anchor: TagOrAnchor::Anchor(anchor),
+            input,
+            input_hash,
+        };
+        let mono_result = P::mono(mono_inputs)?;
         let mut collector = mono_result.collector;
         // If output has been redirected, place output redirected placeholder
         if let Some(_) = worker.is_output_redirected(&anchor.parameters)? {
@@ -672,10 +686,11 @@ impl TagBehaviorDispatch {
     pub fn execute_tag(
         worker: &Worker,
         collector: Collector,
+        document: &str,
         tag: &Tag,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let behavior = Self::get_behavior(tag.command)?;
-        behavior.execute_tag(worker, collector, tag)
+        behavior.execute_tag(worker, collector, document, tag)
     }
 
     /// Dispatches the `collect_tag` call to the correct [`TagBehavior`] implementation.
@@ -721,11 +736,12 @@ impl TagBehaviorDispatch {
     pub fn execute_anchor(
         worker: &Worker,
         collector: Collector,
+        document: &str,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let behavior = Self::get_behavior(anchor.command)?;
-        behavior.execute_anchor(worker, collector, anchor, anchor_end)
+        behavior.execute_anchor(worker, collector, document, anchor, anchor_end)
     }
 
     /// Dispatches the `collect_anchor` call to the correct [`TagBehavior`] implementation.
@@ -747,10 +763,11 @@ impl TagBehaviorDispatch {
     pub fn collect_anchor(
         worker: &Worker,
         collector: Collector,
+        document: &str,
         anchor: &Anchor,
         anchor_end: Position,
     ) -> Result<(bool, Collector)> {
         let behavior = Self::get_behavior(anchor.command)?;
-        behavior.collect_anchor(worker, collector, anchor, anchor_end)
+        behavior.collect_anchor(worker, collector, document, anchor, anchor_end)
     }
 }

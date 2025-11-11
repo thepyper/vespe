@@ -13,7 +13,7 @@ pub struct DonePolicy;
 
 impl StaticPolicy for DonePolicy {
     // TODO doc
-    fn collect_static_tag(worker: &Worker, collector: Collector, tag: &Tag) -> Result<Collector> {
+    fn collect_static_tag(_worker: &Worker, _collector: Collector, tag: &Tag) -> Result<Collector> {
         tracing::debug!(
             "tag_done::DonePolicy::collect_static_tag\nTag = {:?}\n",
             tag

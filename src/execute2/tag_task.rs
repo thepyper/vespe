@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
 use super::Result;
 use crate::ast2::{Arguments, JsonPlusEntity, Parameters, Range};
 
@@ -49,22 +49,15 @@ impl DynamicPolicy for TaskPolicy {
     ///
     // TODO doc
     fn mono(
-        worker: &Worker,
-        collector: Collector,
-        _input: &ModelContent,
-        _input_hash: String,
-        _parameters: &Parameters,
-        _arguments: &Arguments,
-        mut state: Self::State,
-        _readonly: bool,
+        mut inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
-        tracing::debug!("tag_task::TaskPolicy::mono\nState = {:?}", state,);
-        let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
-        match state.status {
+        tracing::debug!("tag_task::TaskPolicy::mono\nState = {:?}", inputs.state);
+        let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector);
+        match inputs.state.status {
             TaskStatus::JustCreated => {
                 // Load content from the specified context
-                state.status = TaskStatus::Waiting;
-                result.new_state = Some(state);
+                inputs.state.status = TaskStatus::Waiting;
+                result.new_state = Some(inputs.state);
                 result.new_output = Some(String::new());
                 result.do_next_pass = true;
             }

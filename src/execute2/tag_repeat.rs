@@ -9,7 +9,7 @@ use super::content::ModelContent;
 use super::execute::{Collector, Worker};
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tag_inline::{InlineState, InlineStatus};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoResult};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoResult, DynamicPolicyMonoInput};
 
 use crate::ast2::{Arguments, CommandKind, Parameters};
 
@@ -75,32 +75,25 @@ impl DynamicPolicy for RepeatPolicy {
     /// Returns other [`ExecuteError`] variants if state loading/saving fails or
     /// anchor mutation fails.
     fn mono(
-        worker: &Worker,
-        collector: Collector,
-        _input: &ModelContent,
-        _input_hash: String,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        mut state: Self::State,
-        readonly: bool,
+        mut inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!(
             "tag_repeat::RepeatPolicy::mono\nState = {:?}\nreadonly = {}\n",
-            state,
-            readonly
+            inputs.state,
+            inputs.readonly
         );
-        let mut result = DynamicPolicyMonoResult::<Self::State>::new(collector);
-        match state.status {
+        let mut result = DynamicPolicyMonoResult::<Self::State>::new(inputs.collector.clone()); // TODO better?
+        match inputs.state.status {
             RepeatStatus::JustCreated => {
                 // Find anchor to repeat if any
                 match result.collector.anchor_stack().last() {
                     Some(anchor) => {
                         let is_anchor_repeatable = match anchor.command {
                             CommandKind::Answer => {
-                                let mut answer_state = worker
+                                let mut answer_state = inputs.worker
                                     .load_state::<AnswerState>(anchor.command, &anchor.uuid)?;
                                 answer_state.status = AnswerStatus::Repeat;
-                                worker.save_state::<AnswerState>(
+                                inputs.worker.save_state::<AnswerState>(
                                     anchor.command,
                                     &anchor.uuid,
                                     &answer_state,
@@ -109,10 +102,10 @@ impl DynamicPolicy for RepeatPolicy {
                                 true
                             }
                             CommandKind::Inline => {
-                                let mut inline_state = worker
+                                let mut inline_state = inputs.worker
                                     .load_state::<InlineState>(anchor.command, &anchor.uuid)?;
                                 inline_state.status = InlineStatus::Repeat;
-                                worker.save_state::<InlineState>(
+                                inputs.worker.save_state::<InlineState>(
                                     anchor.command,
                                     &anchor.uuid,
                                     &inline_state,
@@ -124,10 +117,10 @@ impl DynamicPolicy for RepeatPolicy {
                         };
                         if is_anchor_repeatable {
                             // Mutate anchor parameters
-                            let mutated_anchor = anchor.update(parameters, arguments);
+                            let mutated_anchor = anchor.update(inputs.parameters(), inputs.arguments());
                             result
                                 .new_patches
-                                .extend(worker.mutate_anchor(&mutated_anchor)?);
+                                .extend(inputs.worker.mutate_anchor(&mutated_anchor)?);
                         }
                     }
                     None => {
@@ -137,8 +130,8 @@ impl DynamicPolicy for RepeatPolicy {
                     }
                 };
                 // Prepare the query
-                state.status = RepeatStatus::Completed;
-                result.new_state = Some(state);
+                inputs.state.status = RepeatStatus::Completed;
+                result.new_state = Some(inputs.state);
                 result.do_next_pass = true;
             }
             RepeatStatus::Completed => {

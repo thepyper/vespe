@@ -175,7 +175,7 @@ Now, do something specific.
 @answer { provider: "gemini -y" }
 ```
 
-You can also pass data to the included file, which can be used for templating with Handlebars syntax.
+You can also pass data to the included file, which can be used for templating with [Handlebars](https://handlebarsjs.com/) syntax.
 
 **`data-example.md`:**
 ```markdown
@@ -483,7 +483,7 @@ For the next execution, you would move the `@answer` and `@done` tags to be afte
 
 ## Templating with Handlebars
 
-All contexts in `vespe` are processed as Handlebars templates. This means you can use Handlebars syntax to create dynamic and reusable content within your Markdown files, and inject values with the `data`, `input_data`, `prefix_data`, `postfix_data` parameters.
+All contexts in `vespe` are processed as [Handlebars](https://handlebarsjs.com/) templates. This means you can use Handlebars syntax to create dynamic and reusable content within your Markdown files, and inject values with the `data`, `input_data`, `prefix_data`, `postfix_data` parameters.
 
 ### Special Variables
 

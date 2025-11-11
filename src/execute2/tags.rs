@@ -243,21 +243,6 @@ pub struct DynamicPolicyMonoInput<'a, State> {
     pub input_hash: String,
 }
 
-impl<'a, T> DynamicPolicyMonoInput<'a, T> {
-    pub fn parameters(&self) -> &Parameters {
-        match &self.tag_or_anchor {
-            TagOrAnchor::Tag(tag) => &tag.parameters,
-            TagOrAnchor::Anchor((anchor, _)) => &anchor.parameters,
-        }
-    }
-    pub fn arguments(&self) -> &Arguments {
-        match &self.tag_or_anchor {
-            TagOrAnchor::Tag(tag) => &tag.arguments,
-            TagOrAnchor::Anchor((anchor, _)) => &anchor.arguments,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct DynamicPolicyMonoInputResidual<'a, State> {
     pub readonly: bool,

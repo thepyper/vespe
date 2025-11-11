@@ -1,17 +1,13 @@
 Let's pretend to make a coffee, imagine actions and write them out as required (only listed actions, do not skip forward):
 
-<!-- task-27929309-3fe1-422c-b6dd-6333607de39d:begin {}  -->
+<!-- task-480aa79b-a377-41f3-8ed3-a6e0d0cd7855:begin {}  -->
+<!-- task-480aa79b-a377-41f3-8ed3-a6e0d0cd7855:end {}  -->
 
 1. Open moka
 
-<!-- answer-c3d12293-6f9f-4c91-a5ed-742ff42fe72c:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
-Okay, I've noted the first action:
-
-1. Open moka
-
-What's the next step?
-<!-- answer-c3d12293-6f9f-4c91-a5ed-742ff42fe72c:end {}  -->
-<!-- task-27929309-3fe1-422c-b6dd-6333607de39d:end {}  -->
+<!-- answer-5cf510bd-5ef0-4713-91d5-1764fb39cbe8:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
+Okay, moka is open. What's next?
+<!-- answer-5cf510bd-5ef0-4713-91d5-1764fb39cbe8:end {}  -->
 
 2. Clean moka
 

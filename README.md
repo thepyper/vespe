@@ -483,15 +483,15 @@ For the next execution, you would move the `@answer` and `@done` tags to be afte
 
 ## Templating with Handlebars
 
-All contexts in `vespe` are processed as Handlebars templates. This means you can use Handlebars syntax to create dynamic and reusable content within your Markdown files.
+All contexts in `vespe` are processed as Handlebars templates. This means you can use Handlebars syntax to create dynamic and reusable content within your Markdown files, and inject values with the `data`, `input_data`, `prefix_data`, `postfix_data` parameters.
 
 ### Special Variables
 
 `vespe` provides several special variables that can be used within your Handlebars templates:
 
-*   `{{_}}`: Represents the first positional command-line argument passed to `vespe context run`. For example, if you run `vespe context run my-context arg1 arg2`, `{{_}}` will be `arg1`.
-*   `{{__}}`: Represents all positional command-line arguments as a space-separated string. Using the previous example, `{{__}}` would be `arg1 arg2`.
-*   `{{___}}`: Represents the input received from `stdin`. If you pipe content to `vespe context run`, this variable will hold that content.
+*   `{{$1}}`, `{{$2}}`, ... `{{$n}}`: Represents the first positional command-line argument passed to `vespe context run`. For example, if you run `vespe context run my-context arg1 arg2`, `{{$1}}` will be `arg1`.
+*   `{{$args}}`: Represents all positional command-line arguments as a space-separated string. Using the previous example, `{{$args}}` would be `arg1 arg2`.
+*   `{{$input}}`: Represents the input received from `stdin`. If you pipe content to `vespe context run`, this variable will hold that content.
 
 ## CLI Usage
 

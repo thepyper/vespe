@@ -497,6 +497,24 @@ All contexts in `vespe` are processed as [Handlebars](https://handlebarsjs.com/)
 *   `{{$args}}`: Represents all positional command-line arguments as a space-separated string. Using the previous example, `{{$args}}` would be `arg1 arg2`.
 *   `{{$input}}`: Represents the input received from `stdin`. If you pipe content to `vespe context run`, this variable will hold that content.
 
+## Piping Data into Contexts
+
+You can pipe data directly into a context:
+```shell
+cat logs/error.log | ctx context run analyze-errors
+```
+
+**analyze-errors.md:**
+```markdown
+Analyze these error logs and suggest fixes:
+
+{{$input}}
+
+@answer { provider: "gemini -y" }
+```
+
+This is powerful for processing command output, log files, or any text data.
+
 ## CLI Usage
 
 `vespe` provides a simple yet powerful command-line interface to manage your projects and contexts.

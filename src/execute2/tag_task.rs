@@ -11,9 +11,9 @@ use serde::{Deserialize, Serialize};
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::{Collector, Worker};
-use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, TagOrAnchor};
 use super::Result;
-use crate::ast2::{Arguments, JsonPlusEntity, Parameters, Range};
+use crate::ast2::{Arguments, JsonPlusEntity, Parameters, Range, Position};
 
 /// Represents the execution status of an `@task` tag.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -32,8 +32,8 @@ pub enum TaskStatus {
 pub struct TaskState {
     /// The current status of the `@task` anchor.
     pub status: TaskStatus,
-    /// The range to reach in next Eating step
-    pub eating_range: Range,
+    /// The ending position to reach in next Eating step
+    pub eating_end: Position,
 }
 
 /// Implements the dynamic policy for the `@task` tag.
@@ -70,7 +70,27 @@ impl DynamicPolicy for TaskPolicy {
             }
             TaskStatus::Eating => {
                 // Eat a piece of text
-                // TODO
+                let (existing_output, eaten_output) = match residual.tag_or_anchor {
+                    TagOrAnchor::Anchor((a0, a1)) => {
+                        (Range {
+                            begin: a0.range.end,
+                            end: a1.range.begin,
+                        }, Range {
+                            begin: a1.range.end,
+                            end: residual.state.eating_end,
+                        })
+                    }
+                    _ => {
+                        panic!("tag!?!?!?");
+                    }
+                };
+                result.new_patches = vec![(eaten_output, String::new())];
+                let existing_output = Worker::get_range(residual.document, &existing_output)?;
+                let eaten_output = Worker::get_range(residual.document, &eaten_output)?;
+                result.new_output = Some(format!("{}{}", existing_output, eaten_output));
+                result.do_next_pass = true;
+                residual.state.status = TaskStatus::Waiting;
+                result.new_state = Some(residual.state);
             }
         }
         Ok(result)

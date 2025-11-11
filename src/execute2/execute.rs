@@ -906,7 +906,7 @@ impl Worker {
     ///
     /// # Arguments
     ///
-    /// * `context_content` - The original string content to which patches will be applied.
+    /// * `document` - The original string content to which patches will be applied.
     /// * `patches` - A vector of tuples, where each tuple contains a [`Range`] and the
     ///               `String` to replace the content within that range.
     ///
@@ -919,22 +919,36 @@ impl Worker {
     /// This function does not directly return errors, but panics if byte offsets
     /// derived from character offsets are out of bounds, which should not happen
     /// with valid `Range` objects.
-    fn apply_patches(context_content: &str, patches: &Vec<(Range, String)>) -> Result<String> {
-        let mut result = context_content.to_string();
+    fn apply_patches(document: &str, patches: &Vec<(Range, String)>) -> Result<String> {
+        let mut result = document.to_string();
         for (range, replace) in patches.iter().rev() {
-            let start_byte = context_content
+            let start_byte = document
                 .char_indices()
                 .nth(range.begin.offset)
                 .map(|(i, _)| i)
-                .unwrap_or(context_content.len());
-            let end_byte = context_content
+                .unwrap_or(document.len());
+            let end_byte = document
                 .char_indices()
                 .nth(range.end.offset)
                 .map(|(i, _)| i)
-                .unwrap_or(context_content.len());
+                .unwrap_or(document.len());
             result.replace_range(start_byte..end_byte, replace);
         }
         Ok(result)
+    }
+
+    pub fn get_range<'a>(document: &'a str, range: &Range) -> Result<&'a str> {
+        let start_byte = document
+                .char_indices()
+                .nth(range.begin.offset)
+                .map(|(i, _)| i)
+                .unwrap_or(document.len());
+            let end_byte = document
+                .char_indices()
+                .nth(range.end.offset)
+                .map(|(i, _)| i)
+                .unwrap_or(document.len());
+        Ok(&document[start_byte..end_byte])                
     }
 
     /// Constructs the file system path for storing the state of a dynamic command.

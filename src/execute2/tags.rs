@@ -146,7 +146,7 @@ pub trait TagBehavior {
 }
 
 #[derive(Clone)]
-enum TagOrAnchor<'a> {
+pub enum TagOrAnchor<'a> {
     Tag(&'a Tag),
     Anchor((&'a Anchor, &'a Anchor)),
 }

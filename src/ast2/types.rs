@@ -40,6 +40,12 @@ impl Ord for Position {
     }
 }
 
+impl Default for Position {
+    fn default() -> Self {
+        Position::null()
+    }
+}
+
 /// Represents a span of text in the source document, from a `begin` to an `end`
 /// `Position`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]

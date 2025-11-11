@@ -285,7 +285,9 @@ pub struct DynamicPolicyMonoResult<State> {
 }
 
 impl<'a, T> DynamicPolicyMonoResult<T> {
-    pub fn from_inputs(inputs: DynamicPolicyMonoInput<'a, T>) -> (Self, DynamicPolicyMonoInputResidual<'a, T>) {
+    pub fn from_inputs(
+        inputs: DynamicPolicyMonoInput<'a, T>,
+    ) -> (Self, DynamicPolicyMonoInputResidual<'a, T>) {
         let tag_or_anchor = inputs.tag_or_anchor.clone();
         let parameters = match &tag_or_anchor {
             TagOrAnchor::Tag(tag) => &tag.parameters,
@@ -314,7 +316,7 @@ impl<'a, T> DynamicPolicyMonoResult<T> {
             new_patches: vec![],
         };
         (result, residual)
-    }    
+    }
 }
 
 /// Trait for defining the behavior of dynamic tags.

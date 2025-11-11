@@ -77,7 +77,8 @@ impl DynamicPolicy for RepeatPolicy {
     fn mono(
         mut inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
-        let (mut result, mut residual) = DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+        let (mut result, mut residual) =
+            DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
         match residual.state.status {
             RepeatStatus::JustCreated => {
                 // Find anchor to repeat if any

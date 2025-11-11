@@ -92,7 +92,8 @@ impl DynamicPolicy for InlinePolicy {
         */
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!("tag_inline::InlinePolicy::mono\nState = {:?}", inputs.state);
-        let (mut result, mut residual) = DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+        let (mut result, mut residual) =
+            DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
         match residual.state.status {
             InlineStatus::JustCreated => {
                 let context_name = residual
@@ -104,7 +105,7 @@ impl DynamicPolicy for InlinePolicy {
                     .clone();
                 // Load content from the specified context
                 residual.state.status = InlineStatus::Completed;
-                result.new_state = Some(residual.state);  
+                result.new_state = Some(residual.state);
                 let context = residual.worker.read_context(&context_name)?;
                 let context = match residual.parameters.get("data") {
                     Some(JsonPlusEntity::Object(data)) => {

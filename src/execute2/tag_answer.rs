@@ -105,7 +105,8 @@ impl DynamicPolicy for AnswerPolicy {
             inputs.state,
             inputs.readonly,
         );
-        let (mut result, mut residual) = DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+        let (mut result, mut residual) =
+            DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
         match residual.state.status {
             AnswerStatus::JustCreated => {
                 // Prepare the query
@@ -122,8 +123,11 @@ impl DynamicPolicy for AnswerPolicy {
                 let prompt = residual
                     .worker
                     .postfix_content_from_parameters(prompt, residual.parameters)?;
-                let prompt =
-                    Self::postfix_content_with_choice(residual.worker, prompt, residual.parameters)?;
+                let prompt = Self::postfix_content_with_choice(
+                    residual.worker,
+                    prompt,
+                    residual.parameters,
+                )?;
                 let response = residual.worker.call_model(residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.reply = response;

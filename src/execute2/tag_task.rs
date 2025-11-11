@@ -52,7 +52,8 @@ impl DynamicPolicy for TaskPolicy {
         mut inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!("tag_task::TaskPolicy::mono\nState = {:?}", inputs.state);
-        let (mut result, mut residual) = DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+        let (mut result, mut residual) =
+            DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
         match residual.state.status {
             TaskStatus::JustCreated => {
                 // Load content from the specified context

@@ -168,6 +168,7 @@ pub struct StaticPolicyMonoInputResidual<'a> {
     pub arguments: &'a Arguments,
 }
 
+#[derive(Debug)]
 pub struct StaticPolicyMonoResult {
     /// Indicates if another execution pass is required after this step.
     pub do_next_pass: bool,
@@ -487,7 +488,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
             tag_or_anchor: TagOrAnchor::Tag(tag),
         };
         let mono_result = P::mono(mono_inputs)?;
-        Ok((false, mono_result.collector))
+        Ok((mono_result.do_next_pass, mono_result.collector))
     }
 }
 

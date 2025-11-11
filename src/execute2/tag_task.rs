@@ -91,6 +91,7 @@ impl DynamicPolicy for TaskPolicy {
                 result.do_next_pass = true;
                 residual.state.status = TaskStatus::Waiting;
                 result.new_state = Some(residual.state);
+                result.do_next_pass = true;
             }
         }
         Ok(result)

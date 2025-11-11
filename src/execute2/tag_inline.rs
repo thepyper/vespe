@@ -39,7 +39,6 @@ pub struct InlineState {
 ///
 /// This policy defines how an `@inline` tag and its corresponding anchor behave
 /// during the execution process, managing state transitions to allow for dynamic
-
 /// content loading and refreshing.
 pub struct InlinePolicy;
 
@@ -59,13 +58,7 @@ impl DynamicPolicy for InlinePolicy {
     ///
     /// # Arguments
     ///
-    /// * `worker` - A reference to the [`Worker`] instance.
-    /// * `collector` - The current [`Collector`] state.
-    /// * `_input` - The [`ModelContent`] collected so far (unused in this policy).
-    /// * `_parameters` - The [`Parameters`] associated with the tag (unused).
-    /// * `arguments` - The [`Arguments`] containing the path to the context file to inline.
-    /// * `state` - The current [`InlineState`] of the anchor.
-    /// * `_readonly` - A boolean indicating if the current pass is read-only (unused).
+    /// * `inputs` - A `DynamicPolicyMonoInput` struct containing all necessary data.
     ///
     /// # Returns
     ///
@@ -78,16 +71,6 @@ impl DynamicPolicy for InlinePolicy {
     /// or if the file cannot be read.
     fn mono(
         inputs: DynamicPolicyMonoInput<Self::State>,
-        /*
-        worker: &Worker,
-        collector: Collector,
-        _input: &ModelContent,
-        _input_hash: String,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        mut state: Self::State,
-        _readonly: bool,
-        */
     ) -> Result<DynamicPolicyMonoResult<Self::State>> {
         tracing::debug!("tag_inline::InlinePolicy::mono\nState = {:?}", inputs.state);
         let (mut result, mut residual) =

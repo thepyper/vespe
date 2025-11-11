@@ -54,13 +54,7 @@ impl DynamicPolicy for RepeatPolicy {
     ///
     /// # Arguments
     ///
-    /// * `worker` - A reference to the [`Worker`] instance.
-    /// * `collector` - The current [`Collector`] state.
-    /// * `input` - The [`ModelContent`] collected so far (unused in this policy).
-    /// * `parameters` - The [`Parameters`] associated with the `@repeat` tag.
-    /// * `arguments` - The [`Arguments`] associated with the `@repeat` tag.
-    /// * `state` - The current [`RepeatState`] of the tag.
-    /// * `readonly` - A boolean indicating if the current pass is read-only.
+    /// * `inputs` - A `DynamicPolicyMonoInput` struct containing all necessary data.
     ///
     /// # Returns
     ///

@@ -145,29 +145,55 @@ pub trait TagBehavior {
     ) -> Result<(bool, Collector)>;
 }
 
+/// An enum that represents either a `Tag` or a pair of `Anchor`s.
+///
+/// This is used to provide a unified input to the `mono` methods of `StaticPolicy`
+/// and `DynamicPolicy`, allowing them to operate on both tags and anchors.
 #[derive(Clone, Debug)]
 pub enum TagOrAnchor<'a> {
+    /// A single tag.
     Tag(&'a Tag),
+    /// A pair of begin and end anchors.
     Anchor((&'a Anchor, &'a Anchor)),
 }
 
+/// Input for the `mono` method of a `StaticPolicy`.
+///
+/// This struct encapsulates all the necessary information for a static policy to
+/// execute its behavior.
 #[derive(Debug)]
 pub struct StaticPolicyMonoInput<'a> {
+    /// A boolean indicating if the current pass is read-only.
     pub readonly: bool,
+    /// A reference to the `Worker` instance.
     pub worker: &'a Worker,
+    /// The current `Collector` state.
     pub collector: Collector,
+    /// The `Tag` or `Anchor` being processed.
     pub tag_or_anchor: TagOrAnchor<'a>,
 }
 
+/// Residual input for the `mono` method of a `StaticPolicy`.
+///
+/// This struct holds the data from `StaticPolicyMonoInput` that is not consumed
+/// by the `from_inputs` method of `StaticPolicyMonoResult`.
 #[derive(Debug)]
 pub struct StaticPolicyMonoInputResidual<'a> {
+    /// A boolean indicating if the current pass is read-only.
     pub readonly: bool,
+    /// A reference to the `Worker` instance.
     pub worker: &'a Worker,
+    /// The `Tag` or `Anchor` being processed.
     pub tag_or_anchor: TagOrAnchor<'a>,
+    /// The parameters of the tag or anchor.
     pub parameters: &'a Parameters,
+    /// The arguments of the tag or anchor.
     pub arguments: &'a Arguments,
 }
 
+/// The result of a single execution step for a static policy.
+///
+/// This struct encapsulates all possible outcomes of a `mono` call for a static tag.
 #[derive(Debug)]
 pub struct StaticPolicyMonoResult {
     /// Indicates if another execution pass is required after this step.
@@ -179,6 +205,8 @@ pub struct StaticPolicyMonoResult {
 }
 
 impl StaticPolicyMonoResult {
+    /// Creates a new `StaticPolicyMonoResult` and a `StaticPolicyMonoInputResidual`
+    /// from a `StaticPolicyMonoInput`.
     pub fn from_inputs(inputs: StaticPolicyMonoInput) -> (Self, StaticPolicyMonoInputResidual) {
         let tag_or_anchor = inputs.tag_or_anchor.clone();
         let parameters = match &tag_or_anchor {
@@ -210,49 +238,73 @@ impl StaticPolicyMonoResult {
 /// Static tags are processed in a single pass and do not involve complex state
 /// management or file modifications. They primarily affect the `Collector`'s state.
 pub trait StaticPolicy {
-    /// Collects the content and updates the collector for a static tag.
+    /// Executes a single step of the static policy's behavior.
     ///
-    /// This method is responsible for the core logic of a static tag, such as
-    /// including content from another file or setting default parameters.
+    /// This method is the core logic for static tags, handling their behavior
+    /// in a single, monolithic step.
     ///
     /// # Arguments
     ///
-    /// * `worker` - A reference to the [`Worker`] instance.
-    /// * `collector` - The current [`Collector`] state.
-    /// * `tag` - The [`Tag`] being processed.
+    /// * `inputs` - A `StaticPolicyMonoInput` struct containing all necessary data.
     ///
     /// # Returns
     ///
-    /// A `Result` containing the updated [`Collector`] state.
+    /// A `Result` containing a `StaticPolicyMonoResult` which describes the outcome
+    /// of this execution step.
     ///
     /// # Errors
     ///
-    /// Returns an [`ExecuteError`] if any operation fails during tag processing.
+    /// Returns an [`ExecuteError`] if any operation fails during the static policy's execution.
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult>;
 }
 
+/// Input for the `mono` method of a `DynamicPolicy`.
+///
+/// This struct encapsulates all the necessary information for a dynamic policy to
+/// execute its behavior.
 #[derive(Debug)]
 pub struct DynamicPolicyMonoInput<'a, State> {
+    /// A boolean indicating if the current pass is read-only.
     pub readonly: bool,
+    /// A reference to the `Worker` instance.
     pub worker: &'a Worker,
+    /// The current `Collector` state.
     pub collector: Collector,
+    /// The document content as a string.
     pub document: &'a str,
+    /// The current state of the dynamic tag.
     pub state: State,
+    /// The `Tag` or `Anchor` being processed.
     pub tag_or_anchor: TagOrAnchor<'a>,
+    /// The `ModelContent` collected so far, serving as input to the dynamic tag.
     pub input: ModelContent,
+    /// The SHA256 hash of the `input` content.
     pub input_hash: String,
 }
 
+/// Residual input for the `mono` method of a `DynamicPolicy`.
+///
+/// This struct holds the data from `DynamicPolicyMonoInput` that is not consumed
+/// by the `from_inputs` method of `DynamicPolicyMonoResult`.
 #[derive(Debug)]
 pub struct DynamicPolicyMonoInputResidual<'a, State> {
+    /// A boolean indicating if the current pass is read-only.
     pub readonly: bool,
+    /// A reference to the `Worker` instance.
     pub worker: &'a Worker,
+    /// The document content as a string.
     pub document: &'a str,
+    /// The current state of the dynamic tag.
     pub state: State,
+    /// The `Tag` or `Anchor` being processed.
     pub tag_or_anchor: TagOrAnchor<'a>,
+    /// The parameters of the tag or anchor.
     pub parameters: &'a Parameters,
+    /// The arguments of the tag or anchor.
     pub arguments: &'a Arguments,
+    /// The `ModelContent` collected so far, serving as input to the dynamic tag.
     pub input: ModelContent,
+    /// The SHA256 hash of the `input` content.
     pub input_hash: String,
 }
 
@@ -275,6 +327,8 @@ pub struct DynamicPolicyMonoResult<State> {
 }
 
 impl<'a, T> DynamicPolicyMonoResult<T> {
+    /// Creates a new `DynamicPolicyMonoResult` and a `DynamicPolicyMonoInputResidual`
+    /// from a `DynamicPolicyMonoInput`.
     pub fn from_inputs(
         inputs: DynamicPolicyMonoInput<'a, T>,
     ) -> (Self, DynamicPolicyMonoInputResidual<'a, T>) {
@@ -329,15 +383,7 @@ pub trait DynamicPolicy {
     ///
     /// # Arguments
     ///
-    /// * `worker` - A reference to the [`Worker`] instance.
-    /// * `collector` - The current [`Collector`] state.
-    /// * `input` - The [`ModelContent`] collected so far, serving as input to the dynamic tag.
-    /// * `input_hash` - The SHA256 hash of the `input` content. This is used to detect
-    ///                  changes in the input that might require re-execution.
-    /// * `parameters` - The [`Parameters`] associated with the tag or anchor.
-    /// * `arguments` - The [`Arguments`] associated with the tag or anchor.
-    /// * `state` - The current state of the dynamic tag.
-    /// * `readonly` - A boolean indicating if the current pass is read-only.
+    /// * `inputs` - A `DynamicPolicyMonoInput` struct containing all necessary data.
     ///
     /// # Returns
     ///
@@ -349,14 +395,6 @@ pub trait DynamicPolicy {
     /// Returns an [`ExecuteError`] if any operation fails during the dynamic policy's execution.
     fn mono(
         inputs: DynamicPolicyMonoInput<Self::State>,
-        /* worker: &Worker,
-        collector: Collector,
-        input: &ModelContent,
-        input_hash: String,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        state: Self::State,
-        readonly: bool, */
     ) -> Result<DynamicPolicyMonoResult<Self::State>>;
 }
 
@@ -402,11 +440,9 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         panic!("StaticTag does not support collect_anchor");
     }
 
-    /// Executes a static tag, updating the collector.
+    /// Executes a static tag by delegating to the underlying `StaticPolicy`.
     ///
-    /// This method delegates to the underlying [`StaticPolicy::collect_static_tag`] and
-    /// returns `(false, collector, vec![])` as static tags do not trigger new passes
-    /// or produce patches in this context.
+    /// This method calls the `mono` method of the `StaticPolicy` and returns its result.
     ///
     /// # Arguments
     ///
@@ -416,7 +452,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
     ///
     /// # Returns
     ///
-    /// A `Result` containing `(false, updated_collector, [])`.
+    /// A `Result` containing `(do_next_pass, updated_collector, new_patches)`.
     ///
     /// # Errors
     ///
@@ -442,10 +478,9 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         ))
     }
 
-    /// Collects a static tag, updating the collector.
+    /// Collects a static tag by delegating to the underlying `StaticPolicy`.
     ///
-    /// This method delegates to the underlying [`StaticPolicy::collect_static_tag`] and
-    /// returns `(false, collector)` as static tags do not trigger new passes.
+    /// This method calls the `mono` method of the `StaticPolicy` in `readonly` mode.
     ///
     /// # Arguments
     ///
@@ -455,7 +490,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
     ///
     /// # Returns
     ///
-    /// A `Result` containing `(false, updated_collector)`.
+    /// A `Result` containing `(do_next_pass, updated_collector)`.
     ///
     /// # Errors
     ///

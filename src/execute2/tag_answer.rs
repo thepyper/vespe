@@ -66,18 +66,13 @@ impl DynamicPolicy for AnswerPolicy {
     ///   to `NeedInjection`, and triggers a new pass.
     /// - `NeedInjection`: Prepares the model's reply for injection into the document,
     ///   transitions to `Completed`, and triggers a new pass.
-    /// - `Completed`: No action, the tag is resolved.
+    /// - `Completed`: No action, the tag is resolved. If the `dynamic` parameter is set to `true`,
+    ///   it will check if the input context has changed and if so, it will transition to `Repeat`.
     /// - `Repeat`: Resets the state to `NeedProcessing` and triggers a new pass to re-execute.
     ///
     /// # Arguments
     ///
-    /// * `worker` - A reference to the [`Worker`] instance.
-    /// * `collector` - The current [`Collector`] state.
-    /// * `input` - The [`ModelContent`] collected so far, serving as input to the model.
-    /// * `parameters` - The [`Parameters`] associated with the `@answer` tag.
-    /// * `arguments` - The [`Arguments`] associated with the `@answer` tag.
-    /// * `state` - The current [`AnswerState`] of the tag.
-    /// * `readonly` - A boolean indicating if the current pass is read-only.
+    /// * `inputs` - A `DynamicPolicyMonoInput` struct containing all necessary data.
     ///
     /// # Returns
     ///

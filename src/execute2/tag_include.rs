@@ -23,13 +23,11 @@ impl StaticPolicy for IncludePolicy {
     ///
     /// # Arguments
     ///
-    /// * `worker` - A reference to the [`Worker`] instance, used to execute the included context.
-    /// * `collector` - The current [`Collector`] state.
-    /// * `tag` - The [`Tag`] being processed, which contains the name of the context to include.
+    /// * `inputs` - A `StaticPolicyMonoInput` struct containing all necessary data.
     ///
     /// # Returns
     ///
-    /// A `Result` containing the updated [`Collector`] with the included content.
+    /// A `Result` containing a `StaticPolicyMonoResult` with the updated collector.
     ///
     /// # Errors
     ///
@@ -37,8 +35,6 @@ impl StaticPolicy for IncludePolicy {
     /// in the tag arguments.
     /// Returns [`ExecuteError::Generic`] if the included context execution returns no collector.
     /// Returns other [`ExecuteError`] variants if the included context cannot be found or executed.
-    ///
-    /// # Examples
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
         let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
         let included_context_name = residual

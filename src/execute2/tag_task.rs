@@ -154,10 +154,12 @@ impl DynamicPolicy for TaskPolicy {
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
         match residual.state.status {
             TaskStatus::JustCreated => {
-                // Load content from the specified context
-                residual.state.status = TaskStatus::Waiting;
-                result.new_state = Some(residual.state);
-                result.new_output = Some(String::new());
+                if !residual.readonly {
+                    // Load content from the specified context
+                    residual.state.status = TaskStatus::Waiting;
+                    result.new_state = Some(residual.state);
+                    result.new_output = Some(String::new());
+                }
                 result.do_next_pass = true;
             }
             TaskStatus::Waiting => {

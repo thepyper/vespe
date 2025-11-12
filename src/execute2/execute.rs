@@ -480,7 +480,11 @@ impl Worker {
             }
             Some(descent_collector) => {
                 for i in 1..=max_rewrite_steps {
-                    tracing::debug!("execute::Worker::execute: Running pass {}/{}.", i, max_rewrite_steps);
+                    tracing::debug!(
+                        "execute::Worker::execute: Running pass {}/{}.",
+                        i,
+                        max_rewrite_steps
+                    );
                     // Lock file, read it (could be edited outside), parse it, execute fast things that may modify context and save it
                     let (do_next_pass, _) =
                         self.execute_pass(descent_collector.clone(), &context_path, data)?;
@@ -499,7 +503,11 @@ impl Worker {
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
                     let (do_next_pass, _) =
                         self.collect_pass(descent_collector.clone(), &context_path, data)?;
-                    tracing::debug!("+++++++++++++++++++++++++++++ pass {} -> {}", i, do_next_pass);
+                    tracing::debug!(
+                        "+++++++++++++++++++++++++++++ pass {} -> {}",
+                        i,
+                        do_next_pass
+                    );
                     match do_next_pass {
                         true => {
                             tracing::debug!(

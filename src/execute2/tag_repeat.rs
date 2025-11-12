@@ -46,7 +46,7 @@ use super::{ExecuteError, Result};
 
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tag_inline::{InlineState, InlineStatus};
-use super::tags::{TagOrAnchor, StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
+use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, TagOrAnchor};
 
 use crate::ast2::CommandKind;
 
@@ -61,7 +61,6 @@ use crate::ast2::CommandKind;
 pub struct RepeatPolicy;
 
 impl StaticPolicy for RepeatPolicy {
-
     /// Executes a single step of the `@repeat` tag's lifecycle.
     ///
     /// This method is invoked when the `@repeat` tag is processed. It identifies
@@ -115,16 +114,14 @@ impl StaticPolicy for RepeatPolicy {
     /// // 3. Generate patches to update the @answer tag and remove the @repeat tag.
     /// // 4. Set `do_next_pass` to true to re-execute the @answer tag.
     /// ```
-    fn mono(
-        inputs: StaticPolicyMonoInput,
-    ) -> Result<StaticPolicyMonoResult> {
+    fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
         let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
         let tag = match residual.tag_or_anchor {
             TagOrAnchor::Tag(tag) => tag,
             _ => {
                 panic!("!?!?!? cannot be anchor in static tag !?!?!?"); // better error TODO
             }
-        };       
+        };
         // Find anchor to repeat if any
         match result.collector.anchor_stack().last() {
             Some(anchor) => {
@@ -160,15 +157,14 @@ impl StaticPolicy for RepeatPolicy {
                 if is_anchor_repeatable {
                     if !residual.readonly {
                         // Mutate anchor parameters
-                        let mutated_anchor =
-                            anchor.update(residual.parameters, residual.arguments);
+                        let mutated_anchor = anchor.update(residual.parameters, residual.arguments);
                         // Patch mutated anchor
-                        let mutated_anchor_patch = residual.worker.mutate_anchor(&mutated_anchor)?;
+                        let mutated_anchor_patch =
+                            residual.worker.mutate_anchor(&mutated_anchor)?;
                         let elide_repeat_patch = (tag.range, String::new());
-                        result
-                            .new_patches = vec![mutated_anchor_patch, elide_repeat_patch];
+                        result.new_patches = vec![mutated_anchor_patch, elide_repeat_patch];
                     }
-                    result.do_next_pass = true;        
+                    result.do_next_pass = true;
                 }
             }
             None => {

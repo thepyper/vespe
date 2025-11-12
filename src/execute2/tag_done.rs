@@ -134,7 +134,7 @@ impl StaticPolicy for DonePolicy {
                                     result.new_patches = vec![(tag.range, String::new())];
                                 }
                                 result.do_next_pass = true;
-                            },
+                            }
                             _ => {}
                         }
                     }
@@ -146,7 +146,7 @@ impl StaticPolicy for DonePolicy {
             None => {
                 panic!("no previous task anchor!=!=!="); // TODO better error
             }
-        }        
+        }
         tracing::debug!("tag_done res {:?}", result);
         Ok(result)
     }

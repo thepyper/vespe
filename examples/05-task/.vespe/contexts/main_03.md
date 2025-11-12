@@ -1,7 +1,7 @@
 I want to create a little snake game with a TUI, in rust.
 I want to use ratatui.
 
-@set { provider: 'gemini -y -m gemini-2.5-flash' } 
+@set { provider: 'gemini -y -m gemini-2.5-pro' } 
 
 <!-- task-98e7cc97-dd56-4ef1-9f61-3591b98e5834:begin {}  -->
 
@@ -12,20 +12,8 @@ Here's a step-by-step development plan for creating the Snake TUI game with Rust
 
 1.  **Project Initialization**: Create a new Rust project and add `ratatui`, `crossterm` (for terminal backend), and `rand` (for random number generation) as dependencies.
 
-<!-- answer-85948d52-c236-495a-baa1-60ddc7a73ee6:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
-I will create a TUI Snake game in Rust using `ratatui`.
-
-Here's my plan:
-
-1.  **Project Setup:** Initialize a new Rust project and add `ratatui`, `crossterm` (for terminal events), and `rand` (for random number generation) as dependencies.
-2.  **Game State:** Define data structures to manage the snake's position, direction, food location, score, and game status (e.g., running, game over).
-3.  **Event Handling:** Implement input processing using `crossterm` to capture arrow key presses for snake movement.
-4.  **Game Logic:** Develop the core game mechanics, including snake movement, collision detection (walls, self), food generation and consumption, and score updates.
-5.  **TUI Rendering:** Utilize `ratatui` to draw the game board, snake, food, score, and game over messages on the terminal.
-6.  **Game Loop:** Create a main loop that continuously updates the game state based on input and time, then re-renders the TUI.
-
-This approach will result in a functional and interactive TUI Snake game.
-<!-- answer-85948d52-c236-495a-baa1-60ddc7a73ee6:end {}  -->
+<!-- answer-3c2fcda1-d417-4e69-bfc0-83644c4ec3b0:begin { provider: 'gemini -y -m gemini-2.5-pro' }  -->
+<!-- answer-3c2fcda1-d417-4e69-bfc0-83644c4ec3b0:end {}  -->
 
 2.  **Basic TUI Setup**: Implement the main application loop using `crossterm` and `ratatui` to draw a simple border and a "Snake Game" title.
 3.  **Define Game State**: Create data structures to represent the snake (e.g., a `Vec` of coordinates), food (a single coordinate), game area dimensions, current direction, score, and game over status.

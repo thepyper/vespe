@@ -158,14 +158,16 @@ impl StaticPolicy for RepeatPolicy {
                     _ => false,
                 };
                 if is_anchor_repeatable {
-                    // Mutate anchor parameters
-                    let mutated_anchor =
-                        anchor.update(residual.parameters, residual.arguments);
-                    // Patch mutated anchor
-                    let mutated_anchor_patch = residual.worker.mutate_anchor(&mutated_anchor)?;
-                    let elide_repeat_patch = (tag.range, String::new());
-                    result
-                        .new_patches = vec![mutated_anchor_patch, elide_repeat_patch];
+                    if !residual.readonly {
+                        // Mutate anchor parameters
+                        let mutated_anchor =
+                            anchor.update(residual.parameters, residual.arguments);
+                        // Patch mutated anchor
+                        let mutated_anchor_patch = residual.worker.mutate_anchor(&mutated_anchor)?;
+                        let elide_repeat_patch = (tag.range, String::new());
+                        result
+                            .new_patches = vec![mutated_anchor_patch, elide_repeat_patch];
+                    }
                     result.do_next_pass = true;        
                 }
             }

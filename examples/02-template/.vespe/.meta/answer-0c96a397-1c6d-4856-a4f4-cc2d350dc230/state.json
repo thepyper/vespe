@@ -1,6 +1,27 @@
 {
-  "status": "NeedProcessing",
-  "query": [],
-  "reply": "",
-  "context_hash": ""
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "User": {
+        "text": "\n"
+      }
+    },
+    {
+      "Agent": {
+        "text": "Tell me 5 trivia about color blue.\r\n"
+      }
+    }
+  ],
+  "reply": "Here are 5 trivia facts about the color blue:\n\n1.  The ancient Egyptians created the first synthetic blue pigment, \"Egyptian blue,\" around 2,200 B.C.\n2.  Historically, the deep blue ultramarine pigment, made from lapis lazuli, was more valuable than gold during the Renaissance.\n3.  Many ancient cultures, including the ancient Greeks, did not have a specific word for the color blue.\n4.  Blue is the rarest naturally occurring color in food and is often considered an appetite suppressant.\n5.  Blue consistently ranks as the world's most favorite color across various cultures and countries.\n",
+  "context_hash": "4f536447348839d591f1a1ec379138485cbb09b6b318b9dcefdc3a44f0fef9b4"
 }

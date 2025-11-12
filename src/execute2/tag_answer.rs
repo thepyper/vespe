@@ -109,7 +109,7 @@ impl DynamicPolicy for AnswerPolicy {
                 result.do_next_pass = true;
             }
             AnswerStatus::NeedProcessing => {
-                // Execute the model query
+                // Execute the model query                
                 let prompt = residual
                     .worker
                     .prefix_content_from_parameters(residual.input, residual.parameters)?;
@@ -132,10 +132,12 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::NeedInjection => {
                 // Inject the reply into the document
-                let output = residual.state.reply.clone();
-                residual.state.status = AnswerStatus::Completed;
-                result.new_state = Some(residual.state);
-                result.new_output = Some(output);
+                if !residual.readonly {
+                    let output = residual.state.reply.clone();
+                    residual.state.status = AnswerStatus::Completed;
+                    result.new_state = Some(residual.state);
+                    result.new_output = Some(output);
+                }
                 result.do_next_pass = true;
             }
             AnswerStatus::Completed => {
@@ -156,10 +158,12 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::Repeat => {
                 // Prepare the query
-                residual.state.status = AnswerStatus::NeedProcessing;
-                residual.state.reply = String::new();
-                result.new_state = Some(residual.state);
-                result.new_output = Some(String::new());
+                if !residual.readonly {
+                    residual.state.status = AnswerStatus::NeedProcessing;
+                    residual.state.reply = String::new();
+                    result.new_state = Some(residual.state);
+                    result.new_output = Some(String::new());
+                }
                 result.do_next_pass = true;
             }
         }

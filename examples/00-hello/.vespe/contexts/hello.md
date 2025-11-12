@@ -1,5 +1,5 @@
 @comment {
-    _1: "Run this with 'ctx context run hello'.",
+    _1: "Run this with 'vespe context run hello'.",
 }
 
 # Hello vespe

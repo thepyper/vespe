@@ -1,6 +1,6 @@
 
 @comment {
-    _1: "Run this with 'echo violet | ctx context run main sepia yellow'.",
+    _1: "Run this with 'echo violet | vespe context run main sepia yellow'.",
 }
 
 @set {

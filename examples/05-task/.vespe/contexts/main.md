@@ -1,23 +1,22 @@
-Let's pretend to make a coffee, imagine actions and write them out as required (only listed actions, do not skip forward):
 
-1. Open moka
+Inventa un task che puo' essere eseguito da te in 3 step abbastanza slegati tra loro da non richiedere conoscenza degli step precedenti.
 
-2. Clean moka
+<!-- answer-b9527baf-4c85-48ae-aa33-9451f75dd857:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
+Certamente! Ecco un task che posso eseguire in 3 passaggi, ognuno relativamente indipendente:
 
-3. Put water in moka
+**Task Proposto:** Gestione di un file di configurazione fittizio.
 
-4. Put coffee in moka
+**Step 1: Creazione del file di configurazione iniziale.**
+Creerò un nuovo file chiamato `config.txt` nella directory corrente con un contenuto JSON di base.
 
-5. Close moka
+**Step 2: Aggiornamento di una proprietà nel file di configurazione.**
+Modificherò il valore di una specifica proprietà all'interno del file `config.txt` creato nello Step 1.
 
-6. Put moka on fire
+**Step 3: Lettura e riepilogo del contenuto finale del file di configurazione.**
+Leggerò il contenuto aggiornato di `config.txt` e fornirò un breve riepilogo delle sue impostazioni.
 
-7. Wait moka gurgling
+Se sei d'accordo, posso iniziare con il primo step.
+<!-- answer-b9527baf-4c85-48ae-aa33-9451f75dd857:end {}  -->
 
-8. Turn fire off
-
-9. Put coffee into cup
-
-10. Drink coffee
 
 

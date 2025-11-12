@@ -3,21 +3,21 @@
     _1: "Run this with 'vespe context run main'.",
 }
 
-<!-- answer-031e39d4-7423-4353-a4ca-05aa28749df5:begin {
-	postfix: instructions/summarize,
+<!-- answer-689bca48-781e-4138-aed1-84af5af42477:begin {
+	input: input/email,
 	output: output/summary,
-	provider: 'ollama run gemma3:1b',
+	provider: 'gemini -y -m gemini-2.5-flash',
 	prefix: agent/secretary,
-	input: input/email
+	postfix: instructions/summarize
 }  -->
-<!-- answer-031e39d4-7423-4353-a4ca-05aa28749df5:end {}  -->
+<!-- answer-689bca48-781e-4138-aed1-84af5af42477:end {}  -->
 
-<!-- answer-f75bb50c-3b04-46d1-bbf8-a8ed9b546a51:begin {
+<!-- answer-1bd2d0ab-da6e-4dd9-a746-0ba2cd035de0:begin {
 	output: output/names,
-	prefix: agent/secretary,
+	input: input/email,
 	postfix: instructions/names,
-	provider: 'ollama run gemma3:1b',
-	input: input/email
+	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/secretary
 }  -->
-<!-- answer-f75bb50c-3b04-46d1-bbf8-a8ed9b546a51:end {}  -->
+<!-- answer-1bd2d0ab-da6e-4dd9-a746-0ba2cd035de0:end {}  -->
 

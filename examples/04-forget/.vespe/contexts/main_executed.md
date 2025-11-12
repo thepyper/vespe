@@ -1,6 +1,6 @@
 
 @comment {
-    _1: "Run this with 'ctx context run main'.",
+    _1: "Run this with 'vespe context run main'.",
 }
 
 @set {
@@ -11,16 +11,16 @@
 
 Is this mail a problem enough for you to call me?
 
-<!-- answer-ab215a20-a8a6-4bfe-acb3-07e303029a92:begin {
-	output: output/email_1,
+<!-- answer-56bcff4f-760b-44f0-b050-7d007f3ef353:begin {
+	provider: 'gemini -y -m gemini-2.5-flash',
 	choose: {
 		no: "Not an issue, I can deal this myself",
 		yes: "Yes we have a problem!"
 	},
 	prefix: agent/secretary,
-	provider: 'gemini -y -m gemini-2.5-flash'
+	output: output/email_1
 }  -->
-<!-- answer-ab215a20-a8a6-4bfe-acb3-07e303029a92:end {}  -->
+<!-- answer-56bcff4f-760b-44f0-b050-7d007f3ef353:end {}  -->
 
 @forget
 
@@ -28,12 +28,12 @@ Is this mail a problem enough for you to call me?
 
 Summarize me the issue there.
 
-<!-- answer-db985a43-ab59-4bb1-b896-fe6390b10f83:begin {
-	prefix: agent/secretary,
+<!-- answer-5f6116a1-8bcd-4ed9-afb7-d2b24351c53b:begin {
 	output: output/email_2,
-	provider: 'gemini -y -m gemini-2.5-flash'
+	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/secretary
 }  -->
-<!-- answer-db985a43-ab59-4bb1-b896-fe6390b10f83:end {}  -->
+<!-- answer-5f6116a1-8bcd-4ed9-afb7-d2b24351c53b:end {}  -->
 
 @forget
 
@@ -42,8 +42,6 @@ Summarize me the issue there.
 
 Read the above, any insights for me?
 
-<!-- answer-d209ba51-3439-4afd-95f8-9b3b2df59e31:begin {
-	output: output/insights,
-	provider: 'gemini -y -m gemini-2.5-flash'
-}  -->
-<!-- answer-d209ba51-3439-4afd-95f8-9b3b2df59e31:end {}  -->
+@answer {
+    output: output/insights
+}

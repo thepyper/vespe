@@ -1,0 +1,22 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "Let's pretend to make a coffee, I will tell you the actions to do, you write them in first person as if you were just got up from bed.\n\n"
+      }
+    },
+    {
+      "System": {
+        "text": "Content here has been used, so has been removed as it is no more useful."
+      }
+    },
+    {
+      "User": {
+        "text": "\n3. Put water in moka\n\n"
+      }
+    }
+  ],
+  "reply": "I woke up feeling refreshed and ready for a morning cup of coffee. I glanced at my kitchen timer to ensure the coffee had already brewed earlier - 15 minutes had passed perfectly. The steam was visible on the kettle, signifying that it was ready.\n\nWith a gentle smile, I carefully placed the kettle onto the stove with the lid slightly open. It gave off a soothing warmth as it began its task of preparing the water for my morning cup.\n\nNow, after getting out of bed, I needed to retrieve the coffee machine from the cupboard and place it on the countertop where it usually sits ready to serve. The cold night air was replaced with the warm draft that would soon be replaced by the aroma of freshly brewed coffee.\n\nI picked up the moka pot carefully, ensuring its lid closed securely before taking a seat at my usual spot in front of the window. I poured myself a cup from the freshly brewed mug and added some fresh milk to make it a little smoother for those sensitive palates.\n\nWith a sip of the warm, rich coffee, my morning began with the aroma of brewing coffee that wafted across the room. It was the perfect start to a new day, reminding me why I love waking up early to enjoy this ritual.\n\n",
+  "context_hash": "24bd86ef104ab4e6c07ca28824e14b0ab09f3f66f88661980f69b32f446839b0"
+}

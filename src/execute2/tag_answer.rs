@@ -109,7 +109,7 @@ impl DynamicPolicy for AnswerPolicy {
                 result.do_next_pass = true;
             }
             AnswerStatus::NeedProcessing => {
-                // Execute the model query                
+                // Execute the model query
                 let prompt = residual
                     .worker
                     .prefix_content_from_parameters(residual.input, residual.parameters)?;

@@ -336,7 +336,7 @@ pub(crate) struct Worker {
 }
 
 impl std::fmt::Debug for Worker {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Ok(())
     }
 }
@@ -1327,8 +1327,8 @@ impl Worker {
     ///
     /// A `Result` containing a vector of `(Range, String)` tuples representing the
     /// modification to be applied to the source file.
-    pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<Vec<(Range, String)>> {
-        Ok(vec![(anchor.range, format!("{}\n", anchor.to_string()))])
+    pub fn mutate_anchor(&self, anchor: &Anchor) -> Result<(Range, String)> {
+        Ok((anchor.range, format!("{}\n", anchor.to_string())))
     }
 
     /// Reads the raw content of a context file.

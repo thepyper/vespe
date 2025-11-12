@@ -744,7 +744,7 @@ impl TagBehaviorDispatch {
     fn get_behavior(command: CommandKind) -> Result<Box<dyn TagBehavior>> {
         match command {
             CommandKind::Answer => Ok(Box::new(DynamicTagBehavior(AnswerPolicy))),
-            CommandKind::Repeat => Ok(Box::new(DynamicTagBehavior(RepeatPolicy))),
+            CommandKind::Repeat => Ok(Box::new(StaticTagBehavior(RepeatPolicy))),
             CommandKind::Include => Ok(Box::new(StaticTagBehavior(IncludePolicy))),
             CommandKind::Inline => Ok(Box::new(DynamicTagBehavior(InlinePolicy))),
             CommandKind::Set => Ok(Box::new(StaticTagBehavior(SetPolicy))),

@@ -30,7 +30,7 @@ impl StaticPolicy for ForgetPolicy {
     ///
     /// # Examples
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
-        let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
+        let (mut result, _residual) = StaticPolicyMonoResult::from_inputs(inputs);
         result.collector = result.collector.forget();
         Ok(result)
     }

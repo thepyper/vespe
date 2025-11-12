@@ -32,7 +32,7 @@ impl StaticPolicy for CommentPolicy {
     /// The original, unmodified `Collector`.
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
         // The @comment tag does nothing, so we just return the collector as is.
-        let (result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
+        let (result, _residual) = StaticPolicyMonoResult::from_inputs(inputs);
         Ok(result)
     }
 }

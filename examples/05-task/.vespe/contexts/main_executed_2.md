@@ -1,19 +1,17 @@
-Let's pretend to make a coffee, imagine actions and write them out as required (only listed actions, do not skip forward):
+Let's pretend to make a coffee, I will tell you the actions to do, you write them in first person as if you were just got up from bed.
 
-<!-- task-480aa79b-a377-41f3-8ed3-a6e0d0cd7855:begin {}  -->
+<!-- task-6b603cd8-cbed-4c18-98ce-f997669b585b:begin {}  -->
 
 1. Open moka
 
-<!-- answer-5cf510bd-5ef0-4713-91d5-1764fb39cbe8:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
-Okay, moka is open. What's next?
-<!-- answer-5cf510bd-5ef0-4713-91d5-1764fb39cbe8:end {}  -->
+<!-- answer-095fa63e-3ff0-46e2-8b67-b57c5ec1cd1f:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
+Okay, I'm ready.
+
+I open the moka pot.
+<!-- answer-095fa63e-3ff0-46e2-8b67-b57c5ec1cd1f:end {}  -->
 
 2. Clean moka
-
-<!-- answer-20efa892-17dd-4fb8-8e71-0e5dd1d838ed:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
-Moka is cleaned. What's next?
-<!-- answer-20efa892-17dd-4fb8-8e71-0e5dd1d838ed:end {}  -->
-<!-- task-480aa79b-a377-41f3-8ed3-a6e0d0cd7855:end {}  -->
+<!-- task-6b603cd8-cbed-4c18-98ce-f997669b585b:end {}  -->
 
 3. Put water in moka
 
@@ -30,5 +28,3 @@ Moka is cleaned. What's next?
 9. Put coffee into cup
 
 10. Drink coffee
-
-

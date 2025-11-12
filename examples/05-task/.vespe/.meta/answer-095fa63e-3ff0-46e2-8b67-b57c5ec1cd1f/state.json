@@ -1,0 +1,22 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "Let's pretend to make a coffee, I will tell you the actions to do, you write them in first person as if you were just got up from bed.\n\n"
+      }
+    },
+    {
+      "System": {
+        "text": "Content here has been used, so has been removed as it is no more useful."
+      }
+    },
+    {
+      "User": {
+        "text": "\n1. Open moka\n\n"
+      }
+    }
+  ],
+  "reply": "Okay, I'm ready.\n\nI open the moka pot.\n",
+  "context_hash": "d7209d3e58d2c588246a3b203920ba3459793716f300ac7f65315a161d731e90"
+}

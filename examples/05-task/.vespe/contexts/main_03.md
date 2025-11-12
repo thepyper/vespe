@@ -1,4 +1,6 @@
 I want to create a little snake game with a TUI, in rust.
+I want you to proceed in a step-by-step manner, I will tell you what to do each time.
+Do NOT proceed by yourself, do ONLY the things I will ask in the following prompt:
 
 @set { provider: 'gemini -y -m gemini-2.5-flash' }
 <!-- task-b91c2c0c-2694-48ff-bee2-d70e91bf97c1:begin {}  -->
@@ -9,8 +11,9 @@ Here's a step-by-step development plan for your TUI Snake game in Rust:
 <!-- task-b91c2c0c-2694-48ff-bee2-d70e91bf97c1:end {}  -->
 
 1.  **Project Initialization**: Create a new Rust project using `cargo new snake_tui`.
-<!-- answer-1cb8bb89-9041-48f9-9975-3b19427e2050:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
-<!-- answer-1cb8bb89-9041-48f9-9975-3b19427e2050:end {}  -->
+<!-- answer-412003a4-8168-44b5-bc60-c65781599f53:begin { provider: 'gemini -y -m gemini-2.5-flash' }  -->
+Okay, I understand. I'm ready for your first command.
+<!-- answer-412003a4-8168-44b5-bc60-c65781599f53:end {}  -->
 
 2.  **Dependency Management**: Add a TUI library (e.g., `crossterm`) and potentially a random number generator (`rand`) to `Cargo.toml`.
 3.  **Game State Definition**:

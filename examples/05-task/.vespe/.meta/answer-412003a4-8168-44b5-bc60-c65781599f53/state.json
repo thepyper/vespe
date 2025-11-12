@@ -1,0 +1,17 @@
+{
+  "status": "Completed",
+  "query": [
+    {
+      "User": {
+        "text": "I want to create a little snake game with a TUI, in rust.\r\nI want you to proceed in a step-by-step manner, I will tell you what to do each time.\r\nDo NOT proceed by yourself, do ONLY the things I will ask in the following prompt:\r\n\r\n"
+      }
+    },
+    {
+      "System": {
+        "text": "Content here has been used, so has been removed as it is no more useful."
+      }
+    }
+  ],
+  "reply": "Okay, I understand. I'm ready for your first command.\n",
+  "context_hash": "200fbb13b3ca178b0d1646c4930b96070d736a0993d9a2dd294988eefd73953d"
+}

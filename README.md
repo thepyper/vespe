@@ -10,6 +10,12 @@
 
 At its core, `vespe` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.vespe` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
 
+- TODO: why vespe section
+why vespe?
+- llm answer are only as good as query context is
+- user best knows it's project and what it's current focus is
+- vespe gives you fine grained control over context
+
 ## Philosophy
 
 `vespe` is built on a few core principles:

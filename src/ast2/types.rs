@@ -408,6 +408,12 @@ impl Arguments {
             range: Range::null(),
         }
     }
+    pub fn update(mut self, other: &Arguments) -> Self {
+        if !other.arguments.is_empty() {
+            self.arguments = other.arguments.clone();
+        }
+        self
+    }
 }
 
 impl ToString for Arguments {
@@ -532,7 +538,7 @@ impl Anchor {
     pub fn update(&self, parameters: &Parameters, arguments: &Arguments) -> Self {
         let mut anchor = self.clone();
         anchor.parameters = anchor.parameters.update(parameters);
-        anchor.arguments = arguments.clone();
+        anchor.arguments = anchor.arguments.update(arguments);
         anchor
     }
 }

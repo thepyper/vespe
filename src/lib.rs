@@ -12,6 +12,7 @@ pub mod project;
 pub fn init_telemetry() {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_writer(std::io::stderr)
         .init();
 }

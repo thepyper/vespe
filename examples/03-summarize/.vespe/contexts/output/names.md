@@ -1,14 +1,6 @@
-Here are the extracted names:
+Here are the names extracted from the text:
 
-**People:**
-*   Tony
-
-**Companies:**
-*   TurboBarrow Ltd
-*   [Your Company Name] (placeholder for the sender's company)
-*   WranglerBanger Ltd
-
-**Divisions/Departments:**
-*   Operations
-*   Procurement
-*   Ergonomics
+*   **TurboBarrow Ltd**: A company.
+*   **[Your Company Name]**: A placeholder for a company name.
+*   **Tony**: A person's name.
+*   **WranglerBanger Ltd**: A company.

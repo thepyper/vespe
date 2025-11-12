@@ -1,23 +1,23 @@
 
 @comment {
-    _1: "Run this with 'ctx context run main'.",
+    _1: "Run this with 'vespe context run main'.",
 }
 
-<!-- answer-476db160-9bba-4a6f-a728-0c1d9338521a:begin {
-	postfix: instructions/summarize,
-	prefix: agent/secretary,
+<!-- answer-b3159f99-db9c-46af-af08-516c07cafa13:begin {
 	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/secretary,
 	input: input/email,
+	postfix: instructions/summarize,
 	output: output/summary
 }  -->
-<!-- answer-476db160-9bba-4a6f-a728-0c1d9338521a:end {}  -->
+<!-- answer-b3159f99-db9c-46af-af08-516c07cafa13:end {}  -->
 
-<!-- answer-878e4f45-3a00-46f2-b5e2-45916ac945f9:begin {
+<!-- answer-0178162b-42d6-4810-81c5-da1dfbd77622:begin {
 	input: input/email,
-	prefix: agent/secretary,
-	postfix: instructions/names,
+	output: output/names,
 	provider: 'gemini -y -m gemini-2.5-flash',
-	output: output/names
+	postfix: instructions/names,
+	prefix: agent/secretary
 }  -->
-<!-- answer-878e4f45-3a00-46f2-b5e2-45916ac945f9:end {}  -->
+<!-- answer-0178162b-42d6-4810-81c5-da1dfbd77622:end {}  -->
 

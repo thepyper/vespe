@@ -3,10 +3,10 @@
   "query": [
     {
       "User": {
-        "text": "tell me something nice\n\n"
+        "text": "tell me something nice\r\n\r\n"
       }
     }
   ],
-  "reply": "Of course! Here's something lovely to share:\n\n\"The smallest seed can grow into the biggest tree.\" This phrase reminds us that no matter how small or insignificant something may seem, with patience and dedication, it has the potential to transform into something great. Life is full of possibilities, just like this little seed turning into a magnificent oak!\n\n",
+  "reply": "Sure! Here's something nice for you: \"Life is like a box of chocolates, and we never know what we're going to get!\" - Johnny Carson. Enjoy your day!\n\n",
   "context_hash": "0e51f048d3621a3329a9fad534d5a32005dc6f020af550ed82d1bde454216230"
 }

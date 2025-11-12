@@ -247,7 +247,11 @@ impl Collector {
         self
     }
 
-    /// Exits the current anchor, popping it from the anchor stack.
+    /// Exits the given anchor, removing it from the anchor stack.
+    ///
+    /// # Arguments
+    ///
+    /// * `anchor` - The [`Anchor`] to exit.
     ///
     /// # Returns
     ///
@@ -257,10 +261,17 @@ impl Collector {
     /// # Errors
     ///
     /// Returns [`ExecuteError::EmptyAnchorStack`] if there are no anchors to exit.
-    fn exit(mut self) -> Result<Self> {
-        self.anchor_stack
-            .pop()
-            .ok_or_else(|| ExecuteError::EmptyAnchorStack(self.latest_range.clone()))?;
+    fn exit(mut self, anchor: &Anchor) -> Result<Self> {
+        let size_before = self.anchor_stack.len();
+        self.anchor_stack = self
+            .anchor_stack
+            .into_iter()
+            .filter(|x| x.uuid != anchor.uuid)
+            .collect::<Vec<Anchor>>();
+        let size_after = self.anchor_stack.len();
+        if size_before == size_after {
+            return Err(ExecuteError::EmptyAnchorStack(self.latest_range.clone()));
+        }
         Ok(self)
     }
 
@@ -503,11 +514,6 @@ impl Worker {
                     // Re-read file, parse it, execute slow things that do not modify context, collect data
                     let (do_next_pass, _) =
                         self.collect_pass(descent_collector.clone(), &context_path, data)?;
-                    tracing::debug!(
-                        "+++++++++++++++++++++++++++++ pass {} -> {}",
-                        i,
-                        do_next_pass
-                    );
                     match do_next_pass {
                         true => {
                             tracing::debug!(
@@ -844,6 +850,7 @@ impl Worker {
                     if collector.is_in_task_anchor() {
                         // Do not collect text inside task anchor
                         // TODO spostare altrove? logica di task in pass? come fare?
+                        tracing::debug!("Removed by task anchor: {:?}", text.content);
                     } else {
                         // Normal collection
                         let content = if collector.anchor_stack.is_empty() {
@@ -905,7 +912,7 @@ impl Worker {
                         };
                         (do_next_pass, new_collector.enter(anchor), patches)
                     }
-                    AnchorKind::End => (false, collector.exit()?, vec![]),
+                    AnchorKind::End => (false, collector.exit(anchor)?, vec![]),
                 },
             };
             collector = next_collector;
@@ -924,13 +931,11 @@ impl Worker {
                 return Ok((true, collector));
             }
             // Check if collector has been discarded, then exit and trigger another pass
-            tracing::debug!("***************** {} dnp", do_next_pass);
             if do_next_pass {
                 return Ok((true, collector));
             }
         }
         // No patches applied nor new pass triggered, then return definitive collector
-        tracing::debug!("------------------------------ nnp");
         Ok((false, collector))
     }
 

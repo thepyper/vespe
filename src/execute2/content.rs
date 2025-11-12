@@ -164,7 +164,7 @@ impl ToString for ModelContentItem {
 /// `ModelContent` is a collection of `ModelContentItem`s, ordered to form a complete
 /// prompt that can be sent to an external model. It allows for building complex
 /// conversational contexts.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelContent(pub Vec<ModelContentItem>);
 
 impl ModelContent {

@@ -42,6 +42,8 @@ pub enum AnswerStatus {
 pub struct AnswerState {
     /// The current status of the `@answer` tag.
     pub status: AnswerStatus,
+    /// The query sent to the external model
+    pub query: ModelContent,
     /// The reply received from the external model.
     pub reply: String,
     /// The context hash
@@ -121,6 +123,7 @@ impl DynamicPolicy for AnswerPolicy {
                 )?;
                 let response = residual.worker.call_model(residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
+                residual.state.query = prompt;
                 residual.state.reply = response;
                 residual.state.status = AnswerStatus::NeedInjection;
                 residual.state.context_hash = residual.input_hash;

@@ -165,6 +165,10 @@ impl StaticPolicy for RepeatPolicy {
                         result.new_patches = vec![mutated_anchor_patch, elide_repeat_patch];
                     }
                     result.do_next_pass = true;
+                } else {
+                    return Err(ExecuteError::Generic(
+                        "@repeat must be used inside a repeatable anchor".to_string(),
+                    ));
                 }
             }
             None => {

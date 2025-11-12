@@ -42,6 +42,8 @@ Summarize me the issue there.
 
 Read the above, any insights for me?
 
-@answer {
-    output: output/insights
-}
+<!-- answer-71b0688e-92c4-4c4d-99b3-5be1f79c0c5c:begin {
+	provider: 'gemini -y -m gemini-2.5-flash',
+	output: output/insights
+}  -->
+<!-- answer-71b0688e-92c4-4c4d-99b3-5be1f79c0c5c:end {}  -->

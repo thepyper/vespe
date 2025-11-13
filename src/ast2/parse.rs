@@ -381,11 +381,31 @@ pub(crate) fn _try_parse_anchor<'doc>(
 
     let p8 = p7.skip_many_whitespaces_immutable();
 
-    //TODO parse status
+    let mut status: Option<String> = None;
+    let p_after_status_parse = if let Some(p_plus_start) = p8.consume_matching_char_immutable('+') {
+        if let Some((parsed_status, p_status_content)) = _try_parse_identifier(&p_plus_start)? {
+            if let Some(p_plus_end) = p_status_content.consume_matching_char_immutable('+') {
+                status = Some(parsed_status);
+                p_plus_end
+            } else {
+                return Err(Ast2Error::ParsingError {
+                    position: p_status_content.get_position(),
+                    message: "Expected '+' after status in anchor".to_string(),
+                });
+            }
+        } else {
+            return Err(Ast2Error::ParsingError {
+                position: p_plus_start.get_position(),
+                message: "Expected status identifier after '+' in anchor".to_string(),
+            });
+        }
+    } else {
+        p8 // No status found, continue from p8
+    };
 
-    let (parameters, p9) = match _try_parse_parameters(&p8)? {
+    let (parameters, p9) = match _try_parse_parameters(&p_after_status_parse)? {
         Some((p, p_next)) => (p, p_next),
-        None => (Parameters::new(), p8.clone()),
+        None => (Parameters::new(), p_after_status_parse.clone()),
     };
 
     let p10 = p9.skip_many_whitespaces_immutable();

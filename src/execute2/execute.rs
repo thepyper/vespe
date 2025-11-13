@@ -719,7 +719,7 @@ impl Worker {
         &self,
         parameters: &Parameters,
         prompt: &ModelContent,
-    ) -> Result<String> {
+    ) -> Result<(String, String)> {
         let provider = match parameters.get("provider") {
             Some(
                 JsonPlusEntity::NudeString(x)
@@ -736,8 +736,10 @@ impl Worker {
                 return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
-        crate::agent::shell::shell_call(&provider, &prompt.to_prompt())
-            .map_err(|e| ExecuteError::ShellError(e.to_string()))
+        let prompt = prompt.to_prompt();
+        let response = crate::agent::shell::shell_call(&provider, &prompt)
+            .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
+        (prompt, response)
     }
 
     /// Executes a single read-only pass over the context file.

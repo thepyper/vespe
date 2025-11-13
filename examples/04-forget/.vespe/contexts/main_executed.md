@@ -11,16 +11,16 @@
 
 Is this mail a problem enough for you to call me?
 
-<!-- answer-56bcff4f-760b-44f0-b050-7d007f3ef353:begin {
-	provider: 'gemini -y -m gemini-2.5-flash',
+<!-- answer-46e2ad75-d923-4f2e-8e3a-6d61d30436d8:begin {
 	choose: {
-		no: "Not an issue, I can deal this myself",
-		yes: "Yes we have a problem!"
+		yes: "Yes we have a problem!",
+		no: "Not an issue, I can deal this myself"
 	},
-	prefix: agent/secretary,
-	output: output/email_1
+	provider: 'gemini -y -m gemini-2.5-flash',
+	output: output/email_1,
+	prefix: agent/secretary
 }  -->
-<!-- answer-56bcff4f-760b-44f0-b050-7d007f3ef353:end {}  -->
+<!-- answer-46e2ad75-d923-4f2e-8e3a-6d61d30436d8:end {}  -->
 
 @forget
 
@@ -28,12 +28,12 @@ Is this mail a problem enough for you to call me?
 
 Summarize me the issue there.
 
-<!-- answer-5f6116a1-8bcd-4ed9-afb7-d2b24351c53b:begin {
+<!-- answer-439fbe0b-06cd-4b23-a314-4b0fee7427cf:begin {
+	prefix: agent/secretary,
 	output: output/email_2,
-	provider: 'gemini -y -m gemini-2.5-flash',
-	prefix: agent/secretary
+	provider: 'gemini -y -m gemini-2.5-flash'
 }  -->
-<!-- answer-5f6116a1-8bcd-4ed9-afb7-d2b24351c53b:end {}  -->
+<!-- answer-439fbe0b-06cd-4b23-a314-4b0fee7427cf:end {}  -->
 
 @forget
 
@@ -42,8 +42,8 @@ Summarize me the issue there.
 
 Read the above, any insights for me?
 
-<!-- answer-71b0688e-92c4-4c4d-99b3-5be1f79c0c5c:begin {
-	provider: 'gemini -y -m gemini-2.5-flash',
-	output: output/insights
+<!-- answer-713baa02-5a63-40a2-91a9-f81fa5570139:begin {
+	output: output/insights,
+	provider: 'gemini -y -m gemini-2.5-flash'
 }  -->
-<!-- answer-71b0688e-92c4-4c4d-99b3-5be1f79c0c5c:end {}  -->
+<!-- answer-713baa02-5a63-40a2-91a9-f81fa5570139:end {}  -->

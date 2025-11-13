@@ -33,6 +33,7 @@ use super::execute::Worker;
 use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use super::Result;
 use crate::ast2::{Position, Range};
+use std::str::FromStr;
 
 /// Represents the execution status of an `@task` tag.
 ///
@@ -57,6 +58,31 @@ pub enum TaskStatus {
     /// This state indicates that the task is consuming content from the document,
     /// typically to update its internal state or generate new output.
     Eating,
+}
+
+impl ToString for TaskStatus {
+    fn to_string(&self) -> String {
+        match self {
+            TaskStatus::JustCreated => "just_created".to_string(),
+            TaskStatus::Waiting => "waiting".to_string(),
+            TaskStatus::Eating => "eating".to_string(),
+        }
+    }
+}
+
+impl FromStr for TaskStatus {
+    type Err = super::error::ExecuteError;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "just_created" => Ok(TaskStatus::JustCreated),
+            "waiting" => Ok(TaskStatus::Waiting),
+            "eating" => Ok(TaskStatus::Eating),
+            _ => Err(super::error::ExecuteError::UnsupportedStatus(
+                s.to_string(),
+            )),
+        }
+    }
 }
 
 /// Holds the persistent state for an `@task` anchor.

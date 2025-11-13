@@ -12,6 +12,7 @@ use super::error::ExecuteError;
 use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use super::Result;
 use crate::ast2::JsonPlusEntity;
+use std::str::FromStr;
 
 /// Represents the execution status of an `@inline` tag.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq, Clone)]
@@ -26,6 +27,29 @@ pub enum InlineStatus {
     /// The `@inline` tag has successfully loaded its content, and no further
     /// action is needed unless its state is changed to `Repeat`.
     Completed,
+}
+
+impl ToString for InlineStatus {
+    fn to_string(&self) -> String {
+        match self {
+            InlineStatus::JustCreated => "just_created".to_string(),
+            InlineStatus::Repeat => "repeat".to_string(),
+            InlineStatus::Completed => "completed".to_string(),
+        }
+    }
+}
+
+impl FromStr for InlineStatus {
+    type Err = ExecuteError;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "just_created" => Ok(InlineStatus::JustCreated),
+            "repeat" => Ok(InlineStatus::Repeat),
+            "completed" => Ok(InlineStatus::Completed),
+            _ => Err(ExecuteError::UnsupportedStatus(s.to_string())),
+        }
+    }
 }
 
 /// Holds the persistent state for an `@inline` anchor.

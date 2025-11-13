@@ -115,6 +115,10 @@ pub enum ExecuteError {
     #[error("Handlebars render error: {0}")]
     RenderError(#[from] handlebars::RenderError),
 
+    /// Indicates that a string could not be parsed into a status enum.
+    #[error("Unsupported status: {0}")]
+    UnsupportedStatus(String),
+
     /// A catch-all error for any `anyhow::Error` that occurs.
     ///
     /// This provides a convenient way to propagate errors from libraries that

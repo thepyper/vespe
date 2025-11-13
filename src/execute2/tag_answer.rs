@@ -11,6 +11,7 @@ use super::error::ExecuteError;
 use super::execute::Worker;
 use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use crate::ast2::{JsonPlusEntity, Parameters, Range};
+use std::str::FromStr;
 
 use handlebars::Handlebars;
 
@@ -34,6 +35,35 @@ pub enum AnswerStatus {
     Completed,
     /// The `@answer` tag content has been edited by user, then it must be seen as user conten by llm.
     Edited,
+}
+
+impl ToString for AnswerStatus {
+    fn to_string(&self) -> String {
+        match self {
+            AnswerStatus::JustCreated => "just_created".to_string(),
+            AnswerStatus::Repeat => "repeat".to_string(),
+            AnswerStatus::NeedProcessing => "need_processing".to_string(),
+            AnswerStatus::NeedInjection => "need_injection".to_string(),
+            AnswerStatus::Completed => "completed".to_string(),
+            AnswerStatus::Edited => "edited".to_string(),
+        }
+    }
+}
+
+impl FromStr for AnswerStatus {
+    type Err = ExecuteError;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "just_created" => Ok(AnswerStatus::JustCreated),
+            "repeat" => Ok(AnswerStatus::Repeat),
+            "need_processing" => Ok(AnswerStatus::NeedProcessing),
+            "need_injection" => Ok(AnswerStatus::NeedInjection),
+            "completed" => Ok(AnswerStatus::Completed),
+            "edited" => Ok(AnswerStatus::Edited),
+            _ => Err(ExecuteError::UnsupportedStatus(s.to_string())),
+        }
+    }
 }
 
 /// Represents the persistent state of an `@answer` tag.

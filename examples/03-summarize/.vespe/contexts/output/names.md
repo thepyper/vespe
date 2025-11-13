@@ -1,4 +1,4 @@
-- **TurboBarrow Ltd**: The company being addressed, a manufacturer of wheelbarrows.
-- **BarrowBot**: The AI virtual executive assistant for TurboBarrow.
+- **TurboBarrow Ltd**: The company the AI assistant works for, a manufacturer of wheelbarrows.
+- **BarrowBot**: The name of the AI assistant.
 - **WranglerBanger Ltd**: The company sending the inquiry.
 - **Tony**: The sender of the inquiry from WranglerBanger Ltd.

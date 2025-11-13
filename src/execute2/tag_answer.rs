@@ -5,8 +5,6 @@
 use super::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::fmt;
-use std::str::FromStr;
 
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
@@ -36,38 +34,6 @@ pub enum AnswerStatus {
     Completed,
     /// The `@answer` tag content has been edited by user, then it must be seen as user conten by llm.
     Edited,
-}
-
-impl fmt::Display for AnswerStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            AnswerStatus::JustCreated => write!(f, "JustCreated"),
-            AnswerStatus::Repeat => write!(f, "Repeat"),
-            AnswerStatus::NeedProcessing => write!(f, "NeedProcessing"),
-            AnswerStatus::NeedInjection => write!(f, "NeedInjection"),
-            AnswerStatus::Completed => write!(f, "Completed"),
-            AnswerStatus::Edited => write!(f, "Edited"),
-        }
-    }
-}
-
-impl FromStr for AnswerStatus {
-    type Err = ExecuteError;
-
-    fn from_str(s: &str) -> Result<Self> {
-        match s {
-            "JustCreated" => Ok(AnswerStatus::JustCreated),
-            "Repeat" => Ok(AnswerStatus::Repeat),
-            "NeedProcessing" => Ok(AnswerStatus::NeedProcessing),
-            "NeedInjection" => Ok(AnswerStatus::NeedInjection),
-            "Completed" => Ok(AnswerStatus::Completed),
-            "Edited" => Ok(AnswerStatus::Edited),
-            _ => Err(ExecuteError::UnsupportedParameterValue(format!(
-                "Unknown AnswerStatus: {}",
-                s
-            ))),
-        }
-    }
 }
 
 /// Represents the persistent state of an `@answer` tag.

@@ -169,13 +169,14 @@ impl ToString for ModelContentItem {
             ModelContentItem::System(content) => format!("{}", content.text),
             ModelContentItem::User(content) => format!("{}", content.text),
             ModelContentItem::Agent(content) => format!("{}", content.text),
-            ModelContentItem::MergeDownstream(content) => content,
-            ModelContentItem::MergeUpstream(content) => content,
+            ModelContentItem::MergeDownstream(content) => content.clone(),
+            ModelContentItem::MergeUpstream(content) => content.clone(),
         }
     }
 }
 
-enum PromptFormat {
+#[derive(Clone, Copy)]
+pub enum PromptFormat {
     Parts,
 }
 
@@ -250,7 +251,7 @@ impl ModelContent {
             */
 
     fn embed_in_prompt_as_part(item: &ModelContentItem) -> String {
-         match self {
+        match item {
             ModelContentItem::System(content) => {
                 let text = content.text.trim();
                 if !text.is_empty() {
@@ -283,14 +284,78 @@ impl ModelContent {
 
     fn embed_in_prompt(item: &ModelContentItem, format: PromptFormat) -> String {
         match format {
-            PromptFormat::Parts => Self::embed_in_prompt_as_part(item),            
+            PromptFormat::Parts => Self::embed_in_prompt_as_part(item),
         }
     }
 
     pub fn to_prompt(&self, format: PromptFormat) -> String {
-        // TODO
-    }
-}
+        let mut merged_items: Vec<ModelContentItem> = Vec::new();
+        let mut downstream_merges: Vec<String> = Vec::new();
+
+        for item in &self.0 {
+            match item {
+                ModelContentItem::System(content) => {
+                    let mut new_text = content.text.clone();
+                    if !downstream_merges.is_empty() {
+                        let mut prefix = downstream_merges.join("\n");
+                        prefix.push('\n');
+                        new_text.insert_str(0, &prefix);
+                        downstream_merges.clear();
+                    }
+                    merged_items.push(ModelContentItem::system(&new_text));
+                }
+                ModelContentItem::User(content) => {
+                    let mut new_text = content.text.clone();
+                    if !downstream_merges.is_empty() {
+                        let mut prefix = downstream_merges.join("\n");
+                        prefix.push('\n');
+                        new_text.insert_str(0, &prefix);
+                        downstream_merges.clear();
+                    }
+                    merged_items.push(ModelContentItem::user(&new_text));
+                }
+                ModelContentItem::Agent(content) => {
+                    let mut new_text = content.text.clone();
+                    if !downstream_merges.is_empty() {
+                        let mut prefix = downstream_merges.join("\n");
+                        prefix.push('\n');
+                        new_text.insert_str(0, &prefix);
+                        downstream_merges.clear();
+                    }
+                    merged_items.push(ModelContentItem::agent(&new_text));
+                }
+                ModelContentItem::MergeDownstream(s) => {
+                    downstream_merges.push(s.clone());
+                }
+                ModelContentItem::MergeUpstream(s) => {
+                    if let Some(last_item) = merged_items.last_mut() {
+                        match last_item {
+                            ModelContentItem::System(c) => {
+                                c.text.push('\n');
+                                c.text.push_str(s);
+                            }
+                            ModelContentItem::User(c) => {
+                                c.text.push('\n');
+                                c.text.push_str(s);
+                            }
+                            ModelContentItem::Agent(c) => {
+                                c.text.push('\n');
+                                c.text.push_str(s);
+                            }
+                            _ => {} // Should not happen
+                        }
+                    }
+                    // If there's no previous item, we ignore the upstream merge.
+                }
+            }
+        }
+
+        merged_items
+            .iter()
+            .map(|item| Self::embed_in_prompt(item, format))
+            .collect::<Vec<String>>()
+            .join("\n")
+    }}
 
 impl Default for ModelContent {
     /// Returns a default, empty `ModelContent` instance.

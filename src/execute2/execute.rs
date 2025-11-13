@@ -680,7 +680,7 @@ impl Worker {
                     None => None,
                 };
                 let postfix = self.execute(x, data)?.to_string();
-                let postfix = ModelContentItem::system(&postfix);
+                let postfix = ModelContentItem::merge_upstream(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))
             }

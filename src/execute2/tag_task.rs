@@ -152,8 +152,8 @@ impl DynamicPolicy for TaskPolicy {
         tracing::debug!("tag_task::TaskPolicy::mono\nState = {:?}", inputs.state);
         let (mut result, mut residual) =
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
-        match residual.state.status {
-            TaskStatus::JustCreated => {
+        match (residual.container, residual.state.status) {
+            (Container::Tag(_) | Container::BeginAnchor(_, _), TaskStatus::JustCreated) => {
                 if !residual.readonly {
                     // Load content from the specified context
                     residual.state.status = TaskStatus::Waiting;
@@ -162,7 +162,7 @@ impl DynamicPolicy for TaskPolicy {
                 }
                 result.do_next_pass = true;
             }
-            TaskStatus::Waiting => {
+            (Container::BeginAnchor(_, _), TaskStatus::Waiting) => {
                 // Nothing to do
                 result.collector = result
                     .collector
@@ -170,36 +170,30 @@ impl DynamicPolicy for TaskPolicy {
                         super::TASK_ANCHOR_PLACEHOLDER,
                     ));
             }
-            TaskStatus::Eating => {
+            (Container::BeginAnchor(a0, a1), TaskStatus::Eating) => {
                 // Eat a piece of text
-                match residual.container {
-                    Container::BeginAnchor(a0, a1) => {
-                        if !residual.readonly {
-                            let (existing_output, eaten_output) = (
-                                Range {
-                                    begin: a0.range.end,
-                                    end: a1.range.begin,
-                                },
-                                Range {
-                                    begin: a1.range.end,
-                                    end: residual.state.eating_end,
-                                },
-                            );
-                            result.new_patches = vec![(eaten_output, String::new())];
-                            let existing_output =
-                                Worker::get_range(residual.document, &existing_output)?;
-                            let eaten_output = Worker::get_range(residual.document, &eaten_output)?;
-                            result.new_output =
-                                Some(format!("{}{}", existing_output, eaten_output));
-                            result.do_next_pass = true;
-                            residual.state.status = TaskStatus::Waiting;
-                            result.new_state = Some(residual.state);
-                        };
-                        result.do_next_pass = true;
-                    }
-                    _ => {}
-                }
+                if !residual.readonly {
+                    let (existing_output, eaten_output) = (
+                        Range {
+                            begin: a0.range.end,
+                            end: a1.range.begin,
+                        },
+                        Range {
+                            begin: a1.range.end,
+                            end: residual.state.eating_end,
+                        },
+                    );
+                    result.new_patches = vec![(eaten_output, String::new())];
+                    let existing_output = Worker::get_range(residual.document, &existing_output)?;
+                    let eaten_output = Worker::get_range(residual.document, &eaten_output)?;
+                    result.new_output = Some(format!("{}{}", existing_output, eaten_output));
+                    result.do_next_pass = true;
+                    residual.state.status = TaskStatus::Waiting;
+                    result.new_state = Some(residual.state);
+                };
+                result.do_next_pass = true;
             }
+            _ => {}
         }
         Ok(result)
     }

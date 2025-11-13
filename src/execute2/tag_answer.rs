@@ -121,7 +121,6 @@ impl DynamicPolicy for AnswerPolicy {
                     prompt,
                     residual.parameters,
                 )?;
-                let prompt = residual.worker.postfix_content(prompt, ModelContent::from_item(ModelContentItem::agent("")));
                 let (prompt, response) = residual.worker.call_model(residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;

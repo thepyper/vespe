@@ -736,7 +736,8 @@ impl Worker {
                 return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
-        let prompt = prompt.to_prompt(PromptFormat::Parts);
+        let mut prompt = prompt.to_prompt(PromptFormat::Parts);
+        prompt.push_str("Assistant:\n");
         let response = crate::agent::shell::shell_call(&provider, &prompt)
             .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
         Ok((prompt, response))

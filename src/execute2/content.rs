@@ -110,6 +110,9 @@ impl ModelContentItem {
         ModelContentItem::MergeUpstream(text.into())
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.to_string().trim().is_empty()
+    }
 }
 
 impl ToString for ModelContentItem {
@@ -188,27 +191,6 @@ impl ModelContent {
         self.0.push(item);
     }
 
-    /// Converts the entire `ModelContent` into a single formatted prompt string.
-    ///
-    /// This method iterates through all `ModelContentItem`s and formats each one
-    /// using `ModelContentItem::to_prompt()`, then joins them with newline characters.
-    /// The result is a complete prompt ready for an external model.
-    ///
-    /// # Returns
-    ///
-    /// A `String` representing the concatenated and formatted prompt.
-    ///
-    /// # Examples
-    /*
-    pub fn to_prompt(&self) -> String {
-        self.0
-            .iter()
-            .map(|item| item.to_prompt())
-            .collect::<Vec<String>>()
-            .join("\n")
-    }
-            */
-
     fn embed_in_prompt_as_part(item: &ModelContentItem) -> String {
         match item {
             ModelContentItem::System(content) => {
@@ -247,14 +229,34 @@ impl ModelContent {
         }
     }
 
+    /// Converts the entire `ModelContent` into a single formatted prompt string.
+    ///
+    /// This method iterates through all `ModelContentItem`s and formats each one
+    /// using `ModelContentItem::to_prompt()`, then joins them with newline characters.
+    /// The result is a complete prompt ready for an external model.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the concatenated and formatted prompt.
+    ///
+    /// # Examples    
     pub fn to_prompt(&self, format: PromptFormat) -> String {
+        // Pre pass: delete empty messages
+        let non_empty_items = &self
+            .0
+            .iter()
+            .filter(|x| !x.is_empty())
+            .collect::<Vec<&ModelContentItem>>();
+
         // First pass: merge downstream and upstream messages
         let mut merged_items: Vec<ModelContentItem> = Vec::new();
         let mut downstream_merges: Vec<String> = Vec::new();
 
-        for item in &self.0 {
+        for item in non_empty_items {
             match item {
-                ModelContentItem::System(_) | ModelContentItem::User(_) | ModelContentItem::Agent(_) => {
+                ModelContentItem::System(_)
+                | ModelContentItem::User(_)
+                | ModelContentItem::Agent(_) => {
                     let mut current_text = item.to_string();
 
                     if !downstream_merges.is_empty() {
@@ -278,9 +280,15 @@ impl ModelContent {
                     if let Some(last_item) = merged_items.last_mut() {
                         let text_to_append = s.clone();
                         match last_item {
-                            ModelContentItem::System(c) => c.text = format!("{}\n{}", c.text, text_to_append),
-                            ModelContentItem::User(c) => c.text = format!("{}\n{}", c.text, text_to_append),
-                            ModelContentItem::Agent(c) => c.text = format!("{}\n{}", c.text, text_to_append),
+                            ModelContentItem::System(c) => {
+                                c.text = format!("{}\n{}", c.text, text_to_append)
+                            }
+                            ModelContentItem::User(c) => {
+                                c.text = format!("{}\n{}", c.text, text_to_append)
+                            }
+                            ModelContentItem::Agent(c) => {
+                                c.text = format!("{}\n{}", c.text, text_to_append)
+                            }
                             _ => {} // Should not happen as we only push normal items
                         }
                     }
@@ -296,15 +304,24 @@ impl ModelContent {
         if let Some(mut last) = iter.next() {
             for item in iter {
                 match (&mut last, &item) {
-                    (ModelContentItem::System(last_content), ModelContentItem::System(item_content)) => {
+                    (
+                        ModelContentItem::System(last_content),
+                        ModelContentItem::System(item_content),
+                    ) => {
                         last_content.text.push('\n');
                         last_content.text.push_str(&item_content.text);
                     }
-                    (ModelContentItem::User(last_content), ModelContentItem::User(item_content)) => {
+                    (
+                        ModelContentItem::User(last_content),
+                        ModelContentItem::User(item_content),
+                    ) => {
                         last_content.text.push('\n');
                         last_content.text.push_str(&item_content.text);
                     }
-                    (ModelContentItem::Agent(last_content), ModelContentItem::Agent(item_content)) => {
+                    (
+                        ModelContentItem::Agent(last_content),
+                        ModelContentItem::Agent(item_content),
+                    ) => {
                         last_content.text.push('\n');
                         last_content.text.push_str(&item_content.text);
                     }
@@ -317,12 +334,17 @@ impl ModelContent {
             final_merged_items.push(last);
         }
 
-        final_merged_items
+        let mut prompt = final_merged_items
             .iter()
             .map(|item| Self::embed_in_prompt(item, format))
             .collect::<Vec<String>>()
-            .join("\n")
-    }}
+            .join("\n");
+
+        prompt.push_str("Assistant:\n"); // TODO rendere dipendente dal tipo di formattazione?
+
+        prompt
+    }
+}
 
 impl Default for ModelContent {
     /// Returns a default, empty `ModelContent` instance.

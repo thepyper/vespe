@@ -106,15 +106,15 @@ impl DynamicPolicy for AnswerPolicy {
         );
         let (mut result, mut residual) =
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
-        match residual.state.status {
-            AnswerStatus::JustCreated => {
+        match (residual.container, residual.state.status) {
+            (Container::Tag(_) | Container::BeginAnchor(_, _), AnswerStatus::JustCreated) => {
                 // Prepare the query
                 residual.state.status = AnswerStatus::NeedProcessing;
                 residual.state.reply = String::new();
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
-            AnswerStatus::NeedProcessing => {
+            (Container::BeginAnchor(_, _), AnswerStatus::NeedProcessing) => {
                 // Execute the model query
                 let prompt = residual
                     .worker
@@ -138,7 +138,7 @@ impl DynamicPolicy for AnswerPolicy {
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
-            AnswerStatus::NeedInjection => {
+            (Container::BeginAnchor(_, _), AnswerStatus::NeedInjection) => {
                 // Inject the reply into the document
                 if !residual.readonly {
                     let output = residual.state.reply.clone();
@@ -148,44 +148,23 @@ impl DynamicPolicy for AnswerPolicy {
                 }
                 result.do_next_pass = true;
             }
-            AnswerStatus::Completed => {
+            (Container::BeginAnchor(_, _), AnswerStatus::Completed) => {
                 // Nothing to do
-                match residual.container {
-                    Container::EndAnchor(a0, a1) => {
-                        let content = Worker::get_range(
-                            residual.document,
-                            &Range {
-                                begin: a0.range.end,
-                                end: a1.range.begin,
-                            },
-                        )?;
-                        let content_hash = result.collector.hash(&content);
-                        if residual.state.reply_hash != content_hash {
-                            // Content has been modified, evaporate anchor and let content become user content
-                            residual.state.status = AnswerStatus::NeedEvaporation;
-                            result.new_state = Some(residual.state);
-                            result.do_next_pass = true;
-                        }
-                    }
-                    Container::BeginAnchor(_, _) => {
-                        let is_dynamic = residual
-                            .parameters
-                            .get("dynamic")
-                            .map(|x| x.as_bool().unwrap_or(false))
-                            .unwrap_or(false);
-                        if !is_dynamic {
-                            // Do nothing
-                        } else if residual.state.context_hash != residual.input_hash {
-                            // Repeat
-                            residual.state.status = AnswerStatus::Repeat;
-                            result.new_state = Some(residual.state);
-                            result.do_next_pass = true;
-                        }
-                    }
-                    _ => {}
+                let is_dynamic = residual
+                    .parameters
+                    .get("dynamic")
+                    .map(|x| x.as_bool().unwrap_or(false))
+                    .unwrap_or(false);
+                if !is_dynamic {
+                    // Do nothing
+                } else if residual.state.context_hash != residual.input_hash {
+                    // Repeat
+                    residual.state.status = AnswerStatus::Repeat;
+                    result.new_state = Some(residual.state);
+                    result.do_next_pass = true;
                 }
             }
-            AnswerStatus::Repeat => {
+            (Container::BeginAnchor(_, _), AnswerStatus::Repeat) => {
                 // Prepare the query
                 if !residual.readonly {
                     residual.state.status = AnswerStatus::NeedProcessing;
@@ -195,21 +174,32 @@ impl DynamicPolicy for AnswerPolicy {
                 }
                 result.do_next_pass = true;
             }
-            AnswerStatus::NeedEvaporation => {
+            (Container::BeginAnchor(a0, a1), AnswerStatus::NeedEvaporation) => {
                 // Prepare the query
-                if let Container::BeginAnchor(a0, a1) = residual.container {
-                    if !residual.readonly {
-                        residual.state.status = AnswerStatus::Evaporated;
-                        result.new_patches =
-                            vec![(a0.range, String::new()), (a1.range, String::new())];
-                        result.new_state = Some(residual.state);
-                    }
+                if !residual.readonly {
+                    residual.state.status = AnswerStatus::Evaporated;
+                    result.new_patches = vec![(a0.range, String::new()), (a1.range, String::new())];
+                    result.new_state = Some(residual.state);
+                }
+                result.do_next_pass = true;
+            }
+            (Container::EndAnchor(a0, a1), AnswerStatus::Evaporated) => {
+                let content = Worker::get_range(
+                    residual.document,
+                    &Range {
+                        begin: a0.range.end,
+                        end: a1.range.begin,
+                    },
+                )?;
+                let content_hash = result.collector.hash(&content);
+                if residual.state.reply_hash != content_hash {
+                    // Content has been modified, evaporate anchor and let content become user content
+                    residual.state.status = AnswerStatus::NeedEvaporation;
+                    result.new_state = Some(residual.state);
                     result.do_next_pass = true;
                 }
             }
-            AnswerStatus::Evaporated => {
-                // Unreachable
-            }
+            _ => {}
         }
         Ok(result)
     }

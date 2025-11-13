@@ -914,7 +914,41 @@ impl Worker {
                         };
                         (do_next_pass, new_collector.enter(anchor), patches)
                     }
-                    AnchorKind::End => (false, collector.exit(anchor)?, vec![]),
+                    AnchorKind::End => {
+                        collector = collector.set_latest_range(&anchor.range);
+                        let anchor_begin = anchor_index
+                            .get_begin(&anchor.uuid)
+                            .ok_or(ExecuteError::EndAnchorNotFound(anchor.uuid))?;
+                        let anchor_begin = ast
+                            .content
+                            .get(anchor_begin)
+                            .and_then(|c| match c {
+                                Content::Anchor(a) => Some(a),
+                                _ => None,
+                            })
+                            .ok_or(ExecuteError::EndAnchorNotFound(anchor.uuid))?;
+                        let (do_next_pass, new_collector, patches) = if readonly {
+                            let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
+                                self,
+                                collector,
+                                &document,
+                                anchor_begin,
+                                anchor,
+                                true,
+                            )?;
+                            (do_next_pass, collector, vec![])
+                        } else {
+                            TagBehaviorDispatch::execute_anchor(
+                                self,
+                                collector,
+                                &document,
+                                anchor_begin,
+                                anchor,
+                                true,
+                            )?
+                        };
+                        (do_next_pass, new_collector.exit(anchor)?, patches)
+                    }
                 },
             };
             collector = next_collector;

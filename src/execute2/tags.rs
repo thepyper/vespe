@@ -851,7 +851,14 @@ impl TagBehaviorDispatch {
         is_end: bool,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let behavior = Self::get_behavior(anchor_begin.command)?;
-        behavior.execute_anchor(worker, collector, document, anchor_begin, anchor_end, is_end)
+        behavior.execute_anchor(
+            worker,
+            collector,
+            document,
+            anchor_begin,
+            anchor_end,
+            is_end,
+        )
     }
 
     /// Dispatches the `collect_anchor` call to the correct [`TagBehavior`] implementation.
@@ -879,6 +886,13 @@ impl TagBehaviorDispatch {
         is_end: bool,
     ) -> Result<(bool, Collector)> {
         let behavior = Self::get_behavior(anchor_begin.command)?;
-        behavior.collect_anchor(worker, collector, document, anchor_begin, anchor_end, is_end)
+        behavior.collect_anchor(
+            worker,
+            collector,
+            document,
+            anchor_begin,
+            anchor_end,
+            is_end,
+        )
     }
 }

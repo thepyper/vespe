@@ -141,13 +141,13 @@ impl Collector {
     }
 
     // TODO doc
-    pub fn is_in_this_kind_of_anchor(&self, kind: CommandKind) -> bool {
+    pub fn is_in_this_kind_of_anchor(&self, kind: CommandKind) -> Option<&Anchor> {
         for anchor in &self.anchor_stack {
             if anchor.command == kind {
-                return true;
+                return Some(anchor);
             }
         }
-        false
+        None
     }
 
     /// Creates a new, empty `Collector` instance.
@@ -860,16 +860,22 @@ impl Worker {
             let (do_next_pass, next_collector, patches) = match item {
                 Content::Text(text) => {
                     collector = collector.set_latest_range(&text.range);
-                    if collector.is_in_this_kind_of_anchor(CommandKind::Task) {
+                    if let Some(_) = collector.is_in_this_kind_of_anchor(CommandKind::Task) {
                         // Do not collect text inside task anchor
                         // TODO spostare altrove? logica di task in pass? come fare?
                         tracing::debug!("Removed by task anchor: {:?}", text.content);
-                    } else if !collector.is_in_this_kind_of_anchor(CommandKind::Answer) {
+                    } else if let Some(anchor) = collector.is_in_this_kind_of_anchor(CommandKind::Answer) {
+                        // Inside answer anchor, check if anchor is edited
+                        if let Some(_) = anchor.parameters.get("edited") { // TODO non mi piace tanto, non e' un parametro!!
+                            // Edited content, then it's user
+                            collector = collector.push_item(ModelContentItem::user(&text.content));
+                        } else {
+                            // Unedited content, then it's assistant
+                            collector = collector.push_item(ModelContentItem::agent(&text.content));
+                        }
+                    } else {
                         // User writes outside answer anchors
                         collector = collector.push_item(ModelContentItem::user(&text.content));
-                    } else {
-                        // Agents write inside anchors
-                        collector = collector.push_item(ModelContentItem::agent(&text.content));
                     }
                     (false, collector, vec![])
                 }

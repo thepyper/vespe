@@ -110,47 +110,6 @@ impl ModelContentItem {
         ModelContentItem::MergeUpstream(text.into())
     }
 
-    /// Converts the `ModelContentItem` into a formatted prompt string suitable
-    /// for display or submission to a model, including a message type header.
-    ///
-    /// The output format includes a separator `---` and a message type (e.g., "System Message:",
-    /// "User Message:", "Agent Message:") followed by the content.
-    ///
-    /// # Returns
-    ///
-    /// A `String` representing the formatted prompt item.
-    ///
-    /// # Examples
-    /*
-    pub fn to_prompt(&self) -> String {
-        match self {
-            ModelContentItem::System(content) => {
-                let text = content.text.trim();
-                if !text.is_empty() {
-                    format!("\n---\nSystem Message:\n{}\n", text)
-                } else {
-                    text.into()
-                }
-            }
-            ModelContentItem::User(content) => {
-                let text = content.text.trim();
-                if !text.is_empty() {
-                    format!("\n---\nUser Message:\n{}\n", text)
-                } else {
-                    text.into()
-                }
-            }
-            ModelContentItem::Agent(content) => {
-                let text = content.text.trim();
-                if !text.is_empty() {
-                    format!("\n---\nAgent Message:\n{}\n", text)
-                } else {
-                    text.into()
-                }
-            }
-        }
-    }
-        */
 }
 
 impl ToString for ModelContentItem {

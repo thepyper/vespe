@@ -9,7 +9,7 @@ use crate::ast2::{
     Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters, Range,
     Tag,
 };
-use crate::execute2::content::{ModelContent, ModelContentItem};
+use crate::execute2::content::{ModelContent, ModelContentItem, PromptFormat};
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
@@ -288,7 +288,7 @@ impl Collector {
     ///
     /// The `Collector` with the new item added to its context.
     pub fn push_item(mut self, item: ModelContentItem) -> Self {
-        self.context_hasher.update(item.to_prompt());
+        self.context_hasher.update(item.to_string());
         self.context.push(item);
         self
     }
@@ -736,10 +736,10 @@ impl Worker {
                 return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
-        let prompt = prompt.to_prompt();
+        let prompt = prompt.to_prompt(PromptFormat::Parts);
         let response = crate::agent::shell::shell_call(&provider, &prompt)
             .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
-        (prompt, response)
+        Ok((prompt, response))
     }
 
     /// Executes a single read-only pass over the context file.

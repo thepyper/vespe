@@ -150,7 +150,7 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::Completed => {
                 // Nothing to do
-                if let TagOrAnchor::Anchor(a0, a1) = residual.tag_or_anchor {
+                if let TagOrAnchor::Anchor((a0, a1)) = residual.tag_or_anchor {
                     let is_dynamic = residual
                         .parameters
                         .get("dynamic")

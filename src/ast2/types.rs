@@ -355,6 +355,9 @@ impl Parameters {
     pub fn insert(&mut self, key: String, value: JsonPlusEntity) {
         self.parameters.properties.insert(key, value);
     }
+    pub fn remove(&mut self, key: &str) {
+        self.parameters.properties.remove(key);
+    }
     pub fn update(mut self, other: &Parameters) -> Self {
         for parameter in other.parameters.properties.iter() {
             self.parameters

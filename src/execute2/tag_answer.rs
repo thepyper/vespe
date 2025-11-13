@@ -32,10 +32,8 @@ pub enum AnswerStatus {
     NeedInjection,
     /// The `@answer` tag has completed its execution, and its response is in the document.
     Completed,
-    ///
-    NeedEvaporation,
-    ///
-    Evaporated,
+    /// The `@answer` tag content has been edited by user, then it must be seen as user conten by llm.
+    Edited,
 }
 
 /// Represents the persistent state of an `@answer` tag.
@@ -179,28 +177,27 @@ impl DynamicPolicy for AnswerPolicy {
                     let content_hash = result.collector.hash(&content);
                     if residual.state.reply_hash != content_hash {
                         // Content has been modified, evaporate anchor and let content become user content
-                        residual.state.status = AnswerStatus::NeedEvaporation;
-                        result.new_state = Some(residual.state);
+                        if !residual.readonly {
+                            residual.state.status = AnswerStatus::Edited;
+                            result.new_state = Some(residual.state);
+                            let mut a0 = a0.clone();
+                            a0.parameters.insert("edited".into(), JsonPlusEntity::Flag);
+                            result.new_patches = vec![(a0.range, format!("{}", a0.to_string()))];
+                        }
                         result.do_next_pass = true;
                     }
                 }
             }
-            (Container::BeginAnchor(_, _), AnswerStatus::Repeat) => {
+            (Container::BeginAnchor(a0, _), AnswerStatus::Repeat) => {
                 // Return to need processing
                 if !residual.readonly {
                     residual.state.status = AnswerStatus::NeedProcessing;
                     residual.state.reply = String::new();
                     result.new_state = Some(residual.state);
                     result.new_output = Some(String::new());
-                }
-                result.do_next_pass = true;
-            }
-            (Container::BeginAnchor(a0, a1), AnswerStatus::NeedEvaporation) => {
-                // Go to evaporation state
-                if !residual.readonly {
-                    residual.state.status = AnswerStatus::Evaporated;
-                    result.new_patches = vec![(a0.range, String::new()), (a1.range, String::new())];
-                    result.new_state = Some(residual.state);
+                    let mut a0 = a0.clone();
+                    a0.parameters.remove("edited".into());
+                    result.new_patches = vec![(a0.range, format!("{}", a0.to_string()))];
                 }
                 result.do_next_pass = true;
             }

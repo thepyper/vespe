@@ -904,12 +904,12 @@ impl Worker {
                             .ok_or(ExecuteError::EndAnchorNotFound(anchor.uuid))?;
                         let (do_next_pass, new_collector, patches) = if readonly {
                             let (do_next_pass, collector) = TagBehaviorDispatch::collect_anchor(
-                                self, collector, &document, anchor, anchor_end,
+                                self, collector, &document, anchor, anchor_end, false,
                             )?;
                             (do_next_pass, collector, vec![])
                         } else {
                             TagBehaviorDispatch::execute_anchor(
-                                self, collector, &document, anchor, anchor_end,
+                                self, collector, &document, anchor, anchor_end, false,
                             )?
                         };
                         (do_next_pass, new_collector.enter(anchor), patches)

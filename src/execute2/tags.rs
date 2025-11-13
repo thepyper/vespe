@@ -112,6 +112,7 @@ pub trait TagBehavior {
         document: &str,
         anchor_begin: &Anchor,
         anchor_end: &Anchor,
+        is_end: bool,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)>;
 
     /// Collects the content associated with an anchor in a read-only pass.
@@ -142,6 +143,7 @@ pub trait TagBehavior {
         document: &str,
         anchor_begin: &Anchor,
         anchor_end: &Anchor,
+        is_end: bool,
     ) -> Result<(bool, Collector)>;
 }
 
@@ -385,6 +387,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         _document: &str,
         _anchor_begin: &Anchor,
         _anchor_end: &Anchor,
+        _is_end: bool,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         panic!("StaticTag does not support execute_anchor");
     }
@@ -403,6 +406,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
         _document: &str,
         _anchor_begin: &Anchor,
         _anchor_end: &Anchor,
+        _is_end: bool,
     ) -> Result<(bool, Collector)> {
         panic!("StaticTag does not support collect_anchor");
     }
@@ -605,6 +609,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         document: &str,
         anchor_begin: &Anchor,
         anchor_end: &Anchor,
+        is_end: bool,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let state = match worker.load_state::<P::State>(anchor_begin.command, &anchor_begin.uuid) {
             Ok(state) => state,
@@ -614,13 +619,18 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             }
         };
         let (input, input_hash) = worker.redirect_input(&collector, &anchor_begin.parameters)?;
+        let container = if is_end {
+            Container::EndAnchor(anchor_begin, anchor_end)
+        } else {
+            Container::BeginAnchor(anchor_begin, anchor_end)
+        };
         let mono_inputs = DynamicPolicyMonoInput::<P::State> {
             readonly: false,
             worker,
             collector,
             document,
             state,
-            container: Container::BeginAnchor(anchor_begin, anchor_end),
+            container,
             input,
             input_hash,
         };
@@ -683,16 +693,22 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         document: &str,
         anchor_begin: &Anchor,
         anchor_end: &Anchor,
+        is_end: bool,
     ) -> Result<(bool, Collector)> {
         let state = worker.load_state::<P::State>(anchor_begin.command, &anchor_begin.uuid)?;
         let (input, input_hash) = worker.redirect_input(&collector, &anchor_begin.parameters)?;
+        let container = if is_end {
+            Container::EndAnchor(anchor_begin, anchor_end)
+        } else {
+            Container::BeginAnchor(anchor_begin, anchor_end)
+        };
         let mono_inputs = DynamicPolicyMonoInput::<P::State> {
             readonly: true,
             worker,
             collector,
             document,
             state,
-            container: Container::BeginAnchor(anchor_begin, anchor_end),
+            container,
             input,
             input_hash,
         };
@@ -832,9 +848,10 @@ impl TagBehaviorDispatch {
         document: &str,
         anchor_begin: &Anchor,
         anchor_end: &Anchor,
+        is_end: bool,
     ) -> Result<(bool, Collector, Vec<(Range, String)>)> {
         let behavior = Self::get_behavior(anchor_begin.command)?;
-        behavior.execute_anchor(worker, collector, document, anchor_begin, anchor_end)
+        behavior.execute_anchor(worker, collector, document, anchor_begin, anchor_end, is_end)
     }
 
     /// Dispatches the `collect_anchor` call to the correct [`TagBehavior`] implementation.
@@ -859,8 +876,9 @@ impl TagBehaviorDispatch {
         document: &str,
         anchor_begin: &Anchor,
         anchor_end: &Anchor,
+        is_end: bool,
     ) -> Result<(bool, Collector)> {
         let behavior = Self::get_behavior(anchor_begin.command)?;
-        behavior.collect_anchor(worker, collector, document, anchor_begin, anchor_end)
+        behavior.collect_anchor(worker, collector, document, anchor_begin, anchor_end, is_end)
     }
 }

@@ -172,9 +172,10 @@ impl DynamicPolicy for TaskPolicy {
             }
             TaskStatus::Eating => {
                 // Eat a piece of text
-                if !residual.readonly {
-                    let (existing_output, eaten_output) = match residual.container {
-                        Container::BeginAnchor(a0, a1) => (
+                match residual.container {
+                    Container::BeginAnchor(a0, a1) => {
+                        if !residual.readonly {
+                            let (existing_output, eaten_output) = (
                             Range {
                                 begin: a0.range.end,
                                 end: a1.range.begin,
@@ -182,19 +183,19 @@ impl DynamicPolicy for TaskPolicy {
                             Range {
                                 begin: a1.range.end,
                                 end: residual.state.eating_end,
-                            },
-                        ),
-                        _ => {}
-                    };
-                    result.new_patches = vec![(eaten_output, String::new())];
-                    let existing_output = Worker::get_range(residual.document, &existing_output)?;
-                    let eaten_output = Worker::get_range(residual.document, &eaten_output)?;
-                    result.new_output = Some(format!("{}{}", existing_output, eaten_output));
-                    result.do_next_pass = true;
-                    residual.state.status = TaskStatus::Waiting;
-                    result.new_state = Some(residual.state);
-                }
-                result.do_next_pass = true;
+                            });
+                            result.new_patches = vec![(eaten_output, String::new())];
+                            let existing_output = Worker::get_range(residual.document, &existing_output)?;
+                            let eaten_output = Worker::get_range(residual.document, &eaten_output)?;
+                            result.new_output = Some(format!("{}{}", existing_output, eaten_output));
+                            result.do_next_pass = true;
+                            residual.state.status = TaskStatus::Waiting;
+                            result.new_state = Some(residual.state);
+                        };
+                        result.do_next_pass = true;
+                    }
+                    _ => {}
+                }                
             }
         }
         Ok(result)

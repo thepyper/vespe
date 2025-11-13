@@ -182,7 +182,7 @@ impl DynamicPolicy for AnswerPolicy {
                             result.new_state = Some(residual.state);
                             let mut a0 = a0.clone();
                             a0.parameters.insert("edited".into(), JsonPlusEntity::Flag);
-                            result.new_patches = vec![(a0.range, format!("{}", a0.to_string()))];
+                            result.new_patches = vec![residual.worker.mutate_anchor(&a0)?];
                         }
                         result.do_next_pass = true;
                     }
@@ -197,7 +197,7 @@ impl DynamicPolicy for AnswerPolicy {
                     result.new_output = Some(String::new());
                     let mut a0 = a0.clone();
                     a0.parameters.remove("edited".into());
-                    result.new_patches = vec![(a0.range, format!("{}", a0.to_string()))];
+                    result.new_patches = vec![residual.worker.mutate_anchor(&a0)?];
                 }
                 result.do_next_pass = true;
             }

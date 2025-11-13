@@ -30,7 +30,9 @@ use serde::{Deserialize, Serialize};
 
 use super::content::ModelContentItem;
 use super::execute::Worker;
-use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
+use super::tags::{
+    Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, DynamicState,
+};
 use super::Result;
 use crate::ast2::{Position, Range};
 use std::str::FromStr;
@@ -222,5 +224,11 @@ impl DynamicPolicy for TaskPolicy {
             _ => {}
         }
         Ok(result)
+    }
+}
+
+impl DynamicState for TaskState {
+    fn status_indicator(&self) -> String {
+        self.status.to_string()
     }
 }

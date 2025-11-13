@@ -9,7 +9,9 @@ use serde_json::json;
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::Worker;
-use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
+use super::tags::{
+    Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, DynamicState,
+};
 use crate::ast2::{JsonPlusEntity, Parameters, Range};
 use std::str::FromStr;
 
@@ -343,5 +345,11 @@ impl AnswerPolicy {
     }
     fn choice_tag_from_choice(choice: &str) -> String {
         format!("§{}§", choice)
+    }
+}
+
+impl DynamicState for AnswerState {
+    fn status_indicator(&self) -> String {
+        self.status.to_string()
     }
 }

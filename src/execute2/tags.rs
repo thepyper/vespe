@@ -261,6 +261,10 @@ pub struct DynamicPolicyMonoInputResidual<'a, State> {
     pub input_hash: String,
 }
 
+pub trait DynamicState {
+    fn status_indicator(&self) -> String;
+}
+
 /// The result of a single execution step for a dynamic policy.
 ///
 /// This struct encapsulates all possible outcomes of a `mono` call for a dynamic tag,

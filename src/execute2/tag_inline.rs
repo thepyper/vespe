@@ -9,7 +9,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::error::ExecuteError;
-use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
+use super::tags::{
+    Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, DynamicState,
+};
 use super::Result;
 use crate::ast2::JsonPlusEntity;
 use std::str::FromStr;
@@ -160,5 +162,11 @@ impl DynamicPolicy for InlinePolicy {
             _ => {}
         }
         Ok(result)
+    }
+}
+
+impl DynamicState for InlineState {
+    fn status_indicator(&self) -> String {
+        self.status.to_string()
     }
 }

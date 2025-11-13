@@ -9,7 +9,7 @@ use serde_json::json;
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::Worker;
-use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
+use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, TagOrAnchor};
 use crate::ast2::{JsonPlusEntity, Parameters};
 
 use handlebars::Handlebars;
@@ -32,6 +32,10 @@ pub enum AnswerStatus {
     NeedInjection,
     /// The `@answer` tag has completed its execution, and its response is in the document.
     Completed,
+    ///
+    NeedEvaporation,
+    ///
+    Evaporated,
 }
 
 /// Represents the persistent state of an `@answer` tag.
@@ -48,6 +52,8 @@ pub struct AnswerState {
     pub reply: String,
     /// The context hash
     pub context_hash: String,
+    /// The reply hash
+    pub reply_hash: String,
 }
 
 /// Implements the dynamic policy for the `@answer` tag.
@@ -125,6 +131,7 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.worker.call_model(residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;
+                residual.state.reply_hash = result.collector.hash(&response);
                 residual.state.reply = response;
                 residual.state.status = AnswerStatus::NeedInjection;
                 residual.state.context_hash = residual.input_hash;
@@ -143,18 +150,35 @@ impl DynamicPolicy for AnswerPolicy {
             }
             AnswerStatus::Completed => {
                 // Nothing to do
-                let is_dynamic = residual
-                    .parameters
-                    .get("dynamic")
-                    .map(|x| x.as_bool().unwrap_or(false))
-                    .unwrap_or(false);
-                if !is_dynamic {
-                    // Do nothing
-                } else if residual.state.context_hash != residual.input_hash {
-                    // Repeat
-                    residual.state.status = AnswerStatus::Repeat;
-                    result.new_state = Some(residual.state);
-                    result.do_next_pass = true;
+                if let TagOrAnchor::Anchor(a0, a1) = residual.tag_or_anchor {
+                    let is_dynamic = residual
+                        .parameters
+                        .get("dynamic")
+                        .map(|x| x.as_bool().unwrap_or(false))
+                        .unwrap_or(false);
+                    let content = Worker::get_range(
+                        residual.document,
+                        Range {
+                            begin: a0.range.end,
+                            end: a1.range.begin,
+                        },
+                    )?;
+                    let content_hash = result.collector.hash(&content);
+                    if residual.state.reply_hash != content_hash {
+                        // Content has been modified, evaporate anchor and let content become user content
+                        residual.state.status = AnswerStatus::NeedEvaporation;
+                        result.new_state = Some(residual.state);
+                        result.do_next_pass = true;
+                    } else if !is_dynamic {
+                        // Do nothing
+                    } else if residual.state.context_hash != residual.input_hash {
+                        // Repeat
+                        residual.state.status = AnswerStatus::Repeat;
+                        result.new_state = Some(residual.state);
+                        result.do_next_pass = true;
+                    }
+                } else {
+                    panic!("not an anchor!?!?!?");
                 }
             }
             AnswerStatus::Repeat => {
@@ -166,6 +190,23 @@ impl DynamicPolicy for AnswerPolicy {
                     result.new_output = Some(String::new());
                 }
                 result.do_next_pass = true;
+            }
+            AnswerStatus::NeedEvaporation => {
+                // Prepare the query
+                if let TagOrAnchor::Anchor((a0, a1)) = residual.tag_or_anchor {
+                    if !residual.readonly {
+                        residual.state.status = AnswerStatus::Evaporated;
+                        result.new_patches =
+                            vec![(a0.range, String::new()), (a1.range, String::new())];
+                        result.new_state = Some(residual.state);
+                    }
+                    result.do_next_pass = true;
+                } else {
+                    panic!("not an anchor!?!?!?");
+                }
+            }
+            AnswerStatus::Evaporated => {
+                // Unreachable
             }
         }
         Ok(result)

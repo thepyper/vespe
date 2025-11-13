@@ -165,20 +165,24 @@ impl DynamicPolicy for AnswerPolicy {
                 }
             }
             (Container::EndAnchor(a0, a1), AnswerStatus::Completed) => {
-                // Evaporate anchor
-                let content = Worker::get_range(
-                    residual.document,
-                    &Range {
-                        begin: a0.range.end,
-                        end: a1.range.begin,
-                    },
-                )?;
-                let content_hash = result.collector.hash(&content);
-                if residual.state.reply_hash != content_hash {
-                    // Content has been modified, evaporate anchor and let content become user content
-                    residual.state.status = AnswerStatus::NeedEvaporation;
-                    result.new_state = Some(residual.state);
-                    result.do_next_pass = true;
+                if let Some(_) = residual.worker.is_output_redirected(&a0.parameters)? {
+                    // No evaporation for redirected output anchors
+                } else {
+                    // Evaporate anchor
+                    let content = Worker::get_range(
+                        residual.document,
+                        &Range {
+                            begin: a0.range.end,
+                            end: a1.range.begin,
+                        },
+                    )?;
+                    let content_hash = result.collector.hash(&content);
+                    if residual.state.reply_hash != content_hash {
+                        // Content has been modified, evaporate anchor and let content become user content
+                        residual.state.status = AnswerStatus::NeedEvaporation;
+                        result.new_state = Some(residual.state);
+                        result.do_next_pass = true;
+                    }
                 }
             }
             (Container::BeginAnchor(_, _), AnswerStatus::Repeat) => {

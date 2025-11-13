@@ -492,6 +492,8 @@ pub struct Anchor {
     pub uuid: Uuid,
     /// Whether this is the `Begin` or `End` of the anchor pair.
     pub kind: AnchorKind,
+    /// A status tag useful to visualize things
+    pub status: Option<String>,
     /// Key-value parameters, typically only present on the `Begin` anchor.
     pub parameters: Parameters,
     /// Positional arguments, typically only present on the `Begin` anchor.
@@ -512,6 +514,7 @@ impl Anchor {
             command,
             uuid,
             kind: AnchorKind::Begin,
+            status: None,
             parameters: parameters.clone(),
             arguments: arguments.clone(),
             range: Range::null(),
@@ -520,6 +523,7 @@ impl Anchor {
             command,
             uuid,
             kind: AnchorKind::End,
+            status: None,
             parameters: Parameters::new(),
             arguments: Arguments::new(),
             range: Range::null(),
@@ -532,6 +536,7 @@ impl Anchor {
             command: CommandKind::Tag,
             uuid: uuid!("00000000-0000-0000-0000-000000000000"),
             kind: AnchorKind::Begin,
+            status: None,
             parameters: Parameters::new(),
             arguments: Arguments::new(),
             range: Range::null(),
@@ -544,15 +549,24 @@ impl Anchor {
         anchor.arguments = anchor.arguments.update(arguments);
         anchor
     }
+    /// Mutate an anchor into another with different status
+    pub fn set_status(mut self, new_status: String) -> Self {
+        self.status = Some(new_status);
+        self
+    }
 }
 
 impl ToString for Anchor {
     fn to_string(&self) -> String {
         format!(
-            "<!-- {}-{}:{} {} {} -->",
+            "<!-- {}-{}:{} {} {} {} -->",
             self.command.to_string(),
             self.uuid.to_string(),
             self.kind.to_string(),
+            match &self.status {
+                None => format!(""),
+                Some(x) => format!("+{}+", x),
+            },
             self.parameters.to_string(),
             self.arguments.to_string(),
         )

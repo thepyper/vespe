@@ -381,6 +381,8 @@ pub(crate) fn _try_parse_anchor<'doc>(
 
     let p8 = p7.skip_many_whitespaces_immutable();
 
+    //TODO parse status
+
     let (parameters, p9) = match _try_parse_parameters(&p8)? {
         Some((p, p_next)) => (p, p_next),
         None => (Parameters::new(), p8.clone()),
@@ -422,6 +424,7 @@ pub(crate) fn _try_parse_anchor<'doc>(
         command,
         uuid,
         kind,
+        status,
         parameters,
         arguments,
         range: Range { begin, end },

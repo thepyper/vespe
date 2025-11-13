@@ -166,7 +166,7 @@ impl DynamicPolicy for TaskPolicy {
                 // Nothing to do
                 result.collector = result
                     .collector
-                    .push_item(ModelContentItem::system(super::TASK_ANCHOR_PLACEHOLDER));
+                    .push_item(ModelContentItem::merge_downstream(super::TASK_ANCHOR_PLACEHOLDER));
             }
             TaskStatus::Eating => {
                 // Eat a piece of text

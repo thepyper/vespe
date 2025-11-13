@@ -214,7 +214,7 @@ impl ModelContent {
             ModelContentItem::System(content) => {
                 let text = content.text.trim();
                 if !text.is_empty() {
-                    format!("\n---\nSystem Message:\n{}\n", text)
+                    format!("---\nSystem:\n{}\n", text)
                 } else {
                     text.into()
                 }
@@ -222,7 +222,7 @@ impl ModelContent {
             ModelContentItem::User(content) => {
                 let text = content.text.trim();
                 if !text.is_empty() {
-                    format!("\n---\nUser Message:\n{}\n", text)
+                    format!("---\nUser:\n{}\n", text)
                 } else {
                     text.into()
                 }
@@ -230,7 +230,7 @@ impl ModelContent {
             ModelContentItem::Agent(content) => {
                 let text = content.text.trim();
                 if !text.is_empty() {
-                    format!("\n---\nAssistant Message:\n{}\n", text)
+                    format!("Assistant:\n{}\n", text)
                 } else {
                     text.into()
                 }

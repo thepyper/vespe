@@ -854,7 +854,7 @@ impl Worker {
                         // TODO spostare altrove? logica di task in pass? come fare?
                         tracing::debug!("Removed by task anchor: {:?}", text.content);
                     } else if !collector.is_in_this_kind_of_anchor(CommandKind::Answer) {
-                        // User writes outside anchors
+                        // User writes outside answer anchors
                         collector = collector.push_item(ModelContentItem::user(&text.content));
                     } else {
                         // Agents write inside anchors

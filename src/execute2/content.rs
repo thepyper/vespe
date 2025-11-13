@@ -230,7 +230,7 @@ impl ModelContent {
             ModelContentItem::Agent(content) => {
                 let text = content.text.trim();
                 if !text.is_empty() {
-                    format!("\n---\nAgent Message:\n{}\n", text)
+                    format!("\n---\nAssistant Message:\n{}\n", text)
                 } else {
                     text.into()
                 }
@@ -253,55 +253,34 @@ impl ModelContent {
 
         for item in &self.0 {
             match item {
-                ModelContentItem::System(content) => {
-                    let mut new_text = content.text.clone();
+                ModelContentItem::System(_) | ModelContentItem::User(_) | ModelContentItem::Agent(_) => {
+                    let mut current_text = item.to_string();
+
                     if !downstream_merges.is_empty() {
-                        let mut prefix = downstream_merges.join("\n");
-                        prefix.push('\n');
-                        new_text.insert_str(0, &prefix);
+                        let prefix = downstream_merges.join("\n");
+                        current_text = format!("{}\n{}", prefix, current_text);
                         downstream_merges.clear();
                     }
-                    merged_items.push(ModelContentItem::system(&new_text));
-                }
-                ModelContentItem::User(content) => {
-                    let mut new_text = content.text.clone();
-                    if !downstream_merges.is_empty() {
-                        let mut prefix = downstream_merges.join("\n");
-                        prefix.push('\n');
-                        new_text.insert_str(0, &prefix);
-                        downstream_merges.clear();
-                    }
-                    merged_items.push(ModelContentItem::user(&new_text));
-                }
-                ModelContentItem::Agent(content) => {
-                    let mut new_text = content.text.clone();
-                    if !downstream_merges.is_empty() {
-                        let mut prefix = downstream_merges.join("\n");
-                        prefix.push('\n');
-                        new_text.insert_str(0, &prefix);
-                        downstream_merges.clear();
-                    }
-                    merged_items.push(ModelContentItem::agent(&new_text));
+
+                    let new_item = match item {
+                        ModelContentItem::System(_) => ModelContentItem::system(&current_text),
+                        ModelContentItem::User(_) => ModelContentItem::user(&current_text),
+                        ModelContentItem::Agent(_) => ModelContentItem::agent(&current_text),
+                        _ => unreachable!(), // We are in the match arm for these types
+                    };
+                    merged_items.push(new_item);
                 }
                 ModelContentItem::MergeDownstream(s) => {
                     downstream_merges.push(s.clone());
                 }
                 ModelContentItem::MergeUpstream(s) => {
                     if let Some(last_item) = merged_items.last_mut() {
+                        let text_to_append = s.clone();
                         match last_item {
-                            ModelContentItem::System(c) => {
-                                c.text.push('\n');
-                                c.text.push_str(s);
-                            }
-                            ModelContentItem::User(c) => {
-                                c.text.push('\n');
-                                c.text.push_str(s);
-                            }
-                            ModelContentItem::Agent(c) => {
-                                c.text.push('\n');
-                                c.text.push_str(s);
-                            }
-                            _ => {} // Should not happen
+                            ModelContentItem::System(c) => c.text = format!("{}\n{}", c.text, text_to_append),
+                            ModelContentItem::User(c) => c.text = format!("{}\n{}", c.text, text_to_append),
+                            ModelContentItem::Agent(c) => c.text = format!("{}\n{}", c.text, text_to_append),
+                            _ => {} // Should not happen as we only push normal items
                         }
                     }
                     // If there's no previous item, we ignore the upstream merge.

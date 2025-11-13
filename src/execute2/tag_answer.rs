@@ -10,7 +10,7 @@ use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
 use super::execute::Worker;
 use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, TagOrAnchor};
-use crate::ast2::{JsonPlusEntity, Parameters};
+use crate::ast2::{JsonPlusEntity, Parameters, Range};
 
 use handlebars::Handlebars;
 
@@ -158,7 +158,7 @@ impl DynamicPolicy for AnswerPolicy {
                         .unwrap_or(false);
                     let content = Worker::get_range(
                         residual.document,
-                        Range {
+                        &Range {
                             begin: a0.range.end,
                             end: a1.range.begin,
                         },

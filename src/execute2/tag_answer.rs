@@ -129,7 +129,7 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.worker.call_model(residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;
-                residual.state.reply_hash = result.collector.hash(&response);
+                residual.state.reply_hash = result.collector.normalized_hash(&response);
                 residual.state.reply = response;
                 residual.state.status = AnswerStatus::NeedInjection;
                 residual.state.context_hash = residual.input_hash;
@@ -174,7 +174,7 @@ impl DynamicPolicy for AnswerPolicy {
                             end: a1.range.begin,
                         },
                     )?;
-                    let content_hash = result.collector.hash(&content);
+                    let content_hash = result.collector.normalized_hash(&content);
                     if residual.state.reply_hash != content_hash {
                         // Content has been modified, evaporate anchor and let content become user content
                         if !residual.readonly {

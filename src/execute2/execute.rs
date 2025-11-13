@@ -118,6 +118,16 @@ impl Collector {
         format!("{:x}", context_hasher.finalize())
     }
 
+    pub fn normalized_hash(&self, input: &str) -> String {
+        let normalized_input = input
+            .replace("\r\n", "\n")
+            .lines()
+            .map(|line| line.trim())
+            .collect::<Vec<_>>()
+            .join("\n");
+        self.hash(&normalized_input)
+    }
+
     /// Returns a reference to the current anchor stack.
     ///
     /// The anchor stack keeps track of nested anchors, which is crucial for
@@ -288,7 +298,8 @@ impl Collector {
     ///
     /// The `Collector` with the new item added to its context.
     pub fn push_item(mut self, item: ModelContentItem) -> Self {
-        self.context_hasher.update(item.to_string());
+        self.context_hasher
+            .update(item.to_string().replace("\r\n", "\n").trim());
         self.context.push(item);
         self
     }
@@ -1343,7 +1354,7 @@ impl Worker {
                     None => None,
                 };
                 let input = self.execute(&x, data)?;
-                let input_hash = collector.hash(&input.to_string());
+                let input_hash = collector.normalized_hash(&input.to_string());
                 Ok((input, input_hash))
             }
             Some(x) => {

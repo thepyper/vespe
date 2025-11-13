@@ -164,26 +164,8 @@ impl DynamicPolicy for AnswerPolicy {
                     result.do_next_pass = true;
                 }
             }
-            (Container::BeginAnchor(_, _), AnswerStatus::Repeat) => {
-                // Prepare the query
-                if !residual.readonly {
-                    residual.state.status = AnswerStatus::NeedProcessing;
-                    residual.state.reply = String::new();
-                    result.new_state = Some(residual.state);
-                    result.new_output = Some(String::new());
-                }
-                result.do_next_pass = true;
-            }
-            (Container::BeginAnchor(a0, a1), AnswerStatus::NeedEvaporation) => {
-                // Prepare the query
-                if !residual.readonly {
-                    residual.state.status = AnswerStatus::Evaporated;
-                    result.new_patches = vec![(a0.range, String::new()), (a1.range, String::new())];
-                    result.new_state = Some(residual.state);
-                }
-                result.do_next_pass = true;
-            }
-            (Container::EndAnchor(a0, a1), AnswerStatus::Evaporated) => {
+            (Container::EndAnchor(a0, a1), AnswerStatus::Completed) => {
+                // Evaporate anchor
                 let content = Worker::get_range(
                     residual.document,
                     &Range {
@@ -198,6 +180,25 @@ impl DynamicPolicy for AnswerPolicy {
                     result.new_state = Some(residual.state);
                     result.do_next_pass = true;
                 }
+            }
+            (Container::BeginAnchor(_, _), AnswerStatus::Repeat) => {
+                // Return to need processing
+                if !residual.readonly {
+                    residual.state.status = AnswerStatus::NeedProcessing;
+                    residual.state.reply = String::new();
+                    result.new_state = Some(residual.state);
+                    result.new_output = Some(String::new());
+                }
+                result.do_next_pass = true;
+            }
+            (Container::BeginAnchor(a0, a1), AnswerStatus::NeedEvaporation) => {
+                // Go to evaporation state
+                if !residual.readonly {
+                    residual.state.status = AnswerStatus::Evaporated;
+                    result.new_patches = vec![(a0.range, String::new()), (a1.range, String::new())];
+                    result.new_state = Some(residual.state);
+                }
+                result.do_next_pass = true;
             }
             _ => {}
         }

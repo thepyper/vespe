@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::error::ExecuteError;
-use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
+use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use super::Result;
 use crate::ast2::JsonPlusEntity;
 
@@ -92,8 +92,8 @@ impl DynamicPolicy for InlinePolicy {
         tracing::debug!("tag_inline::InlinePolicy::mono\nState = {:?}", inputs.state);
         let (mut result, mut residual) =
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
-        match residual.state.status {
-            InlineStatus::JustCreated => {
+        match (residual.container, residual.state.status) {
+            (Container::Tag(_) | Container::BeginAnchor(_, _), InlineStatus::JustCreated) => {
                 if !residual.readonly {
                     let context_name = residual
                         .arguments
@@ -121,10 +121,10 @@ impl DynamicPolicy for InlinePolicy {
                 }
                 result.do_next_pass = true;
             }
-            InlineStatus::Completed => {
+            (Container::BeginAnchor(_, _), InlineStatus::Completed) => {
                 // Nothing to do
             }
-            InlineStatus::Repeat => {
+            (Container::BeginAnchor(_, _), InlineStatus::Repeat) => {
                 // Reset state to force a reload in the next pass
                 if !residual.readonly {
                     residual.state.status = InlineStatus::JustCreated;
@@ -133,6 +133,7 @@ impl DynamicPolicy for InlinePolicy {
                 }
                 result.do_next_pass = true;
             }
+            _ => {}
         }
         Ok(result)
     }

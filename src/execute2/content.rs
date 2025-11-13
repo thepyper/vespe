@@ -248,6 +248,7 @@ impl ModelContent {
     }
 
     pub fn to_prompt(&self, format: PromptFormat) -> String {
+        // First pass: merge downstream and upstream messages
         let mut merged_items: Vec<ModelContentItem> = Vec::new();
         let mut downstream_merges: Vec<String> = Vec::new();
 
@@ -288,7 +289,35 @@ impl ModelContent {
             }
         }
 
-        merged_items
+        // Second pass: merge consecutive messages of the same type
+        let mut final_merged_items: Vec<ModelContentItem> = Vec::new();
+        let mut iter = merged_items.into_iter();
+
+        if let Some(mut last) = iter.next() {
+            for item in iter {
+                match (&mut last, &item) {
+                    (ModelContentItem::System(last_content), ModelContentItem::System(item_content)) => {
+                        last_content.text.push('\n');
+                        last_content.text.push_str(&item_content.text);
+                    }
+                    (ModelContentItem::User(last_content), ModelContentItem::User(item_content)) => {
+                        last_content.text.push('\n');
+                        last_content.text.push_str(&item_content.text);
+                    }
+                    (ModelContentItem::Agent(last_content), ModelContentItem::Agent(item_content)) => {
+                        last_content.text.push('\n');
+                        last_content.text.push_str(&item_content.text);
+                    }
+                    _ => {
+                        final_merged_items.push(last);
+                        last = item;
+                    }
+                }
+            }
+            final_merged_items.push(last);
+        }
+
+        final_merged_items
             .iter()
             .map(|item| Self::embed_in_prompt(item, format))
             .collect::<Vec<String>>()

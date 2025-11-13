@@ -146,9 +146,10 @@ pub trait TagBehavior {
 }
 
 #[derive(Clone, Debug)]
-pub enum TagOrAnchor<'a> {
+pub enum Container<'a> {
     Tag(&'a Tag),
-    Anchor((&'a Anchor, &'a Anchor)),
+    BeginAnchor(&'a Anchor, &'a Anchor),
+    EndAnchor(&'a Anchor, &'a Anchor),
 }
 
 #[derive(Debug)]
@@ -156,14 +157,14 @@ pub struct StaticPolicyMonoInput<'a> {
     pub readonly: bool,
     pub worker: &'a Worker,
     pub collector: Collector,
-    pub tag_or_anchor: TagOrAnchor<'a>,
+    pub container: Container<'a>,
 }
 
 #[derive(Debug)]
 pub struct StaticPolicyMonoInputResidual<'a> {
     pub readonly: bool,
     pub worker: &'a Worker,
-    pub tag_or_anchor: TagOrAnchor<'a>,
+    pub container: Container<'a>,
     pub parameters: &'a Parameters,
     pub arguments: &'a Arguments,
 }
@@ -180,19 +181,21 @@ pub struct StaticPolicyMonoResult {
 
 impl StaticPolicyMonoResult {
     pub fn from_inputs(inputs: StaticPolicyMonoInput) -> (Self, StaticPolicyMonoInputResidual) {
-        let tag_or_anchor = inputs.tag_or_anchor.clone();
-        let parameters = match &tag_or_anchor {
-            TagOrAnchor::Tag(tag) => &tag.parameters,
-            TagOrAnchor::Anchor((anchor, _)) => &anchor.parameters,
+        let container = inputs.container.clone();
+        let parameters = match &container {
+            Container::Tag(tag) => &tag.parameters,
+            Container::BeginAnchor(anchor, _) => &anchor.parameters,
+            Container::EndAnchor(anchor, _) => &anchor.parameters,
         };
-        let arguments = match &tag_or_anchor {
-            TagOrAnchor::Tag(tag) => &tag.arguments,
-            TagOrAnchor::Anchor((anchor, _)) => &anchor.arguments,
+        let arguments = match &container {
+            Container::Tag(tag) => &tag.arguments,
+            Container::BeginAnchor(anchor, _) => &anchor.arguments,
+            Container::EndAnchor(anchor, _) => &anchor.arguments,
         };
         let residual = StaticPolicyMonoInputResidual {
             readonly: inputs.readonly,
             worker: inputs.worker,
-            tag_or_anchor,
+            container,
             parameters,
             arguments,
         };
@@ -238,7 +241,7 @@ pub struct DynamicPolicyMonoInput<'a, State> {
     pub collector: Collector,
     pub document: &'a str,
     pub state: State,
-    pub tag_or_anchor: TagOrAnchor<'a>,
+    pub container: Container<'a>,
     pub input: ModelContent,
     pub input_hash: String,
 }
@@ -249,7 +252,7 @@ pub struct DynamicPolicyMonoInputResidual<'a, State> {
     pub worker: &'a Worker,
     pub document: &'a str,
     pub state: State,
-    pub tag_or_anchor: TagOrAnchor<'a>,
+    pub container: Container<'a>,
     pub parameters: &'a Parameters,
     pub arguments: &'a Arguments,
     pub input: ModelContent,
@@ -278,21 +281,23 @@ impl<'a, T> DynamicPolicyMonoResult<T> {
     pub fn from_inputs(
         inputs: DynamicPolicyMonoInput<'a, T>,
     ) -> (Self, DynamicPolicyMonoInputResidual<'a, T>) {
-        let tag_or_anchor = inputs.tag_or_anchor.clone();
-        let parameters = match &tag_or_anchor {
-            TagOrAnchor::Tag(tag) => &tag.parameters,
-            TagOrAnchor::Anchor((anchor, _)) => &anchor.parameters,
+        let container = inputs.container.clone();
+        let parameters = match &container {
+            Container::Tag(tag) => &tag.parameters,
+            Container::BeginAnchor(anchor, _) => &anchor.parameters,
+            Container::EndAnchor(anchor, _) => &anchor.parameters,
         };
-        let arguments = match &tag_or_anchor {
-            TagOrAnchor::Tag(tag) => &tag.arguments,
-            TagOrAnchor::Anchor((anchor, _)) => &anchor.arguments,
+        let arguments = match &container {
+            Container::Tag(tag) => &tag.arguments,
+            Container::BeginAnchor(anchor, _) => &anchor.arguments,
+            Container::EndAnchor(anchor, _) => &anchor.arguments,
         };
         let residual = DynamicPolicyMonoInputResidual {
             readonly: inputs.readonly,
             worker: inputs.worker,
             document: inputs.document,
             state: inputs.state,
-            tag_or_anchor,
+            container,
             parameters,
             arguments,
             input: inputs.input,
@@ -432,7 +437,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
             readonly: false,
             worker,
             collector,
-            tag_or_anchor: TagOrAnchor::Tag(tag),
+            container: Container::Tag(tag),
         };
         let mono_result = P::mono(mono_inputs)?;
         Ok((
@@ -470,7 +475,7 @@ impl<P: StaticPolicy> TagBehavior for StaticTagBehavior<P> {
             readonly: true,
             worker,
             collector,
-            tag_or_anchor: TagOrAnchor::Tag(tag),
+            container: Container::Tag(tag),
         };
         let mono_result = P::mono(mono_inputs)?;
         Ok((mono_result.do_next_pass, mono_result.collector))
@@ -522,7 +527,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             collector,
             document,
             state,
-            tag_or_anchor: TagOrAnchor::Tag(tag),
+            container: Container::Tag(tag),
             input,
             input_hash,
         };
@@ -615,7 +620,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             collector,
             document,
             state,
-            tag_or_anchor: TagOrAnchor::Anchor((anchor_begin, anchor_end)),
+            container: Container::BeginAnchor(anchor_begin, anchor_end),
             input,
             input_hash,
         };
@@ -687,7 +692,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             collector,
             document,
             state,
-            tag_or_anchor: TagOrAnchor::Anchor((anchor_begin, anchor_end)),
+            container: Container::BeginAnchor(anchor_begin, anchor_end),
             input,
             input_hash,
         };

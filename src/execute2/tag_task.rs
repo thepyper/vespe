@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 
 use super::content::ModelContentItem;
 use super::execute::Worker;
-use super::tags::{DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, TagOrAnchor};
+use super::tags::{Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult};
 use super::Result;
 use crate::ast2::{Position, Range};
 
@@ -173,8 +173,8 @@ impl DynamicPolicy for TaskPolicy {
             TaskStatus::Eating => {
                 // Eat a piece of text
                 if !residual.readonly {
-                    let (existing_output, eaten_output) = match residual.tag_or_anchor {
-                        TagOrAnchor::Anchor((a0, a1)) => (
+                    let (existing_output, eaten_output) = match residual.container {
+                        Container::BeginAnchor(a0, a1) => (
                             Range {
                                 begin: a0.range.end,
                                 end: a1.range.begin,
@@ -184,9 +184,7 @@ impl DynamicPolicy for TaskPolicy {
                                 end: residual.state.eating_end,
                             },
                         ),
-                        _ => {
-                            panic!("tag!?!?!?");
-                        }
+                        _ => {}
                     };
                     result.new_patches = vec![(eaten_output, String::new())];
                     let existing_output = Worker::get_range(residual.document, &existing_output)?;

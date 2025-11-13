@@ -46,7 +46,7 @@ use super::{ExecuteError, Result};
 
 use super::tag_answer::{AnswerState, AnswerStatus};
 use super::tag_inline::{InlineState, InlineStatus};
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, TagOrAnchor};
+use super::tags::{Container, StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 
 use crate::ast2::CommandKind;
 
@@ -116,8 +116,8 @@ impl StaticPolicy for RepeatPolicy {
     /// ```
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
         let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
-        let tag = match residual.tag_or_anchor {
-            TagOrAnchor::Tag(tag) => tag,
+        let tag = match residual.container {
+            Container::Tag(tag) => tag,
             _ => {
                 panic!("!?!?!? cannot be anchor in static tag !?!?!?"); // better error TODO
             }

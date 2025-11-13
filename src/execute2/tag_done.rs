@@ -40,7 +40,7 @@
 use super::Result;
 
 use super::tag_task::{TaskState, TaskStatus};
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult, TagOrAnchor};
+use super::tags::{Container, StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 use crate::ast2::CommandKind;
 
 /// Implements the static policy for the `@done` tag.
@@ -107,8 +107,8 @@ impl StaticPolicy for DonePolicy {
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
         let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
         tracing::debug!("tag_done::DonePolicy: {:?}", residual);
-        let tag = match residual.tag_or_anchor {
-            TagOrAnchor::Tag(tag) => tag,
+        let tag = match residual.container {
+            Container::Tag(tag) => tag,
             _ => {
                 panic!("!?!?!? cannot be anchor in static tag !?!?!?"); // better error TODO
             }

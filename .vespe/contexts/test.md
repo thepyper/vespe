@@ -26,7 +26,5 @@ Would you like me to elaborate on a specific aspect – perhaps the different ty
 
 tell me 1 thing about color red.
 
-<!-- answer-847df1e2-365a-47f5-ac88-a1288f6044db:begin { provider: 'ollama run gemma3:1b' }  -->
 Red is often associated with intense emotions, particularly passion, anger, and energy. It's frequently used as a signal of warning or urgency, and it's a powerful color that stimulates our senses.
-
-<!-- answer-847df1e2-365a-47f5-ac88-a1288f6044db:end {}  -->
+@repeat

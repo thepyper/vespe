@@ -72,7 +72,6 @@ fn is_context_file(project: &Project, path: &Path) -> bool {
 fn path_to_context_name(project: &Project, path: &Path) -> Result<String> {
     let relative_path = path.strip_prefix(project.contexts_root())?;
     let context_name = relative_path
-        .with_extension("")
         .to_string_lossy()
         .to_string();
     Ok(context_name)

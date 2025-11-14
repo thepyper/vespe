@@ -75,8 +75,8 @@ fn get_context_name(today: bool, name: Option<String>, format_str: &str) -> Resu
         Ok(chrono::Local::now().format(format_str).to_string())
     } else {
         name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))
-    }
-    Ok(format!("{}.md", context_name))
+    };
+    Ok(format!("{}.md", &context_name?))
 }
 
 fn main() -> Result<()> {

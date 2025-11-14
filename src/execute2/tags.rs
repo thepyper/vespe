@@ -359,7 +359,7 @@ pub trait DynamicPolicy {
     ///
     /// Returns an [`ExecuteError`] if any operation fails during the dynamic policy's execution.
     fn mono(
-        inputs: DynamicPolicyMonoInput<Self::State>,       
+        inputs: DynamicPolicyMonoInput<Self::State>,
     ) -> Result<DynamicPolicyMonoResult<Self::State>>;
 }
 
@@ -532,19 +532,22 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             input_hash,
         };
         let mono_result = P::mono(mono_inputs)?;
-        // Mutate tag into a new anchor
-        let (uuid, patches_2) = worker.tag_to_anchor(
-            &mono_result.collector,
-            tag,
-            &mono_result.new_output.unwrap_or(String::new()),
-        )?;
-        // If there is a new state, save it
-        if let Some(new_state) = mono_result.new_state {
-            worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
-        } // TODO se nnn c'e', errore!! deve mutare in anchor!!
-          // Return collector and patches
         let mut patches = mono_result.new_patches;
-        patches.extend(patches_2);
+        match mono_result.new_state {
+            Some(new_state) => {
+                let (uuid, patch) = worker.tag_to_anchor(
+                    &mono_result.collector,
+                    tag,
+                    Some(new_state.status_indicator()),
+                    &mono_result.new_output.unwrap_or(String::new()),
+                )?;
+                patches.push(patch);
+                worker.save_state::<P::State>(tag.command, &uuid, &new_state, None)?;
+            }
+            None => {
+                panic!("!?!??! must give state on tag -> anchor !!");
+            }
+        }
         Ok((mono_result.do_next_pass, mono_result.collector, patches))
     }
 
@@ -651,7 +654,12 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         }
         // If there is some output, patch into new anchor
         if let Some(output) = mono_result.new_output {
-            patches.push(worker.inject_into_anchor(&collector, anchor_begin, &anchor_end, &output)?);
+            patches.push(worker.inject_into_anchor(
+                &collector,
+                anchor_begin,
+                &anchor_end,
+                &output,
+            )?);
         };
         // If status indicator is incorrect, rewrite anchor
         if anchor_begin.status != status_indicator {

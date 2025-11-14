@@ -80,9 +80,7 @@ impl FromStr for TaskStatus {
             "just_created" => Ok(TaskStatus::JustCreated),
             "waiting" => Ok(TaskStatus::Waiting),
             "eating" => Ok(TaskStatus::Eating),
-            _ => Err(super::error::ExecuteError::UnsupportedStatus(
-                s.to_string(),
-            )),
+            _ => Err(super::error::ExecuteError::UnsupportedStatus(s.to_string())),
         }
     }
 }

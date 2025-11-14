@@ -506,6 +506,7 @@ impl Anchor {
     /// Creates a new pair of `Begin` and `End` anchors with a shared, new UUID.
     pub fn new_couple(
         command: CommandKind,
+        status: Option<String>,
         parameters: &Parameters,
         arguments: &Arguments,
     ) -> (Anchor, Anchor) {
@@ -514,7 +515,7 @@ impl Anchor {
             command,
             uuid,
             kind: AnchorKind::Begin,
-            status: None,
+            status: status,
             parameters: parameters.clone(),
             arguments: arguments.clone(),
             range: Range::null(),

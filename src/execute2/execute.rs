@@ -864,9 +864,12 @@ impl Worker {
                         // Do not collect text inside task anchor
                         // TODO spostare altrove? logica di task in pass? come fare?
                         tracing::debug!("Removed by task anchor: {:?}", text.content);
-                    } else if let Some(anchor) = collector.is_in_this_kind_of_anchor(CommandKind::Answer) {
+                    } else if let Some(anchor) =
+                        collector.is_in_this_kind_of_anchor(CommandKind::Answer)
+                    {
                         // Inside answer anchor, check if anchor is edited
-                        if let Some(_) = anchor.parameters.get("edited") { // TODO non mi piace tanto, non e' un parametro!!
+                        if let Some(_) = anchor.parameters.get("edited") {
+                            // TODO non mi piace tanto, non e' un parametro!!
                             // Edited content, then it's user
                             collector = collector.push_item(ModelContentItem::user(&text.content));
                         } else {
@@ -1162,28 +1165,29 @@ impl Worker {
         &self,
         _collector: &Collector,
         tag: &Tag,
+        status: Option<String>,
         output: &str,
-    ) -> Result<(Uuid, Vec<(Range, String)>)> {
-        let (a0, a1) = Anchor::new_couple(tag.command, &tag.parameters, &tag.arguments);
+    ) -> Result<(Uuid, (Range, String))> {
+        let (a0, a1) = Anchor::new_couple(tag.command, status, &tag.parameters, &tag.arguments);
         match self.redirect_output(&tag.parameters, output)? {
             true => {
                 // Output redirected, just convert tag into anchor
                 Ok((
                     a0.uuid,
-                    vec![(
+                    (
                         tag.range,
                         format!("{}\n{}\n", a0.to_string(), a1.to_string()),
-                    )],
+                    ),
                 ))
             }
             false => {
                 // Output not redirected, include in new anchors
                 Ok((
                     a0.uuid,
-                    vec![(
+                    (
                         tag.range,
                         format!("{}\n{}{}\n", a0.to_string(), output, a1.to_string()),
-                    )],
+                    ),
                 ))
             }
         }

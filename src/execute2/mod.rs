@@ -64,6 +64,7 @@
 mod content;
 mod error;
 mod execute;
+pub mod analize;
 mod tag_answer;
 mod tag_comment;
 mod tag_done;
@@ -79,6 +80,7 @@ mod utils;
 pub use self::error::{ExecuteError, Result};
 pub use content::{ModelContent, ModelContentItem};
 
+pub use analize::{analyze_context, AnchorAnalysis, AnchorState, ContextAnalysis};
 pub use execute::collect_context;
 pub use execute::execute_context;
 

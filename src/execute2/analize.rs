@@ -6,7 +6,6 @@ use crate::path::PathResolver;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::path::PathBuf;
 use uuid::Uuid;
 
 /// Enum that aggregates the different types of state specific for each anchor.

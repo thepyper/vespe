@@ -74,6 +74,8 @@ enum ContextCommands {
         /// The name of the context to analyze.
         #[arg(value_name = "NAME")]
         context_name: String,
+        #[arg(long = "filter-uuid", help = "Filter anchors by UUID prefix")]
+        filter_uuid: Option<String>,
     },
 }
 
@@ -145,9 +147,16 @@ fn main() -> Result<()> {
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }
-                ContextCommands::Analize { context_name } => {
+                ContextCommands::Analize { context_name, filter_uuid } => {
                     let context_name = format!("{}.md", &context_name);
-                    let analysis = project.analyze_context(&context_name)?;
+                    let mut analysis = project.analyze_context(&context_name)?;
+
+                    if let Some(filter) = &filter_uuid {
+                        analysis.anchors.retain(|uuid, _| {
+                            uuid.to_string().starts_with(filter)
+                        });
+                    }
+
                     display_analysis_report(&analysis)?;
                 }
             }

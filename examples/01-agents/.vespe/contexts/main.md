@@ -2,14 +2,14 @@
     _1: "Run this with 'vespe context run main'.",
 }
 
-@include agent/gemini_25_flash_yolo
+@include agent/gemini_25_flash_yolo.md
 
 Tell me something about blue.
 
-@answer { prefix: agent/funny_clown }
+@answer { prefix: agent/funny_clown.md }
 
 Tell me something about red.
 
-@answer { prefix: agent/creepy_crow }
+@answer { prefix: agent/creepy_crow.md }
 
 

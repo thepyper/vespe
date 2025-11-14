@@ -8,6 +8,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use vespe::execute2::{AnchorAnalysis, AnchorState, ContextAnalysis};
 use vespe::project::Project;
 
 mod watch;
@@ -67,6 +68,12 @@ enum ContextCommands {
         /// The arguments to pass to the context.
         #[arg()]
         args: Vec<String>,
+    },
+    /// Analyzes a context file.
+    Analize {
+        /// The name of the context to analyze.
+        #[arg(value_name = "NAME")]
+        context_name: String,
     },
 }
 
@@ -138,6 +145,11 @@ fn main() -> Result<()> {
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }
+                ContextCommands::Analize { context_name } => {
+                    let context_name = format!("{}.md", &context_name);
+                    let analysis = project.analyze_context(&context_name)?;
+                    display_analysis_report(&analysis)?;
+                }
             }
         }
         Commands::Watch {} => {
@@ -162,5 +174,49 @@ fn read_input() -> Result<Option<String>> {
         Ok(data) => Ok(Some(data)),
         Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
         Err(e) => Err(e.into()),
+    }
+}
+
+fn display_analysis_report(analysis: &ContextAnalysis) -> Result<()> {
+    println!("Context Analysis Report");
+    println!("=======================");
+    if analysis.anchors.is_empty() {
+        println!("No relevant anchors found.");
+    } else {
+        for (_, anchor_analysis) in &analysis.anchors {
+            match &anchor_analysis.state {
+                AnchorState::Answer(_) => display_answer_analysis(anchor_analysis),
+                AnchorState::Inline(_) => display_inline_analysis(anchor_analysis),
+                AnchorState::Task(_) => display_task_analysis(anchor_analysis),
+            }
+            println!("-----------------------");
+        }
+    }
+    Ok(())
+}
+
+fn display_answer_analysis(analysis: &AnchorAnalysis) {
+    if let AnchorState::Answer(state) = &analysis.state {
+        println!("Anchor (Answer): {}", analysis.anchor.uuid);
+        println!("  Status: {:?}", state.status);
+        println!("  Query: {:.50}...", state.query.chars().take(50).collect::<String>());
+        println!("  Reply: {:.50}...", state.reply.chars().take(50).collect::<String>());
+    }
+}
+
+fn display_inline_analysis(analysis: &AnchorAnalysis) {
+    if let AnchorState::Inline(state) = &analysis.state {
+        println!("Anchor (Inline): {}", analysis.anchor.uuid);
+        println!("  Status: {:?}", state.status);
+        if let Some(arg) = analysis.anchor.arguments.arguments.get(0) {
+            println!("  Source: {}", arg.value);
+        }
+    }
+}
+
+fn display_task_analysis(analysis: &AnchorAnalysis) {
+    if let AnchorState::Task(state) = &analysis.state {
+        println!("Anchor (Task): {}", analysis.anchor.uuid);
+        println!("  Status: {:?}", state.status);
     }
 }

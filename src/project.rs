@@ -1,6 +1,6 @@
 use crate::ast2::{JsonPlusEntity, JsonPlusObject};
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
-use crate::execute2::ModelContent;
+use crate::execute2::{analyze_context, ContextAnalysis, ModelContent};
 use crate::file::{FileAccessor, ProjectFileAccessor};
 use crate::path::{PathResolver, ProjectPathResolver};
 
@@ -135,6 +135,15 @@ impl Project {
         )?;
         self.commit(Some(format!("Executed context {}.", context_name)))?;
         Ok(content)
+    }
+
+    pub fn analyze_context(&self, context_name: &str) -> Result<ContextAnalysis> {
+        let analysis = crate::execute2::analyze_context(
+            self.file_access.clone(),
+            self.path_res.clone(),
+            context_name,
+        )?;
+        Ok(analysis)
     }
 
     pub fn project_home(&self) -> PathBuf {

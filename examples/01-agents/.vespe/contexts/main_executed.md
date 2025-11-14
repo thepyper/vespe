@@ -16,10 +16,10 @@ Why, blue is the color of a blueberry pie that's been dropped on a smurf! It's a
 Tell me something about red.
 
 <!-- answer-3d031ec9-d7e5-4e77-81d4-729797411ddb:begin +completed+ {
-	prefix: agent/creepy_crow.md,
-	provider: 'gemini -y -m gemini-2.5-flash'
+	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/creepy_crow.md
 }  -->
-Red, you say? *Honk honk!* That's the color of my big, squishy nose, of course! And the juicy, ripe tomatoes I juggle before they splat! It's also the color of the blush on your cheeks when I tell a really, really funny joke! *Honk honk!*
+*Craak!* Red, you say? Ah, red is the color of the fresh, warm blood that drips from a broken nose after a particularly enthusiastic pratfall! It's the hue of a clown's smile, painted wide and menacing, and the fiery glow in the eyes of a hungry beast lurking in the shadows. *Craak!* It's a color that screams, doesn't it?
 <!-- answer-3d031ec9-d7e5-4e77-81d4-729797411ddb:end  {}  -->
 
 

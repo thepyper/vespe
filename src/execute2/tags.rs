@@ -330,7 +330,7 @@ pub trait DynamicPolicy {
     ///
     /// This state is persisted between execution passes and allows dynamic tags
     /// to maintain context and progress through their lifecycle.
-    type State: Default + std::fmt::Debug + Serialize + for<'de> Deserialize<'de>;
+    type State: Default + std::fmt::Debug + Serialize + for<'de> Deserialize<'de> + DynamicState;
 
     /// Executes a single step of the dynamic policy's behavior.
     ///
@@ -359,15 +359,7 @@ pub trait DynamicPolicy {
     ///
     /// Returns an [`ExecuteError`] if any operation fails during the dynamic policy's execution.
     fn mono(
-        inputs: DynamicPolicyMonoInput<Self::State>,
-        /* worker: &Worker,
-        collector: Collector,
-        input: &ModelContent,
-        input_hash: String,
-        parameters: &Parameters,
-        arguments: &Arguments,
-        state: Self::State,
-        readonly: bool, */
+        inputs: DynamicPolicyMonoInput<Self::State>,       
     ) -> Result<DynamicPolicyMonoResult<Self::State>>;
 }
 
@@ -622,6 +614,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
                 return Ok((false, collector, vec![]));
             }
         };
+        let mut status_indicator = Some(state.status_indicator());
         let (input, input_hash) = worker.redirect_input(&collector, &anchor_begin.parameters)?;
         let container = if is_end {
             Container::EndAnchor(anchor_begin, anchor_end)
@@ -640,6 +633,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         };
         let mono_result = P::mono(mono_inputs)?;
         let mut collector = mono_result.collector;
+        let mut patches = mono_result.new_patches;
         // If output has been redirected, place output redirected placeholder
         if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
             collector =
@@ -653,16 +647,19 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
                 &new_state,
                 None,
             )?;
+            status_indicator = Some(new_state.status_indicator());
         }
         // If there is some output, patch into new anchor
-        let patches_2 = if let Some(output) = mono_result.new_output {
-            worker.inject_into_anchor(&collector, anchor_begin, &anchor_end, &output)?
-        } else {
-            vec![]
+        if let Some(output) = mono_result.new_output {
+            patches.push(worker.inject_into_anchor(&collector, anchor_begin, &anchor_end, &output)?);
         };
+        // If status indicator is incorrect, rewrite anchor
+        if anchor_begin.status != status_indicator {
+            let mut anchor_begin = anchor_begin.clone();
+            anchor_begin.status = status_indicator;
+            patches.push(worker.mutate_anchor(&anchor_begin)?);
+        }
         // Return collector and patches
-        let mut patches = mono_result.new_patches;
-        patches.extend(patches_2);
         Ok((mono_result.do_next_pass, collector, patches))
     }
 

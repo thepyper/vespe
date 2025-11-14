@@ -1219,27 +1219,27 @@ impl Worker {
         anchor_begin: &Anchor,
         anchor_end: &Anchor,
         output: &str,
-    ) -> Result<Vec<(Range, String)>> {
+    ) -> Result<(Range, String)> {
         match self.redirect_output(&anchor_begin.parameters, output)? {
             true => {
                 // Output redirected, delete anchor contents
-                Ok(vec![(
+                Ok((
                     Range {
                         begin: anchor_begin.range.end,
                         end: anchor_end.range.begin,
                     },
                     String::new(),
-                )])
+                ))
             }
             false => {
                 // Output not redirected, patch anchor contents
-                Ok(vec![(
+                Ok((
                     Range {
                         begin: anchor_begin.range.end,
                         end: anchor_end.range.begin,
                     },
                     output.to_string(),
-                )])
+                ))
             }
         }
     }

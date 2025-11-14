@@ -1,6 +1,6 @@
 use crate::ast2::{JsonPlusEntity, JsonPlusObject};
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
-use crate::execute2::{analyze_context, ContextAnalysis, ModelContent};
+use crate::execute2::{ContextAnalysis, ModelContent};
 use crate::file::{FileAccessor, ProjectFileAccessor};
 use crate::path::{PathResolver, ProjectPathResolver};
 

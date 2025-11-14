@@ -334,7 +334,7 @@ impl ModelContent {
             final_merged_items.push(last);
         }
 
-        let mut prompt = final_merged_items
+        let prompt = final_merged_items
             .iter()
             .map(|item| Self::embed_in_prompt(item, format))
             .collect::<Vec<String>>()

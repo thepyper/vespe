@@ -10,6 +10,7 @@ use crate::ast2::{
     Tag,
 };
 use crate::execute2::content::{ModelContent, ModelContentItem, PromptFormat};
+use crate::execute2::tag_answer::AnswerStatus;
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
@@ -868,8 +869,7 @@ impl Worker {
                         collector.is_in_this_kind_of_anchor(CommandKind::Answer)
                     {
                         // Inside answer anchor, check if anchor is edited
-                        if let Some(_) = anchor.parameters.get("edited") {
-                            // TODO non mi piace tanto, non e' un parametro!!
+                        if anchor.status == Some(AnswerStatus::Edited.to_string()) { 
                             // Edited content, then it's user
                             collector = collector.push_item(ModelContentItem::user(&text.content));
                         } else {

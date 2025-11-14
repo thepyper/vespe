@@ -212,9 +212,6 @@ impl DynamicPolicy for AnswerPolicy {
                         if !residual.readonly {
                             residual.state.status = AnswerStatus::Edited;
                             result.new_state = Some(residual.state);
-                            let mut a0 = a0.clone();
-                            a0.parameters.insert("edited".into(), JsonPlusEntity::Flag);
-                            result.new_patches = vec![residual.worker.mutate_anchor(&a0)?];
                         }
                         result.do_next_pass = true;
                     }
@@ -227,24 +224,11 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.state.reply = String::new();
                     result.new_state = Some(residual.state);
                     result.new_output = Some(String::new());
-                    let mut a0 = a0.clone();
-                    a0.parameters.remove("edited".into());
-                    result.new_patches = vec![residual.worker.mutate_anchor(&a0)?];
                 }
                 result.do_next_pass = true;
             }
             (Container::BeginAnchor(a0, _), AnswerStatus::Edited) => {
-                // Return to need processing
-                if let Some(JsonPlusEntity::Flag) = a0.parameters.get("edited") {
-                    // Edited preserved
-                } else {
-                    if !residual.readonly {
-                        let mut a0 = a0.clone();
-                        a0.parameters.insert("edited".into(), JsonPlusEntity::Flag);
-                        result.new_patches = vec![residual.worker.mutate_anchor(&a0)?];
-                    }
-                    result.do_next_pass = true;
-                }
+                // Nothing to do
             }
             _ => {}
         }

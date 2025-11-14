@@ -154,7 +154,7 @@ impl Project {
         name: &str,
         initial_content: Option<String>,
     ) -> Result<PathBuf> {
-        let file_path = self.path_res.resolve_context(name)?;
+        let file_path = self.path_res.resolve_output_file(&format!("{}.md", name))?;
         if file_path.exists() {
             anyhow::bail!("Context file already exists: {}", file_path.display());
         }

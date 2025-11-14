@@ -217,7 +217,7 @@ impl DynamicPolicy for AnswerPolicy {
                     }
                 }
             }
-            (Container::BeginAnchor(a0, _), AnswerStatus::Repeat) => {
+            (Container::BeginAnchor(_, _), AnswerStatus::Repeat) => {
                 // Return to need processing
                 if !residual.readonly {
                     residual.state.status = AnswerStatus::NeedProcessing;
@@ -227,7 +227,7 @@ impl DynamicPolicy for AnswerPolicy {
                 }
                 result.do_next_pass = true;
             }
-            (Container::BeginAnchor(a0, _), AnswerStatus::Edited) => {
+            (Container::BeginAnchor(_, _), AnswerStatus::Edited) => {
                 // Nothing to do
             }
             _ => {}

@@ -491,7 +491,7 @@ impl Worker {
             context_name,
             data,
         );
-        let context_path = self.path_res.resolve_context(context_name)?;
+        let context_path = self.path_res.resolve_input_file(context_name)?;
 
         match collector.descent(&context_path) {
             None => {
@@ -1271,7 +1271,7 @@ impl Worker {
     pub fn is_output_redirected(&self, parameters: &Parameters) -> Result<Option<PathBuf>> {
         match &parameters.get("output") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let output_path = self.path_res.resolve_context(&x)?;
+                let output_path = self.path_res.resolve_output_file(&x)?;
                 return Ok(Some(output_path));
             }
             Some(x) => {
@@ -1415,7 +1415,7 @@ impl Worker {
     /// Returns [`ExecuteError::PathResolutionError`] if the context name cannot be resolved.
     /// Returns [`ExecuteError::IoError`] if the file cannot be read.
     pub fn read_context(&self, context_name: &str) -> Result<String> {
-        self.read_context_from_path(&self.path_res.resolve_context(context_name)?)
+        self.read_context_from_path(&self.path_res.resolve_input_file(context_name)?)
     }
 
     pub fn read_context_from_path(&self, context_path: &Path) -> Result<String> {

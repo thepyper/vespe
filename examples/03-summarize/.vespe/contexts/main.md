@@ -5,17 +5,17 @@
 
 @answer {
     provider: 'gemini -y -m gemini-2.5-flash',
-    prefix: agent/secretary,
-    input: input/email,
-    postfix: instructions/summarize,
-    output: output/summary,
+    prefix: agent/secretary.md,
+    input: input/email.md,
+    postfix: instructions/summarize.md,
+    output: output/summary.md,
 }
 
 @answer {
     provider: 'gemini -y -m gemini-2.5-flash',
-    prefix: agent/secretary,
-    input: input/email,
-    postfix: instructions/names,
-    output: output/names,
+    prefix: agent/secretary.md,
+    input: input/email.md,
+    postfix: instructions/names.md,
+    output: output/names.md,
 }
 

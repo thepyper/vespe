@@ -2,24 +2,24 @@
     _1: "Run this with 'vespe context run main'.",
 }
 
-@include agent/gemini_25_flash_yolo
+@include agent/gemini_25_flash_yolo.md
 
 Tell me something about blue.
 
-<!-- answer-7c192854-cbba-4474-9915-d273968e545b:begin +completed+ {
-	prefix: agent/funny_clown,
-	provider: 'gemini -y -m gemini-2.5-flash'
+<!-- answer-fb4edd67-7805-443b-b69c-bd92dfb810da:begin +completed+ {
+	provider: 'gemini -y -m gemini-2.5-flash',
+	prefix: agent/funny_clown.md
 }  -->
-Alright, alright, settle down folks, gather 'round! You wanna know about blue, eh? Well, let me tell ya, blue is the color of a sad trombone, a forgotten balloon, and sometimes, if I've had too much cotton candy, even my own tongue! It's the color of the sky when it's thinking deep thoughts, and the ocean when it's trying to hide its giggles. But mostly, it's the color of my nose when I've accidentally painted it with blueberry pie filling instead of red paint! *Honk honk!* Ain't that just a knee-slapper?
-<!-- answer-7c192854-cbba-4474-9915-d273968e545b:end  {}  -->
+Why, blue is the color of a blueberry pie that's been dropped on a smurf! It's also the color of my nose when I forget to put on my red one, and the color of the ocean right before I cannonball into it and make a giant splash! *Honk honk!*
+<!-- answer-fb4edd67-7805-443b-b69c-bd92dfb810da:end  {}  -->
 
 Tell me something about red.
 
-<!-- answer-298e7ab9-2bf0-49cc-ad49-ac2a5709df01:begin +completed+ {
-	provider: 'gemini -y -m gemini-2.5-flash',
-	prefix: agent/creepy_crow
+<!-- answer-3d031ec9-d7e5-4e77-81d4-729797411ddb:begin +completed+ {
+	prefix: agent/creepy_crow.md,
+	provider: 'gemini -y -m gemini-2.5-flash'
 }  -->
-Craak! Red, you say? Ah, red... the color of fresh-spilled secrets, craak, and the last gasp of a dying ember. It's the stain on the butcher's block, the glint in a hungry eye, and the blush of a fevered dream. Craak! It's the color of the deepest, darkest fear, and the blood that runs cold in your veins. A most... *interesting* color, wouldn't you agree? Craak, craak!
-<!-- answer-298e7ab9-2bf0-49cc-ad49-ac2a5709df01:end  {}  -->
+Red, you say? *Honk honk!* That's the color of my big, squishy nose, of course! And the juicy, ripe tomatoes I juggle before they splat! It's also the color of the blush on your cheeks when I tell a really, really funny joke! *Honk honk!*
+<!-- answer-3d031ec9-d7e5-4e77-81d4-729797411ddb:end  {}  -->
 
 

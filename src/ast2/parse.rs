@@ -403,7 +403,9 @@ pub(crate) fn _try_parse_anchor<'doc>(
         p8 // No status found, continue from p8
     };
 
-    let (parameters, p9) = match _try_parse_parameters(&p_after_status_parse)? {
+    let p8_5 = p_after_status_parse.skip_many_whitespaces_immutable();
+
+    let (parameters, p9) = match _try_parse_parameters(&p8_5)? {
         Some((p, p_next)) => (p, p_next),
         None => (Parameters::new(), p_after_status_parse.clone()),
     };

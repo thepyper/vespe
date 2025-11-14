@@ -340,7 +340,11 @@ impl ModelContent {
             .collect::<Vec<String>>()
             .join("\n");
 
+        /*
+        Aggiungere questo con gemini e' peggiorativo per multi-persona (example 01), vedendo
+        di nuovo "Assistant" prende di nuovo la personalita' del pagliaccio e non del corvo.
         prompt.push_str("Assistant:\n"); // TODO rendere dipendente dal tipo di formattazione?
+        */
 
         prompt
     }

@@ -13,6 +13,7 @@ use vespe::project::Project;
 
 mod watch;
 
+const DEFAULT_TRUNCATION_LIMIT: usize = 100;
 const DIARY_CONTEXT_FORMAT: &str = "diary/%Y-%m-%d";
 const DEFAULT_CONTEXT_TEMPLATE: &str = r#"
 # {{title}}
@@ -192,9 +193,15 @@ fn display_analysis_report(analysis: &ContextAnalysis) -> Result<()> {
     if analysis.anchors.is_empty() {
         println!("No relevant anchors found.");
     } else {
+        let answer_anchor_count = analysis
+            .anchors
+            .values()
+            .filter(|aa| matches!(aa.state, AnchorState::Answer(_)))
+            .count();
+
         for (_, anchor_analysis) in &analysis.anchors {
             match &anchor_analysis.state {
-                AnchorState::Answer(_) => display_answer_analysis(anchor_analysis),
+                AnchorState::Answer(_) => display_answer_analysis(anchor_analysis, answer_anchor_count),
                 AnchorState::Inline(_) => display_inline_analysis(anchor_analysis),
                 AnchorState::Task(_) => display_task_analysis(anchor_analysis),
             }
@@ -204,12 +211,32 @@ fn display_analysis_report(analysis: &ContextAnalysis) -> Result<()> {
     Ok(())
 }
 
-fn display_answer_analysis(analysis: &AnchorAnalysis) {
+fn display_answer_analysis(analysis: &AnchorAnalysis, answer_anchor_count: usize) {
     if let AnchorState::Answer(state) = &analysis.state {
+        let truncation_limit = if answer_anchor_count == 1 {
+            usize::MAX // No truncation
+        } else if answer_anchor_count >= 2 && answer_anchor_count <= 5 {
+            DEFAULT_TRUNCATION_LIMIT * 20
+        } else {
+            DEFAULT_TRUNCATION_LIMIT
+        };
+
         println!("Anchor (Answer): {}", analysis.anchor.uuid);
         println!("  Status: {:?}", state.status);
-        println!("  Query: {:.50}...", state.query.chars().take(50).collect::<String>());
-        println!("  Reply: {:.50}...", state.reply.chars().take(50).collect::<String>());
+
+        let query_display = if state.query.len() > truncation_limit {
+            format!("{:.limit$}...", state.query.chars().take(truncation_limit).collect::<String>(), limit = truncation_limit)
+        } else {
+            state.query.clone()
+        };
+        println!("  Query: {}", query_display);
+
+        let reply_display = if state.reply.len() > truncation_limit {
+            format!("{:.limit$}...", state.reply.chars().take(truncation_limit).collect::<String>(), limit = truncation_limit)
+        } else {
+            state.reply.clone()
+        };
+        println!("  Reply: {}", reply_display);
     }
 }
 

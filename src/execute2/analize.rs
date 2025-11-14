@@ -3,7 +3,6 @@ use super::{tag_answer::AnswerState, tag_inline::InlineState, tag_task::TaskStat
 use crate::ast2::{parse_document, Anchor, CommandKind, Content};
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::path::PathBuf;

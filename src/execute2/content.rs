@@ -102,24 +102,7 @@ impl ModelContentItem {
             text: text.into(),
         })
     }
-
-    /// Creates a new `ModelContentItem::Agent` from a string slice.
-    ///
-    /// # Arguments
-    ///
-    /// * `author` - The author of the agent message.
-    /// * `text` - The text content for the agent's message.
-    ///
-    /// # Returns
-    ///
-    /// A `ModelContentItem` variant containing the agent's text.
-    pub fn agent(author: &str, text: &str) -> Self {
-        ModelContentItem::Agent(AgentModelContent {
-            author: author.into(),
-            text: text.into(),
-        })
-    }
-
+    
     /// Creates a new `ModelContentItem::MergeDownstream` from a string slice.
     ///
     /// This variant is used internally to indicate that its content should be prepended

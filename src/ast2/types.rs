@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::cmp::Ordering;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 use uuid::{uuid, Uuid};
 
 /// Represents a specific point in the source document.
@@ -313,7 +313,7 @@ impl JsonPlusObject {
             properties: BTreeMap::new(),
         }
     }
-    pub fn from_hash_map(properties: HashMap<String, JsonPlusEntity>) -> Self {
+    pub fn from_map(properties: BTreeMap<String, JsonPlusEntity>) -> Self {
         JsonPlusObject { properties }
     }
     pub fn insert(&mut self, key: String, value: JsonPlusEntity) {

@@ -1,5 +1,5 @@
 use serde_json::json;
-use std::collections::HashMap;
+use std::collections::{BTreeMap};
 use std::str::Chars;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -859,7 +859,7 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(
         None => return Ok(None),
     };
 
-    let mut properties = HashMap::new();
+    let mut properties = BTreeMap::new();
 
     while !p1.is_eod() {
         p1.skip_many_whitespaces_or_eol();

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
@@ -113,12 +113,12 @@ impl Project {
                     .iter()
                     .enumerate()
                     .map(|(i, x)| (format!("${}", i + 1), JsonPlusEntity::NudeString(x.clone())))
-                    .collect::<HashMap<String, JsonPlusEntity>>();
+                    .collect::<BTreeMap<String, JsonPlusEntity>>();
                 data.insert(
                     "$args".to_string(),
                     JsonPlusEntity::DoubleQuotedString(args.join(" ")),
                 );
-                let data = JsonPlusObject::from_hash_map(data);
+                let data = JsonPlusObject::from_map(data);
                 data
             }
             None => JsonPlusObject::new(),

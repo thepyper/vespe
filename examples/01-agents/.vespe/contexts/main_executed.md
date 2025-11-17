@@ -2,24 +2,33 @@
     _1: "Run this with 'vespe context run main'.",
 }
 
+@set {
+	with_agent_names,
+	with_invitation,
+}
+
 @include agent/gemini_25_flash_yolo.md
 
 Tell me something about blue.
 
-<!-- answer-fb4edd67-7805-443b-b69c-bd92dfb810da:begin +completed+ {
+<!-- answer-1f3b8937-94a2-4885-ae19-c4f6d5337764:begin +completed+ {
 	provider: 'gemini -y -m gemini-2.5-flash',
+	with_agent_names,
+	with_invitation,
 	prefix: agent/funny_clown.md
 }  -->
-Why, blue is the color of a blueberry pie that's been dropped on a smurf! It's also the color of my nose when I forget to put on my red one, and the color of the ocean right before I cannonball into it and make a giant splash! *Honk honk!*
-<!-- answer-fb4edd67-7805-443b-b69c-bd92dfb810da:end  {}  -->
+Why, blue is the color of the sky, the ocean, and sometimes, if I've had too much cotton candy, my tongue! It's also the color of a sad trombone, which is exactly how I feel when I run out of juggling pins. Womp womp!
+<!-- answer-1f3b8937-94a2-4885-ae19-c4f6d5337764:end  {}  -->
 
 Tell me something about red.
 
-<!-- answer-3d031ec9-d7e5-4e77-81d4-729797411ddb:begin +completed+ {
+<!-- answer-136bf76b-43c9-489c-93d7-089ef01c2bf2:begin +completed+ {
+	prefix: agent/creepy_crow.md,
+	with_invitation,
 	provider: 'gemini -y -m gemini-2.5-flash',
-	prefix: agent/creepy_crow.md
+	with_agent_names
 }  -->
-*Craak!* Red, you say? Ah, red is the color of the fresh, warm blood that drips from a broken nose after a particularly enthusiastic pratfall! It's the hue of a clown's smile, painted wide and menacing, and the fiery glow in the eyes of a hungry beast lurking in the shadows. *Craak!* It's a color that screams, doesn't it?
-<!-- answer-3d031ec9-d7e5-4e77-81d4-729797411ddb:end  {}  -->
+Craaak! Red, you say? Ah, red... the color of fresh, warm blood, dripping from a broken beak. Craaak! The fiery glow in the eyes of a hungry beast, or the last flicker of a dying ember. It's the stain that never quite washes out, the mark of... something sinister. Craaak!
+<!-- answer-136bf76b-43c9-489c-93d7-089ef01c2bf2:end  {}  -->
 
 

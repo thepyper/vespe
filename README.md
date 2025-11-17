@@ -605,6 +605,18 @@ vespe watch [--project-root <PATH>]
 
 This is very useful for iterative development, allowing you to see the results of your changes in real-time.
 
+### `vespe project add-aux-path`
+
+Adds a persistent auxiliary search path to the project's configuration. This is useful for permanently linking shared directories of contexts or templates.
+
+**Usage:**
+
+```shell
+vespe project add-aux-path <PATH>
+```
+
+*   `<PATH>`: The directory path to add to the project's auxiliary search paths.
+
 ## Piping Data into Contexts
 
 You can pipe data directly into a context:

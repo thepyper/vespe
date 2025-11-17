@@ -1,14 +1,14 @@
-use anyhow::Context;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use std::thread;
 use tracing::{debug, error};
+use crate::error::Error;
 
 pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String> {
     let mut command_parts = command_template.split_whitespace();
     let program = command_parts
         .next()
-        .context("Command template cannot be empty")?;
+        .ok_or(Error::EmptyCommandTemplate)?;
     let args: Vec<&str> = command_parts.collect();
 
     let mut command = {
@@ -30,18 +30,28 @@ pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String>
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let mut child = command.spawn().with_context(|| {
-        format!(
-            "Failed to spawn command: '{}'. Is it in your PATH?",
-            command_template
-        )
+    let mut child = command.spawn().map_err(|source| Error::CommandSpawnError {
+        command: command_template.to_string(),
+        source,
     })?;
 
-    debug!("Writing query to stdin: '{}'.", input);
-    child.stdin.as_mut().unwrap().write_all(input.as_bytes())?;
+    child.stdin.as_mut()
+        .ok_or_else(|| Error::StdinWriteError {
+            command: command_template.to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::Other, "Stdin not available"),
+        })?
+        .write_all(input.as_bytes())
+        .map_err(|source| Error::StdinWriteError {
+            command: command_template.to_string(),
+            source,
+        })?;
 
-    let stdout = child.stdout.take().context("Failed to take stdout")?;
-    let stderr = child.stderr.take().context("Failed to take stderr")?;
+    let stdout = child.stdout.take().ok_or(Error::StdoutCaptureError {
+        command: command_template.to_string(),
+    })?;
+    let stderr = child.stderr.take().ok_or(Error::StderrCaptureError {
+        command: command_template.to_string(),
+    })?;
 
     #[allow(unused_assignments)]
     let mut full_stdout = Vec::new();
@@ -51,52 +61,68 @@ pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String>
     let stdout_reader = BufReader::new(stdout);
     let stderr_reader = BufReader::new(stderr);
 
-    let stdout_handle = thread::spawn(move || {
-        let mut line = String::new();
-        let mut reader = stdout_reader;
-        let mut buffer = Vec::new();
-        loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) => break,
-                Ok(_) => {
-                    debug!("Child stdout: {}", line.trim_end());
-                    buffer.extend_from_slice(line.as_bytes());
-                }
-                Err(e) => {
-                    error!("Error reading child stdout: {:?}", e);
-                    break;
+    let stdout_handle = thread::spawn({
+        let command_template = command_template.to_string();
+        move || {
+            let mut line = String::new();
+            let mut reader = stdout_reader;
+            let mut buffer = Vec::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        debug!("Child stdout: {}", line.trim_end());
+                        buffer.extend_from_slice(line.as_bytes());
+                    }
+                    Err(e) => {
+                        error!("Error reading child stdout: {:?}", e);
+                        return Err(Error::StdoutReadError {
+                            command: command_template,
+                            source: e,
+                        });
+                    }
                 }
             }
+            Ok(buffer)
         }
-        buffer
     });
 
-    let stderr_handle = thread::spawn(move || {
-        let mut line = String::new();
-        let mut reader = stderr_reader;
-        let mut buffer = Vec::new();
-        loop {
-            line.clear();
-            match reader.read_line(&mut line) {
-                Ok(0) => break,
-                Ok(_) => {
-                    debug!("Child stderr: {}", line.trim_end());
-                    buffer.extend_from_slice(line.as_bytes());
-                }
-                Err(e) => {
-                    error!("Error reading child stderr: {:?}", e);
-                    break;
+    let stderr_handle = thread::spawn({
+        let command_template = command_template.to_string();
+        move || {
+            let mut line = String::new();
+            let mut reader = stderr_reader;
+            let mut buffer = Vec::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line) {
+                    Ok(0) => break,
+                    Ok(_) => {
+                        debug!("Child stderr: {}", line.trim_end());
+                        buffer.extend_from_slice(line.as_bytes());
+                    }
+                    Err(e) => {
+                        error!("Error reading child stderr: {:?}", e);
+                        return Err(Error::StderrReadError {
+                            command: command_template,
+                            source: e,
+                        });
+                    }
                 }
             }
+            Ok(buffer)
         }
-        buffer
     });
 
     let status = child.wait()?;
 
-    full_stdout = stdout_handle.join().expect("Failed to join stdout thread");
-    full_stderr = stderr_handle.join().expect("Failed to join stderr thread");
+    full_stdout = stdout_handle.join().map_err(|_| Error::StdoutThreadJoinError {
+        command: command_template.to_string(),
+    })??;
+    full_stderr = stderr_handle.join().map_err(|_| Error::StderrThreadJoinError {
+        command: command_template.to_string(),
+    })??;
 
     debug!("Command finished with status: {:?}", status);
     if !status.success() {
@@ -105,11 +131,12 @@ pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String>
             command_template,
             String::from_utf8_lossy(&full_stderr)
         );
-        anyhow::bail!(
-            "Command '{}' failed: {:?}",
-            command_template,
-            String::from_utf8_lossy(&full_stderr)
-        );
+        return Err(Error::CommandFailed {
+            command: command_template.to_string(),
+            exit_code: status.code().unwrap_or(-1), // Use -1 if exit code is not available
+            stderr: String::from_utf8_lossy(&full_stderr).to_string(),
+        }
+        .into());
     }
 
     debug!(

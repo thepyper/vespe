@@ -95,7 +95,7 @@ pub(crate) struct Collector {
     /// Latest task begin anchor
     latest_task: Option<Anchor>,
     /// Latest prefix used (agent personality)
-    latest_prefix: Option<String>,
+    latest_agent_hash: Option<String>,
 }
 
 impl Collector {
@@ -169,7 +169,7 @@ impl Collector {
             default_parameters: Parameters::new(),
             latest_range: Range::null(),
             latest_task: None,
-            latest_prefix: None,
+            latest_agent_hash: None,
         }
     }
 
@@ -205,7 +205,7 @@ impl Collector {
             default_parameters: self.default_parameters.clone(),
             latest_range: Range::null(),
             latest_task: None,
-            latest_prefix: None,
+            latest_agent_hash: None,
         })
     }
 
@@ -351,12 +351,12 @@ impl Collector {
         self
     }
 
-    pub fn latest_prefix(&self) -> Option<String> {
-        self.latest_prefix.clone()
+    pub fn latest_agent_hash(&self) -> Option<String> {
+        self.latest_agent_hash.clone()
     }
 
-    pub fn set_latest_prefix(mut self, latest_prefix: Option<String>) -> Self {
-        self.latest_prefix = latest_prefix;
+    pub fn set_latest_agent_hash(mut self, latest_agent_hash: Option<String>) -> Self {
+        self.latest_agent_hash = latest_agent_hash;
         self
     }
 }
@@ -742,7 +742,7 @@ impl Worker {
     /// Returns [`ExecuteError::ShellError`] if the external shell command fails.
     pub(crate) fn call_model(
         &self,
-        prefix_hash: Option<String>,
+        agent_hash: Option<String>,
         parameters: &Parameters,
         prompt: &ModelContent,
     ) -> Result<(String, String)> {
@@ -763,7 +763,7 @@ impl Worker {
             }
         };
         let prompt_config = PromptConfig {
-            agent: prefix_hash,
+            agent: agent_hash,
             format: PromptFormat::Parts,
             with_agent_names: parameters.get_as_bool("with_agent_names"),
             with_invitation: parameters.get_as_bool("with_invitation"),
@@ -894,9 +894,9 @@ impl Worker {
                             collector = collector.push_item(ModelContentItem::user(&text.content));
                         } else {
                             // Unedited content, then it's assistant
-                            let latest_prefix = collector.latest_prefix().unwrap_or(String::new());
+                            let latest_agent_hash = collector.latest_agent_hash().unwrap_or(String::new());
                             collector = collector
-                                .push_item(ModelContentItem::agent(&latest_prefix, &text.content));
+                                .push_item(ModelContentItem::agent(&latest_agent_hash, &text.content));
                         }
                     } else {
                         // User writes outside answer anchors

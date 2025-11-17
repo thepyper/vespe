@@ -137,7 +137,7 @@ impl DynamicPolicy for AnswerPolicy {
         let (mut result, mut residual) =
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
 
-        let prefix_hash = residual.parameters.get_as_string_only("prefix").map(|x| {
+        let agent_hash = residual.parameters.get_as_string_only("prefix").map(|x| {
             Collector::normalized_hash(&format!(
                 "{}\n{}",
                 x,
@@ -147,22 +147,8 @@ impl DynamicPolicy for AnswerPolicy {
                     .map(|y| y.to_string())
                     .unwrap_or(String::new())
             ))
-        });
-        tracing::debug!(
-            "answer {:?}, pr {}, pd {}, lh {}",
-            residual.container,
-            residual
-                .parameters
-                .get_as_string_only("prefix")
-                .unwrap_or("none".to_string()),
-            residual
-                .parameters
-                .get("prefix_data")
-                .map(|y| y.to_string())
-                .unwrap_or("none".to_string()),
-            prefix_hash.clone().unwrap_or("none".to_string())
-        );
-        result.collector = result.collector.set_latest_prefix(prefix_hash.clone());
+        });       
+        result.collector = result.collector.set_latest_prefix(agent_hash.clone());
 
         match (residual.container, residual.state.status) {
             (Container::Tag(_) | Container::BeginAnchor(_, _), AnswerStatus::JustCreated) => {
@@ -186,7 +172,7 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.parameters,
                 )?;
                 let (prompt, response) =
-                    residual.worker.call_model(prefix_hash, residual.parameters, &prompt)?;
+                    residual.worker.call_model(agent_hash, residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;
                 residual.state.reply_hash = Collector::normalized_hash(&response);

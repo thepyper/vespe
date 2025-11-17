@@ -213,6 +213,13 @@ impl Project {
         }
     }
 
+    pub fn add_aux_path(&mut self, path: PathBuf) -> Result<()> {
+        self.project_config.aux_paths.push(path);
+        self.save_project_config()?;
+        self.commit(Some("Added auxiliary path to project config.".into()))?;
+        Ok(())
+    }
+
     pub fn commit(&self, title_message: Option<String>) -> Result<()> {
         if self.project_config.git_integration_enabled {
             self.file_access.commit(title_message)

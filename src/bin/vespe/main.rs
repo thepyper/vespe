@@ -43,8 +43,23 @@ enum Commands {
         #[command(subcommand)]
         command: ContextCommands,
     },
+    /// Manages project-level configurations.
+    Project {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     /// Watches for changes in context files and re-executes them.
     Watch {},
+}
+
+#[derive(Subcommand)]
+enum ProjectCommands {
+    /// Adds an auxiliary path to the project configuration.
+    AddAuxPath {
+        /// The path to add as an auxiliary path.
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -171,6 +186,19 @@ fn main() -> Result<()> {
                     }
 
                     display_analysis_report(&analysis)?;
+                }
+            }
+        }
+        Commands::Project { command } => {
+            let mut project = Project::find(&project_path)?;
+            tracing::info!(
+                "Found .ctx project at: {}",
+                project.project_home().display()
+            );
+            match command {
+                ProjectCommands::AddAuxPath { path } => {
+                    project.add_aux_path(path.clone())?;
+                    tracing::info!("Added auxiliary path: {}", path.display());
                 }
             }
         }

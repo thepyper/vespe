@@ -358,6 +358,12 @@ impl Parameters {
             Some(x) => x.as_string_only(),
         }
     }
+    pub fn get_as_bool(&self, key: &str) -> bool {
+        match self.get(key) {
+            None => false,
+            Some(x) => x.as_bool().unwrap_or(false),
+        }
+    }
     pub fn insert(&mut self, key: String, value: JsonPlusEntity) {
         self.parameters.properties.insert(key, value);
     }

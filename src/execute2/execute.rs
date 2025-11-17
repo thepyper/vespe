@@ -9,7 +9,7 @@ use crate::ast2::{
     Anchor, AnchorKind, CommandKind, Content, JsonPlusEntity, JsonPlusObject, Parameters, Range,
     Tag,
 };
-use crate::execute2::content::{ModelContent, ModelContentItem, PromptFormat};
+use crate::execute2::content::{ModelContent, ModelContentItem, PromptConfig, PromptFormat};
 use crate::execute2::tag_answer::AnswerStatus;
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::file::FileAccessor;
@@ -761,7 +761,13 @@ impl Worker {
                 return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
-        let prompt = prompt.to_prompt(PromptFormat::Parts);
+        let prompt_config = PromptConfig {
+            agent: parameters.get_as_string_only("prefix"),
+            format: PromptFormat::Parts,
+            with_agent_names: parameters.get_as_bool("with_agent_names"),
+            with_invitation: parameters.get_as_bool("with_invitation"),
+        };
+        let prompt = prompt.to_prompt(&prompt_config);
         let response = crate::agent::shell::shell_call(&provider, &prompt)
             .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
         Ok((prompt, response))

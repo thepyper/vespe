@@ -146,6 +146,13 @@ pub enum PromptFormat {
     Parts,
 }
 
+pub struct PromptConfig {
+    pub agent: Option<String>,
+    pub format: PromptFormat,
+    pub with_agent_names: bool,
+    pub with_invitation: bool,
+}
+
 /// A struct representing a full conversation or a multi-part prompt.
 ///
 /// `ModelContent` is a collection of `ModelContentItem`s, ordered to form a complete
@@ -195,7 +202,7 @@ impl ModelContent {
         self.0.push(item);
     }
 
-    fn embed_in_prompt_as_part(item: &ModelContentItem) -> String {
+    fn embed_in_prompt_as_part(item: &ModelContentItem, config: &PromptConfig) -> String {
         match item {
             ModelContentItem::System(content) => {
                 let text = content.text.trim();
@@ -216,7 +223,12 @@ impl ModelContent {
             ModelContentItem::Agent(content) => {
                 let text = content.text.trim();
                 if !text.is_empty() {
-                    format!("Assistant:\n{}\n", text)
+                    if config.with_agent_names {
+                        let name = super::names::generate_name(&content.author);
+                        format!("Assistant {}:\n{}\n", name, text)
+                    } else {
+                        format!("Assistant:\n{}\n", text)
+                    }
                 } else {
                     text.into()
                 }
@@ -227,9 +239,9 @@ impl ModelContent {
         }
     }
 
-    fn embed_in_prompt(item: &ModelContentItem, format: PromptFormat) -> String {
-        match format {
-            PromptFormat::Parts => Self::embed_in_prompt_as_part(item),
+    fn embed_in_prompt(item: &ModelContentItem, config: &PromptConfig) -> String {
+        match config.format {
+            PromptFormat::Parts => Self::embed_in_prompt_as_part(item, config),
         }
     }
 
@@ -244,7 +256,7 @@ impl ModelContent {
     /// A `String` representing the concatenated and formatted prompt.
     ///
     /// # Examples    
-    pub fn to_prompt(&self, format: PromptFormat) -> String {
+    pub fn to_prompt(&self, config: &PromptConfig) -> String {
         // Pre pass: delete empty messages
         let non_empty_items = &self
             .0
@@ -348,11 +360,34 @@ impl ModelContent {
             final_merged_items.push(last);
         }
 
-        let prompt = final_merged_items
-            .iter()
-            .map(|item| Self::embed_in_prompt(item, format))
-            .collect::<Vec<String>>()
-            .join("\n");
+        let agent_name = match config.with_agent_names {
+            false => None,
+            true => config
+                .agent
+                .clone()
+                .map(|x| super::names::generate_name(&x)),
+        };
+
+        let mut prompt = agent_name
+            .clone()
+            .map(|x| format!("You are {}.\n", x))
+            .unwrap_or(String::new());
+
+        prompt.push_str(
+            &final_merged_items
+                .iter()
+                .map(|item| Self::embed_in_prompt(item, config))
+                .collect::<Vec<String>>()
+                .join("\n"),
+        );
+
+        let invitation = match (config.with_invitation, agent_name) {
+            (true, Some(agent_name)) => format!("Assistant {}:", agent_name),
+            (true, None) => format!("Assistant:"),
+            (false, _) => String::new(),
+        };
+
+        prompt.push_str(&invitation);
 
         /*
         Aggiungere questo con gemini e' peggiorativo per multi-persona (example 01), vedendo

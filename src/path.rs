@@ -57,6 +57,7 @@ impl ProjectPathResolver {
 impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
+        tracing::debug!("resolve_input_file: Resolving {}", file_name);
         let mut searched_paths = vec![self.contexts_root()];
         if let Ok(file_path) = self.contexts_root().join(file_name).canonicalize() {
             if file_path.exists() {
@@ -81,12 +82,16 @@ impl PathResolver for ProjectPathResolver {
     }
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {
+        tracing::debug!("resolve_output_file: Resolving {}", file_name);
         let base_path = if let Some(ref path) = self.output_path {
             path.clone()
         } else {
             self.contexts_root()
-        };
-        let file_path = base_path.join(format!("{}", file_name)).canonicalize()?;
+        }
+        .canonicalize()?;
+        tracing::debug!("resolve_output_file: Base path {}", base_path.display());
+        let file_path = base_path.join(format!("{}", file_name));
+        tracing::debug!("resolve_output_file: File path {}", file_path.display());
         let parent_dir = file_path
             .parent()
             .ok_or_else(|| Error::ParentDirectoryNotFound {
@@ -100,6 +105,11 @@ impl PathResolver for ProjectPathResolver {
     }
     /// Resolve a meta kind / uuid to a path, create directory if doesn't exist
     fn resolve_metadata(&self, meta_kind: &str, meta_uuid: &Uuid) -> Result<PathBuf> {
+        tracing::debug!(
+            "resolve_metadata: Resolving {}-{}",
+            meta_kind,
+            meta_uuid.to_string()
+        );
         let metadata_dir =
             self.metadata_home()
                 .join(format!("{}-{}", meta_kind, meta_uuid.to_string()));

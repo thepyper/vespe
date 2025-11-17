@@ -196,13 +196,6 @@ pub enum ExecuteError {
     /// Indicates that the required `choice` parameter is missing.
     #[error("Missing 'choice' parameter at {range:?}")]
     MissingChoice { range: Range },
-
-    /// A catch-all error for any `anyhow::Error` that occurs.
-    ///
-    /// This provides a convenient way to propagate errors from libraries that
-    /// use `anyhow` for their error handling.
-    #[error("Anyhow error: {0}")]
-    Anyhow(#[from] anyhow::Error),
 }
 
 /// A specialized `Result` type for the execution module.

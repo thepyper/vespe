@@ -969,9 +969,12 @@ impl Worker {
                             collector = collector.push_item(ModelContentItem::user(&text.content));
                         } else {
                             // Unedited content, then it's assistant
-                            let latest_agent_hash = collector.latest_agent_hash().unwrap_or(String::new());
-                            collector = collector
-                                .push_item(ModelContentItem::agent(&latest_agent_hash, &text.content));
+                            let latest_agent_hash =
+                                collector.latest_agent_hash().unwrap_or(String::new());
+                            collector = collector.push_item(ModelContentItem::agent(
+                                &latest_agent_hash,
+                                &text.content,
+                            ));
                         }
                     } else {
                         // User writes outside answer anchors

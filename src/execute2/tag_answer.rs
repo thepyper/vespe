@@ -147,7 +147,7 @@ impl DynamicPolicy for AnswerPolicy {
                     .map(|y| y.to_string())
                     .unwrap_or(String::new())
             ))
-        });       
+        });
         result.collector = result.collector.set_latest_agent_hash(agent_hash.clone());
 
         match (residual.container, residual.state.status) {
@@ -172,7 +172,9 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.parameters,
                 )?;
                 let (prompt, response) =
-                    residual.worker.call_model(agent_hash, residual.parameters, &prompt)?;
+                    residual
+                        .worker
+                        .call_model(agent_hash, residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;
                 residual.state.reply_hash = Collector::normalized_hash(&response);

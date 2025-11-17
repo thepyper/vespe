@@ -102,7 +102,7 @@ impl ModelContentItem {
             text: text.into(),
         })
     }
-    
+
     /// Creates a new `ModelContentItem::MergeDownstream` from a string slice.
     ///
     /// This variant is used internally to indicate that its content should be prepended

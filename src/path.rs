@@ -20,7 +20,11 @@ pub struct ProjectPathResolver {
 
 impl ProjectPathResolver {
     pub fn new(root_path: PathBuf, aux_paths: Vec<PathBuf>, output_path: Option<PathBuf>) -> Self {
-        ProjectPathResolver { root_path, aux_paths, output_path }
+        ProjectPathResolver {
+            root_path,
+            aux_paths,
+            output_path,
+        }
     }
     pub fn with_additional_aux_paths(&self, additional_aux_paths: Vec<PathBuf>) -> Self {
         let mut new_aux_paths = self.aux_paths.clone();

@@ -9,7 +9,7 @@ use std::sync::Arc;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
@@ -131,10 +131,7 @@ impl Project {
         anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
     }
 
-    pub fn execute_context(
-        &self,
-        input: ExecuteContextInput,
-    ) -> Result<ModelContent> {
+    pub fn execute_context(&self, input: ExecuteContextInput) -> Result<ModelContent> {
         let mut data = match input.args {
             Some(args) => {
                 let mut data = args

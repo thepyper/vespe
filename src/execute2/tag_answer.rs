@@ -162,7 +162,7 @@ impl DynamicPolicy for AnswerPolicy {
                 .unwrap_or("none".to_string()),
             prefix_hash.clone().unwrap_or("none".to_string())
         );
-        result.collector = result.collector.set_latest_prefix(prefix_hash);
+        result.collector = result.collector.set_latest_prefix(prefix_hash.clone());
 
         match (residual.container, residual.state.status) {
             (Container::Tag(_) | Container::BeginAnchor(_, _), AnswerStatus::JustCreated) => {
@@ -186,7 +186,7 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.parameters,
                 )?;
                 let (prompt, response) =
-                    residual.worker.call_model(residual.parameters, &prompt)?;
+                    residual.worker.call_model(prefix_hash, residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;
                 residual.state.reply_hash = Collector::normalized_hash(&response);

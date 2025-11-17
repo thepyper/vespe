@@ -742,6 +742,7 @@ impl Worker {
     /// Returns [`ExecuteError::ShellError`] if the external shell command fails.
     pub(crate) fn call_model(
         &self,
+        prefix_hash: Option<String>,
         parameters: &Parameters,
         prompt: &ModelContent,
     ) -> Result<(String, String)> {
@@ -762,7 +763,7 @@ impl Worker {
             }
         };
         let prompt_config = PromptConfig {
-            agent: parameters.get_as_string_only("prefix"),
+            agent: prefix_hash,
             format: PromptFormat::Parts,
             with_agent_names: parameters.get_as_bool("with_agent_names"),
             with_invitation: parameters.get_as_bool("with_invitation"),

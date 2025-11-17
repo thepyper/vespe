@@ -45,7 +45,7 @@ pub fn watch(project: &Project) -> Result<()> {
                                 context_name
                             );
                             if let Err(e) =
-                                project.execute_context(&context_name, None, None, None, None)
+                                project.execute_context(&context_name, None, None, None, None, None)
                             {
                                 tracing::error!("Error executing context {}: {}", context_name, e);
                             }

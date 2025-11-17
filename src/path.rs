@@ -1,5 +1,6 @@
 use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
-use crate::error::{Error, Result};
+use crate::error::Error;
+use anyhow::Result;
 use std::path::PathBuf;
 use uuid::Uuid;
 

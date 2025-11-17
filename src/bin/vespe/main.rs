@@ -242,7 +242,7 @@ fn display_answer_analysis(analysis: &AnchorAnalysis, answer_anchor_count: usize
         } else {
             state.query.clone()
         };
-        println!("  Query: {}", query_display);
+        println!("+ Query: +++++++++++++++++++++++++++++++++++++++++++++++++++\n{}", query_display);
 
         let reply_display = if state.reply.len() > truncation_limit {
             format!(
@@ -257,7 +257,7 @@ fn display_answer_analysis(analysis: &AnchorAnalysis, answer_anchor_count: usize
         } else {
             state.reply.clone()
         };
-        println!("  Reply: {}", reply_display);
+        println!("+ Reply:  +++++++++++++++++++++++++++++++++++++++++++++++++++\n{}", reply_display);
     }
 }
 

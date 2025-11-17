@@ -638,12 +638,14 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let mut collector = mono_result.collector;
         let mut patches = mono_result.new_patches;
         // If output has been redirected, place output redirected placeholder
-        if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
-            let latest_agent_hash = collector.latest_agent_hash().unwrap_or(String::new());
-            collector = collector.push_item(ModelContentItem::agent(
-                &latest_agent_hash,
-                REDIRECTED_OUTPUT_PLACEHOLDER,
-            ));
+        if !is_end {
+            if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
+                let latest_agent_hash = collector.latest_agent_hash().unwrap_or(String::new());
+                collector = collector.push_item(ModelContentItem::agent(
+                    &latest_agent_hash,
+                    REDIRECTED_OUTPUT_PLACEHOLDER,
+                ));
+            }
         }
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
@@ -727,12 +729,14 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
         let mono_result = P::mono(mono_inputs)?;
         let mut collector = mono_result.collector;
         // If output has been redirected, place output redirected placeholder
-        if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
-            let latest_agent_hash = collector.latest_agent_hash().unwrap_or(String::new());
-            collector = collector.push_item(ModelContentItem::agent(
-                &latest_agent_hash,
-                REDIRECTED_OUTPUT_PLACEHOLDER,
-            ));
+        if !is_end {
+            if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
+                let latest_agent_hash = collector.latest_agent_hash().unwrap_or(String::new());
+                collector = collector.push_item(ModelContentItem::agent(
+                    &latest_agent_hash,
+                    REDIRECTED_OUTPUT_PLACEHOLDER,
+                ));
+            }
         }
         // If there is some patches, just discard them and new state as well as it cannot be applied
         if !mono_result.new_patches.is_empty() {

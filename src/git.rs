@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use git2::{Repository, Signature, StatusOptions};
 use std::collections::HashSet;
 #[allow(unused_imports)]

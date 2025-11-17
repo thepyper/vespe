@@ -46,7 +46,7 @@ pub enum Error {
         file_path: PathBuf,
         workdir: PathBuf,
     },
-    #[error("Failed to add file '{file_path}' to index: {0}")]
+    #[error("Failed to add file '{file_path}' to index: {file_path}")]
     AddFileToIndexError {
         file_path: PathBuf,
         #[source]
@@ -56,7 +56,7 @@ pub enum Error {
     WriteIndexError(#[source] git2::Error),
     #[error("Failed to write tree from index: {0}")]
     WriteTreeError(#[source] git2::Error),
-    #[error("Failed to find tree with OID '{oid}': {0}")]
+    #[error("Failed to find tree with OID '{oid}': {oid}")]
     FindTreeError {
         oid: git2::Oid,
         #[source]
@@ -66,7 +66,7 @@ pub enum Error {
     CreateSignatureError(#[source] git2::Error),
     #[error("Failed to create commit: {0}")]
     CreateCommitError(#[source] git2::Error),
-    #[error("Failed to find commit with OID '{oid}': {0}")]
+    #[error("Failed to find commit with OID '{oid}': {oid}")]
     FindCommitError {
         oid: git2::Oid,
         #[source]
@@ -92,4 +92,18 @@ pub enum Error {
         #[source]
         source: anyhow::Error,
     },
+    #[error("Project already initialized in this directory.")]
+    ProjectAlreadyInitialized,
+    #[error("Failed to canonicalize path '{path}': {source}")]
+    FailedToCanonicalizePath {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("No .ctx project found in the current directory or any parent directory.")]
+    ProjectNotFound,
+    #[error("Context file already exists: '{path}'")]
+    ContextFileAlreadyExists { path: PathBuf },
+    #[error("JSON error: {0}")]
+    JsonError(#[from] serde_json::Error),
 }

@@ -6,8 +6,9 @@ use crate::path::{PathResolver, ProjectPathResolver};
 
 use std::sync::Arc;
 
-use anyhow::Context as AnyhowContext;
 use anyhow::Result;
+
+use crate::error::Error;
 
 use std::collections::BTreeMap;
 use std::io::ErrorKind;
@@ -49,14 +50,19 @@ impl Project {
     pub fn init(root_path: &Path) -> Result<()> {
         let ctx_dir = root_path.join(CTX_DIR_NAME);
         if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
-            anyhow::bail!("ctx project already initialized in this directory.");
+            return Err(Error::ProjectAlreadyInitialized.into());
         }
 
-        std::fs::create_dir_all(&ctx_dir).context("Failed to create .ctx directory")?;
+        std::fs::create_dir_all(&ctx_dir).map_err(|source| Error::FailedToCreateDirectory {
+            path: ctx_dir.clone(),
+            source,
+        })?;
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
-        std::fs::write(&ctx_root_file, "Feel The BuZZ!!")
-            .context("Failed to write .ctx_root file")?;
+        std::fs::write(&ctx_root_file, "Feel The BuZZ!!").map_err(|source| Error::FileWriteError {
+            path: ctx_root_file.clone(),
+            source,
+        })?;
 
         let mut project_config = ProjectConfig::default();
 
@@ -88,7 +94,12 @@ impl Project {
         loop {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
-                let root_path = current_path.canonicalize()?;
+                let root_path = current_path
+                    .canonicalize()
+                    .map_err(|source| Error::FailedToCanonicalizePath {
+                        path: current_path.clone(),
+                        source,
+                    })?;
                 let project_config_path = root_path
                     .join(CTX_DIR_NAME)
                     .join(METADATA_DIR_NAME)
@@ -99,7 +110,15 @@ impl Project {
                 let editor_interface: Option<Arc<dyn EditorCommunicator>> =
                     match project_config.editor_interface {
                         EditorInterface::VSCode => {
-                            Some(Arc::new(FileBasedEditorCommunicator::new(&editor_path)?)
+                            Some(Arc::new(
+                                FileBasedEditorCommunicator::new(&editor_path).map_err(
+                                    |source| Error::EditorInterfaceError {
+                                        message: "Failed to create file-based editor communicator"
+                                            .to_string(),
+                                        source: source.into(),
+                                    },
+                                )?
+                            )
                                 as Arc<dyn EditorCommunicator>)
                         }
                         _ => None,
@@ -128,7 +147,7 @@ impl Project {
             }
         }
 
-        anyhow::bail!("No .ctx project found in the current directory or any parent directory.")
+        return Err(Error::ProjectNotFound.into());
     }
 
     pub fn execute_context(&self, input: ExecuteContextInput) -> Result<ModelContent> {
@@ -210,7 +229,7 @@ impl Project {
     ) -> Result<PathBuf> {
         let file_path = self.path_res.resolve_output_file(&format!("{}", name))?;
         if file_path.exists() {
-            anyhow::bail!("Context file already exists: {}", file_path.display());
+            return Err(Error::ContextFileAlreadyExists { path: file_path }.into());
         }
         let content = initial_content.unwrap_or_else(|| "".to_string());
         self.file_access.write_file(&file_path, &content, None)?;
@@ -222,11 +241,16 @@ impl Project {
 
     pub fn save_project_config(&self) -> Result<()> {
         let config_path = self.project_config_path();
-        std::fs::create_dir_all(
-            config_path.parent().unwrap(), // TODO brutto!!
-        )
-        .context(format!("Failed to create metadata directory",))?;
-        let serialized = serde_json::to_string_pretty(&self.project_config)?;
+        let parent_dir = config_path
+            .parent()
+            .ok_or_else(|| Error::ParentDirectoryNotFound {
+                file_path: config_path.clone(),
+            })?;
+        std::fs::create_dir_all(parent_dir).map_err(|source| Error::FailedToCreateDirectory {
+            path: parent_dir.to_path_buf(),
+            source,
+        })?;
+        let serialized = serde_json::to_string_pretty(&self.project_config).map_err(Error::JsonError)?;
         self.file_access.write_file(
             &config_path,
             &serialized,
@@ -237,9 +261,12 @@ impl Project {
 
     pub fn load_project_config(project_config_path: &PathBuf) -> Result<ProjectConfig> {
         match std::fs::read_to_string(project_config_path) {
-            Ok(content) => Ok(serde_json::from_str(&content)?),
+            Ok(content) => Ok(serde_json::from_str(&content).map_err(Error::JsonError)?),
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(ProjectConfig::default()),
-            Err(e) => Err(anyhow::Error::new(e).context("Failed to read project config file")),
+            Err(e) => Err(Error::FileReadError {
+                path: project_config_path.clone(),
+                source: e,
+            }.into()),
         }
     }
 

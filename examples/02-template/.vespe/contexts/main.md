@@ -1,6 +1,6 @@
 
 @comment {
-    _1: "Run this with 'echo violet | vespe context run main sepia yellow'.",
+    _1: "Run this with 'echo violet | vespe context run main sepia yellow -Dmy_var=green'.",
 }
 
 @set {
@@ -16,4 +16,6 @@
 @inline { data: { color: '{{$args}}' } } template/about_color.md
 
 @inline { data: { color: '{{$input}}' } } template/about_color.md
+
+@inline { data: { color: '{{$my_var}}' } } template/about_color.md
 

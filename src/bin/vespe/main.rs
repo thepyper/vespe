@@ -166,6 +166,7 @@ fn main() -> Result<()> {
                     args,
                     defines,
                     aux_paths,
+                    output_path,
                 } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
                     tracing::info!(

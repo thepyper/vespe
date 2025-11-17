@@ -87,6 +87,9 @@ enum ContextCommands {
         /// Define a key-value pair for the context.
         #[arg(short = 'D', long = "define", value_name = "KEY=VALUE", action = ArgAction::Append)]
         defines: Option<Vec<String>>,
+        /// Additional auxiliary paths to search for input files.
+        #[arg(short = 'I', long = "aux_path", value_name = "PATH", action = ArgAction::Append)]
+        aux_paths: Option<Vec<PathBuf>>,
     },
     /// Analyzes a context file.
     Analize {
@@ -159,9 +162,7 @@ fn main() -> Result<()> {
                     today,
                     args,
                     defines,
-                    /// Additional auxiliary paths to search for input files.
-                    #[arg(short = 'I', value_name = "PATH", action = ArgAction::Append)]
-                    aux_paths: Option<Vec<PathBuf>>,
+                    aux_paths,
                 } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
                     tracing::info!(

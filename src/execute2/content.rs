@@ -257,9 +257,25 @@ impl ModelContent {
     ///
     /// # Examples    
     pub fn to_prompt(&self, config: &PromptConfig) -> String {
+        let agent_name = match config.with_agent_names {
+            false => None,
+            true => config
+                .agent
+                .clone()
+                .map(|x| super::names::generate_name(&x)),
+        };
+
+        let identity = agent_name
+            .clone()
+            .map(|x| format!("You are {}.\n", x))
+            .unwrap_or(String::new());
+
+        // Pre pass: prepend identity message
+        let mut prepend_identity = vec![ModelContentItem::merge_downstream(&identity)];
+        prepend_identity.extend(self.0.clone());
+
         // Pre pass: delete empty messages
-        let non_empty_items = &self
-            .0
+        let non_empty_items = &prepend_identity
             .iter()
             .filter(|x| !x.is_empty())
             .collect::<Vec<&ModelContentItem>>();
@@ -360,26 +376,11 @@ impl ModelContent {
             final_merged_items.push(last);
         }
 
-        let agent_name = match config.with_agent_names {
-            false => None,
-            true => config
-                .agent
-                .clone()
-                .map(|x| super::names::generate_name(&x)),
-        };
-
-        let mut prompt = agent_name
-            .clone()
-            .map(|x| format!("You are {}.\n", x))
-            .unwrap_or(String::new());
-
-        prompt.push_str(
-            &final_merged_items
-                .iter()
-                .map(|item| Self::embed_in_prompt(item, config))
-                .collect::<Vec<String>>()
-                .join("\n"),
-        );
+        let mut prompt = final_merged_items
+            .iter()
+            .map(|item| Self::embed_in_prompt(item, config))
+            .collect::<Vec<String>>()
+            .join("\n");
 
         let invitation = match (config.with_invitation, agent_name) {
             (true, Some(agent_name)) => format!("Assistant {}:", agent_name),

@@ -587,8 +587,8 @@ cat my-data.txt | vespe context run [NAME]
 
 *   `[NAME]`: The name of the context to execute.
 *   `--today`: A flag to execute the context for the current date.
-*   `-D <KEY>=<VALUE>`: (Optional) Defines a variable that can be used within the context via Handlebars syntax (e.g., `{{KEY}}`). This is useful for passing dynamic values to your templates. For example, running with `-D name=World` allows you to use `{{name}}` in your context. This option can be specified multiple times.
-*   `-I <PATH>`: (Optional) Adds an auxiliary directory path to search for input files (e.g., for `@include` or `@answer input:`). When resolving a file, `vespe` will first check the project's root path and then search the specified auxiliary paths in order. This allows you to organize and reuse context files from shared locations. This option can be specified multiple times.
+*   `-D <KEY>=<VALUE>`: (Optional) Defines a variable that can be used within the context via Handlebars syntax (e.g., `{{$KEY}}`). This is useful for passing dynamic values to your templates. For example, running with `-D name=World` allows you to use `{{$name}}` in your context. This option can be specified multiple times.
+*   `-I <PATH>`: (Optional) Adds an auxiliary directory path to search for input files (e.g., for `@include`, `@inline` or `@answer input/prefix/postfix:` ). When resolving a file, `vespe` will first check the project's root path and then search the specified auxiliary paths in order. This allows you to organize and reuse context files from shared locations. This option can be specified multiple times.
 *   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{$1}}` for first argument, `{{$2}}` for second argument, and so on; {{$args}} for all of the arguments space-separated).
 *   **Piped Input**: The `run` command can also receive text from `stdin`. This input is available within the context via the `{{$input}}` Handlebars variable.
 

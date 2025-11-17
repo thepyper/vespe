@@ -9,7 +9,7 @@ use std::sync::Arc;
 use anyhow::Context as AnyhowContext;
 use anyhow::Result;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 

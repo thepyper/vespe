@@ -74,4 +74,22 @@ pub enum Error {
     },
     #[error("Failed to restore index to new HEAD state: {0}")]
     RestoreIndexError(#[source] git2::Error),
+    #[error("Failed to read file '{path}': {source}")]
+    FileReadError {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Failed to write file '{path}': {source}")]
+    FileWriteError {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Editor interface error: {message} ({source})")]
+    EditorInterfaceError {
+        message: String,
+        #[source]
+        source: anyhow::Error,
+    },
 }

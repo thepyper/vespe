@@ -95,7 +95,7 @@ enum ContextCommands {
         output_path: Option<PathBuf>,
     },
     /// Analyzes a context file.
-    Analize {
+    Analyze {
         /// The name of the context to analyze.
         #[arg(value_name = "NAME")]
         context_name: String,
@@ -187,7 +187,7 @@ fn main() -> Result<()> {
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }
-                ContextCommands::Analize {
+                ContextCommands::Analyze {
                     context_name,
                     filter_uuid,
                 } => {

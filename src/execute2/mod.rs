@@ -61,7 +61,7 @@
 //! This module is crucial for enabling an interactive, AI-driven document generation and
 //! modification workflow.
 
-pub mod analize;
+pub mod analyze;
 mod content;
 mod error;
 mod execute;
@@ -81,7 +81,7 @@ mod utils;
 pub use self::error::{ExecuteError, Result};
 pub use content::{ModelContent, ModelContentItem};
 
-pub use analize::{analyze_context, AnchorAnalysis, AnchorState, ContextAnalysis};
+pub use analyze::{analyze_context, AnchorAnalysis, AnchorState, ContextAnalysis};
 pub use execute::collect_context;
 pub use execute::execute_context;
 

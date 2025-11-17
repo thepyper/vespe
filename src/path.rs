@@ -15,19 +15,27 @@ pub trait PathResolver {
 pub struct ProjectPathResolver {
     root_path: PathBuf,
     aux_paths: Vec<PathBuf>,
+    output_path: Option<PathBuf>,
 }
 
 impl ProjectPathResolver {
-    pub fn new(root_path: PathBuf, aux_paths: Vec<PathBuf>) -> Self {
-        ProjectPathResolver { root_path, aux_paths }
+    pub fn new(root_path: PathBuf, aux_paths: Vec<PathBuf>, output_path: Option<PathBuf>) -> Self {
+        ProjectPathResolver { root_path, aux_paths, output_path }
     }
-
     pub fn with_additional_aux_paths(&self, additional_aux_paths: Vec<PathBuf>) -> Self {
         let mut new_aux_paths = self.aux_paths.clone();
         new_aux_paths.extend(additional_aux_paths);
         ProjectPathResolver {
             root_path: self.root_path.clone(),
             aux_paths: new_aux_paths,
+            output_path: self.output_path.clone(),
+        }
+    }
+    pub fn with_alternative_output_path(&self, alternative_output_path: PathBuf) -> Self {
+        ProjectPathResolver {
+            root_path: self.root_path.clone(),
+            aux_paths: self.aux_paths.clone(),
+            output_path: Some(alternative_output_path),
         }
     }
     pub fn project_home(&self) -> PathBuf {
@@ -63,7 +71,12 @@ impl PathResolver for ProjectPathResolver {
     }
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {
-        let file_path = self.contexts_root().join(format!("{}", file_name));
+        let base_path = if let Some(ref path) = self.output_path {
+            path.clone()
+        } else {
+            self.contexts_root()
+        };
+        let file_path = base_path.join(format!("{}", file_name));
         let parent_dir = file_path
             .parent()
             .context("Failed to get parent directory")?;

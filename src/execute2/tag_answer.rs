@@ -251,6 +251,26 @@ impl DynamicPolicy for AnswerPolicy {
 }
 
 impl AnswerPolicy {
+    /// Appends a choice-related postfix to the `ModelContent` if a `choose` parameter is present.
+    ///
+    /// This method is used when the `@answer` tag is configured to present a set of choices
+    /// to the model. It formats these choices into a system message and appends it to the
+    /// current prompt.
+    ///
+    /// # Arguments
+    ///
+    /// * `worker` - A reference to the [`Worker`] instance.
+    /// * `content` - The current [`ModelContent`] to which the postfix will be added.
+    /// * `parameters` - The [`Parameters`] of the `@answer` tag, potentially containing a `choose` parameter.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the updated `ModelContent` with the choice postfix.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExecuteError::UnsupportedParameterValue`] if the `choose` parameter
+    /// has an invalid format.
     fn postfix_content_with_choice(
         worker: &Worker,
         content: ModelContent,
@@ -318,6 +338,22 @@ impl AnswerPolicy {
             None => Ok(content),
         }
     }
+    /// Processes the model's response, extracting the chosen option if a `choose` parameter was used.
+    ///
+    /// If the `@answer` tag was configured with a `choose` parameter (object variant),
+    /// this method attempts to identify which choice tag is present in the model's `response`.
+    /// It then returns the corresponding value from the `choose` parameter.
+    ///
+    /// # Arguments
+    ///
+    /// * `response` - The raw response string from the external model.
+    /// * `parameters` - The [`Parameters`] of the `@answer` tag, potentially containing a `choose` parameter.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the processed response string. This will be the chosen
+    /// value if applicable, or the original response if no `choose` parameter was used
+    /// or no choice was clearly indicated.
     fn process_response_with_choice(response: String, parameters: &Parameters) -> Result<String> {
         match parameters.get("choose") {
             Some(JsonPlusEntity::Object(x)) => {
@@ -341,12 +377,32 @@ impl AnswerPolicy {
             _ => Ok(response),
         }
     }
+    /// Generates a unique tag string for a given choice.
+    ///
+    /// This tag is used internally to identify which choice the model has selected
+    /// from a list of options.
+    ///
+    /// # Arguments
+    ///
+    /// * `choice` - The string representation of the choice.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the unique choice tag.
     fn choice_tag_from_choice(choice: &str) -> String {
         format!("§{}§", choice)
     }
 }
 
 impl DynamicState for AnswerState {
+    /// Returns a string representation of the current `AnswerStatus`.
+    ///
+    /// This is used for persistence and debugging, providing a human-readable
+    /// indicator of the `@answer` tag's state.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the current status.
     fn status_indicator(&self) -> String {
         self.status.to_string()
     }

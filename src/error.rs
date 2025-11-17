@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, Error>;
-
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Context name is required unless --today is specified.")]
@@ -148,12 +146,4 @@ pub enum Error {
         exit_code: i32,
         stderr: String,
     },
-    #[error("Handlebars template error: {0}")]
-    HandlebarsTemplateError(#[from] handlebars::TemplateError),
-    #[error("Handlebars render error: {0}")]
-    HandlebarsRenderError(#[from] handlebars::RenderError),
-    #[error("Receive timeout error: {0}")]
-    RecvTimeoutError(#[from] std::sync::mpsc::RecvTimeoutError),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
 }

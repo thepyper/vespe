@@ -8,6 +8,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+use vespe::error::Error;
 use vespe::execute2::{AnchorAnalysis, AnchorState, ContextAnalysis};
 use vespe::project::Project;
 
@@ -108,7 +109,7 @@ fn get_context_name(today: bool, name: Option<String>, format_str: &str) -> Resu
     let context_name = if today {
         Ok(chrono::Local::now().format(format_str).to_string())
     } else {
-        name.ok_or_else(|| anyhow::anyhow!("Context name is required unless --today is specified."))
+        name.ok_or_else(|| anyhow::Error::from(Error::ContextNameRequired))
     };
     Ok(format!("{}.md", &context_name?))
 }
@@ -227,16 +228,19 @@ fn main() -> Result<()> {
 }
 
 fn read_input() -> Result<Option<String>> {
-    let (tx, rx) = mpsc::channel();
+    let (tx, rx) = mpsc::channel::<Result<String, Error>>();
 
     thread::spawn(move || {
         let mut input = String::new();
-        io::stdin().read_to_string(&mut input).unwrap();
-        let _ = tx.send(input);
+        let res = io::stdin().read_to_string(&mut input)
+            .map(|_| input)
+            .map_err(Error::StdinReadError);
+        let _ = tx.send(res);
     });
 
     match rx.recv_timeout(Duration::from_millis(250)) {
-        Ok(data) => Ok(Some(data)),
+        Ok(Ok(data)) => Ok(Some(data)),
+        Ok(Err(e)) => Err(e.into()),
         Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
         Err(e) => Err(e.into()),
     }

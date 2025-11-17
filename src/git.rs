@@ -1,3 +1,4 @@
+use crate::error::Error;
 use anyhow::Result;
 use git2::{Repository, Signature, StatusOptions};
 use std::collections::HashSet;
@@ -5,7 +6,6 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
 use tracing::debug; // Added HashSet
-use crate::error::Error;
 
 pub fn git_commit_files(
     root_path: &Path,
@@ -17,13 +17,11 @@ pub fn git_commit_files(
         message, files_to_commit
     );
 
-    let repo = Repository::discover(root_path)
-        .map_err(|e| Error::GitRepositoryError {
-            message: "Failed to open repository".to_string(),
-            source: e,
-        })?;
-    let workdir = repo.workdir()
-        .ok_or(Error::NoWorkdirError)?;
+    let repo = Repository::discover(root_path).map_err(|e| Error::GitRepositoryError {
+        message: "Failed to open repository".to_string(),
+        source: e,
+    })?;
+    let workdir = repo.workdir().ok_or(Error::NoWorkdirError)?;
 
     // Convert files_to_commit to a HashSet for efficient lookup
     let files_to_commit_set: HashSet<PathBuf> = files_to_commit.iter().cloned().collect();
@@ -37,13 +35,10 @@ pub fn git_commit_files(
 
     // 2. Get the tree associated with the HEAD commit.
     // This represents the state of the repository at the last commit.
-    let head_tree = head_commit
-        .tree()
-        .map_err(Error::TreeFromCommitError)?;
+    let head_tree = head_commit.tree().map_err(Error::TreeFromCommitError)?;
 
     // 3. Load the repository index.
-    let mut index = repo.index()
-        .map_err(Error::RepositoryIndexError)?;
+    let mut index = repo.index().map_err(Error::RepositoryIndexError)?;
 
     // 4. Identify files that were staged *before* our operation,
     //    excluding those that will be committed.
@@ -90,12 +85,13 @@ pub fn git_commit_files(
                 path: path.clone(),
                 source: e,
             })?;
-        let canonical_workdir = workdir
-            .canonicalize()
-            .map_err(|e| Error::CanonicalizePathError {
-                path: workdir.to_path_buf(),
-                source: e,
-            })?;
+        let canonical_workdir =
+            workdir
+                .canonicalize()
+                .map_err(|e| Error::CanonicalizePathError {
+                    path: workdir.to_path_buf(),
+                    source: e,
+                })?;
 
         let relative_path = canonical_path
             .strip_prefix(&canonical_workdir)
@@ -112,18 +108,14 @@ pub fn git_commit_files(
     }
 
     // 7. Write the changes to the index to disk.
-    index.write()
-        .map_err(Error::WriteIndexError)?;
+    index.write().map_err(Error::WriteIndexError)?;
 
     // 8. Create a new tree based on the current state of the index.
-    let tree_oid = index
-        .write_tree()
-        .map_err(Error::WriteTreeError)?;
-    let tree = repo.find_tree(tree_oid)
-        .map_err(|e| Error::FindTreeError {
-            oid: tree_oid,
-            source: e,
-        })?;
+    let tree_oid = index.write_tree().map_err(Error::WriteTreeError)?;
+    let tree = repo.find_tree(tree_oid).map_err(|e| Error::FindTreeError {
+        oid: tree_oid,
+        source: e,
+    })?;
 
     // 9. Create the author and committer signature.
     let signature = Signature::now("vespe", "vespe@example.com") // Using "vespe@example.com" as a placeholder
@@ -149,9 +141,7 @@ pub fn git_commit_files(
             oid: new_commit_oid,
             source: e,
         })?;
-    let new_head_tree = new_head_commit
-        .tree()
-        .map_err(Error::TreeFromCommitError)?;
+    let new_head_tree = new_head_commit.tree().map_err(Error::TreeFromCommitError)?;
 
     index
         .read_tree(&new_head_tree)
@@ -165,12 +155,13 @@ pub fn git_commit_files(
                 path: path.clone(),
                 source: e,
             })?;
-        let canonical_workdir = workdir
-            .canonicalize()
-            .map_err(|e| Error::CanonicalizePathError {
-                path: workdir.to_path_buf(),
-                source: e,
-            })?;
+        let canonical_workdir =
+            workdir
+                .canonicalize()
+                .map_err(|e| Error::CanonicalizePathError {
+                    path: workdir.to_path_buf(),
+                    source: e,
+                })?;
 
         let relative_path = canonical_path
             .strip_prefix(&canonical_workdir)
@@ -187,8 +178,7 @@ pub fn git_commit_files(
     }
 
     // 13. Write the restored index to disk.
-    index.write()
-        .map_err(Error::WriteIndexError)?;
+    index.write().map_err(Error::WriteIndexError)?;
 
     debug!("Commit created with id {}", new_commit_oid);
     Ok(())

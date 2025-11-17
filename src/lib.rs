@@ -3,12 +3,12 @@ pub mod ast2;
 pub mod config;
 pub mod constants;
 pub mod editor;
+pub mod error;
 pub mod execute2;
 pub mod file;
 pub mod git;
 pub mod path;
 pub mod project;
-pub mod error;
 
 pub fn init_telemetry() {
     tracing_subscriber::fmt()

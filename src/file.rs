@@ -105,20 +105,26 @@ impl FileAccessor for ProjectFileAccessor {
     fn lock_file(&self, path: &Path) -> Result<Uuid> {
         match &self.editor_interface {
             None => Ok(DUMMY_ID),
-            Some(x) => x.save_and_lock_file(path).map_err(|e| Error::EditorInterfaceError {
-                message: "Failed to save and lock file".to_string(),
-                source: e,
-            }).map_err(anyhow::Error::from),
+            Some(x) => x
+                .save_and_lock_file(path)
+                .map_err(|e| Error::EditorInterfaceError {
+                    message: "Failed to save and lock file".to_string(),
+                    source: e,
+                })
+                .map_err(anyhow::Error::from),
         }
     }
     /// Release excludive access to a file
     fn unlock_file(&self, uuid: &Uuid) -> Result<()> {
         match &self.editor_interface {
             None => Ok(()),
-            Some(x) => x.unlock_and_reload_file(*uuid).map_err(|e| Error::EditorInterfaceError {
-                message: "Failed to unlock and reload file".to_string(),
-                source: e,
-            }).map_err(anyhow::Error::from),
+            Some(x) => x
+                .unlock_and_reload_file(*uuid)
+                .map_err(|e| Error::EditorInterfaceError {
+                    message: "Failed to unlock and reload file".to_string(),
+                    source: e,
+                })
+                .map_err(anyhow::Error::from),
         }
     }
     /// Write whole file, optional comment to the operation

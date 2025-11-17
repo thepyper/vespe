@@ -72,11 +72,12 @@ impl PathResolver for ProjectPathResolver {
             }
             searched_paths.push(aux_path.clone());
         }
-        
+
         Err(Error::FileNotFound {
             file_name: file_name.to_string(),
             searched_paths,
-        }.into())
+        }
+        .into())
     }
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {
@@ -91,11 +92,10 @@ impl PathResolver for ProjectPathResolver {
             .ok_or_else(|| Error::ParentDirectoryNotFound {
                 file_path: file_path.clone(),
             })?;
-        std::fs::create_dir_all(parent_dir)
-            .map_err(|e| Error::FailedToCreateDirectory {
-                path: parent_dir.to_path_buf(),
-                source: e,
-            })?;
+        std::fs::create_dir_all(parent_dir).map_err(|e| Error::FailedToCreateDirectory {
+            path: parent_dir.to_path_buf(),
+            source: e,
+        })?;
         Ok(file_path)
     }
     /// Resolve a meta kind / uuid to a path, create directory if doesn't exist
@@ -103,11 +103,10 @@ impl PathResolver for ProjectPathResolver {
         let metadata_dir =
             self.metadata_home()
                 .join(format!("{}-{}", meta_kind, meta_uuid.to_string()));
-        std::fs::create_dir_all(&metadata_dir)
-            .map_err(|e| Error::FailedToCreateDirectory {
-                path: metadata_dir.clone(),
-                source: e,
-            })?;
+        std::fs::create_dir_all(&metadata_dir).map_err(|e| Error::FailedToCreateDirectory {
+            path: metadata_dir.clone(),
+            source: e,
+        })?;
         Ok(metadata_dir)
     }
 }

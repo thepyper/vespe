@@ -232,7 +232,8 @@ fn read_input() -> Result<Option<String>> {
 
     thread::spawn(move || {
         let mut input = String::new();
-        let res = io::stdin().read_to_string(&mut input)
+        let res = io::stdin()
+            .read_to_string(&mut input)
             .map(|_| input)
             .map_err(Error::StdinReadError);
         let _ = tx.send(res);

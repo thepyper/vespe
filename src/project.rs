@@ -59,9 +59,11 @@ impl Project {
         })?;
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
-        std::fs::write(&ctx_root_file, "Feel The BuZZ!!").map_err(|source| Error::FileWriteError {
-            path: ctx_root_file.clone(),
-            source,
+        std::fs::write(&ctx_root_file, "Feel The BuZZ!!").map_err(|source| {
+            Error::FileWriteError {
+                path: ctx_root_file.clone(),
+                source,
+            }
         })?;
 
         let mut project_config = ProjectConfig::default();
@@ -94,12 +96,12 @@ impl Project {
         loop {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
-                let root_path = current_path
-                    .canonicalize()
-                    .map_err(|source| Error::FailedToCanonicalizePath {
+                let root_path = current_path.canonicalize().map_err(|source| {
+                    Error::FailedToCanonicalizePath {
                         path: current_path.clone(),
                         source,
-                    })?;
+                    }
+                })?;
                 let project_config_path = root_path
                     .join(CTX_DIR_NAME)
                     .join(METADATA_DIR_NAME)
@@ -109,18 +111,16 @@ impl Project {
                 let editor_path = ctx_dir.join(METADATA_DIR_NAME).join(".editor");
                 let editor_interface: Option<Arc<dyn EditorCommunicator>> =
                     match project_config.editor_interface {
-                        EditorInterface::VSCode => {
-                            Some(Arc::new(
-                                FileBasedEditorCommunicator::new(&editor_path).map_err(
-                                    |source| Error::EditorInterfaceError {
-                                        message: "Failed to create file-based editor communicator"
-                                            .to_string(),
-                                        source: source.into(),
-                                    },
-                                )?
-                            )
-                                as Arc<dyn EditorCommunicator>)
-                        }
+                        EditorInterface::VSCode => Some(Arc::new(
+                            FileBasedEditorCommunicator::new(&editor_path).map_err(|source| {
+                                Error::EditorInterfaceError {
+                                    message: "Failed to create file-based editor communicator"
+                                        .to_string(),
+                                    source: source.into(),
+                                }
+                            })?,
+                        )
+                            as Arc<dyn EditorCommunicator>),
                         _ => None,
                     };
 
@@ -250,7 +250,8 @@ impl Project {
             path: parent_dir.to_path_buf(),
             source,
         })?;
-        let serialized = serde_json::to_string_pretty(&self.project_config).map_err(Error::JsonError)?;
+        let serialized =
+            serde_json::to_string_pretty(&self.project_config).map_err(Error::JsonError)?;
         self.file_access.write_file(
             &config_path,
             &serialized,
@@ -266,7 +267,8 @@ impl Project {
             Err(e) => Err(Error::FileReadError {
                 path: project_config_path.clone(),
                 source: e,
-            }.into()),
+            }
+            .into()),
         }
     }
 

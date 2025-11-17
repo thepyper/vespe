@@ -110,39 +110,39 @@ impl StaticPolicy for DonePolicy {
         let tag = match residual.container {
             Container::Tag(tag) => tag,
             Container::BeginAnchor(anchor, _) | Container::EndAnchor(anchor, _) => {
-                return Err(ExecuteError::DoneTagAsAnchor { range: anchor.range });
+                return Err(ExecuteError::DoneTagAsAnchor {
+                    range: anchor.range,
+                });
             }
         };
         match result.collector.latest_task() {
-            Some(anchor) => {
-                match anchor.command {
-                    CommandKind::Task => {
-                        let mut task_state = residual
-                            .worker
-                            .load_state::<TaskState>(anchor.command, &anchor.uuid)?;
-                        match task_state.status {
-                            TaskStatus::Waiting => {
-                                if !residual.readonly {
-                                    task_state.status = TaskStatus::Eating;
-                                    task_state.eating_end = tag.range.begin;
-                                    residual.worker.save_state::<TaskState>(
-                                        anchor.command,
-                                        &anchor.uuid,
-                                        &task_state,
-                                        None,
-                                    )?;
-                                    result.new_patches = vec![(tag.range, String::new())];
-                                }
-                                result.do_next_pass = true;
+            Some(anchor) => match anchor.command {
+                CommandKind::Task => {
+                    let mut task_state = residual
+                        .worker
+                        .load_state::<TaskState>(anchor.command, &anchor.uuid)?;
+                    match task_state.status {
+                        TaskStatus::Waiting => {
+                            if !residual.readonly {
+                                task_state.status = TaskStatus::Eating;
+                                task_state.eating_end = tag.range.begin;
+                                residual.worker.save_state::<TaskState>(
+                                    anchor.command,
+                                    &anchor.uuid,
+                                    &task_state,
+                                    None,
+                                )?;
+                                result.new_patches = vec![(tag.range, String::new())];
                             }
-                            _ => {}
+                            result.do_next_pass = true;
                         }
-                    }
-                    _ => {
-                        return Err(ExecuteError::DoneTagOutsideTask { range: tag.range });
+                        _ => {}
                     }
                 }
-            }
+                _ => {
+                    return Err(ExecuteError::DoneTagOutsideTask { range: tag.range });
+                }
+            },
             None => {
                 return Err(ExecuteError::DoneTagOutsideTask { range: tag.range });
             }

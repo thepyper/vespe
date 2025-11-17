@@ -188,7 +188,9 @@ pub enum ExecuteError {
     DoneTagOutsideTask { range: Range },
 
     /// Indicates that the `choice` parameter has an unsupported value.
-    #[error("Unsupported 'choice' parameter at {range:?}, must be a string or an array of strings")]
+    #[error(
+        "Unsupported 'choice' parameter at {range:?}, must be a string or an array of strings"
+    )]
     UnsupportedChoice { range: Range },
 
     /// Indicates that the required `choice` parameter is missing.

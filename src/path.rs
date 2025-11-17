@@ -14,11 +14,12 @@ pub trait PathResolver {
 
 pub struct ProjectPathResolver {
     root_path: PathBuf,
+    aux_paths: Vec<PathBuf>,
 }
 
 impl ProjectPathResolver {
-    pub fn new(root_path: PathBuf) -> Self {
-        ProjectPathResolver { root_path }
+    pub fn new(root_path: PathBuf, aux_paths: Vec<PathBuf>) -> Self {
+        ProjectPathResolver { root_path, aux_paths }
     }
     pub fn project_home(&self) -> PathBuf {
         self.root_path.join(CTX_DIR_NAME)
@@ -34,8 +35,22 @@ impl ProjectPathResolver {
 impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
-        let file_path = self.contexts_root().join(format!("{}", file_name));
-        Ok(file_path)
+        let file_path = self.contexts_root().join(file_name);
+        if file_path.exists() {
+            return Ok(file_path);
+        }
+
+        for aux_path in &self.aux_paths {
+            let aux_file_path = aux_path.join(file_name);
+            if aux_file_path.exists() {
+                return Ok(aux_file_path);
+            }
+        }
+
+        Err(anyhow::anyhow!(
+            "File '{}' not found in root_path or any auxiliary paths.",
+            file_name
+        ))
     }
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {

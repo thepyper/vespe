@@ -148,7 +148,7 @@ impl DynamicPolicy for AnswerPolicy {
                     .unwrap_or(String::new())
             ))
         });       
-        result.collector = result.collector.set_latest_prefix(agent_hash.clone());
+        result.collector = result.collector.set_latest_agent_hash(agent_hash.clone());
 
         match (residual.container, residual.state.status) {
             (Container::Tag(_) | Container::BeginAnchor(_, _), AnswerStatus::JustCreated) => {

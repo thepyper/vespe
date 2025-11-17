@@ -11,26 +11,24 @@
 
 Tell me something about blue.
 
-<!-- answer-31423d0c-277e-4e6c-86bb-242fd1ca6b2a:begin +completed+ {
+<!-- answer-0f242727-c103-48c2-ae3a-efeaeeab0b62:begin +completed+ {
+	prefix: agent/funny_clown.md,
 	with_agent_names,
 	with_invitation,
-	provider: 'gemini -y -m gemini-2.5-flash',
-	prefix: agent/funny_clown.md
+	provider: 'gemini -y -m gemini-2.5-flash'
 }  -->
-Why did the blue paint break up with the red paint? Because it felt a little *blue* and needed some space!
-
-But seriously, blue is the color of the sky, the ocean, and sometimes, my face when I realize I've forgotten my juggling balls. It's also the color of those tiny little pills that make you feel... well, let's just say they make you feel *less blue*. And don't even get me started on blue cheese. It's like mold decided to throw a party, and everyone's invited, even if they didn't RSVP! Ha! Get it? RSVP! I'm here all week, folks! Try the fish!
-<!-- answer-31423d0c-277e-4e6c-86bb-242fd1ca6b2a:end  {}  -->
+Why, blue is the color of the sky, the ocean, and sometimes, when I've had too much cotton candy, even my tongue! It's a color so cool, it makes ice cubes jealous. And if you ever feel blue, just remember, a clown's red nose is always there to cheer you up! Honk honk!
+<!-- answer-0f242727-c103-48c2-ae3a-efeaeeab0b62:end  {}  -->
 
 Tell me something about red.
 
-<!-- answer-e31d4e5d-73a6-44e6-9da7-e0ed2d86f00f:begin +completed+ {
-	prefix: agent/creepy_crow.md,
-	with_invitation,
+<!-- answer-a349a8f1-c885-4c5d-b02a-ed69ed63c098:begin +completed+ {
 	with_agent_names,
-	provider: 'gemini -y -m gemini-2.5-flash'
+	prefix: agent/creepy_crow.md,
+	provider: 'gemini -y -m gemini-2.5-flash',
+	with_invitation
 }  -->
-Craak! Red, you say? Ah, red. The color of fresh, warm... *blood*. Craak! It's the hue of a sunset, painting the sky in fiery streaks, just before the shadows lengthen and the night truly begins to creep in. Craak! It's the flush on a fevered cheek, the glint in a predator's eye, the stain on a forgotten, rusty blade. A very... *vibrant* color, wouldn't you agree? Full of life, and sometimes, full of its abrupt ending. Craak!
-<!-- answer-e31d4e5d-73a6-44e6-9da7-e0ed2d86f00f:end  {}  -->
+Craak! Red, you say? Ah, yes, the color of fresh, warm... sustenance. The hue of a hunter's moon, casting long, twisted shadows. It's the flush on a cheek, just before the chill sets in. Craak! A most *interesting* color, indeed.
+<!-- answer-a349a8f1-c885-4c5d-b02a-ed69ed63c098:end  {}  -->
 
 

@@ -8,7 +8,7 @@ use serde_json::json;
 
 use super::content::{ModelContent, ModelContentItem};
 use super::error::ExecuteError;
-use super::execute::Worker;
+use super::execute::{Collector, Worker};
 use super::tags::{
     Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, DynamicState,
 };
@@ -161,13 +161,22 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.worker.call_model(residual.parameters, &prompt)?;
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;
-                residual.state.reply_hash = result.collector.normalized_hash(&response);
+                residual.state.reply_hash = Collector::normalized_hash(&response);
                 residual.state.reply = response;
                 residual.state.status = AnswerStatus::NeedInjection;
                 residual.state.context_hash = residual.input_hash;
-                result.collector = result
-                    .collector
-                    .set_latest_prefix(residual.parameters.get_as_string_only("prefix"));
+                let prefix_hash = residual.parameters.get_as_string_only("prefix").map(|x| {
+                    Collector::normalized_hash(&format!(
+                        "{}\n{}",
+                        x,
+                        residual
+                            .parameters
+                            .get("prefix_data")
+                            .map(|y| y.to_string())
+                            .unwrap_or(String::new())
+                    ))
+                });
+                result.collector = result.collector.set_latest_prefix(prefix_hash);
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
@@ -209,7 +218,7 @@ impl DynamicPolicy for AnswerPolicy {
                             end: a1.range.begin,
                         },
                     )?;
-                    let content_hash = result.collector.normalized_hash(&content);
+                    let content_hash = Collector::normalized_hash(&content);
                     if residual.state.reply_hash != content_hash {
                         // Content has been modified, evaporate anchor and let content become user content
                         if !residual.readonly {

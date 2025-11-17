@@ -115,20 +115,20 @@ impl Collector {
         format!("{:x}", self.context_hasher.clone().finalize())
     }
 
-    pub fn hash(&self, input: &str) -> String {
+    pub fn hash(input: &str) -> String {
         let mut context_hasher = Sha256::new();
         context_hasher.update(input);
         format!("{:x}", context_hasher.finalize())
     }
 
-    pub fn normalized_hash(&self, input: &str) -> String {
+    pub fn normalized_hash(input: &str) -> String {
         let normalized_input = input
             .replace("\r\n", "\n")
             .lines()
             .map(|line| line.trim())
             .collect::<Vec<_>>()
             .join("\n");
-        self.hash(&normalized_input)
+        Self::hash(&normalized_input)
     }
 
     /// Returns a reference to the current anchor stack.
@@ -1385,7 +1385,7 @@ impl Worker {
                     None => None,
                 };
                 let input = self.execute(&x, data)?;
-                let input_hash = collector.normalized_hash(&input.to_string());
+                let input_hash = Collector::normalized_hash(&input.to_string());
                 Ok((input, input_hash))
             }
             Some(x) => {

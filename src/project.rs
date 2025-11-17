@@ -114,6 +114,7 @@ impl Project {
         args: Option<Vec<String>>,
         defines: Option<Vec<String>>,
         additional_aux_paths: Option<Vec<PathBuf>>,
+        output_path: Option<PathBuf>,
     ) -> Result<ModelContent> {
         let mut data = match args {
             Some(args) => {
@@ -143,11 +144,17 @@ impl Project {
             "$input".to_string(),
             JsonPlusEntity::DoubleQuotedString(input.unwrap_or(String::new())),
         );
-        let path_res = if let Some(aux_paths) = additional_aux_paths {
-            Arc::new(self.path_res.with_additional_aux_paths(aux_paths))
-        } else {
-            self.path_res.clone()
-        };
+        let mut path_res_builder = self.path_res.clone();
+
+        if let Some(aux_paths) = additional_aux_paths {
+            path_res_builder = Arc::new(path_res_builder.with_additional_aux_paths(aux_paths));
+        }
+
+        if let Some(output_path) = output_path {
+            path_res_builder = Arc::new(path_res_builder.with_alternative_output_path(output_path));
+        }
+
+        let path_res = path_res_builder;
 
         let content = crate::execute2::execute_context(
             self.file_access.clone(),

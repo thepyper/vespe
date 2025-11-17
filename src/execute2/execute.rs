@@ -575,11 +575,15 @@ impl Worker {
         data: Option<&JsonPlusObject>,
     ) -> Result<Option<Collector>> {
         tracing::debug!(
-            "Worker::execute for context: {} with data {:?}",
+            "Worker::execute Executing context: {} with data {:?}",
             context_name,
             data,
         );
         let context_path = self.path_res.resolve_input_file(context_name)?;
+        tracing::debug!(
+            "Worker::execute Context resolved to file: {}",
+            context_path.display(),
+        );
 
         match collector.descent(&context_path) {
             None => {

@@ -56,13 +56,13 @@ impl ProjectPathResolver {
 impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
-        let file_path = self.contexts_root().join(file_name);
+        let file_path = self.contexts_root().join(file_name).canonicalize()?;
         if file_path.exists() {
             return Ok(file_path);
         }
 
         for aux_path in &self.aux_paths {
-            let aux_file_path = aux_path.join(file_name);
+            let aux_file_path = aux_path.join(file_name).canonicalize()?;
             if aux_file_path.exists() {
                 return Ok(aux_file_path);
             }
@@ -80,7 +80,7 @@ impl PathResolver for ProjectPathResolver {
         } else {
             self.contexts_root()
         };
-        let file_path = base_path.join(format!("{}", file_name));
+        let file_path = base_path.join(format!("{}", file_name)).canonicalize()?;
         let parent_dir = file_path
             .parent()
             .context("Failed to get parent directory")?;

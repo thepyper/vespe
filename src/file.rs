@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -5,7 +6,7 @@ use uuid::{uuid, Uuid};
 
 use super::editor::EditorCommunicator;
 use super::git::git_commit_files;
-use crate::error::{Error, Result};
+use crate::error::Error;
 
 pub trait FileAccessor {
     /// Read whole file to a string
@@ -15,6 +16,7 @@ pub trait FileAccessor {
                 path: path.to_path_buf(),
                 source: e,
             })
+            .map_err(anyhow::Error::from)
     }
     /// Require exclusive access to a file
     fn lock_file(&self, path: &Path) -> Result<Uuid>;
@@ -101,7 +103,8 @@ impl FileAccessor for ProjectFileAccessor {
             .map_err(|e| Error::FileReadError {
                 path: path.to_path_buf(),
                 source: e,
-            })?;
+            })
+            .map_err(anyhow::Error::from)?;
         Ok(content)
     }
     /// Require exclusive access to a file
@@ -113,7 +116,8 @@ impl FileAccessor for ProjectFileAccessor {
                 .map_err(|e| Error::EditorInterfaceError {
                     message: "Failed to save and lock file".to_string(),
                     source: e,
-                }),
+                })
+                .map_err(anyhow::Error::from),
         }
     }
     /// Release excludive access to a file
@@ -125,7 +129,8 @@ impl FileAccessor for ProjectFileAccessor {
                 .map_err(|e| Error::EditorInterfaceError {
                     message: "Failed to unlock and reload file".to_string(),
                     source: e,
-                }),
+                })
+                .map_err(anyhow::Error::from),
         }
     }
     /// Write whole file, optional comment to the operation
@@ -135,7 +140,8 @@ impl FileAccessor for ProjectFileAccessor {
             .map_err(|e| Error::FileWriteError {
                 path: path.to_path_buf(),
                 source: e,
-            })?;
+            })
+            .map_err(anyhow::Error::from)?;
         let mut mutable = self.mutable.lock().unwrap();
         mutable.modified_files.insert(path.into());
         if let Some(comment) = comment {

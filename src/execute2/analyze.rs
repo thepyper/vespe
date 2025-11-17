@@ -1,4 +1,4 @@
-use super::{ExecuteError, tag_answer::AnswerState, tag_inline::InlineState, tag_task::TaskState, Result};
+use super::{tag_answer::AnswerState, tag_inline::InlineState, tag_task::TaskState, Result};
 use crate::ast2::{parse_document, Anchor, CommandKind, Content};
 use crate::file::FileAccessor;
 use crate::path::PathResolver;
@@ -104,14 +104,8 @@ impl Analyzer {
     /// - The document content cannot be parsed.
     /// - The state for any dynamic anchor cannot be loaded.
     fn run(&self, context_name: &str) -> Result<ContextAnalysis> {
-        let path = self
-            .path_res
-            .resolve_input_file(context_name)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
-        let content = self
-            .file_access
-            .read_file(&path)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+        let path = self.path_res.resolve_input_file(context_name)?;
+        let content = self.file_access.read_file(&path)?;
         let doc = parse_document(&content)?;
 
         let mut analysis = ContextAnalysis {
@@ -192,8 +186,7 @@ impl Analyzer {
     fn get_state_path(&self, command: CommandKind, uuid: &Uuid) -> Result<PathBuf> {
         let meta_path = self
             .path_res
-            .resolve_metadata(&command.to_string(), &uuid)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+            .resolve_metadata(&command.to_string(), &uuid)?;
         let state_path = meta_path.join("state.json");
         Ok(state_path)
     }
@@ -224,10 +217,7 @@ impl Analyzer {
         uuid: &Uuid,
     ) -> Result<T> {
         let state_path = self.get_state_path(command, uuid)?;
-        let state = self
-            .file_access
-            .read_file(&state_path)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+        let state = self.file_access.read_file(&state_path)?;
         let state: T = serde_json::from_str(&state)?;
         Ok(state)
     }

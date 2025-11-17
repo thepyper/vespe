@@ -6,9 +6,9 @@ use crate::path::{PathResolver, ProjectPathResolver};
 
 use std::sync::Arc;
 
-// use anyhow::Result; // Commented out as it's no longer directly used
+use anyhow::Result;
 
-use crate::error::{Error, Result};
+use crate::error::Error;
 
 use std::collections::BTreeMap;
 use std::io::ErrorKind;

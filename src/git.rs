@@ -1,4 +1,5 @@
-use crate::error::{Error, Result};
+use crate::error::Error;
+use anyhow::Result;
 use git2::{Repository, Signature, StatusOptions};
 use std::collections::HashSet;
 #[allow(unused_imports)]
@@ -183,7 +184,7 @@ pub fn git_commit_files(
     Ok(())
 }
 
-pub fn is_in_git_repository(root_path: &Path) -> std::result::Result<bool, git2::Error> {
+pub fn is_in_git_repository(root_path: &Path) -> Result<bool, git2::Error> {
     // Tenta di scoprire un repository Git a partire dalla directory attuale
     // `Repository::discover` cerca verso l'alto nella gerarchia delle directory.
     match Repository::discover(&root_path) {

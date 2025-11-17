@@ -156,8 +156,4 @@ pub enum Error {
     RecvTimeoutError(#[from] std::sync::mpsc::RecvTimeoutError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
-    #[error("Git error: {0}")]
-    GitError(#[from] git2::Error),
-    #[error("Execute error: {0}")]
-    ExecuteError(#[from] crate::execute2::ExecuteError),
 }

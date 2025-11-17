@@ -68,6 +68,7 @@ pub fn collect_context(
     tracing::debug!("Collecting context: {}", context_name);
 
     let exe = Worker::new(file_access, path_res);
+
     exe.collect(context_name, data)
 }
 
@@ -578,10 +579,7 @@ impl Worker {
             context_name,
             data,
         );
-        let context_path = self
-            .path_res
-            .resolve_input_file(context_name)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+        let context_path = self.path_res.resolve_input_file(context_name)?;
         tracing::debug!(
             "Worker::execute Context resolved to file: {}",
             context_path.display(),
@@ -909,8 +907,7 @@ impl Worker {
         context_path: &Path,
         data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
-        let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+        let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
         self._pass_internal(collector, context_path, false, data)
     }
 
@@ -948,10 +945,7 @@ impl Worker {
         readonly: bool,
         data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
-        let document = self
-            .file_access
-            .read_file(context_path)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+        let document = self.file_access.read_file(context_path)?;
         let document = match data {
             Some(data) => self.process_context_with_data(document, data)?,
             None => document,
@@ -1086,8 +1080,7 @@ impl Worker {
                 // Apply patches and trigger new pass
                 let new_content = Self::apply_patches(&document, patches)?;
                 self.file_access
-                    .write_file(context_path, &new_content, None)
-                    .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+                    .write_file(context_path, &new_content, None)?;
                 return Ok((true, collector));
             }
             // Check if collector has been discarded, then exit and trigger another pass
@@ -1192,8 +1185,7 @@ impl Worker {
     fn get_state_path(&self, command: CommandKind, uuid: &Uuid) -> Result<PathBuf> {
         let meta_path = self
             .path_res
-            .resolve_metadata(&command.to_string(), &uuid)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+            .resolve_metadata(&command.to_string(), &uuid)?;
         let state_path = meta_path.join("state.json");
         Ok(state_path)
     }
@@ -1224,10 +1216,7 @@ impl Worker {
         uuid: &Uuid,
     ) -> Result<T> {
         let state_path = self.get_state_path(command, uuid)?;
-        let state = self
-            .file_access
-            .read_file(&state_path)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+        let state = self.file_access.read_file(&state_path)?;
         let state: T = serde_json::from_str(&state)?;
         Ok(state)
     }
@@ -1264,8 +1253,7 @@ impl Worker {
         let state_path = self.get_state_path(command, uuid)?;
         let state_str = serde_json::to_string_pretty(state)?;
         self.file_access
-            .write_file(&state_path, &state_str, comment)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+            .write_file(&state_path, &state_str, comment)?;
         Ok(())
     }
 
@@ -1403,10 +1391,7 @@ impl Worker {
     pub fn is_output_redirected(&self, parameters: &Parameters) -> Result<Option<PathBuf>> {
         match &parameters.get("output") {
             Some(JsonPlusEntity::NudeString(x)) => {
-                let output_path = self
-                    .path_res
-                    .resolve_output_file(&x)
-                    .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+                let output_path = self.path_res.resolve_output_file(&x)?;
                 return Ok(Some(output_path));
             }
             Some(_) => {
@@ -1444,9 +1429,7 @@ impl Worker {
     fn redirect_output(&self, parameters: &Parameters, output: &str) -> Result<bool> {
         match self.is_output_redirected(parameters)? {
             Some(output_path) => {
-                self.file_access
-                    .write_file(&output_path, output, None)
-                    .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+                self.file_access.write_file(&output_path, output, None)?;
                 return Ok(true);
             }
             None => {
@@ -1549,12 +1532,7 @@ impl Worker {
     /// Returns [`ExecuteError::PathResolutionError`] if the context name cannot be resolved.
     /// Returns [`ExecuteError::IoError`] if the file cannot be read.
     pub fn read_context(&self, context_name: &str) -> Result<String> {
-        self.read_context_from_path(
-            &self
-                .path_res
-                .resolve_input_file(context_name)
-                .map_err(|e| ExecuteError::Anyhow(e.into()))?,
-        )
+        self.read_context_from_path(&self.path_res.resolve_input_file(context_name)?)
     }
 
     /// Reads the raw content of a context file from a given path.
@@ -1574,10 +1552,7 @@ impl Worker {
     ///
     /// Returns [`ExecuteError::IoError`] if the file cannot be read.
     pub fn read_context_from_path(&self, context_path: &Path) -> Result<String> {
-        let context_content = self
-            .file_access
-            .read_file(&context_path)
-            .map_err(|e| ExecuteError::Anyhow(e.into()))?;
+        let context_content = self.file_access.read_file(&context_path)?;
         Ok(context_content)
     }
 

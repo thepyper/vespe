@@ -44,7 +44,9 @@ pub fn watch(project: &Project) -> Result<()> {
                                 "Change detected in context file: {}. Re-executing...",
                                 context_name
                             );
-                            if let Err(e) = project.execute_context(&context_name, None, None) {
+                            if let Err(e) =
+                                project.execute_context(&context_name, None, None, None)
+                            {
                                 tracing::error!("Error executing context {}: {}", context_name, e);
                             }
                         }

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use handlebars::Handlebars;
 use serde_json::json;
 use std::io::{self, Read};
@@ -69,6 +69,9 @@ enum ContextCommands {
         /// The arguments to pass to the context.
         #[arg()]
         args: Vec<String>,
+        /// Define a key-value pair for the context.
+        #[arg(short = 'D', long = "define", value_name = "KEY=VALUE", action = ArgAction::Append)]
+        defines: Option<Vec<String>>,
     },
     /// Analyzes a context file.
     Analize {
@@ -136,7 +139,12 @@ fn main() -> Result<()> {
                         project.create_context_file(&context_name, Some(rendered_content))?;
                     tracing::info!("Created new context file: {}", file_path.display());
                 }
-                ContextCommands::Run { name, today, args } => {
+                ContextCommands::Run {
+                    name,
+                    today,
+                    args,
+                    defines,
+                } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
                     tracing::info!(
                         "Executing context '{}' with args {:?}...",
@@ -144,7 +152,8 @@ fn main() -> Result<()> {
                         args
                     );
                     let input = read_input()?;
-                    let content = project.execute_context(&context_name, input, Some(args))?;
+                    let content =
+                        project.execute_context(&context_name, input, Some(args), defines)?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }

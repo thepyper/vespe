@@ -106,6 +106,7 @@ impl Project {
         context_name: &str,
         input: Option<String>,
         args: Option<Vec<String>>,
+        defines: Option<Vec<String>>,
     ) -> Result<ModelContent> {
         let mut data = match args {
             Some(args) => {
@@ -123,6 +124,14 @@ impl Project {
             }
             None => JsonPlusObject::new(),
         };
+        if let Some(defines) = defines {
+            for define in defines {
+                if let Some((key, value)) = define.split_once('=') {
+                    let key = format!("${}", key);
+                    data.insert(key, JsonPlusEntity::NudeString(value.to_string()));
+                }
+            }
+        }
         data.insert(
             "$input".to_string(),
             JsonPlusEntity::DoubleQuotedString(input.unwrap_or(String::new())),

@@ -703,11 +703,10 @@ impl Worker {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let data = match parameters.get("prefix_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!(
-                            "bad prefix_data: {:?}",
-                            x
-                        )));
+                    Some(_) => {
+                        return Err(ExecuteError::UnsupportedPrefixData {
+                            range: parameters.range,
+                        });
                     }
                     None => None,
                 };
@@ -716,10 +715,9 @@ impl Worker {
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
             }
-            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
-                "bad prefix: {:?}",
-                x
-            ))),
+            Some(_) => Err(ExecuteError::UnsupportedPrefix {
+                range: parameters.range,
+            }),
             None => Ok(content),
         }
     }
@@ -775,11 +773,10 @@ impl Worker {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let data = match parameters.get("postfix_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!(
-                            "bad postfix_data: {:?}",
-                            x
-                        )));
+                    Some(_) => {
+                        return Err(ExecuteError::UnsupportedPostfixData {
+                            range: parameters.range,
+                        });
                     }
                     None => None,
                 };
@@ -788,10 +785,9 @@ impl Worker {
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))
             }
-            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
-                "bad postfix: {:?}",
-                x
-            ))),
+            Some(_) => Err(ExecuteError::UnsupportedPostfix {
+                range: parameters.range,
+            }),
             None => Ok(content),
         }
     }
@@ -831,14 +827,15 @@ impl Worker {
                 | JsonPlusEntity::SingleQuotedString(x)
                 | JsonPlusEntity::DoubleQuotedString(x),
             ) => x,
-            Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "bad provider: {:?}",
-                    x
-                )));
+            Some(_) => {
+                return Err(ExecuteError::UnsupportedProvider {
+                    range: parameters.range,
+                });
             }
             None => {
-                return Err(ExecuteError::MissingParameter("provider".to_string()));
+                return Err(ExecuteError::MissingProvider {
+                    range: parameters.range,
+                });
             }
         };
         let prompt_config = PromptConfig {
@@ -1397,11 +1394,10 @@ impl Worker {
                 let output_path = self.path_res.resolve_output_file(&x)?;
                 return Ok(Some(output_path));
             }
-            Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "output: {:?}",
-                    x
-                )));
+            Some(_) => {
+                return Err(ExecuteError::UnsupportedOutput {
+                    range: parameters.range,
+                });
             }
             None => {
                 return Ok(None);
@@ -1478,11 +1474,10 @@ impl Worker {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let data = match parameters.get("input_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!(
-                            "bad input_data: {:?}",
-                            x
-                        )));
+                    Some(_) => {
+                        return Err(ExecuteError::UnsupportedInputData {
+                            range: parameters.range,
+                        });
                     }
                     None => None,
                 };
@@ -1490,11 +1485,10 @@ impl Worker {
                 let input_hash = Collector::normalized_hash(&input.to_string());
                 Ok((input, input_hash))
             }
-            Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "input: {:?}",
-                    x
-                )));
+            Some(_) => {
+                return Err(ExecuteError::UnsupportedInput {
+                    range: parameters.range,
+                });
             }
             None => {
                 return Ok((collector.context().clone(), collector.context_hash()));

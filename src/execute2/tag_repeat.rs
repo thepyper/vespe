@@ -155,9 +155,7 @@ impl StaticPolicy for RepeatPolicy {
                     _ => false,
                 };
                 if !is_anchor_repeatable {
-                    return Err(ExecuteError::Generic(
-                        "@repeat must be used inside a repeatable anchor".to_string(),
-                    ));
+                    return Err(ExecuteError::RepeatNotAllowed { range: tag.range });
                 }
                 if !residual.readonly {
                     // Mutate anchor parameters
@@ -170,9 +168,7 @@ impl StaticPolicy for RepeatPolicy {
                 result.do_next_pass = true;
             }
             None => {
-                return Err(ExecuteError::Generic(
-                    "@repeat must be used inside an anchor".to_string(),
-                ));
+                return Err(ExecuteError::RepeatNotInAnchor { range: tag.range });
             }
         };
         // Prepare the query

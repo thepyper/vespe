@@ -125,7 +125,9 @@ impl DynamicPolicy for InlinePolicy {
                         .arguments
                         .arguments
                         .get(0)
-                        .ok_or_else(|| ExecuteError::MissingParameter("context_name".to_string()))?
+                        .ok_or_else(|| ExecuteError::MissingInlineArgument {
+                            range: residual.arguments.range,
+                        })?
                         .value
                         .clone();
                     // Load content from the specified context
@@ -137,9 +139,9 @@ impl DynamicPolicy for InlinePolicy {
                             residual.worker.process_context_with_data(context, data)?
                         }
                         Some(_) => {
-                            return Err(ExecuteError::UnsupportedParameterValue(
-                                "data".to_string(),
-                            ));
+                            return Err(ExecuteError::UnsupportedDataParameter {
+                                range: residual.parameters.range,
+                            });
                         }
                         None => context,
                     };

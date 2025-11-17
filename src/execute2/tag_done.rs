@@ -37,7 +37,7 @@
 //! In this example, the first `@done` tag would cause the `@task` to process
 //! "This is the first part of the content." The second `@done` tag would then
 //! cause it to process "This is the second part of the content."
-use super::Result;
+use super::{ExecuteError, Result};
 
 use super::tag_task::{TaskState, TaskStatus};
 use super::tags::{Container, StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
@@ -109,8 +109,8 @@ impl StaticPolicy for DonePolicy {
         tracing::debug!("tag_done::DonePolicy: {:?}", residual);
         let tag = match residual.container {
             Container::Tag(tag) => tag,
-            _ => {
-                panic!("!?!?!? cannot be anchor in static tag !?!?!?"); // better error TODO
+            Container::BeginAnchor(anchor, _) | Container::EndAnchor(anchor, _) => {
+                return Err(ExecuteError::DoneTagAsAnchor { range: anchor.range });
             }
         };
         match result.collector.latest_task() {
@@ -139,12 +139,12 @@ impl StaticPolicy for DonePolicy {
                         }
                     }
                     _ => {
-                        panic!("not a task anchor!=!=!="); // TODO better error
+                        return Err(ExecuteError::DoneTagOutsideTask { range: tag.range });
                     }
                 }
             }
             None => {
-                panic!("no previous task anchor!=!=!="); // TODO better error
+                return Err(ExecuteError::DoneTagOutsideTask { range: tag.range });
             }
         }
         tracing::debug!("tag_done res {:?}", result);

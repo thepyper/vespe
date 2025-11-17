@@ -119,6 +119,82 @@ pub enum ExecuteError {
     #[error("Unsupported status: {0}")]
     UnsupportedStatus(String),
 
+    /// Indicates that the `@include` tag is missing its required context name argument.
+    #[error("Missing argument for '@include' tag at {range:?}")]
+    MissingIncludeArgument { range: Range },
+
+    /// Indicates that the `data` parameter for an `@include` tag is not a valid object.
+    #[error("Unsupported 'data' parameter for '@include' tag at {range:?}, must be an object")]
+    UnsupportedDataParameter { range: Range },
+
+    /// Indicates that the execution of a context included via `@include` has failed.
+    #[error("Execution of included context '{context}' failed at {range:?}")]
+    IncludeExecutionFailed { context: String, range: Range },
+
+    /// Indicates that the `prefix_data` parameter has an unsupported value.
+    #[error("Unsupported 'prefix_data' parameter at {range:?}, must be an object")]
+    UnsupportedPrefixData { range: Range },
+
+    /// Indicates that the `prefix` parameter has an unsupported value.
+    #[error("Unsupported 'prefix' parameter at {range:?}, must be a string")]
+    UnsupportedPrefix { range: Range },
+
+    /// Indicates that the `postfix_data` parameter has an unsupported value.
+    #[error("Unsupported 'postfix_data' parameter at {range:?}, must be an object")]
+    UnsupportedPostfixData { range: Range },
+
+    /// Indicates that the `postfix` parameter has an unsupported value.
+    #[error("Unsupported 'postfix' parameter at {range:?}, must be a string")]
+    UnsupportedPostfix { range: Range },
+
+    /// Indicates that the `provider` parameter has an unsupported value.
+    #[error("Unsupported 'provider' parameter at {range:?}, must be a string")]
+    UnsupportedProvider { range: Range },
+
+    /// Indicates that the required `provider` parameter is missing.
+    #[error("Missing 'provider' parameter at {range:?}")]
+    MissingProvider { range: Range },
+
+    /// Indicates that the `output` parameter has an unsupported value.
+    #[error("Unsupported 'output' parameter at {range:?}, must be a string")]
+    UnsupportedOutput { range: Range },
+
+    /// Indicates that the `input_data` parameter has an unsupported value.
+    #[error("Unsupported 'input_data' parameter at {range:?}, must be an object")]
+    UnsupportedInputData { range: Range },
+
+    /// Indicates that the `input` parameter has an unsupported value.
+    #[error("Unsupported 'input' parameter at {range:?}, must be a string")]
+    UnsupportedInput { range: Range },
+
+    /// Indicates that the `@inline` tag is missing its required context name argument.
+    #[error("Missing argument for '@inline' tag at {range:?}")]
+    MissingInlineArgument { range: Range },
+
+    /// Indicates that the `@repeat` tag is not inside a repeatable anchor.
+    #[error("'@repeat' must be used inside a repeatable anchor at {range:?}")]
+    RepeatNotAllowed { range: Range },
+
+    /// Indicates that the `@repeat` tag is not inside any anchor.
+    #[error("'@repeat' must be used inside an anchor at {range:?}")]
+    RepeatNotInAnchor { range: Range },
+
+    /// Indicates that the `@done` tag is being used as an anchor, which is not allowed.
+    #[error("'@done' tag cannot be an anchor at {range:?}")]
+    DoneTagAsAnchor { range: Range },
+
+    /// Indicates that the `@done` tag is not inside a `@task` anchor.
+    #[error("'@done' must be used inside a '@task' anchor at {range:?}")]
+    DoneTagOutsideTask { range: Range },
+
+    /// Indicates that the `choice` parameter has an unsupported value.
+    #[error("Unsupported 'choice' parameter at {range:?}, must be a string or an array of strings")]
+    UnsupportedChoice { range: Range },
+
+    /// Indicates that the required `choice` parameter is missing.
+    #[error("Missing 'choice' parameter at {range:?}")]
+    MissingChoice { range: Range },
+
     /// A catch-all error for any `anyhow::Error` that occurs.
     ///
     /// This provides a convenient way to propagate errors from libraries that

@@ -283,17 +283,10 @@ impl AnswerPolicy {
                 let mut choices = Vec::new();
                 for choice in choices_list {
                     match choice {
-                        JsonPlusEntity::Object(x) => {
-                            return Err(ExecuteError::UnsupportedParameterValue(format!(
-                                "bad choice {:?}",
-                                x
-                            )));
-                        }
-                        JsonPlusEntity::Array(x) => {
-                            return Err(ExecuteError::UnsupportedParameterValue(format!(
-                                "bad choice {:?}",
-                                x
-                            )));
+                        JsonPlusEntity::Object(_) | JsonPlusEntity::Array(_) => {
+                            return Err(ExecuteError::UnsupportedChoice {
+                                range: parameters.range,
+                            });
                         }
                         x => {
                             choices.push(x.to_string());
@@ -324,9 +317,9 @@ impl AnswerPolicy {
                         c.iter().cloned().map(serde_json::Value::String).collect(),
                     ),
                     None => {
-                        return Err(ExecuteError::UnsupportedParameterValue(
-                            "no choice given".to_string(),
-                        ));
+                        return Err(ExecuteError::MissingChoice {
+                            range: parameters.range,
+                        });
                     }
                 };
                 let postfix = handlebars.render_template(

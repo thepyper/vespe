@@ -4,7 +4,7 @@
 //! reusability of context definitions.
 use super::{ExecuteError, Result};
 
-use super::tags::{StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
+use super::tags::{Container, StaticPolicy, StaticPolicyMonoInput, StaticPolicyMonoResult};
 use crate::ast2::JsonPlusEntity;
 
 /// Implements the static policy for the `@include` tag.
@@ -41,17 +41,23 @@ impl StaticPolicy for IncludePolicy {
     /// # Examples
     fn mono(inputs: StaticPolicyMonoInput) -> Result<StaticPolicyMonoResult> {
         let (mut result, residual) = StaticPolicyMonoResult::from_inputs(inputs);
+        let tag = match residual.container {
+            Container::Tag(tag) => tag,
+            _ => {
+                panic!("!?!?!? cannot be anchor in static tag !?!?!?"); // better error TODO
+            }
+        };
         let included_context_name = residual
             .arguments
             .arguments
             .get(0)
-            .ok_or_else(|| ExecuteError::MissingParameter("include tag argument".to_string()))?
+            .ok_or_else(|| ExecuteError::MissingIncludeArgument { range: tag.range })?
             .value
             .clone();
         let data = match residual.parameters.get("data") {
             Some(JsonPlusEntity::Object(data)) => Some(data),
             Some(_) => {
-                return Err(ExecuteError::UnsupportedParameterValue("data".to_string()));
+                return Err(ExecuteError::UnsupportedDataParameter { range: tag.range });
             }
             None => None,
         };
@@ -62,9 +68,10 @@ impl StaticPolicy for IncludePolicy {
             {
                 Some(collector) => collector,
                 None => {
-                    return Err(ExecuteError::Generic(
-                        "Included context returned no collector".to_string(),
-                    ));
+                    return Err(ExecuteError::IncludeExecutionFailed {
+                        context: included_context_name,
+                        range: tag.range,
+                    });
                 }
             };
         Ok(result)

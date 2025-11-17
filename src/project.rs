@@ -44,6 +44,7 @@ impl Project {
         let path_res = Arc::new(ProjectPathResolver::new(
             root_path.to_path_buf(),
             project_config.aux_paths.clone(),
+            None, // output_path
         ));
 
         let project = Project {
@@ -89,6 +90,7 @@ impl Project {
                 let path_res = Arc::new(ProjectPathResolver::new(
                     root_path.clone(),
                     project_config.aux_paths.clone(),
+                    None, // output_path
                 ));
 
                 return Ok(Project {

@@ -319,11 +319,6 @@ You can make an answer dynamic, so it automatically updates if the input context
 
 You can fine-tune the prompt sent to the LLM and manage the output using a set of advanced parameters.
 
-**Agent Persona and Conversation Flow:**
-
--   `with_agent_names: true`: When dealing with a conversation history involving multiple agents (answer with different prefix / prefix_data), this option assigns a unique, consistent name to each agent (e.g., "Agent-A", "Agent-B"). This helps the LLM maintain a coherent persona for each participant. The system prompt will also be updated with "You are <agent_name>" to reinforce the current agent's identity.
--   `with_invitation: true`: Appends "Assistant:" (or "Assistant <agent_name>:" if `with_agent_names` is active) at the end of the prompt. This serves as a clear signal for the LLM to begin its response, guiding the turn-taking in the conversation.
-
 **Input Redirection:**
 
 -   `input: "path/to/context"`: Replaces the current prompt with the content of another context file. This is useful for running a standard prompt from a different file.
@@ -380,6 +375,11 @@ What is the capital of France?
 ```
 
 This will construct a prompt where the LLM is first instructed to act like a pirate, then given the question, and finally told to keep the answer short.
+
+**Agent Persona and Conversation Flow:**
+
+-   `with_agent_names: true`: When dealing with a conversation history involving multiple agents (answer with different prefix / prefix_data), this option assigns a unique, consistent name to each agent (e.g., "Agent-A", "Agent-B"). This helps the LLM maintain a coherent persona for each participant. The system prompt will also be updated with "You are <agent_name>" to reinforce the current agent's identity.
+-   `with_invitation: true`: Appends "Assistant:" (or "Assistant <agent_name>:" if `with_agent_names` is active) at the end of the prompt. This serves as a clear signal for the LLM to begin its response, guiding the turn-taking in the conversation.
 
 **Output Redirection:**
 

@@ -82,19 +82,26 @@ pub fn collect_context(
 pub(crate) struct Collector {
     /// A stack of visited context file paths to detect and prevent circular includes.
     visit_stack: Vec<PathBuf>,
-    /// A stack of entered anchors in current context file
+    /// A stack of entered anchors in current context file. This helps in tracking
+    /// the nesting level of dynamic content.
     anchor_stack: Vec<Anchor>,
-    /// The accumulated content that will be sent to the model.
+    /// The accumulated content that will be sent to the model. This is the primary
+    /// output of the collection process.
     context: ModelContent,
-    /// Running context hash
+    /// A SHA256 hasher used to compute a hash of the accumulated context,
+    /// useful for detecting changes and caching.
     context_hasher: Sha256,
-    /// Execution-time default parameters for tags
+    /// Execution-time default parameters for tags. These parameters can be
+    /// inherited or overridden by individual tags.
     default_parameters: Parameters,
-    /// Latest processed range
+    /// The latest processed range in the document. Used primarily for error reporting
+    /// to pinpoint the location of issues.
     latest_range: Range,
-    /// Latest task begin anchor
+    /// The latest task anchor encountered. This is used to manage the state
+    /// and behavior of task-specific directives.
     latest_task: Option<Anchor>,
-    /// Latest prefix used (agent personality)
+    /// The hash of the latest agent that contributed to the context. This helps
+    /// in maintaining agent identity across turns.
     latest_agent_hash: Option<String>,
 }
 
@@ -111,16 +118,46 @@ impl Collector {
         &self.context
     }
 
+    /// Returns the SHA256 hash of the accumulated `ModelContent`.
+    ///
+    /// This hash represents the current state of the prompt and can be used for
+    /// caching or detecting changes.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the hexadecimal SHA256 hash.
     pub fn context_hash(&self) -> String {
         format!("{:x}", self.context_hasher.clone().finalize())
     }
 
+    /// Computes the SHA256 hash of a given input string.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The string to hash.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the hexadecimal SHA256 hash of the input.
     pub fn hash(input: &str) -> String {
         let mut context_hasher = Sha256::new();
         context_hasher.update(input);
         format!("{:x}", context_hasher.finalize())
     }
 
+    /// Computes the normalized SHA256 hash of a given input string.
+    ///
+    /// Normalization involves replacing `\r\n` with `\n` and trimming whitespace
+    /// from each line before hashing. This ensures consistent hashes across
+    /// different operating systems and minor formatting variations.
+    ///
+    /// # Arguments
+    ///
+    /// * `input` - The string to hash and normalize.
+    ///
+    /// # Returns
+    ///
+    /// A `String` representing the hexadecimal SHA256 hash of the normalized input.
     pub fn normalized_hash(input: &str) -> String {
         let normalized_input = input
             .replace("\r\n", "\n")
@@ -143,7 +180,19 @@ impl Collector {
         &self.anchor_stack
     }
 
-    // TODO doc
+    /// Checks if the collector is currently inside an anchor of a specific `CommandKind`.
+    ///
+    /// This method iterates through the `anchor_stack` to determine if any active
+    /// anchor matches the provided `kind`.
+    ///
+    /// # Arguments
+    ///
+    /// * `kind` - The `CommandKind` to check for (e.g., `CommandKind::Task`).
+    ///
+    /// # Returns
+    ///
+    /// An `Option<&Anchor>`: `Some(&Anchor)` if an anchor of the specified kind is found
+    /// in the stack, `None` otherwise.
     pub fn is_in_this_kind_of_anchor(&self, kind: CommandKind) -> Option<&Anchor> {
         for anchor in &self.anchor_stack {
             if anchor.command == kind {
@@ -187,8 +236,6 @@ impl Collector {
     ///
     /// An `Option<Self>`: `Some(Collector)` if the descent is valid and a new
     /// collector is created, `None` if a circular dependency is detected.
-    ///
-    /// # Examples
     fn descent(&self, context_path: &Path) -> Option<Self> {
         // Check if context has already been visited
         if self.visit_stack.contains(&context_path.to_path_buf()) {
@@ -342,19 +389,47 @@ impl Collector {
         self
     }
 
+    /// Returns the latest task anchor encountered by the collector.
+    ///
+    /// # Returns
+    ///
+    /// An `Option<Anchor>` containing a clone of the latest task anchor, or `None` if no task anchor has been set.
     pub fn latest_task(&self) -> Option<Anchor> {
         self.latest_task.clone()
     }
 
+    /// Sets the latest task anchor encountered by the collector.
+    ///
+    /// # Arguments
+    ///
+    /// * `task_anchor` - The `Anchor` representing the latest task.
+    ///
+    /// # Returns
+    ///
+    /// The `Collector` with the updated latest task anchor.
     pub fn set_latest_task(mut self, task_anchor: &Anchor) -> Self {
         self.latest_task = Some(task_anchor.clone());
         self
     }
 
+    /// Returns the hash of the latest agent that contributed to the context.
+    ///
+    /// # Returns
+    ///
+    /// An `Option<String>` containing a clone of the latest agent hash, or `None` if no agent hash has been set.
     pub fn latest_agent_hash(&self) -> Option<String> {
         self.latest_agent_hash.clone()
     }
 
+    /// Sets the hash of the latest agent that contributed to the context.
+    ///
+    /// # Arguments
+    ///
+    /// * `latest_agent_hash` - An `Option<String>` containing the new agent hash.
+    ///
+    /// # Returns
+    ///
+    /// The `Collector` with the updated latest agent hash.
     pub fn set_latest_agent_hash(mut self, latest_agent_hash: Option<String>) -> Self {
         self.latest_agent_hash = latest_agent_hash;
         self
@@ -1053,6 +1128,25 @@ impl Worker {
         Ok(result)
     }
 
+    /// Extracts a substring from the document based on the provided `Range`.
+    ///
+    /// This is a utility function to safely get a slice of the document content
+    /// corresponding to a specific character range.
+    ///
+    /// # Arguments
+    ///
+    /// * `document` - The full document string.
+    /// * `range` - The [`Range`] specifying the start and end character offsets.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a string slice (`&str`) of the content within the range.
+    ///
+    /// # Errors
+    ///
+    /// This function does not directly return errors, but panics if byte offsets
+    /// derived from character offsets are out of bounds, which should not happen
+    /// with valid `Range` objects.
     pub fn get_range<'a>(document: &'a str, range: &Range) -> Result<&'a str> {
         let start_byte = document
             .char_indices()
@@ -1440,11 +1534,44 @@ impl Worker {
         self.read_context_from_path(&self.path_res.resolve_input_file(context_name)?)
     }
 
+    /// Reads the raw content of a context file from a given path.
+    ///
+    /// This is a utility function that reads the entire content of a file
+    /// into a string.
+    ///
+    /// # Arguments
+    ///
+    /// * `context_path` - The path to the context file to read.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the file's content as a `String`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExecuteError::IoError`] if the file cannot be read.
     pub fn read_context_from_path(&self, context_path: &Path) -> Result<String> {
         let context_content = self.file_access.read_file(&context_path)?;
         Ok(context_content)
     }
 
+    /// Processes the given context string using Handlebars templating with provided data.
+    ///
+    /// This allows for dynamic injection of data into the context content before
+    /// further AST parsing and execution.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - The raw context string, potentially containing Handlebars expressions.
+    /// * `data` - A `JsonPlusObject` containing the data to be used for templating.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the processed context string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExecuteError::RenderError`] if there is an issue during Handlebars rendering.
     pub fn process_context_with_data(
         &self,
         context: String,

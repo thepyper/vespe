@@ -21,6 +21,15 @@ impl ProjectPathResolver {
     pub fn new(root_path: PathBuf, aux_paths: Vec<PathBuf>) -> Self {
         ProjectPathResolver { root_path, aux_paths }
     }
+
+    pub fn with_additional_aux_paths(&self, additional_aux_paths: Vec<PathBuf>) -> Self {
+        let mut new_aux_paths = self.aux_paths.clone();
+        new_aux_paths.extend(additional_aux_paths);
+        ProjectPathResolver {
+            root_path: self.root_path.clone(),
+            aux_paths: new_aux_paths,
+        }
+    }
     pub fn project_home(&self) -> PathBuf {
         self.root_path.join(CTX_DIR_NAME)
     }

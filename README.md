@@ -344,6 +344,23 @@ You can use it in another file like this:
 
 This will send "Tell me about Rust." to the LLM.
 
+**Output Redirection:**
+
+-   `output: "path/to/context"`: Redirects the LLM's response to a specified context instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
+
+*Example:*
+
+```markdown
+Summarize the following text and save it to a file.
+
+@answer {
+  provider: "gemini -y",
+  output: output/summary.txt
+}
+```
+
+The LLM's summary will be saved in `.vespe/contexts/output/summary.txt`.
+
 **Prompt Augmentation:**
 
 -   `prefix: "path/to/context"`: Prepends the content of another file to the current prompt as a `system` message. This is ideal for setting a persona or providing instructions to the LLM.
@@ -380,23 +397,6 @@ This will construct a prompt where the LLM is first instructed to act like a pir
 
 -   `with_agent_names: true`: When dealing with a conversation history involving multiple agents (answer with different prefix / prefix_data), this option assigns a unique, consistent name to each agent (e.g., "Agent-A", "Agent-B"). This helps the LLM maintain a coherent persona for each participant. The system prompt will also be updated with "You are <agent_name>" to reinforce the current agent's identity.
 -   `with_invitation: true`: Appends "Assistant:" (or "Assistant <agent_name>:" if `with_agent_names` is active) at the end of the prompt. This serves as a clear signal for the LLM to begin its response, guiding the turn-taking in the conversation.
-
-**Output Redirection:**
-
--   `output: "path/to/context"`: Redirects the LLM's response to a specified context instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
-
-*Example:*
-
-```markdown
-Summarize the following text and save it to a file.
-
-@answer {
-  provider: "gemini -y",
-  output: output/summary
-}
-```
-
-The LLM's summary will be saved in `.vespe/output/summary.md`.
 
 ### @inline
 

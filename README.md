@@ -617,6 +617,19 @@ vespe project add-aux-path <PATH>
 
 *   `<PATH>`: The directory path to add to the project's auxiliary search paths.
 
+### `vespe context analyze`
+
+Analyzes a specified context file and generates a report on the status of all its anchors (`@answer`, `@inline`, `@task`, etc.). This is useful for inspecting the state of dynamic content, such as viewing the query and reply for an `@answer` anchor.
+
+**Usage:**
+
+```shell
+vespe context analyze <NAME> [--filter-uuid <UUID_PREFIX>]
+```
+
+*   `<NAME>`: The name of the context to analyze.
+*   `--filter-uuid <UUID_PREFIX>`: (Optional) Filters the report to show only the anchors whose UUID starts with the specified prefix. This is useful for focusing on a specific anchor.
+
 ## Piping Data into Contexts
 
 You can pipe data directly into a context:

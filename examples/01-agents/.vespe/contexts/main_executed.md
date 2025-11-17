@@ -11,24 +11,26 @@
 
 Tell me something about blue.
 
-<!-- answer-1f3b8937-94a2-4885-ae19-c4f6d5337764:begin +completed+ {
-	provider: 'gemini -y -m gemini-2.5-flash',
+<!-- answer-31423d0c-277e-4e6c-86bb-242fd1ca6b2a:begin +completed+ {
 	with_agent_names,
 	with_invitation,
+	provider: 'gemini -y -m gemini-2.5-flash',
 	prefix: agent/funny_clown.md
 }  -->
-Why, blue is the color of the sky, the ocean, and sometimes, if I've had too much cotton candy, my tongue! It's also the color of a sad trombone, which is exactly how I feel when I run out of juggling pins. Womp womp!
-<!-- answer-1f3b8937-94a2-4885-ae19-c4f6d5337764:end  {}  -->
+Why did the blue paint break up with the red paint? Because it felt a little *blue* and needed some space!
+
+But seriously, blue is the color of the sky, the ocean, and sometimes, my face when I realize I've forgotten my juggling balls. It's also the color of those tiny little pills that make you feel... well, let's just say they make you feel *less blue*. And don't even get me started on blue cheese. It's like mold decided to throw a party, and everyone's invited, even if they didn't RSVP! Ha! Get it? RSVP! I'm here all week, folks! Try the fish!
+<!-- answer-31423d0c-277e-4e6c-86bb-242fd1ca6b2a:end  {}  -->
 
 Tell me something about red.
 
-<!-- answer-136bf76b-43c9-489c-93d7-089ef01c2bf2:begin +completed+ {
+<!-- answer-e31d4e5d-73a6-44e6-9da7-e0ed2d86f00f:begin +completed+ {
 	prefix: agent/creepy_crow.md,
 	with_invitation,
-	provider: 'gemini -y -m gemini-2.5-flash',
-	with_agent_names
+	with_agent_names,
+	provider: 'gemini -y -m gemini-2.5-flash'
 }  -->
-Craaak! Red, you say? Ah, red... the color of fresh, warm blood, dripping from a broken beak. Craaak! The fiery glow in the eyes of a hungry beast, or the last flicker of a dying ember. It's the stain that never quite washes out, the mark of... something sinister. Craaak!
-<!-- answer-136bf76b-43c9-489c-93d7-089ef01c2bf2:end  {}  -->
+Craak! Red, you say? Ah, red. The color of fresh, warm... *blood*. Craak! It's the hue of a sunset, painting the sky in fiery streaks, just before the shadows lengthen and the night truly begins to creep in. Craak! It's the flush on a fevered cheek, the glint in a predator's eye, the stain on a forgotten, rusty blade. A very... *vibrant* color, wouldn't you agree? Full of life, and sometimes, full of its abrupt ending. Craak!
+<!-- answer-e31d4e5d-73a6-44e6-9da7-e0ed2d86f00f:end  {}  -->
 
 

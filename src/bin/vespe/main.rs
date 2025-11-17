@@ -159,6 +159,9 @@ fn main() -> Result<()> {
                     today,
                     args,
                     defines,
+                    /// Additional auxiliary paths to search for input files.
+                    #[arg(short = 'I', value_name = "PATH", action = ArgAction::Append)]
+                    aux_paths: Option<Vec<PathBuf>>,
                 } => {
                     let context_name = get_context_name(today, name, DIARY_CONTEXT_FORMAT)?;
                     tracing::info!(
@@ -168,7 +171,7 @@ fn main() -> Result<()> {
                     );
                     let input = read_input()?;
                     let content =
-                        project.execute_context(&context_name, input, Some(args), defines)?;
+                        project.execute_context(&context_name, input, Some(args), defines, aux_paths)?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }

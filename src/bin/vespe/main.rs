@@ -1,4 +1,3 @@
-use anyhow::Result;
 use clap::{ArgAction, Parser, Subcommand};
 use handlebars::Handlebars;
 use serde_json::json;
@@ -8,7 +7,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-use vespe::error::Error;
+use vespe::error::{Error, Result};
 use vespe::execute2::{AnchorAnalysis, AnchorState, ContextAnalysis};
 use vespe::project::Project;
 
@@ -109,7 +108,7 @@ fn get_context_name(today: bool, name: Option<String>, format_str: &str) -> Resu
     let context_name = if today {
         Ok(chrono::Local::now().format(format_str).to_string())
     } else {
-        name.ok_or_else(|| anyhow::Error::from(Error::ContextNameRequired))
+        name.ok_or_else(|| Error::ContextNameRequired)
     };
     Ok(format!("{}.md", &context_name?))
 }
@@ -228,7 +227,7 @@ fn main() -> Result<()> {
 }
 
 fn read_input() -> Result<Option<String>> {
-    let (tx, rx) = mpsc::channel::<Result<String, Error>>();
+    let (tx, rx) = mpsc::channel::<Result<String>>();
 
     thread::spawn(move || {
         let mut input = String::new();

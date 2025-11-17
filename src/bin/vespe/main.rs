@@ -226,22 +226,23 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-
-
 fn read_input() -> Result<Option<String>> {
-
-    let (tx, rx) = mpsc::channel();
+    let (tx, rx) = mpsc::channel::<Result<String>>();
 
     thread::spawn(move || {
         let mut input = String::new();
-        io::stdin().read_to_string(&mut input).unwrap();
-        let _ = tx.send(input);
+        let res = io::stdin()
+            .read_to_string(&mut input)
+            .map(|_| input)
+            .map_err(Error::StdinReadError);
+        let _ = tx.send(res);
     });
 
     match rx.recv_timeout(Duration::from_millis(250)) {
-        Ok(data) => Ok(Some(data)),
+        Ok(Ok(data)) => Ok(Some(data)),
+        Ok(Err(e)) => Err(e.into()),
         Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
-        Err(e) => Err(e.into()), 
+        Err(e) => Err(e.into()),
     }
 }
 

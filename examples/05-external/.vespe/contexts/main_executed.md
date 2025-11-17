@@ -11,7 +11,7 @@
 
 Tell me something that happened recently.
 
-<!-- answer-04dea794-3417-4967-beea-59ce1d63db8f:begin +completed+ {
+<!-- answer-56b6b4eb-8454-4c8b-8e59-e423fcb9f401:begin +completed+ {
 	output: epoque/1200.txt,
 	prefix: agent/epoque.md,
 	prefix_data: { year: 1200 },
@@ -19,10 +19,18 @@ Tell me something that happened recently.
 	with_agent_names,
 	with_invitation
 }  -->
-<!-- answer-04dea794-3417-4967-beea-59ce1d63db8f:end  {}  -->
+<!-- answer-56b6b4eb-8454-4c8b-8e59-e423fcb9f401:end  {}  -->
 
 Tell me something that happened recently.
 
-@answer { prefix_data: { year: 1980 }, output: epoque/1980.txt }
+<!-- answer-0f17adb1-f1bd-4996-983d-a167cc08930e:begin +completed+ {
+	output: epoque/1980.txt,
+	prefix: agent/epoque.md,
+	prefix_data: { year: 1980 },
+	provider: 'gemini -y -m gemini-2.5-flash',
+	with_agent_names,
+	with_invitation
+}  -->
+<!-- answer-0f17adb1-f1bd-4996-983d-a167cc08930e:end  {}  -->
 
 

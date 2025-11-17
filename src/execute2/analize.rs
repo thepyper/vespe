@@ -7,7 +7,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use uuid::Uuid;
 
-/// Enum that aggregates the different types of state specific for each anchor.
+/// Represents the specific state associated with different types of dynamic anchors.
+///
+/// Each variant corresponds to a particular command kind (e.g., `@answer`, `@inline`, `@task`)
+/// and holds the state object relevant to that command's execution lifecycle.
 #[derive(Debug)]
 pub enum AnchorState {
     Answer(AnswerState),
@@ -15,19 +18,49 @@ pub enum AnchorState {
     Task(TaskState),
 }
 
-/// Contains the complete analysis of a single anchor.
+/// Encapsulates the complete analysis of a single dynamic anchor found within a document.
+///
+/// This struct combines the parsed `Anchor` definition with its current execution state,
+/// providing a comprehensive view of a dynamic directive's status.
 #[derive(Debug)]
 pub struct AnchorAnalysis {
     pub anchor: Anchor,
     pub state: AnchorState,
 }
 
-/// Final result of the analysis of a context.
+/// Represents the aggregated analysis result for all dynamic anchors within a given context.
+///
+/// It stores a map of `Uuid` to `AnchorAnalysis`, allowing for quick lookup and
+/// management of individual anchor states during the execution process.
 #[derive(Debug)]
 pub struct ContextAnalysis {
     pub anchors: HashMap<Uuid, AnchorAnalysis>,
 }
 
+/// Analyzes a given context (document) to extract all dynamic anchors and their current states.
+///
+/// This function serves as the public entry point for initiating the analysis of a document.
+/// It parses the document content, identifies all `Anchor` nodes, and attempts to load
+/// the persisted state for each dynamic anchor (e.g., `@answer`, `@inline`, `@task`).
+///
+/// # Arguments
+///
+/// * `file_access` - An `Arc` to an object implementing `FileAccessor` for file system operations.
+/// * `path_res` - An `Arc` to an object implementing `PathResolver` for resolving file paths.
+/// * `context_name` - The name of the context (document) to analyze.
+///
+/// # Returns
+///
+/// A `Result` containing a `ContextAnalysis` struct, which holds a map of all
+/// found dynamic anchors and their associated states.
+///
+/// # Errors
+///
+/// Returns an `ExecuteError` if:
+/// - The `context_name` cannot be resolved to a valid file path.
+/// - The document file cannot be read.
+/// - The document content cannot be parsed.
+/// - The state file for any dynamic anchor cannot be read or deserialized.
 pub fn analyze_context(
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
@@ -40,12 +73,36 @@ pub fn analyze_context(
     analyzer.run(context_name)
 }
 
+/// Internal struct responsible for performing the document analysis.
+///
+/// It holds references to `FileAccessor` and `PathResolver` to interact with the
+/// file system and resolve paths during the analysis process.
 struct Analyzer {
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
 }
 
 impl Analyzer {
+    /// Executes the analysis process for a given context name.
+    ///
+    /// This method resolves the input file, reads its content, parses the document
+    /// to find all anchors, and then extracts the state for each dynamic anchor.
+    ///
+    /// # Arguments
+    ///
+    /// * `context_name` - The name of the context (document) to analyze.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing a `ContextAnalysis` struct.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `ExecuteError` if:
+    /// - The input file path cannot be resolved.
+    /// - The file cannot be read.
+    /// - The document content cannot be parsed.
+    /// - The state for any dynamic anchor cannot be loaded.
     fn run(&self, context_name: &str) -> Result<ContextAnalysis> {
         let path = self.path_res.resolve_input_file(context_name)?;
         let content = self.file_access.read_file(&path)?;
@@ -70,6 +127,25 @@ impl Analyzer {
         Ok(analysis)
     }
 
+    /// Extracts the specific state for a given anchor based on its command kind.
+    ///
+    /// This method dispatches to the appropriate state loading mechanism for `Answer`, `Inline`,
+    /// and `Task` commands. If the anchor's command is not a dynamic command that
+    /// maintains state, it returns `None`.
+    ///
+    /// # Arguments
+    ///
+    /// * `anchor` - A reference to the `Anchor` for which to extract the state.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing an `Option<AnchorState>`. `Some(AnchorState)` if the anchor
+    /// is dynamic and has a state, `None` otherwise.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `ExecuteError` if the state file for the dynamic anchor cannot be
+    /// read or deserialized.
     fn extract_anchor_state(&self, anchor: &Anchor) -> Result<Option<AnchorState>> {
         match anchor.command {
             CommandKind::Answer => {

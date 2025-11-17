@@ -1,6 +1,7 @@
 use serde_json::json;
 use std::collections::{BTreeMap};
 use std::str::Chars;
+use std::str::FromStr;
 use uuid::Uuid;
 
 use super::{

@@ -262,7 +262,7 @@ fn display_analysis_report(analysis: &ContextAnalysis) -> Result<()> {
                 AnchorState::Inline(_) => display_inline_analysis(anchor_analysis),
                 AnchorState::Task(_) => display_task_analysis(anchor_analysis),
             }
-            println!("-----------------------");
+            println!("------------------------------------------------------------");
         }
     }
     Ok(())

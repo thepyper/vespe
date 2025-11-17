@@ -61,11 +61,11 @@
 //! This module is crucial for enabling an interactive, AI-driven document generation and
 //! modification workflow.
 
+pub mod analize;
 mod content;
 mod error;
 mod execute;
 mod names;
-pub mod analize;
 mod tag_answer;
 mod tag_comment;
 mod tag_done;

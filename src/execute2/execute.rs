@@ -94,6 +94,8 @@ pub(crate) struct Collector {
     latest_range: Range,
     /// Latest task begin anchor
     latest_task: Option<Anchor>,
+    /// Latest prefix used (agent personality)
+    latest_prefix: Option<String>,
 }
 
 impl Collector {
@@ -167,6 +169,7 @@ impl Collector {
             default_parameters: Parameters::new(),
             latest_range: Range::null(),
             latest_task: None,
+            latest_prefix: None,
         }
     }
 
@@ -202,6 +205,7 @@ impl Collector {
             default_parameters: self.default_parameters.clone(),
             latest_range: Range::null(),
             latest_task: None,
+            latest_prefix: None,
         })
     }
 
@@ -344,6 +348,15 @@ impl Collector {
 
     pub fn set_latest_task(mut self, task_anchor: &Anchor) -> Self {
         self.latest_task = Some(task_anchor.clone());
+        self
+    }
+
+    pub fn latest_prefix(&self) -> Option<String> {
+        self.latest_prefix.clone()
+    }
+
+    pub fn set_latest_prefix(mut self, latest_prefix: Option<String>) -> Self {
+        self.latest_prefix = latest_prefix;
         self
     }
 }
@@ -869,12 +882,14 @@ impl Worker {
                         collector.is_in_this_kind_of_anchor(CommandKind::Answer)
                     {
                         // Inside answer anchor, check if anchor is edited
-                        if anchor.status == Some(AnswerStatus::Edited.to_string()) { 
+                        if anchor.status == Some(AnswerStatus::Edited.to_string()) {
                             // Edited content, then it's user
                             collector = collector.push_item(ModelContentItem::user(&text.content));
                         } else {
                             // Unedited content, then it's assistant
-                            collector = collector.push_item(ModelContentItem::agent(&text.content));
+                            let latest_prefix = collector.latest_prefix().unwrap_or(String::new());
+                            collector = collector
+                                .push_item(ModelContentItem::agent(&latest_prefix, &text.content));
                         }
                     } else {
                         // User writes outside answer anchors

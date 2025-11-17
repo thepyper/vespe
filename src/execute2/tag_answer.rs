@@ -165,6 +165,9 @@ impl DynamicPolicy for AnswerPolicy {
                 residual.state.reply = response;
                 residual.state.status = AnswerStatus::NeedInjection;
                 residual.state.context_hash = residual.input_hash;
+                result.collector = result
+                    .collector
+                    .set_latest_prefix(residual.parameters.get_as_string_only("prefix"));
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }

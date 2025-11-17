@@ -148,14 +148,17 @@ fn main() -> Result<()> {
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }
-                ContextCommands::Analize { context_name, filter_uuid } => {
+                ContextCommands::Analize {
+                    context_name,
+                    filter_uuid,
+                } => {
                     let context_name = format!("{}.md", &context_name);
                     let mut analysis = project.analyze_context(&context_name)?;
 
                     if let Some(filter) = &filter_uuid {
-                        analysis.anchors.retain(|uuid, _| {
-                            uuid.to_string().starts_with(filter)
-                        });
+                        analysis
+                            .anchors
+                            .retain(|uuid, _| uuid.to_string().starts_with(filter));
                     }
 
                     display_analysis_report(&analysis)?;
@@ -201,7 +204,9 @@ fn display_analysis_report(analysis: &ContextAnalysis) -> Result<()> {
 
         for (_, anchor_analysis) in &analysis.anchors {
             match &anchor_analysis.state {
-                AnchorState::Answer(_) => display_answer_analysis(anchor_analysis, answer_anchor_count),
+                AnchorState::Answer(_) => {
+                    display_answer_analysis(anchor_analysis, answer_anchor_count)
+                }
                 AnchorState::Inline(_) => display_inline_analysis(anchor_analysis),
                 AnchorState::Task(_) => display_task_analysis(anchor_analysis),
             }
@@ -225,14 +230,30 @@ fn display_answer_analysis(analysis: &AnchorAnalysis, answer_anchor_count: usize
         println!("  Status: {:?}", state.status);
 
         let query_display = if state.query.len() > truncation_limit {
-            format!("{:.limit$}...", state.query.chars().take(truncation_limit).collect::<String>(), limit = truncation_limit)
+            format!(
+                "{:.limit$}...",
+                state
+                    .query
+                    .chars()
+                    .take(truncation_limit)
+                    .collect::<String>(),
+                limit = truncation_limit
+            )
         } else {
             state.query.clone()
         };
         println!("  Query: {}", query_display);
 
         let reply_display = if state.reply.len() > truncation_limit {
-            format!("{:.limit$}...", state.reply.chars().take(truncation_limit).collect::<String>(), limit = truncation_limit)
+            format!(
+                "{:.limit$}...",
+                state
+                    .reply
+                    .chars()
+                    .take(truncation_limit)
+                    .collect::<String>(),
+                limit = truncation_limit
+            )
         } else {
             state.reply.clone()
         };

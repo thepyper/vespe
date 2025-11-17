@@ -352,6 +352,12 @@ impl Parameters {
     pub fn get(&self, key: &str) -> Option<&JsonPlusEntity> {
         self.parameters.properties.get(key)
     }
+    pub fn get_as_string_only(&self, key: &str) -> Option<String> {
+        match self.get(key) {
+            None => None,
+            Some(x) => x.as_string_only(),
+        }
+    }
     pub fn insert(&mut self, key: String, value: JsonPlusEntity) {
         self.parameters.properties.insert(key, value);
     }

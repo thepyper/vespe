@@ -32,6 +32,7 @@ pub struct UserModelContent {
 /// and contextual responses.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentModelContent {
+    author: String,
     text: String,
 }
 
@@ -98,8 +99,11 @@ impl ModelContentItem {
     /// A `ModelContentItem` variant containing the agent's text.
     ///
     /// # Examples
-    pub fn agent(text: &str) -> Self {
-        ModelContentItem::Agent(AgentModelContent { text: text.into() })
+    pub fn agent(author: &str, text: &str) -> Self {
+        ModelContentItem::Agent(AgentModelContent {
+            author: author.into(),
+            text: text.into(),
+        })
     }
 
     pub fn merge_downstream(text: &str) -> Self {
@@ -254,9 +258,7 @@ impl ModelContent {
 
         for item in non_empty_items {
             match item {
-                ModelContentItem::System(_)
-                | ModelContentItem::User(_)
-                | ModelContentItem::Agent(_) => {
+                ModelContentItem::System(_) | ModelContentItem::User(_) => {
                     let mut current_text = item.to_string();
 
                     if !downstream_merges.is_empty() {
@@ -268,9 +270,21 @@ impl ModelContent {
                     let new_item = match item {
                         ModelContentItem::System(_) => ModelContentItem::system(&current_text),
                         ModelContentItem::User(_) => ModelContentItem::user(&current_text),
-                        ModelContentItem::Agent(_) => ModelContentItem::agent(&current_text),
                         _ => unreachable!(), // We are in the match arm for these types
                     };
+                    merged_items.push(new_item);
+                }
+                ModelContentItem::Agent(agent_item) => {
+                    let mut current_text = item.to_string();
+
+                    if !downstream_merges.is_empty() {
+                        let prefix = downstream_merges.join("\n");
+                        current_text = format!("{}\n{}", prefix, current_text);
+                        downstream_merges.clear();
+                    }
+
+                    let new_item = ModelContentItem::agent(&agent_item.author, &current_text);
+
                     merged_items.push(new_item);
                 }
                 ModelContentItem::MergeDownstream(s) => {

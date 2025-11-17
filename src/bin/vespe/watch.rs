@@ -1,4 +1,5 @@
 use crate::Project;
+use vespe::project::ExecuteContextInput;
 use anyhow::Result;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
@@ -44,9 +45,11 @@ pub fn watch(project: &Project) -> Result<()> {
                                 "Change detected in context file: {}. Re-executing...",
                                 context_name
                             );
-                            if let Err(e) =
-                                project.execute_context(&context_name, None, None, None, None, None)
-                            {
+                            let input_data = vespe::project::ExecuteContextInput {
+                                context_name: context_name.clone(),
+                                ..Default::default()
+                            };
+                            if let Err(e) = project.execute_context(input_data) {
                                 tracing::error!("Error executing context {}: {}", context_name, e);
                             }
                         }

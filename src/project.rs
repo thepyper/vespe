@@ -23,6 +23,28 @@ pub struct Project {
     project_config: ProjectConfig,
 }
 
+pub struct ExecuteContextInput {
+    pub context_name: String,
+    pub input_file: Option<String>,
+    pub args: Option<Vec<String>>,
+    pub defines: Option<Vec<String>>,
+    pub additional_aux_paths: Option<Vec<PathBuf>>,
+    pub output_path: Option<PathBuf>,
+}
+
+impl Default for ExecuteContextInput {
+    fn default() -> Self {
+        Self {
+            context_name: String::new(),
+            input_file: None,
+            args: None,
+            defines: None,
+            additional_aux_paths: None,
+            output_path: None,
+        }
+    }
+}
+
 impl Project {
     pub fn init(root_path: &Path) -> Result<()> {
         let ctx_dir = root_path.join(CTX_DIR_NAME);
@@ -111,14 +133,9 @@ impl Project {
 
     pub fn execute_context(
         &self,
-        context_name: &str,
-        input: Option<String>,
-        args: Option<Vec<String>>,
-        defines: Option<Vec<String>>,
-        additional_aux_paths: Option<Vec<PathBuf>>,
-        output_path: Option<PathBuf>,
+        input: ExecuteContextInput,
     ) -> Result<ModelContent> {
-        let mut data = match args {
+        let mut data = match input.args {
             Some(args) => {
                 let mut data = args
                     .iter()
@@ -134,7 +151,7 @@ impl Project {
             }
             None => JsonPlusObject::new(),
         };
-        if let Some(defines) = defines {
+        if let Some(defines) = input.defines {
             for define in defines {
                 if let Some((key, value)) = define.split_once('=') {
                     let key = format!("${}", key);
@@ -144,15 +161,15 @@ impl Project {
         }
         data.insert(
             "$input".to_string(),
-            JsonPlusEntity::DoubleQuotedString(input.unwrap_or(String::new())),
+            JsonPlusEntity::DoubleQuotedString(input.input_file.unwrap_or(String::new())),
         );
         let mut path_res_builder = self.path_res.clone();
 
-        if let Some(aux_paths) = additional_aux_paths {
+        if let Some(aux_paths) = input.additional_aux_paths {
             path_res_builder = Arc::new(path_res_builder.with_additional_aux_paths(aux_paths));
         }
 
-        if let Some(output_path) = output_path {
+        if let Some(output_path) = input.output_path {
             path_res_builder = Arc::new(path_res_builder.with_alternative_output_path(output_path));
         }
 
@@ -161,10 +178,10 @@ impl Project {
         let content = crate::execute2::execute_context(
             self.file_access.clone(),
             path_res,
-            context_name,
+            &input.context_name,
             Some(&data),
         )?;
-        self.commit(Some(format!("Executed context {}.", context_name)))?;
+        self.commit(Some(format!("Executed context {}.", input.context_name)))?;
         Ok(content)
     }
 

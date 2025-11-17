@@ -9,6 +9,7 @@ use std::thread;
 use std::time::Duration;
 
 use vespe::execute2::{AnchorAnalysis, AnchorState, ContextAnalysis};
+use vespe::project::ExecuteContextInput;
 use vespe::project::Project;
 
 mod watch;
@@ -175,8 +176,15 @@ fn main() -> Result<()> {
                         args
                     );
                     let input = read_input()?;
-                    let content =
-                        project.execute_context(&context_name, input, Some(args), defines, aux_paths, output_path)?;
+                    let input_data = vespe::project::ExecuteContextInput {
+                        context_name: context_name.clone(),
+                        input_file: input,
+                        args: Some(args),
+                        defines,
+                        additional_aux_paths: aux_paths,
+                        output_path,
+                    };
+                    let content = project.execute_context(input_data)?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }

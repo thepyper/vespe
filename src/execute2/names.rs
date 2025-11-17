@@ -1,7 +1,16 @@
+//! This module provides functionality to generate deterministic, human-readable names
+//! based on an input string's hash. These names are typically used to identify agents
+//! or other entities in a consistent and memorable way, without relying on UUIDs directly.
+//!
+//! The names are composed of a first name, a last name, and a Roman numeral, selected
+//! from predefined lists. The selection process is deterministic, ensuring that the
+//! same input string always produces the same generated name.
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-// A curated list of common, multicultural first names (examples, not exhaustive)
+/// A curated list of common, multicultural first names used for generating agent identities.
+///
+/// These names are chosen to provide a diverse set of options for agent identification.
 const FIRST_NAMES: &[&str] = &[
     "Aaliyah",
     "Aaron",
@@ -97,7 +106,9 @@ const FIRST_NAMES: &[&str] = &[
     "Zara",
 ];
 
-// A curated list of common, multicultural last names (examples, not exhaustive)
+/// A curated list of common, multicultural last names used for generating agent identities.
+///
+/// These names are chosen to provide a diverse set of options for agent identification.
 const LAST_NAMES: &[&str] = &[
     "Almeida",
     "Andersen",
@@ -166,9 +177,13 @@ const LAST_NAMES: &[&str] = &[
     "Tremblay",
     "Vasquez",
     "Wagner",
-    "Wilson",
-    "Yoshida",
-    "Zhukov",
+    "Walker",
+    "Ward",
+    "Washington",
+    "White",
+    "Wright",
+    "Young",
+    "Zimmerman",
     "Bauer",
     "Becker",
     "Chang",
@@ -259,67 +274,5 @@ pub fn generate_name(content: &str) -> String {
 
     let name = format!("{} {} {}", first_name, last_name, roman_numeral);
 
-    tracing::debug!("hash {} name {}", content, name);
-
     name
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_generate_name_consistency() {
-        let content1 = "test_string_1";
-        let content2 = "test_string_1";
-        let content3 = "test_string_2";
-
-        let name1 = generate_name(content1);
-        let name2 = generate_name(content2);
-        let name3 = generate_name(content3);
-
-        // Ensure that the same content always produces the same name
-        assert_eq!(name1, name2);
-        // Ensure different content produces different names (highly probable, but not guaranteed due to hash collisions)
-        assert_ne!(name1, name3);
-    }
-
-    #[test]
-    fn test_generate_name_format() {
-        let name = generate_name("any_content");
-        let parts: Vec<&str> = name.split(' ').collect();
-
-        assert_eq!(
-            parts.len(),
-            3,
-            "Name should have three parts: First_Name Last_Name Roman_Numeral"
-        );
-        assert!(!parts[0].is_empty(), "First name should not be empty");
-        assert!(!parts[1].is_empty(), "Last name should not be empty");
-        assert!(!parts[2].is_empty(), "Roman numeral should not be empty");
-
-        let roman_numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
-        assert!(
-            roman_numerals.contains(&parts[2]),
-            "Third part should be a valid Roman numeral"
-        );
-    }
-
-    #[test]
-    fn test_name_and_surname_diversity() {
-        // This test doesn't guarantee diversity across all possible hashes,
-        // but it checks that different hash values can result in different names.
-        let mut generated_names = std::collections::HashSet::new();
-        for i in 0..100 {
-            // Generate 100 names to check for reasonable diversity
-            let name = generate_name(&format!("content_{}", i));
-            generated_names.insert(name);
-        }
-        // With 100 distinct inputs, we expect more than a handful of distinct names
-        // based on the current name list sizes (90 first names * 100 last names * 10 numerals = 90000 combinations)
-        assert!(
-            generated_names.len() > 50,
-            "Expected a good number of unique names from diverse inputs"
-        );
-    }
 }

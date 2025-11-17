@@ -2,6 +2,11 @@
     _1: "Run this with 'vespe context run main'.",
 }
 
+@set {
+	with_agent_names,
+	with_invitation,
+}
+
 @include agent/gemini_25_flash_yolo.md
 
 Tell me something about blue.

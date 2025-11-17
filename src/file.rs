@@ -99,7 +99,13 @@ const DUMMY_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000000");
 impl FileAccessor for ProjectFileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String> {
-        Ok(std::fs::read_to_string(path)?)
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| Error::FileReadError {
+                path: path.to_path_buf(),
+                source: e,
+            })
+            .map_err(anyhow::Error::from)?;
+        Ok(content)
     }
     /// Require exclusive access to a file
     fn lock_file(&self, path: &Path) -> Result<Uuid> {

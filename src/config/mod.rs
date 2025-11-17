@@ -19,6 +19,7 @@ impl Default for EditorInterface {
 pub struct ProjectConfig {
     pub editor_interface: EditorInterface,
     pub git_integration_enabled: bool,
+    pub aux_paths: Vec<PathBuf>,
 }
 
 impl Default for ProjectConfig {
@@ -26,6 +27,7 @@ impl Default for ProjectConfig {
         ProjectConfig {
             editor_interface: EditorInterface::default(),
             git_integration_enabled: true, // Default to true for git integration
+            aux_paths: Vec::new(),
         }
     }
 }

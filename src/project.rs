@@ -41,7 +41,10 @@ impl Project {
         project_config.git_integration_enabled = super::git::is_in_git_repository(&ctx_dir)?;
 
         let file_access = Arc::new(ProjectFileAccessor::new(root_path, None));
-        let path_res = Arc::new(ProjectPathResolver::new(root_path.to_path_buf()));
+        let path_res = Arc::new(ProjectPathResolver::new(
+            root_path.to_path_buf(),
+            project_config.aux_paths.clone(),
+        ));
 
         let project = Project {
             editor_interface: None,
@@ -83,7 +86,10 @@ impl Project {
                     &root_path,
                     editor_interface.clone(),
                 ));
-                let path_res = Arc::new(ProjectPathResolver::new(root_path.clone()));
+                let path_res = Arc::new(ProjectPathResolver::new(
+                    root_path.clone(),
+                    project_config.aux_paths.clone(),
+                ));
 
                 return Ok(Project {
                     editor_interface,

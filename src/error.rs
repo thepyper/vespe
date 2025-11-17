@@ -106,44 +106,4 @@ pub enum Error {
     ContextFileAlreadyExists { path: PathBuf },
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::Error),
-    #[error("Command template cannot be empty")]
-    EmptyCommandTemplate,
-    #[error("Failed to spawn command '{command}': {source}. Is it in your PATH?")]
-    CommandSpawnError {
-        command: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("Failed to write to stdin for command '{command}': {source}")]
-    StdinWriteError {
-        command: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("Failed to capture stdout for command '{command}'")]
-    StdoutCaptureError { command: String },
-    #[error("Failed to capture stderr for command '{command}'")]
-    StderrCaptureError { command: String },
-    #[error("Error reading stdout for command '{command}': {source}")]
-    StdoutReadError {
-        command: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("Error reading stderr for command '{command}': {source}")]
-    StderrReadError {
-        command: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("Failed to join stdout thread for command '{command}'")]
-    StdoutThreadJoinError { command: String },
-    #[error("Failed to join stderr thread for command '{command}'")]
-    StderrThreadJoinError { command: String },
-    #[error("Command '{command}' failed with exit code {exit_code}: {stderr}")]
-    CommandFailed {
-        command: String,
-        exit_code: i32,
-        stderr: String,
-    },
 }

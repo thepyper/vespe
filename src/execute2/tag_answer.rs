@@ -136,6 +136,34 @@ impl DynamicPolicy for AnswerPolicy {
         );
         let (mut result, mut residual) =
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
+
+        let prefix_hash = residual.parameters.get_as_string_only("prefix").map(|x| {
+            Collector::normalized_hash(&format!(
+                "{}\n{}",
+                x,
+                residual
+                    .parameters
+                    .get("prefix_data")
+                    .map(|y| y.to_string())
+                    .unwrap_or(String::new())
+            ))
+        });
+        tracing::debug!(
+            "answer {:?}, pr {}, pd {}, lh {}",
+            residual.container,
+            residual
+                .parameters
+                .get_as_string_only("prefix")
+                .unwrap_or("none".to_string()),
+            residual
+                .parameters
+                .get("prefix_data")
+                .map(|y| y.to_string())
+                .unwrap_or("none".to_string()),
+            prefix_hash.clone().unwrap_or("none".to_string())
+        );
+        result.collector = result.collector.set_latest_prefix(prefix_hash);
+
         match (residual.container, residual.state.status) {
             (Container::Tag(_) | Container::BeginAnchor(_, _), AnswerStatus::JustCreated) => {
                 // Prepare the query
@@ -165,18 +193,6 @@ impl DynamicPolicy for AnswerPolicy {
                 residual.state.reply = response;
                 residual.state.status = AnswerStatus::NeedInjection;
                 residual.state.context_hash = residual.input_hash;
-                let prefix_hash = residual.parameters.get_as_string_only("prefix").map(|x| {
-                    Collector::normalized_hash(&format!(
-                        "{}\n{}",
-                        x,
-                        residual
-                            .parameters
-                            .get("prefix_data")
-                            .map(|y| y.to_string())
-                            .unwrap_or(String::new())
-                    ))
-                });
-                result.collector = result.collector.set_latest_prefix(prefix_hash);
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }

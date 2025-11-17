@@ -9,7 +9,6 @@ use std::thread;
 use std::time::Duration;
 
 use vespe::execute2::{AnchorAnalysis, AnchorState, ContextAnalysis};
-use vespe::project::ExecuteContextInput;
 use vespe::project::Project;
 
 mod watch;

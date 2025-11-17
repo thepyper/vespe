@@ -1,5 +1,4 @@
 use crate::Project;
-use vespe::project::ExecuteContextInput;
 use anyhow::Result;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;

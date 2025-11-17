@@ -257,7 +257,11 @@ pub fn generate_name(content: &str) -> String {
     let roman_numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
     let roman_numeral = roman_numerals[roman_numeral_index];
 
-    format!("{} {} {}", first_name, last_name, roman_numeral)
+    let name = format!("{} {} {}", first_name, last_name, roman_numeral);
+
+    tracing::debug!("hash {} name {}", content, name);
+
+    name
 }
 
 #[cfg(test)]

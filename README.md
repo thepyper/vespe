@@ -56,6 +56,8 @@ At its core, `vespe` operates on a collection of textual documents, referred to 
   - [`vespe context new`](#vespe-context-new)
   - [`vespe context run`](#vespe-context-run)
   - [`vespe watch`](#vespe-watch)
+  - [`vespe project add-aux-path`](#vespe-project-add-aux-path)
+  - [`vespe context analyze`](#vespe-context-analyze)  
 - [Piping Data into Contexts](#piping-data-into-contexts)
 - [License](#license)
 - [NO-WARRANTY](#no-warranty)

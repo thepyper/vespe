@@ -90,6 +90,9 @@ enum ContextCommands {
         /// Additional auxiliary paths to search for input files.
         #[arg(short = 'I', long = "aux_path", value_name = "PATH", action = ArgAction::Append)]
         aux_paths: Option<Vec<PathBuf>>,
+        /// Alternative output path for the context.
+        #[arg(short = 'O', long = "output-path", value_name = "PATH")]
+        output_path: Option<PathBuf>,
     },
     /// Analyzes a context file.
     Analize {
@@ -172,7 +175,7 @@ fn main() -> Result<()> {
                     );
                     let input = read_input()?;
                     let content =
-                        project.execute_context(&context_name, input, Some(args), defines, aux_paths)?;
+                        project.execute_context(&context_name, input, Some(args), defines, aux_paths, output_path)?;
                     tracing::info!("Context '{}' executed successfully.", context_name);
                     print!("{}", content.to_string());
                 }

@@ -208,13 +208,26 @@ impl DynamicPolicy for AnswerPolicy {
                     residual.state.status = AnswerStatus::Repeat;
                     result.new_state = Some(residual.state);
                     result.do_next_pass = true;
-                }
+                }                
             }
             (Container::EndAnchor(a0, a1), AnswerStatus::Completed) => {
-                if let Some(_) = residual.worker.is_output_redirected(&a0.parameters)? {
-                    // No evaporation for redirected output anchors
+                if let Some(output_file) = residual.worker.is_output_redirected(&a0.parameters)? {
+                    // No transformation into edited for redirected output anchors
+                            
+                    // If output has been redirected, place output from file
+                    let output_path = $$$$$ TODO $$$$$ serve funzione per usare output path? verifica anche redirecT_ouput non ho capito se e perche funziona.
+        if !is_end {
+            if let Some(_) = worker.is_output_redirected(&anchor_begin.parameters)? {
+                let latest_agent_hash = collector.latest_agent_hash().unwrap_or(String::new());
+                collector = collector.push_item(ModelContentItem::agent(
+                    &latest_agent_hash,
+                    REDIRECTED_OUTPUT_PLACEHOLDER,
+                ));
+            }
+        }
+
                 } else {
-                    // Evaporate anchor
+                    // Check for edited anchor
                     let content = Worker::get_range(
                         residual.document,
                         &Range {
@@ -224,7 +237,7 @@ impl DynamicPolicy for AnswerPolicy {
                     )?;
                     let content_hash = Collector::normalized_hash(&content);
                     if residual.state.reply_hash != content_hash {
-                        // Content has been modified, evaporate anchor and let content become user content
+                        // Content has been modified, transform into edited state
                         if !residual.readonly {
                             residual.state.status = AnswerStatus::Edited;
                             result.new_state = Some(residual.state);

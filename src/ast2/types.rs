@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use uuid::{uuid, Uuid};
 
 /// Represents a specific point in the source document.
@@ -293,7 +293,7 @@ impl From<&JsonPlusEntity> for serde_json::Value {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JsonPlusObject {
-    pub properties: HashMap<String, JsonPlusEntity>,
+    pub properties: BTreeMap<String, JsonPlusEntity>,
 }
 
 impl From<&JsonPlusObject> for serde_json::Value {
@@ -310,7 +310,7 @@ impl From<&JsonPlusObject> for serde_json::Value {
 impl JsonPlusObject {
     pub fn new() -> Self {
         JsonPlusObject {
-            properties: HashMap::new(),
+            properties: BTreeMap::new(),
         }
     }
     pub fn from_hash_map(properties: HashMap<String, JsonPlusEntity>) -> Self {

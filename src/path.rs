@@ -1,4 +1,5 @@
 use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
+use crate::error::Error;
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -56,6 +57,7 @@ impl ProjectPathResolver {
 impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
+        let mut searched_paths = vec![self.contexts_root()];
         if let Ok(file_path) = self.contexts_root().join(file_name).canonicalize() {
             if file_path.exists() {
                 return Ok(file_path);
@@ -68,12 +70,13 @@ impl PathResolver for ProjectPathResolver {
                     return Ok(aux_file_path);
                 }
             }
+            searched_paths.push(aux_path.clone());
         }
         
-        Err(anyhow::anyhow!(
-            "File '{}' not found in root_path or any auxiliary paths.",
-            file_name
-        ))
+        Err(Error::FileNotFound {
+            file_name: file_name.to_string(),
+            searched_paths,
+        }.into())
     }
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {
@@ -85,9 +88,14 @@ impl PathResolver for ProjectPathResolver {
         let file_path = base_path.join(format!("{}", file_name)).canonicalize()?;
         let parent_dir = file_path
             .parent()
-            .context("Failed to get parent directory")?;
+            .ok_or_else(|| Error::ParentDirectoryNotFound {
+                file_path: file_path.clone(),
+            })?;
         std::fs::create_dir_all(parent_dir)
-            .context("Failed to create parent directories for context file")?;
+            .map_err(|e| Error::FailedToCreateDirectory {
+                path: parent_dir.to_path_buf(),
+                source: e,
+            })?;
         Ok(file_path)
     }
     /// Resolve a meta kind / uuid to a path, create directory if doesn't exist
@@ -95,14 +103,11 @@ impl PathResolver for ProjectPathResolver {
         let metadata_dir =
             self.metadata_home()
                 .join(format!("{}-{}", meta_kind, meta_uuid.to_string()));
-        std::fs::create_dir_all(&metadata_dir).with_context(|| {
-            format!(
-                "Failed to create metadata directory for {}-{}: {}",
-                meta_kind,
-                meta_uuid,
-                metadata_dir.display()
-            )
-        })?;
+        std::fs::create_dir_all(&metadata_dir)
+            .map_err(|e| Error::FailedToCreateDirectory {
+                path: metadata_dir.clone(),
+                source: e,
+            })?;
         Ok(metadata_dir)
     }
 }

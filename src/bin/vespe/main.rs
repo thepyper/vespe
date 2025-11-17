@@ -241,7 +241,7 @@ fn read_input() -> Result<Option<String>> {
     match rx.recv_timeout(Duration::from_millis(250)) {
         Ok(data) => Ok(Some(data)),
         Err(mpsc::RecvTimeoutError::Timeout) => Ok(None),
-        Err(e) => Err(e.into()),
+        Err(e) => Err(e.into()), 
     }
 }
 

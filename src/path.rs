@@ -56,18 +56,20 @@ impl ProjectPathResolver {
 impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
-        let file_path = self.contexts_root().join(file_name).canonicalize()?;
-        if file_path.exists() {
-            return Ok(file_path);
-        }
-
-        for aux_path in &self.aux_paths {
-            let aux_file_path = aux_path.join(file_name).canonicalize()?;
-            if aux_file_path.exists() {
-                return Ok(aux_file_path);
+        if let Ok(file_path) = self.contexts_root().join(file_name).canonicalize() {
+            if file_path.exists() {
+                return Ok(file_path);
             }
         }
 
+        for aux_path in &self.aux_paths {
+            if let Ok(aux_file_path) = aux_path.join(file_name).canonicalize() {
+                if aux_file_path.exists() {
+                    return Ok(aux_file_path);
+                }
+            }
+        }
+        
         Err(anyhow::anyhow!(
             "File '{}' not found in root_path or any auxiliary paths.",
             file_name

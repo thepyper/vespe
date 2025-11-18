@@ -8,7 +8,7 @@ C - system drive
 D - my all works drive
 E - my spare drive, almost empty
 
-<!-- answer-ed068f0d-7b3e-47a9-bc90-8c717ecb6517:begin +completed+ {
+<!-- answer-99e6d200-0ca3-40ce-8199-471ed3d03447:begin +completed+ {
 	choose: {
 		C: 'format C:',
 		D: 'format D:',
@@ -16,17 +16,23 @@ E - my spare drive, almost empty
 	},
 	provider: 'ollama run gemma3:1b'
 }  -->
-No choice was taken.
-<!-- answer-ed068f0d-7b3e-47a9-bc90-8c717ecb6517:end  {}  -->
+[No choice was taken - E§
+
+
+].
+<!-- answer-99e6d200-0ca3-40ce-8199-471ed3d03447:end  {}  -->
 
 Are you sure?
 
-<!-- answer-e668448b-2df6-4478-af52-3d3af3e47e0f:begin +completed+ {
+<!-- answer-3aee16dd-f4f4-40dc-99ec-c00db4039d51:begin +completed+ {
 	choose: {
 		no: 'Let me think about it...',
 		yes: 'Of course!'
 	},
 	provider: 'ollama run gemma3:1b'
 }  -->
-No choice was taken.
-<!-- answer-e668448b-2df6-4478-af52-3d3af3e47e0f:end  {}  -->
+[No choice was taken - yes
+
+
+].
+<!-- answer-3aee16dd-f4f4-40dc-99ec-c00db4039d51:end  {}  -->

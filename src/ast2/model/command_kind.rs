@@ -1,8 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
-use std::cmp::Ordering;
-use std::collections::BTreeMap;
-use uuid::{uuid, Uuid};
 
 /// Enumerates the different types of commands that can be invoked with tags or anchors.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

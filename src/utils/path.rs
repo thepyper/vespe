@@ -95,10 +95,10 @@ impl PathResolver for ProjectPathResolver {
             searched_paths.push(aux_path.clone());
         }
 
-        Err(Error::FileNotFound {
+        Err(super::Error::Path(Error::FileNotFound {
             file_name: file_name.to_string(),
             searched_paths,
-        })
+        }))
     }
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {

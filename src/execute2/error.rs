@@ -197,6 +197,10 @@ pub enum ExecuteError {
     #[error("Missing 'choice' parameter at {range:?}")]
     MissingChoice { range: Range },
 
+    /// An error originating from the utility module.
+    #[error("Utility error: {0}")]
+    UtilError(#[from] crate::utils::Error),
+
     /// A catch-all error for any `anyhow::Error` that occurs.
     ///
     /// This provides a convenient way to propagate errors from libraries that

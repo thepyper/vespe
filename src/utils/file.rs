@@ -39,11 +39,11 @@ pub enum Error {
 pub trait FileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String> {
-        std::fs::read_to_string(path)
+        Ok(std::fs::read_to_string(path)
             .map_err(|e| Error::FileRead {
                 path: path.to_path_buf(),
                 source: e,
-            })
+            })?)
     }
     /// Require exclusive access to a file
     fn lock_file(&self, path: &Path) -> Result<Uuid>;
@@ -149,12 +149,12 @@ impl FileAccessor for ProjectFileAccessor {
     fn unlock_file(&self, uuid: &Uuid) -> Result<()> {
         match &self.editor_interface {
             None => Ok(()),
-            Some(x) => x
+            Some(x) => Ok(x
                 .unlock_and_reload_file(*uuid)
                 .map_err(|e| Error::EditorInterface {
                     message: "Failed to unlock and reload file".to_string(),
                     source: e,
-                }),
+                })?),
         }
     }
     /// Write whole file, optional comment to the operation

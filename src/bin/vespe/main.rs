@@ -235,7 +235,7 @@ fn read_input() -> Result<Option<String>> {
         let res = io::stdin()
             .read_to_string(&mut input)
             .map(|_| input)
-            .map_err(Error::StdinReadError);
+            .map_err(Error::Io);
         let _ = tx.send(res);
     });
 

@@ -29,6 +29,28 @@ pub enum Error {
         #[source]
         source: anyhow::Error,
     },
+    #[error("Failed to create directory '{path}': {source}")]
+    FailedToCreateDirectory {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Failed to write file '{path}': {source}")]
+    FileWrite {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Parent directory not found for path: '{file_path}'")]
+    ParentDirectoryNotFound {
+        file_path: PathBuf,
+    },
+    #[error("Failed to read file '{path}': {source}")]
+    FileRead {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
     #[error(transparent)]
     Utils(#[from] crate::utils::Error),
 }

@@ -60,7 +60,7 @@ impl Project {
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
         std::fs::write(&ctx_root_file, "Feel The BuZZ!!").map_err(|source| {
-            Error::FileWriteError {
+            Error::FileWrite {
                 path: ctx_root_file.clone(),
                 source,
             }
@@ -97,7 +97,7 @@ impl Project {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
                 let root_path = current_path.canonicalize().map_err(|source| {
-                    Error::FailedToCanonicalizePath {
+                    Error::CanonicalizePath {
                         path: current_path.clone(),
                         source,
                     }
@@ -113,7 +113,7 @@ impl Project {
                     match project_config.editor_interface {
                         EditorInterface::VSCode => Some(Arc::new(
                             FileBasedEditorCommunicator::new(&editor_path).map_err(|source| {
-                                Error::EditorInterfaceError {
+                                Error::EditorInterface {
                                     message: "Failed to create file-based editor communicator"
                                         .to_string(),
                                     source: source.into(),
@@ -264,7 +264,7 @@ impl Project {
         match std::fs::read_to_string(project_config_path) {
             Ok(content) => Ok(serde_json::from_str(&content).map_err(Error::JsonError)?),
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(ProjectConfig::default()),
-            Err(e) => Err(Error::FileReadError {
+            Err(e) => Err(Error::FileRead {
                 path: project_config_path.clone(),
                 source: e,
             }

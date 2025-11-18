@@ -155,6 +155,11 @@ pub fn git_commit_files(
 
         let relative_path = canonical_path
             .strip_prefix(&canonical_workdir)
+            .map_err(|_| Error::PathOutsideWorkdir {
+                file_path: path.clone(),
+                workdir: workdir.to_path_buf(),
+            })?;
+        index
             .add_path(relative_path)
             .map_err(|e| Error::AddFileToIndex {
                 file_path: path.clone(),

@@ -8,7 +8,7 @@ C - system drive
 D - my all works drive
 E - my spare drive, almost empty
 
-<!-- answer-9357012e-7f17-40fe-bf3d-0044a43f39ca:begin +completed+ {
+<!-- answer-c8e8a771-924b-4221-bbaf-26f9a95459d0:begin +completed+ {
 	choose: {
 		C: 'format C:',
 		D: 'format D:',
@@ -16,22 +16,19 @@ E - my spare drive, almost empty
 	},
 	provider: 'ollama run qwen2.5:1.5b'
 }  -->
-format D:
-<!-- answer-9357012e-7f17-40fe-bf3d-0044a43f39ca:end  {}  -->
+[No choice was taken - You have not provided enough information or context for me to determine which disk to wipe. Please provide more details about what is causing you concern and why you believe a specific disk needs to be wiped.
+
+].
+<!-- answer-c8e8a771-924b-4221-bbaf-26f9a95459d0:end  {}  -->
 
 Are you sure?
 
-<!-- answer-a7c4eede-3786-472a-b97e-0bfda872522e:begin +completed+ {
+<!-- answer-1a669d41-12f9-42d5-a995-fa3f899a5cf4:begin +completed+ {
 	choose: {
 		no: 'Let me think about it...',
 		yes: 'Of course!'
 	},
 	provider: 'ollama run qwen2.5:1.5b'
 }  -->
-[No choice was taken - [no]
-
-Explanation:
-Formatting a drive like D typically involves erasing all data on that partition. If this is your primary system disk (C), it might result in loss of important user files and settings, which could be inconvenient or impossible to recover fully even with backups. It&#x27;s generally recommended to consider the implications before proceeding with such actions, especially for critical operating systems like Windows, macOS, or Linux, to prevent data loss.
-
-].
-<!-- answer-a7c4eede-3786-472a-b97e-0bfda872522e:end  {}  -->
+Of course!
+<!-- answer-1a669d41-12f9-42d5-a995-fa3f899a5cf4:end  {}  -->

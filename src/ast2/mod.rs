@@ -15,7 +15,7 @@
 //!   error information for any parsing failures.
 
 mod error;
-mod parse;
+mod parser;
 mod model;
 
 pub use model::anchor::{Anchor, AnchorKind};
@@ -31,11 +31,4 @@ pub use model::tag::Tag;
 pub use model::text::Text;
 
 pub use error::{Ast2Error, Result};
-pub use parse::parse_document;
-
-/*
-pub use types::{
-    Anchor, AnchorKind, Argument, Arguments, CommandKind, Content, Document, JsonPlusEntity,
-    JsonPlusObject, Parameters, Position, Range, Tag, Text,
-};
-*/
+pub use parser::document::parse_document;

@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use super::Parser;
 use crate::ast2::{Ast2Error, Result};
-use crate::ast2::model::core::{Position, Range, Text};
+use crate::ast2::model::core::{Range, Text};
 
 pub(crate) fn _try_parse_identifier<'doc>(
     parser: &Parser<'doc>,

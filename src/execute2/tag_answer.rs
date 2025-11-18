@@ -12,7 +12,8 @@ use super::execute::{Collector, Worker};
 use super::tags::{
     Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, DynamicState,
 };
-use crate::ast2::{JsonPlusEntity, Parameters, Range};
+use crate::ast2::model::core::{Parameters, Range};
+use crate::ast2::model::json_plus::JsonPlusEntity;
 use std::str::FromStr;
 
 use handlebars::Handlebars;

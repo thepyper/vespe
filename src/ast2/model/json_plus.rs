@@ -134,7 +134,7 @@ impl ToString for JsonPlusEntity {
     }
 }
 
-implement From<&JsonPlusEntity> for serde_json::Value {
+impl From<&JsonPlusEntity> for serde_json::Value {
     fn from(jpe: &JsonPlusEntity) -> Self {
         match jpe {
             JsonPlusEntity::Flag => true.into(),

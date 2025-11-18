@@ -8,7 +8,7 @@ pub(crate) mod tests;
 
 use std::str::Chars;
 
-use super::{Position, Range};
+use crate::ast2::{Position, Range};
 
 /// A stateful parser that consumes a string slice and tracks the current position.
 ///

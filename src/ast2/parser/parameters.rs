@@ -1,8 +1,7 @@
 use serde_json::json;
-use std::collections::BTreeMap;
 
 use super::Parser;
-use crate::ast2::{Ast2Error, JsonPlusEntity, JsonPlusObject, Parameters, Range, Result};
+use crate::ast2::{Ast2Error, Parameters, Range, Result};
 
 pub(crate) fn _try_parse_parameters<'doc>(
     parser: &Parser<'doc>,

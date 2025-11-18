@@ -1,28 +1,5 @@
-use serde_json::json;
-use std::collections::BTreeMap;
-use std::str::Chars;
-use std::str::FromStr;
-use uuid::Uuid;
-
 use super::Parser;
-use crate::ast2::{
-    Anchor,
-    AnchorKind,
-    Argument,
-    Arguments,
-    Ast2Error,
-    CommandKind,
-    Content,
-    Document,
-    JsonPlusEntity,
-    JsonPlusObject,
-    Parameters,
-    Position,
-    Range,
-    Result,
-    Tag,
-    Text,
-};
+use crate::ast2::{Anchor, AnchorKind, Ast2Error, CommandKind, Parameters, Range, Result, Tag};
 
 pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();

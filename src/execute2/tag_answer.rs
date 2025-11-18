@@ -78,7 +78,9 @@ pub struct AnswerState {
     pub status: AnswerStatus,
     /// The query sent to the external model
     pub query: String,
-    /// The reply received from the external model.
+    /// The exact reply received from external model before any elaboration
+    pub raw_reply: String,
+    /// The reply received from the external model and elaborated.
     pub reply: String,
     /// The context hash
     pub context_hash: String,
@@ -175,6 +177,7 @@ impl DynamicPolicy for AnswerPolicy {
                     residual
                         .worker
                         .call_model(agent_hash, residual.parameters, &prompt)?;
+                residual.state.raw_reply = response.clone();
                 let response = Self::process_response_with_choice(response, residual.parameters)?;
                 residual.state.query = prompt;
                 residual.state.reply_hash = Collector::normalized_hash(&response);

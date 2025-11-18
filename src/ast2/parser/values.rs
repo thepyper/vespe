@@ -122,7 +122,7 @@ pub(crate) fn _try_parse_nude_integer<'doc>(
     }
 
     match i64::from_str_radix(&number_str, 10) {
-        Ok(num) => Ok(Some((num, new_parser))),
+        Ok(num) => Ok(Some((json!(num), new_parser))),
 
         Err(e) => Err(Ast2Error::ParseIntError(e)),
     }
@@ -145,7 +145,7 @@ pub(crate) fn _try_parse_nude_float<'doc>(
         let num_str = format!("{}.{}", int_part, frac_part);
 
         match f64::from_str(&num_str) {
-            Ok(n) => Ok(Some((n, p3))),
+            Ok(n) => Ok(Some((json!(n), p3))),
 
             Err(e) => Err(Ast2Error::ParseFloatError(e)),
         }

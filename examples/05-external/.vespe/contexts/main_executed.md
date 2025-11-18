@@ -23,7 +23,7 @@ Tell me something that happened recently.
 
 Tell me something that happened recently.
 
-<!-- answer-4967f94e-52de-4d6d-9dbb-bc89d5d78d86:begin +completed+ {
+<!-- answer-4967f94e-52de-4d6d-9dbb-bc89d5d78d86:begin +edited+ {
 	output: epoque/1980.txt,
 	prefix: agent/epoque.md,
 	prefix_data: { year: 1980 },

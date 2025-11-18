@@ -16,6 +16,7 @@
 
 mod error;
 mod parse;
+pub mod parser;
 mod types;
 
 pub use error::{Ast2Error, Result};

@@ -59,14 +59,14 @@ impl PathResolver for ProjectPathResolver {
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
         tracing::debug!("resolve_input_file: Resolving {}", file_name);
         let mut searched_paths = vec![self.contexts_root()];
-        if let Ok(file_path) = self.contexts_root().join(file_name).canonicalize() {
+        if let Ok(file_path) = self.contexts_root().join(file_name).absolute() {
             if file_path.exists() {
                 return Ok(file_path);
             }
         }
 
         for aux_path in &self.aux_paths {
-            if let Ok(aux_file_path) = aux_path.join(file_name).canonicalize() {
+            if let Ok(aux_file_path) = aux_path.join(file_name).absolute() {
                 if aux_file_path.exists() {
                     return Ok(aux_file_path);
                 }
@@ -88,7 +88,7 @@ impl PathResolver for ProjectPathResolver {
         } else {
             self.contexts_root()
         }
-        .canonicalize()?;
+        .absolute()?;
         tracing::debug!("resolve_output_file: Base path {}", base_path.display());
         let file_path = base_path.join(format!("{}", file_name));
         tracing::debug!("resolve_output_file: File path {}", file_path.display());

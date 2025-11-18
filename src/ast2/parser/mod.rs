@@ -2,6 +2,7 @@ pub(crate) mod document;
 pub(crate) mod tags_anchors;
 pub(crate) mod parameters;
 pub(crate) mod json_plus;
+pub(crate) mod arguments;
 
 use std::str::Chars;
 

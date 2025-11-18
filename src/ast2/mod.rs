@@ -17,11 +17,13 @@
 mod error;
 mod parse;
 pub mod parser;
-mod types;
+pub mod model;
+
 
 pub use error::{Ast2Error, Result};
 pub use parser::document::parse_document;
-pub use types::{
-    Anchor, AnchorKind, Argument, Arguments, CommandKind, Content, Document, JsonPlusEntity,
-    JsonPlusObject, Parameters, Position, Range, Tag, Text,
+pub use model::core::{
+    Anchor, AnchorKind, Argument, Arguments, CommandKind, Content, Document, Parameters, Position,
+    Range, Tag, Text,
 };
+pub use model::json_plus::{JsonPlusEntity, JsonPlusObject};

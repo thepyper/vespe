@@ -1,3 +1,3 @@
 mod parser;
 
-pub use parser::document::parse_document;
+pub use crate::ast2::parser::document::parse_document;

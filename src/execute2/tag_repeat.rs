@@ -12,36 +12,7 @@
 //! The `RepeatPolicy` handles the logic for identifying the enclosing anchor,
 //! updating its state to `Repeat`, and applying any specified parameter mutations
 //! to the anchor before triggering a new execution pass.
-//!
-//! # Examples
-//!
-//! Consider an `@answer` tag that generates a code snippet. If the initial snippet
-//! is not satisfactory, an `@repeat` tag can be used to prompt the model to
-//! regenerate it, potentially with modified parameters.
-//!
-//! ```markdown
-//! @answer
-//! Here is a code snippet:
-//! ```rust
-//! fn main() {
-//!     println!("Hello, world!");
-//! }
-//! ```
-//! @repeat
-//! ```
-//!
-//! In this example, the `@repeat` tag would cause the `@answer` block to be
-//! re-executed, generating a new code snippet.
-//!
-//! Similarly, with `@inline` tags:
-//!
-//! ```markdown
-//! @inline
-//! Initial thought.
-//! @repeat
-//! ```
-//!
-//! This would cause the `@inline` block to be re-evaluated.
+
 use super::{ExecuteError, Result};
 
 use super::tag_answer::{AnswerState, AnswerStatus};

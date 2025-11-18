@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
             Some(xs)
         }
     }
-    fn consume_many_of(&mut self, xs: &str) -> Option<String> {
+    pub fn consume_many_of(&mut self, xs: &str) -> Option<String> {
         self.consume_many_if(|y| xs.contains(y))
     }
     pub fn skip_many_whitespaces(&mut self) {
@@ -168,3 +168,4 @@ impl<'a> Parser<'a> {
         }
     }
 }
+

@@ -178,3 +178,4 @@ pub(crate) fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uui
         }),
     }
 }
+

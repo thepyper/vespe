@@ -25,3 +25,4 @@ pub fn parse_document(document: &str) -> Result<Document> {
         range: Range { begin, end },
     })
 }
+

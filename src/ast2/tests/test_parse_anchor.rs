@@ -1,5 +1,6 @@
-use super::{AnchorKind, Ast2Error, CommandKind, Parser};
-use serde_json::json;
+use super::super::{AnchorKind, Ast2Error, CommandKind};
+use super::parser::Parser;
+use super::anchor::_try_parse_anchor;
 use uuid::Uuid;
 
 #[test]
@@ -7,7 +8,7 @@ fn test_try_parse_anchor_simple() {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let doc = format!("<!-- tag-{}:begin --> rest", uuid_str);
     let parser = Parser::new(&doc);
-    let (anchor, p_next) = super::_try_parse_anchor(&parser).unwrap().unwrap();
+    let (anchor, p_next) = _try_parse_anchor(&parser).unwrap().unwrap();
     assert_eq!(anchor.command, CommandKind::Tag);
     assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
     assert_eq!(anchor.kind, AnchorKind::Begin);
@@ -28,7 +29,7 @@ fn test_try_parse_anchor_with_parameters() {
         uuid_str
     );
     let parser = Parser::new(&doc);
-    let (anchor, p_next) = super::_try_parse_anchor(&parser).unwrap().unwrap();
+    let (anchor, p_next) = _try_parse_anchor(&parser).unwrap().unwrap();
     assert_eq!(anchor.command, CommandKind::Include);
     assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
     assert_eq!(anchor.kind, AnchorKind::End);
@@ -47,7 +48,7 @@ fn test_try_parse_anchor_with_arguments() {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let doc = format!("<!-- inline-{}:begin 'arg1' \"arg2\" --> rest", uuid_str);
     let parser = Parser::new(&doc);
-    let (anchor, p_next) = super::_try_parse_anchor(&parser).unwrap().unwrap();
+    let (anchor, p_next) = _try_parse_anchor(&parser).unwrap().unwrap();
     assert_eq!(anchor.command, CommandKind::Inline);
     assert_eq!(anchor.uuid, Uuid::parse_str(uuid_str).unwrap());
     assert_eq!(anchor.kind, AnchorKind::Begin);
@@ -67,7 +68,7 @@ fn test_try_parse_anchor_missing_closing_tag() {
     let uuid_str = "123e4567-e89b-12d3-a456-426614174000";
     let doc = format!("<!-- tag-{}:begin rest", uuid_str);
     let parser = Parser::new(&doc);
-    let result = super::_try_parse_anchor(&parser);
+    let result = _try_parse_anchor(&parser);
     assert!(matches!(result, Err(Ast2Error::UnclosedString { .. })));
 }
 
@@ -75,7 +76,7 @@ fn test_try_parse_anchor_missing_closing_tag() {
 fn test_try_parse_anchor_invalid_uuid() {
     let doc = "<!-- tag-invalid-uuid:begin --> rest";
     let parser = Parser::new(doc);
-    let result = super::_try_parse_anchor(&parser);
+    let result = _try_parse_anchor(&parser);
     assert!(matches!(result, Err(Ast2Error::InvalidUuid { .. })));
 }
 
@@ -83,6 +84,6 @@ fn test_try_parse_anchor_invalid_uuid() {
 fn test_try_parse_anchor_no_opening_comment() {
     let doc = "tag-uuid:begin --> rest";
     let parser = Parser::new(doc);
-    let result = super::_try_parse_anchor(&parser).unwrap();
+    let result = _try_parse_anchor(&parser).unwrap();
     assert!(result.is_none());
 }

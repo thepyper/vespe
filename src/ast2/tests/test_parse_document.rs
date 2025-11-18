@@ -1,4 +1,7 @@
-use super::*;
+use super::super::{AnchorKind, Ast2Error, Content, CommandKind};
+use super::parser::Parser;
+use super::content::parse_content;
+use super::document::parse_document;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -10,7 +13,7 @@ fn test_parse_content_mixed() {
         uuid_str
     );
     let parser = Parser::new(&doc);
-    let (content_vec, p_next) = super::parse_content(parser).unwrap();
+    let (content_vec, p_next) = parse_content(parser).unwrap();
 
     assert_eq!(content_vec.len(), 4);
 
@@ -66,7 +69,7 @@ fn test_parse_content_mixed() {
 #[test]
 fn test_parse_document_simple() {
     let doc = "hello world";
-    let document = super::parse_document(doc).unwrap();
+    let document = parse_document(doc).unwrap();
     assert_eq!(document.content.len(), 1);
     if let Content::Text(text) = &document.content[0] {
         assert_eq!(text.range.begin.offset, 0);
@@ -81,7 +84,7 @@ fn test_parse_document_simple() {
 #[test]
 fn test_parse_document_empty() {
     let doc = "";
-    let document = super::parse_document(doc).unwrap();
+    let document = parse_document(doc).unwrap();
     assert!(document.content.is_empty());
     assert_eq!(document.range.begin.offset, 0);
     assert_eq!(document.range.end.offset, 0);
@@ -90,7 +93,7 @@ fn test_parse_document_empty() {
 #[test]
 fn test_parse_document_with_error() {
     let doc = "@tag {param=} rest"; // Missing parameter value
-    let result = super::parse_document(doc);
+    let result = parse_document(doc);
     assert!(matches!(
         result,
         Err(Ast2Error::MissingParameterValue { .. })

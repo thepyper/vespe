@@ -1,4 +1,5 @@
-use super::*;
+use super::super::{Position};
+use super::parser::Parser;
 
 #[test]
 fn test_parser_new() {

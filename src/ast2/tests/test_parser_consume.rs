@@ -1,4 +1,4 @@
-use super::*;
+use super::parser::Parser;
 
 #[test]
 fn test_parser_consume_char_if() {

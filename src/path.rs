@@ -59,14 +59,14 @@ impl PathResolver for ProjectPathResolver {
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
         tracing::debug!("resolve_input_file: Resolving {}", file_name);
         let mut searched_paths = vec![self.contexts_root()];
-        if let Ok(file_path) = self.contexts_root().join(file_name).absolute() {
+        if let Ok(file_path) = std::path::absolute(self.contexts_root().join(file_name)) {
             if file_path.exists() {
                 return Ok(file_path);
             }
         }
 
         for aux_path in &self.aux_paths {
-            if let Ok(aux_file_path) = aux_path.join(file_name).absolute() {
+            if let Ok(aux_file_path) = std::path::absolute(aux_path.join(file_name)) {
                 if aux_file_path.exists() {
                     return Ok(aux_file_path);
                 }
@@ -83,12 +83,11 @@ impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
     fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {
         tracing::debug!("resolve_output_file: Resolving {}", file_name);
-        let base_path = if let Some(ref path) = self.output_path {
+        let base_path = std::path::absolute(if let Some(ref path) = self.output_path {
             path.clone()
         } else {
             self.contexts_root()
-        }
-        .absolute()?;
+        })?;
         tracing::debug!("resolve_output_file: Base path {}", base_path.display());
         let file_path = base_path.join(format!("{}", file_name));
         tracing::debug!("resolve_output_file: File path {}", file_path.display());

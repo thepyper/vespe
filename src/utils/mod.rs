@@ -13,3 +13,5 @@ pub enum Error {
     #[error(transparent)]
     Path(#[from] path::Error),
 }
+
+pub type Result<T> = std::result::Result<T, Error>;

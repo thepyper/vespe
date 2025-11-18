@@ -2,6 +2,7 @@ use thiserror::Error as ThisError;
 use std::path::PathBuf;
 use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
 use uuid::Uuid;
+use super::Result;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
@@ -76,7 +77,7 @@ impl ProjectPathResolver {
 
 impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
-    fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf, Error> {
+    fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
         tracing::debug!("resolve_input_file: Resolving {}", file_name);
         let mut searched_paths = vec![self.contexts_root()];
         if let Ok(file_path) = std::path::absolute(self.contexts_root().join(file_name)) {
@@ -100,7 +101,7 @@ impl PathResolver for ProjectPathResolver {
         })
     }
     /// Resolve a file name to a path, create directory if doesn't exist
-    fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf, Error> {
+    fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {
         tracing::debug!("resolve_output_file: Resolving {}", file_name);
         let base_path = std::path::absolute(if let Some(ref path) = self.output_path {
             path.clone()
@@ -122,7 +123,7 @@ impl PathResolver for ProjectPathResolver {
         Ok(file_path)
     }
     /// Resolve a meta kind / uuid to a path, create directory if doesn't exist
-    fn resolve_metadata(&self, meta_kind: &str, meta_uuid: &Uuid) -> Result<PathBuf, Error> {
+    fn resolve_metadata(&self, meta_kind: &str, meta_uuid: &Uuid) -> Result<PathBuf> {
         tracing::debug!(
             "resolve_metadata: Resolving {}-{}",
             meta_kind,

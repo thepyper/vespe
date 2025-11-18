@@ -281,7 +281,7 @@ impl Project {
 
     pub fn commit(&self, title_message: Option<String>) -> Result<()> {
         if self.project_config.git_integration_enabled {
-            self.file_access.commit(title_message)
+            Ok(self.file_access.commit(title_message)?)
         } else {
             Ok(())
         }

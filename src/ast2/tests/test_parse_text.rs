@@ -1,10 +1,9 @@
-use super::*;
+use crate::ast2::parser::Parser;
+use crate::ast2::parser::document;
 
 #[test]
 fn test_try_parse_text_simple() {
-    let doc = "hello world";
-    let parser = Parser::new(doc);
-    let (text, p_next) = super::_try_parse_text(&parser).unwrap().unwrap();
+    let (text, p_next) = document::_try_parse_text(&parser).unwrap().unwrap();
     assert_eq!(p_next.remain(), "");
 
     let text_str = "hello world";
@@ -14,9 +13,7 @@ fn test_try_parse_text_simple() {
 
 #[test]
 fn test_try_parse_text_until_tag() {
-    let doc = "hello @tag rest";
-    let parser = Parser::new(doc);
-    let (text, p_next) = super::_try_parse_text(&parser).unwrap().unwrap();
+    let (text, p_next) = document::_try_parse_text(&parser).unwrap().unwrap();
     assert_eq!(p_next.remain(), "");
 
     let text_str = "hello @tag rest";
@@ -26,9 +23,7 @@ fn test_try_parse_text_until_tag() {
 
 #[test]
 fn test_try_parse_text_until_anchor() {
-    let doc = "hello <!-- anchor --> rest";
-    let parser = Parser::new(doc);
-    let (text, p_next) = super::_try_parse_text(&parser).unwrap().unwrap();
+    let (text, p_next) = document::_try_parse_text(&parser).unwrap().unwrap();
     assert_eq!(p_next.remain(), "");
 
     let text_str = "hello <!-- anchor --> rest";
@@ -38,9 +33,7 @@ fn test_try_parse_text_until_anchor() {
 
 #[test]
 fn test_try_parse_text_with_newline() {
-    let doc = "line1\nline2 rest";
-    let parser = Parser::new(doc);
-    let (text, p_next) = super::_try_parse_text(&parser).unwrap().unwrap();
+    let (text, p_next) = document::_try_parse_text(&parser).unwrap().unwrap();
     assert_eq!(p_next.remain(), "line2 rest");
     assert_eq!(p_next.get_position().line, 2);
     assert_eq!(p_next.get_position().column, 1);
@@ -52,24 +45,18 @@ fn test_try_parse_text_with_newline() {
 
 #[test]
 fn test_try_parse_text_empty() {
-    let doc = "";
-    let parser = Parser::new(doc);
-    let result = super::_try_parse_text(&parser).unwrap();
+    let result = document::_try_parse_text(&parser).unwrap();
     assert!(result.is_none());
 }
 
 #[test]
 fn test_try_parse_text_starts_with_tag() {
-    let doc = "@unknown rest";
-    let parser = Parser::new(doc);
-    let result = super::_try_parse_text(&parser).unwrap();
+    let result = document::_try_parse_text(&parser).unwrap();
     assert!(!result.is_none());
 }
 
 #[test]
 fn test_try_parse_text_starts_with_anchor() {
-    let doc = "<!-- unknown --> rest";
-    let parser = Parser::new(doc);
-    let result = super::_try_parse_text(&parser).unwrap();
+    let result = document::_try_parse_text(&parser).unwrap();
     assert!(!result.is_none());
 }

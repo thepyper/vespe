@@ -1,3 +1,5 @@
+pub(crate) mod document;
+
 use std::str::Chars;
 
 use super::{Position, Range};

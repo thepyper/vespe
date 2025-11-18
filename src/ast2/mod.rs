@@ -19,7 +19,7 @@ mod parse;
 mod types;
 
 pub use error::{Ast2Error, Result};
-pub use parse::parse_document;
+pub use parser::document::parse_document;
 pub use types::{
     Anchor, AnchorKind, Argument, Arguments, CommandKind, Content, Document, JsonPlusEntity,
     JsonPlusObject, Parameters, Position, Range, Tag, Text,

@@ -1,30 +1,3 @@
-Ecco la sintesi e il prompt che hai richiesto.
-
-### Sintesi delle Best Practice per la Gestione degli Errori in Rust
-
-Per un progetto Rust multi-modulo, l'approccio idiomatico prevede una strategia a due livelli che sfrutta le crate `thiserror` e `anyhow`.
-
-1.  **Per le Librerie e i Moduli Interni (`thiserror`):**
-    *   **Scopo:** Creare tipi di errore specifici, strutturati e ispezionabili. Chi chiama il codice deve poter analizzare il tipo di errore e decidere come gestirlo.
-    *   **Implementazione:** Ogni modulo (es. `git`, `editor`) definisce il proprio `enum Error` pubblico in un file `error.rs`. La crate `thiserror` viene usata per ridurre il boilerplate, derivando automaticamente i trait `std::error::Error`, `Display` e, soprattutto, `From`. Quest'ultimo permette conversioni automatiche tra tipi di errore diversi.
-
-2.  **Per l'Applicazione Eseguibile (`anyhow`):**
-    *   **Scopo:** Gestire gli errori a livello di applicazione, dove l'obiettivo principale è propagare l'errore fino al `main` e presentarlo all'utente in modo chiaro e contestualizzato. L'ispezione dettagliata dell'errore è meno importante della tracciabilità.
-    *   **Implementazione:** La funzione `main` (e le altre funzioni a livello di applicazione) restituisce un `anyhow::Result<T>`. La crate `anyhow` fornisce un tipo `anyhow::Error` "opaco" che può contenere qualsiasi errore che implementi `std::error::Error`. Il metodo `.context()` è fondamentale per aggiungere messaggi descrittivi che spiegano cosa stava facendo il programma quando è avvenuto l'errore.
-
-**Flusso di Propagazione in un Progetto Multi-Modulo:**
-
-1.  Una funzione in un modulo `A` fallisce e restituisce un `mod_a::Error`.
-2.  Una funzione nel modulo `B` chiama la funzione del modulo `A`. Grazie all'operatore `?` e a `impl From<mod_a::Error> for mod_b::Error` (gestito da `thiserror`), l'errore viene convertito e propagato come `mod_b::Error`.
-3.  Questo processo si ripete fino al livello della libreria principale (`lib.rs`), che avrà un `lib::Error` capace di contenere tutti gli errori dei sottomoduli.
-4.  Infine, la funzione `main` chiama una funzione della libreria. L'errore `lib::Error` viene catturato e convertito in un `anyhow::Error`, arricchito con contesto tramite `.context()`, e infine stampato a console per l'utente.
-
----
-
-### Prompt per un Agente di Refactoring degli Errori in Rust
-
-Here is the prompt you requested.
-
 **Role:**
 You are an **Error Handling Refactoring Agent for Rust**. Your mission is to refactor a multi-module Rust project to use modern, idiomatic error handling practices. You will implement a robust strategy using the `thiserror` crate for libraries/modules and the `anyhow` crate for the application layer.
 

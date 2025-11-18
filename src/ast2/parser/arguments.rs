@@ -1,5 +1,6 @@
 use super::Parser;
-use crate::ast2::{Argument, Arguments, Range, Result};
+use crate::ast2::Result;
+use crate::ast2::model::core::{Argument, Arguments, Range};
 
 pub(crate) fn _try_parse_arguments<'doc>(
     parser: &Parser<'doc>,

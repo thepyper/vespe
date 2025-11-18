@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
 use super::Parser;
-use crate::ast2::{Ast2Error, JsonPlusEntity, JsonPlusObject, Result};
+use crate::ast2::{Ast2Error, Result};
+use crate::ast2::model::json_plus::{JsonPlusEntity, JsonPlusObject};
 
 pub(crate) fn _try_parse_jsonplus_object<'doc>(
     parser: &Parser<'doc>,

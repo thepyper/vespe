@@ -1,5 +1,6 @@
 use super::Parser;
-use crate::ast2::{Ast2Error, Content, Document, Range, Result, Text};
+use crate::ast2::{Ast2Error, Result};
+use crate::ast2::model::core::{Content, Document, Range, Text};
 
 /// Parses a string slice into a `Document` AST.
 ///

@@ -1,7 +1,8 @@
 use serde_json::json;
 
 use super::Parser;
-use crate::ast2::{Ast2Error, Parameters, Range, Result};
+use crate::ast2::{Ast2Error, Result};
+use crate::ast2::model::core::{Parameters, Range};
 
 pub(crate) fn _try_parse_parameters<'doc>(
     parser: &Parser<'doc>,

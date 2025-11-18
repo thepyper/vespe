@@ -1,5 +1,6 @@
 use super::Parser;
-use crate::ast2::{Anchor, AnchorKind, Arguments, Ast2Error, CommandKind, Parameters, Range, Result, Tag};
+use crate::ast2::{Ast2Error, Result};
+use crate::ast2::model::core::{Anchor, AnchorKind, Arguments, CommandKind, Parameters, Range, Tag};
 
 pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();

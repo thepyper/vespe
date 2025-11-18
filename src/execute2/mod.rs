@@ -89,6 +89,29 @@ const TASK_ANCHOR_PLACEHOLDER: &str =
     "Execute only the next instruction exactly as given — treat it as a single isolated step; do not infer, continue, or perform any other action beyond it.";
 //const CHOICE_TEMPLATE : &str = "You MUST reply with ONLY ONE of the following choices: {{{choices}}}.\nYou MUST represent these in your output with ONLY ONE of the following tags {{{choice_tags}}}.\n";
 //const CHOICE_TEMPLATE : &str = "You MUST reply EXACTLY WITH ONLY ONE of the following tags: {{{choice_tags}}} which represent the following choices: {{{choices}}}.\n";
-const CHOICE_TEMPLATE : &str = "Your whole reply MUST CONTAIN EXACTLY ONE AND ONLY ONE of the following tags: {{{choice_tags}}} to represent your choice from the following choices: {{{choices}}}.\n";
+//const CHOICE_TEMPLATE : &str = "Your whole reply MUST CONTAIN EXACTLY ONE AND ONLY ONE of the following tags: {{{choice_tags}}} to represent your choice from the following choices: {{{choices}}}.\n";
+//const CHOICE_TEMPLATE : &str = "Your reply MUST BE EXACTLY ONE of the following tags: {{{choice_tags}}} to represent your choice from the following choices: {{{choices}}}. If you give any explanation DO NOT USE THE TAGS.\n";
+//const CHOICE_TEMPLATE : &str = r#"
+//Your reply MUST BE EXACTLY ONE of the following tags: {{{choice_tags}}} to represent your choice from the following choices: {{{choices}}}.
+//You can give explanation later WITHOUT USING TAGS IN THE EXPLANATION.
+//"#;
 const NO_CHOICE_MESSAGE: &str = "[No choice was taken - {{reply}}].";
 const MANY_CHOICES_MESSAGE: &str = "[Many choices were taken - {{reply}}].";
+
+const CHOICE_TEMPLATE : &str = r#"
+
+INSTRUCTIONS:
+You must choose one option in {{{choices}}}.
+First, reason on the choice.
+
+Then, provide your answer in this EXACT format:
+
+CHOICE: [YOUR_CHOICE]
+REASONING: [Your explanation]
+
+Rules:
+- YOUR_CHOICE must be exactly one of {{{choice_tags}}} to represent choices {{{choices}}}
+- Use the § symbol (required for parsing)
+- Do NOT use § anywhere except in the CHOICE line
+- Keep reasoning clear and concise
+"#;

@@ -409,7 +409,7 @@ impl AnswerPolicy {
     ///
     /// A `String` representing the unique choice tag.
     fn choice_tag_from_choice(choice: &str) -> String {
-        format!("§{}§", choice)
+        format!("§{}", choice)
     }
 }
 

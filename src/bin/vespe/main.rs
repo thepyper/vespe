@@ -321,6 +321,26 @@ fn display_answer_analysis(analysis: &AnchorAnalysis, answer_anchor_count: usize
             "+ Reply:  +++++++++++++++++++++++++++++++++++++++++++++++++++\n{}",
             reply_display
         );
+
+        if state.reply != state.raw_reply {
+            let raw_reply_display = if state.reply.len() > truncation_limit {
+                format!(
+                    "{:.limit$}...",
+                    state
+                        .raw_reply
+                        .chars()
+                        .take(truncation_limit)
+                        .collect::<String>(),
+                    limit = truncation_limit
+                )
+            } else {
+                state.raw_reply.clone()
+            };
+            println!(
+                "+ Raw Reply:  +++++++++++++++++++++++++++++++++++++++++++++++\n{}",
+                raw_reply_display
+            );
+        }
     }
 }
 

@@ -97,11 +97,11 @@ pub(crate) fn _try_parse_enclosed_string<'doc>(
 pub(crate) fn _try_parse_nude_value<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(serde_json::Value, Parser<'doc>)>> {
-    if let Some(x) = _try_parse_nude_float(parser)? {
-        return Ok(Some((json!(x), p)));
+    if let Some((x, p)) = _try_parse_nude_float(parser)? {
+        return Ok(Some((x, p)));
     }
     if let Some((x, p)) = _try_parse_nude_integer(parser)? {
-        return Ok(Some((json!(x), p)));
+        return Ok(Some((x, p)));
     }
     if let Some((x, p)) = _try_parse_nude_bool(parser)? {
         return Ok(Some((json!(x), p)));

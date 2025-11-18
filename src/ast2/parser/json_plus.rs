@@ -48,10 +48,10 @@ pub(crate) fn _try_parse_jsonplus_object<'doc>(
                     );
                     p1 = p4;
                 } else if let Some((x, p4)) = super::values::_try_parse_nude_float(&p3)? {
-                    properties.insert(key, JsonPlusEntity::Float(x));
+                    properties.insert(key, JsonPlusEntity::Float(x.as_f64().unwrap_or_default()));
                     p1 = p4
                 } else if let Some((x, p4)) = super::values::_try_parse_nude_integer(&p3)? {
-                    properties.insert(key, JsonPlusEntity::Integer(x));
+                    properties.insert(key, JsonPlusEntity::Integer(x.as_i64().unwrap_or_default()));
                     p1 = p4
                 } else if let Some((x, p4)) = super::values::_try_parse_nude_bool(&p3)? {
                     properties.insert(key, JsonPlusEntity::Boolean(x));
@@ -125,10 +125,10 @@ pub(crate) fn _try_parse_jsonplus_array<'doc>(
             array.push(JsonPlusEntity::DoubleQuotedString(double_quoted_content));
             p1 = p4;
         } else if let Some((x, p4)) = super::values::_try_parse_nude_float(&p1)? {
-            array.push(JsonPlusEntity::Float(x));
+            array.push(JsonPlusEntity::Float(x.as_f64().unwrap_or_default()));
             p1 = p4
         } else if let Some((x, p4)) = super::values::_try_parse_nude_integer(&p1)? {
-            array.push(JsonPlusEntity::Integer(x));
+            array.push(JsonPlusEntity::Integer(x.as_i64().unwrap_or_default()));
             p1 = p4
         } else if let Some((x, p4)) = super::values::_try_parse_nude_bool(&p1)? {
             array.push(JsonPlusEntity::Boolean(x));

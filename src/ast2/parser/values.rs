@@ -54,39 +54,84 @@ pub(crate) fn _try_parse_enclosed_string<'doc>(
     let mut value = String::new();
     let mut current_parser = parser.clone();
 
-    if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
-        current_parser = p;
-        loop {
-            if let Some(p) = current_parser.consume_matching_string_immutable("\\\"") {
-                value.push('"');
-                current_parser = p;
-            } else if let Some(p) = current_parser.consume_matching_string_immutable("\'") {
-                value.push('\'');
-                current_parser = p;
-            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
-                value.push('\n');
-                current_parser = p;
-            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
-                value.push('\r');
-                current_parser = p;
-            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
-                value.push('\t');
-                current_parser = p;
-            } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
-                value.push('\\');
-                current_parser = p;
-            } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
-                return Ok(Some((value, p)));
-            } else if current_parser.is_eod() {
-                return Err(Ast2Error::UnclosedString {
-                    position: begin_pos,
-                });
-            } else {
-                match current_parser.advance_immutable() {
-                    None => unreachable!("Checked is_eod() already"),
-                    Some((x, p)) => {
-                        value.push(x);
-                        current_parser = p;
+    if closure.len() == 1 {
+        let closure_char = closure.chars().next().unwrap();
+        if let Some(p) = current_parser.consume_matching_char_immutable(closure_char) {
+            current_parser = p;
+            loop {
+                if let Some(p_backslash) = current_parser.consume_matching_char_immutable('\\') {
+                    if let Some((escaped_char, p_after_escaped)) = p_backslash.advance_immutable() {
+                        match escaped_char {
+                            '"' => { value.push('"'); current_parser = p_after_escaped; }
+                            '\'' => { value.push('\''); current_parser = p_after_escaped; }
+                            'n' => { value.push('\n'); current_parser = p_after_escaped; }
+                            'r' => { value.push('\r'); current_parser = p_after_escaped; }
+                            't' => { value.push('\t'); current_parser = p_after_escaped; }
+                            '\\' => { value.push('\\'); current_parser = p_after_escaped; }
+                            _ => {
+                                // If it's an unknown escape sequence, treat '\' as a literal character
+                                value.push('\\');
+                                value.push(escaped_char);
+                                current_parser = p_after_escaped;
+                            }
+                        }
+                    } else {
+                        // Backslash at EOD, treat as literal backslash
+                        value.push('\\');
+                        current_parser = p_backslash;
+                    }
+                } else if let Some(p) = current_parser.consume_matching_char_immutable(closure_char) {
+                    return Ok(Some((value, p)));
+                } else if current_parser.is_eod() {
+                    return Err(Ast2Error::UnclosedString {
+                        position: begin_pos,
+                    });
+                } else {
+                    match current_parser.advance_immutable() {
+                        None => unreachable!("Checked is_eod() already"),
+                        Some((x, p)) => {
+                            value.push(x);
+                            current_parser = p;
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
+            current_parser = p;
+            loop {
+                if let Some(p) = current_parser.consume_matching_string_immutable("\\\"") {
+                    value.push('"');
+                    current_parser = p;
+                } else if let Some(p) = current_parser.consume_matching_string_immutable("\'") {
+                    value.push('\'');
+                    current_parser = p;
+                } else if let Some(p) = current_parser.consume_matching_string_immutable("\\n") {
+                    value.push('\n');
+                    current_parser = p;
+                } else if let Some(p) = current_parser.consume_matching_string_immutable("\\r") {
+                    value.push('\r');
+                    current_parser = p;
+                } else if let Some(p) = current_parser.consume_matching_string_immutable("\\t") {
+                    value.push('\t');
+                    current_parser = p;
+                } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
+                    value.push('\\');
+                    current_parser = p;
+                } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
+                    return Ok(Some((value, p)));
+                } else if current_parser.is_eod() {
+                    return Err(Ast2Error::UnclosedString {
+                        position: begin_pos,
+                    });
+                } else {
+                    match current_parser.advance_immutable() {
+                        None => unreachable!("Checked is_eod() already"),
+                        Some((x, p)) => {
+                            value.push(x);
+                            current_parser = p;
+                        }
                     }
                 }
             }

@@ -210,7 +210,7 @@ pub(crate) fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tex
     loop {
         match p_current.advance_immutable() {
             None => break, // EOD
-            Some((\'n\', p_next)) => {
+            Some(('\n', p_next)) => {
                 content.push('\n');
                 p_current = p_next;
                 break; // Consumed newline and stopped

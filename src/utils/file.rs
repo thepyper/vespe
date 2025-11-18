@@ -96,7 +96,8 @@ impl ProjectFileAccessor {
             .modified_files_comments
             .join("\n"))
     }
-            let mut mutable = self.mutable.lock().map_err(|_| Error::MutexPoisoned)?;
+    pub fn commit(&self, title_message: Option<String>) -> Result<(), Error> {
+        let mut mutable = self.mutable.lock().map_err(|_| Error::MutexPoisoned)?;
         if !mutable.modified_files.is_empty() {
             let message_1 = match title_message {
                 Some(x) => format!("{}\n", x),

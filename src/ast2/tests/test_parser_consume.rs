@@ -1,4 +1,4 @@
-use crate::ast2::parser::Parser;
+use super::*;
 
 #[test]
 fn test_parser_consume_char_if() {

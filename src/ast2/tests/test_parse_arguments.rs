@@ -1,11 +1,10 @@
-
-use crate::ast2::parser::Parser;
-use crate::ast2::parser::arguments;
+use super::*;
 
 #[test]
 fn test_try_parse_arguments_single() {
-    let parser = Parser::new("'arg1' ");
-    let (args, p_next) = arguments::_try_parse_arguments(&parser).unwrap().unwrap();
+    let doc = "'arg1' ";
+    let parser = Parser::new(doc);
+    let (args, p_next) = super::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 1);
     assert_eq!(args.arguments[0].value, "arg1");
     assert_eq!(p_next.remain(), " ");
@@ -17,8 +16,9 @@ fn test_try_parse_arguments_single() {
 
 #[test]
 fn test_try_parse_arguments_multiple() {
-    let parser = Parser::new("'arg1' \"arg2\" nude_arg ");
-    let (args, p_next) = arguments::_try_parse_arguments(&parser).unwrap().unwrap();
+    let doc = "'arg1' \"arg2\" nude_arg ";
+    let parser = Parser::new(doc);
+    let (args, p_next) = super::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 3);
     assert_eq!(args.arguments[0].value, "arg1");
     assert_eq!(args.arguments[1].value, "arg2");
@@ -37,15 +37,17 @@ fn test_try_parse_arguments_multiple() {
 
 #[test]
 fn test_try_parse_arguments_empty() {
-    let parser = Parser::new("");
-    let result = arguments::_try_parse_arguments(&parser).unwrap();
+    let doc = "";
+    let parser = Parser::new(doc);
+    let result = super::_try_parse_arguments(&parser).unwrap();
     assert!(result.is_none());
 }
 
 #[test]
 fn test_try_parse_arguments_with_anchor_end() {
-    let parser = Parser::new("'arg1' --> rest");
-    let (args, p_next) = arguments::_try_parse_arguments(&parser).unwrap().unwrap();
+    let doc = "'arg1' --> rest";
+    let parser = Parser::new(doc);
+    let (args, p_next) = super::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 1);
     assert_eq!(args.arguments[0].value, "arg1");
     assert_eq!(p_next.remain(), " --> rest");

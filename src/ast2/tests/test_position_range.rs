@@ -1,5 +1,5 @@
 use super::utils::{create_position, create_range};
-use crate::ast2::model::core::{Position, Range};
+use super::*;
 
 #[test]
 fn test_position_is_valid() {

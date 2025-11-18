@@ -30,10 +30,10 @@
 //! @repeat
 //! ```
 //!
-//! in this example, the '@repeat' tag would cause the '@answer' block to be
+//! In this example, the `@repeat` tag would cause the `@answer` block to be
 //! re-executed, generating a new code snippet.
 //!
-//! Similarly, with '@inline' tags:
+//! Similarly, with `@inline` tags:
 //!
 //! ```markdown
 //! @inline

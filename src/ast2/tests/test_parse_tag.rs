@@ -1,10 +1,11 @@
 use crate::ast2::model::core::CommandKind;
 use crate::ast2::parser::Parser;
 use crate::ast2::parser::tags_anchors;
-use serde_json::json;
+
 
 #[test]
 fn test_try_parse_tag_simple() {
+    let parser = Parser::new("@tag ");
     let (tag, p_next) = tags_anchors::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Tag);
     assert!(tag.parameters.parameters.properties.is_empty());
@@ -18,6 +19,7 @@ fn test_try_parse_tag_simple() {
 
 #[test]
 fn test_try_parse_tag_with_parameters() {
+    let parser = Parser::new("@include {file=\"path/to/file.txt\"} ");
     let (tag, p_next) = tags_anchors::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Include);
     assert_eq!(tag.parameters.parameters.properties.len(), 1);
@@ -32,6 +34,7 @@ fn test_try_parse_tag_with_parameters() {
 
 #[test]
 fn test_try_parse_tag_with_arguments() {
+    let parser = Parser::new("@inline 'arg1' \"arg2\" ");
     let (tag, p_next) = tags_anchors::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Inline);
     assert!(tag.parameters.parameters.properties.is_empty());
@@ -47,6 +50,7 @@ fn test_try_parse_tag_with_arguments() {
 
 #[test]
 fn test_try_parse_tag_with_parameters_and_arguments() {
+    let parser = Parser::new("@answer {id:123} 'arg1' ");
     let (tag, p_next) = tags_anchors::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Answer);
     assert_eq!(tag.parameters.parameters.properties.len(), 1);
@@ -62,18 +66,21 @@ fn test_try_parse_tag_with_parameters_and_arguments() {
 
 #[test]
 fn test_try_parse_tag_no_at_sign() {
+    let parser = Parser::new("tag ");
     let result = tags_anchors::_try_parse_tag(&parser).unwrap();
     assert!(result.is_none());
 }
 
 #[test]
 fn test_try_parse_tag_invalid_command() {
+    let parser = Parser::new("@invalid ");
     let result = tags_anchors::_try_parse_tag(&parser).unwrap();
     assert!(result.is_none());
 }
 
 #[test]
 fn test_try_parse_tag_with_eol() {
+    let parser = Parser::new("@tag\nrest");
     let (tag, p_next) = tags_anchors::_try_parse_tag(&parser).unwrap().unwrap();
     assert_eq!(tag.command, CommandKind::Tag);
     assert_eq!(p_next.remain(), "rest");

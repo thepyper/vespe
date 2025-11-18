@@ -3,6 +3,7 @@ use crate::ast2::parser::Parser;
 use crate::ast2::parser::values;
 use serde_json::json;
 
+
 #[test]
 fn test_try_parse_enclosed_string_double_quote() {
     let doc = r#""hello world" rest"#;
@@ -70,6 +71,8 @@ fn test_try_parse_enclosed_value_single_quote() {
 
 #[test]
 fn test_try_parse_value_enclosed() {
+    let parser_double = Parser::new(r#""double quoted" rest"#);
+    let parser_single = Parser::new("'single quoted' rest");
     let (value_double, p_next_double) = values::_try_parse_value(&parser_double).unwrap().unwrap();
     assert_eq!(value_double, json!("double quoted"));
     assert_eq!(p_next_double.remain(), " rest");

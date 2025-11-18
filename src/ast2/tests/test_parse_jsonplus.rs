@@ -1,10 +1,12 @@
-use crate::ast2::parser::Parser;
+
 use crate::ast2::parser::json_plus;
 use serde_json::json;
+use crate::ast2::parser::Parser;
 
 #[test]
 fn test_try_parse_jsonplus_object() {
     let doc = "{ a:a, b:b, c:1, d:'d', e:\"e\", f, g: 5.0, h:false, i:true, j: [1,2,3,4,5], k: { s:s, t:t } }";
+    let parser = Parser::new(doc);
     //let doc = "{ x:5 }";
     let (value, p_next) = json_plus::_try_parse_jsonplus_object(&parser).unwrap().unwrap();
     // TODO assert
@@ -15,6 +17,7 @@ fn test_try_parse_jsonplus_object() {
 #[test]
 fn test_try_parse_jsonplus_array() {
     let doc = "[ a, 'b', \"c\", 1, 2.2, 3.123, true, false, { a:a, b:b }, [ 1,2,3,4,5,6,7, ] ]";
+    let parser = Parser::new(doc);
     //let doc = "{ x:5 }";
     let (value, p_next) = json_plus::_try_parse_jsonplus_array(&parser).unwrap().unwrap();
     // TODO assert

@@ -1,8 +1,10 @@
+
 use crate::ast2::parser::Parser;
 use crate::ast2::parser::arguments;
 
 #[test]
 fn test_try_parse_arguments_single() {
+    let parser = Parser::new("'arg1' ");
     let (args, p_next) = arguments::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 1);
     assert_eq!(args.arguments[0].value, "arg1");
@@ -15,6 +17,7 @@ fn test_try_parse_arguments_single() {
 
 #[test]
 fn test_try_parse_arguments_multiple() {
+    let parser = Parser::new("'arg1' \"arg2\" nude_arg ");
     let (args, p_next) = arguments::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 3);
     assert_eq!(args.arguments[0].value, "arg1");
@@ -34,12 +37,14 @@ fn test_try_parse_arguments_multiple() {
 
 #[test]
 fn test_try_parse_arguments_empty() {
+    let parser = Parser::new("");
     let result = arguments::_try_parse_arguments(&parser).unwrap();
     assert!(result.is_none());
 }
 
 #[test]
 fn test_try_parse_arguments_with_anchor_end() {
+    let parser = Parser::new("'arg1' --> rest");
     let (args, p_next) = arguments::_try_parse_arguments(&parser).unwrap().unwrap();
     assert_eq!(args.arguments.len(), 1);
     assert_eq!(args.arguments[0].value, "arg1");

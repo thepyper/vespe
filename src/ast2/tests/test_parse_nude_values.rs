@@ -4,6 +4,7 @@ use serde_json::json;
 
 #[test]
 fn test_try_parse_nude_integer() {
+    let parser = Parser::new("123 rest");
     let (value, p_next) = values::_try_parse_nude_integer(&parser).unwrap().unwrap();
     assert_eq!(value, 123);
     assert_eq!(p_next.remain(), " rest");
@@ -23,6 +24,7 @@ fn test_try_parse_nude_integer() {
 
 #[test]
 fn test_try_parse_nude_float() {
+    let parser = Parser::new("123.45 rest");
     let (value, p_next) = values::_try_parse_nude_float(&parser).unwrap().unwrap();
     assert_eq!(value, 123.45);
     assert_eq!(p_next.remain(), " rest");
@@ -48,10 +50,12 @@ fn test_try_parse_nude_float() {
 
 #[test]
 fn test_try_parse_nude_bool() {
+    let parser_true = Parser::new("true rest");
     let (value_true, p_next_true) = values::_try_parse_nude_bool(&parser_true).unwrap().unwrap();
     assert_eq!(value_true, true);
     assert_eq!(p_next_true.remain(), " rest");
 
+    let parser_false = Parser::new("false rest");
     let (value_false, p_next_false) = values::_try_parse_nude_bool(&parser_false).unwrap().unwrap();
     assert_eq!(value_false, false);
     assert_eq!(p_next_false.remain(), " rest");
@@ -65,6 +69,7 @@ fn test_try_parse_nude_bool() {
 
 #[test]
 fn test_try_parse_nude_string() {
+    let parser = Parser::new("hello/world.txt_123 rest");
     let (value, p_next) = values::_try_parse_nude_string(&parser).unwrap().unwrap();
     assert_eq!(value, "hello/world.txt_123");
     assert_eq!(p_next.remain(), " rest");
@@ -86,18 +91,22 @@ fn test_try_parse_nude_string() {
 
 #[test]
 fn test_try_parse_value_nude() {
+    let parser_int = Parser::new("123 rest");
     let (value_int, p_next_int) = values::_try_parse_value(&parser_int).unwrap().unwrap();
     assert_eq!(value_int, json!(123));
     assert_eq!(p_next_int.remain(), " rest");
 
+    let parser_float = Parser::new("123.45 rest");
     let (value_float, p_next_float) = values::_try_parse_value(&parser_float).unwrap().unwrap();
     assert_eq!(value_float, json!(123.45));
     assert_eq!(p_next_float.remain(), " rest");
 
+    let parser_bool = Parser::new("true rest");
     let (value_bool, p_next_bool) = values::_try_parse_value(&parser_bool).unwrap().unwrap();
     assert_eq!(value_bool, json!(true));
     assert_eq!(p_next_bool.remain(), " rest");
 
+    let parser_string = Parser::new("nude_string rest");
     let (value_string, p_next_string) = values::_try_parse_value(&parser_string).unwrap().unwrap();
     assert_eq!(value_string, json!("nude_string"));
     assert_eq!(p_next_string.remain(), " rest");

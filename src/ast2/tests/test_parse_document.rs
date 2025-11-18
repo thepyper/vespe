@@ -2,7 +2,6 @@ use crate::ast2::model::core::{AnchorKind, CommandKind, Content};
 use crate::ast2::error::Ast2Error;
 use crate::ast2::parser::Parser;
 use crate::ast2::parser::document;
-use serde_json::json;
 use uuid::Uuid;
 
 #[test]
@@ -12,7 +11,7 @@ fn test_parse_content_mixed() {
         "Some text\n@tag {{param=1}} 'arg1'\n<!-- include-{}:begin -->\nmore text",
         uuid_str
     );
-    let (content_vec, p_next) = document::parse_content(parser).unwrap();
+    let (content_vec, p_next) = document::parse_content(Parser::new(&doc)).unwrap();
 
     assert_eq!(content_vec.len(), 4);
 
@@ -67,21 +66,23 @@ fn test_parse_content_mixed() {
 
 #[test]
 fn test_parse_document_simple() {
-    let document = document::parse_document(doc).unwrap();
+    let document_str = "Some text";
+    let document = document::parse_document(document_str).unwrap();
     assert_eq!(document.content.len(), 1);
     if let Content::Text(text) = &document.content[0] {
         assert_eq!(text.range.begin.offset, 0);
-        assert_eq!(text.range.end.offset, doc.len());
+        assert_eq!(text.range.end.offset, document_str.len());
     } else {
         panic!("Expected Text");
     }
     assert_eq!(document.range.begin.offset, 0);
-    assert_eq!(document.range.end.offset, doc.len());
+    assert_eq!(document.range.end.offset, document_str.len());
 }
 
 #[test]
 fn test_parse_document_empty() {
-    let document = document::parse_document(doc).unwrap();
+    let document_str = "";
+    let document = document::parse_document(document_str).unwrap();
     assert!(document.content.is_empty());
     assert_eq!(document.range.begin.offset, 0);
     assert_eq!(document.range.end.offset, 0);
@@ -89,7 +90,8 @@ fn test_parse_document_empty() {
 
 #[test]
 fn test_parse_document_with_error() {
-    let result = document::parse_document(doc);
+    let document_str = "@tag {param=}"; // This will cause a MissingParameterValue error
+    let result = document::parse_document(document_str);
     assert!(matches!(
         result,
         Err(Ast2Error::MissingParameterValue { .. })

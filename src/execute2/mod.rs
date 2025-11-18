@@ -87,6 +87,7 @@ pub use execute::execute_context;
 
 const TASK_ANCHOR_PLACEHOLDER: &str =
     "Execute only the next instruction exactly as given — treat it as a single isolated step; do not infer, continue, or perform any other action beyond it.";
-const CHOICE_TEMPLATE : &str = "You MUST reply with ONLY ONE of the following choices: {{{choices}}}.\nYou MUST represent these in your output with ONLY ONE of the following tags {{{choice_tags}}}.\n";
-const NO_CHOICE_MESSAGE: &str = "No choice was taken.";
-const MANY_CHOICES_MESSAGE: &str = "Many choices were taken.";
+//const CHOICE_TEMPLATE : &str = "You MUST reply with ONLY ONE of the following choices: {{{choices}}}.\nYou MUST represent these in your output with ONLY ONE of the following tags {{{choice_tags}}}.\n";
+const CHOICE_TEMPLATE : &str = "You MUST reply EXACTLY WITH ONLY ONE of the following tags: {{{choice_tags}}} which represent the following choices: {{{choices}}}.\n";
+const NO_CHOICE_MESSAGE: &str = "[No choice was taken - {{reply}}].";
+const MANY_CHOICES_MESSAGE: &str = "[Many choices were taken - {{reply}}].";

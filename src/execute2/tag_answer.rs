@@ -341,7 +341,7 @@ impl AnswerPolicy {
                     super::CHOICE_TEMPLATE,
                     &json!({ "choices": json_choices, "choice_tags": choice_tags }),
                 )?;
-                let postfix = ModelContentItem::system(&postfix);
+                let postfix = ModelContentItem::merge_upstream(&postfix);
                 let postfix = ModelContent::from_item(postfix);
                 Ok(worker.postfix_content(content, postfix))
             }
@@ -377,10 +377,16 @@ impl AnswerPolicy {
                         }
                     })
                     .collect::<Vec<String>>();
+                let handlebars = Handlebars::new();
+
                 let response = match choice_tags.len() {
-                    1 => choice_tags.get(0).expect("There is one element!"),
-                    0 => super::NO_CHOICE_MESSAGE,
-                    _ => super::MANY_CHOICES_MESSAGE,
+                    1 => choice_tags.get(0).expect("There is one element!").to_string(),
+                    0 => handlebars
+                        .render_template(super::NO_CHOICE_MESSAGE, &json!({ "reply": response }))?,
+                    _ => handlebars.render_template(
+                        super::MANY_CHOICES_MESSAGE,
+                        &json!({ "reply": response }),
+                    )?,
                 };
                 Ok(format!("{}\n", response))
             }

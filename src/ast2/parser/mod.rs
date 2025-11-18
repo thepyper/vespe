@@ -1,5 +1,6 @@
 pub(crate) mod document;
 pub(crate) mod tags_anchors;
+pub(crate) mod parameters;
 
 use std::str::Chars;
 

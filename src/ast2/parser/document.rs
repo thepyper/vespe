@@ -40,8 +40,6 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
             });
         }
 
-        // TODO: Replace with actual calls to _try_parse_tag, _try_parse_anchor, _try_parse_text
-        // For now, these are placeholders to allow compilation.
         if let Some((tag, p_next)) = super::tags_anchors::_try_parse_tag(&p_current)? {
             contents.push(Content::Tag(tag));
             p_current = p_next;

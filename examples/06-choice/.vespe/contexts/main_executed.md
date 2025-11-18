@@ -2,13 +2,13 @@
     _1: "Run this with 'vespe context run main'.",
 }
 
-Given the following choices, which disk would you wipe? Think step-by-step!
+Given the following choices, which disk would you wipe? Why? Think step-by-step!
 
 C - system drive
 D - my all works drive
 E - my spare drive, almost empty
 
-<!-- answer-552403c3-eded-4b37-9b64-b6fd25f4e449:begin +completed+ {
+<!-- answer-a84dca00-7ffc-49e6-bd96-a20a8c3a7cba:begin +completed+ {
 	choose: {
 		C: 'format C:',
 		D: 'format D:',
@@ -16,17 +16,17 @@ E - my spare drive, almost empty
 	},
 	provider: 'ollama run qwen2.5:1.5b'
 }  -->
-format C:
-<!-- answer-552403c3-eded-4b37-9b64-b6fd25f4e449:end  {}  -->
+format D:
+<!-- answer-a84dca00-7ffc-49e6-bd96-a20a8c3a7cba:end  {}  -->
 
 Are you sure?
 
-<!-- answer-2b3409a8-12c0-4e47-89e4-2f81dbe8a231:begin +completed+ {
+<!-- answer-162a7c85-ce99-40f8-a9ba-53f489955d04:begin +completed+ {
 	choose: {
 		no: 'Let me think about it...',
 		yes: 'Of course!'
 	},
 	provider: 'ollama run qwen2.5:1.5b'
 }  -->
-Let me think about it...
-<!-- answer-2b3409a8-12c0-4e47-89e4-2f81dbe8a231:end  {}  -->
+Of course!
+<!-- answer-162a7c85-ce99-40f8-a9ba-53f489955d04:end  {}  -->

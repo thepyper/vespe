@@ -4,6 +4,7 @@ pub(crate) mod parameters;
 pub(crate) mod json_plus;
 pub(crate) mod arguments;
 pub(crate) mod values;
+pub(crate) mod tests;
 
 use std::str::Chars;
 

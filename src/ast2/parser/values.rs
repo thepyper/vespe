@@ -72,7 +72,7 @@ pub(crate) fn _try_parse_enclosed_string<'doc>(
                 value.push('\t');
                 current_parser = p;
             } else if let Some(p) = current_parser.consume_matching_string_immutable("\\\\") {
-                value.push('\');
+                value.push('\\');
                 current_parser = p;
             } else if let Some(p) = current_parser.consume_matching_string_immutable(closure) {
                 return Ok(Some((value, p)));

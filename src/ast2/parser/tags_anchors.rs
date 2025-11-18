@@ -67,8 +67,7 @@ pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag,
     let p7 = p6.skip_many_whitespaces_immutable();
 
     // Consume EOL if it's there, but don't fail if it's not (e.g. end of file)
-    let p8 = p7.consume_matching_char_immutable('
-').unwrap_or(p7);
+    let p8 = p7.consume_matching_char_immutable('\n').unwrap_or(p7);
 
     let end = p8.get_position();
 
@@ -199,8 +198,7 @@ pub(crate) fn _try_parse_anchor<'doc>(
     let p14 = p13.skip_many_whitespaces_immutable();
 
     // Consume EOL if it's there
-    let p15 = p14.consume_matching_char_immutable('
-').unwrap_or(p14);
+    let p15 = p14.consume_matching_char_immutable('\n').unwrap_or(p14);
 
     let end = p15.get_position();
 

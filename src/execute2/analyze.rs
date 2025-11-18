@@ -1,7 +1,7 @@
 use super::{tag_answer::AnswerState, tag_inline::InlineState, tag_task::TaskState, Result};
 use crate::ast2::{parse_document, Anchor, CommandKind, Content};
-use crate::file::FileAccessor;
-use crate::path::PathResolver;
+use crate::utils::file::FileAccessor;
+use crate::utils::path::PathResolver;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;

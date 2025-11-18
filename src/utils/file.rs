@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use uuid::{uuid, Uuid};
 
-use super::editor::EditorCommunicator;
+use crate::editor::EditorCommunicator;
 use super::git::git_commit_files;
 use crate::error::Error;
 

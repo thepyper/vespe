@@ -12,8 +12,8 @@ use crate::ast2::{
 use crate::execute2::content::{ModelContent, ModelContentItem, PromptConfig, PromptFormat};
 use crate::execute2::tag_answer::AnswerStatus;
 use crate::execute2::tags::TagBehaviorDispatch;
-use crate::file::FileAccessor;
-use crate::path::PathResolver;
+use crate::utils::file::FileAccessor;
+use crate::utils::path::PathResolver;
 
 use handlebars::Handlebars;
 use sha2::{Digest, Sha256};
@@ -910,7 +910,7 @@ impl Worker {
         context_path: &Path,
         data: Option<&JsonPlusObject>,
     ) -> Result<(bool, Collector)> {
-        let _lock = crate::file::FileLock::new(self.file_access.clone(), context_path)?;
+        let _lock = crate::utils::file::FileLock::new(self.file_access.clone(), context_path)?;
         self._pass_internal(collector, context_path, false, data)
     }
 

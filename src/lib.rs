@@ -5,9 +5,10 @@ pub mod constants;
 pub mod editor;
 pub mod error;
 pub mod execute2;
-pub mod file;
-pub mod git;
-pub mod path;
+pub mod utils;
+
+
+
 pub mod project;
 
 pub fn init_telemetry() {

@@ -1,8 +1,8 @@
 use crate::ast2::{JsonPlusEntity, JsonPlusObject};
 use crate::constants::{CTX_DIR_NAME, CTX_ROOT_FILE_NAME, METADATA_DIR_NAME};
 use crate::execute2::{ContextAnalysis, ModelContent};
-use crate::file::{FileAccessor, ProjectFileAccessor};
-use crate::path::{PathResolver, ProjectPathResolver};
+use crate::utils::file::{FileAccessor, ProjectFileAccessor};
+use crate::utils::path::{PathResolver, ProjectPathResolver};
 
 use std::sync::Arc;
 
@@ -68,7 +68,7 @@ impl Project {
 
         let mut project_config = ProjectConfig::default();
 
-        project_config.git_integration_enabled = super::git::is_in_git_repository(&ctx_dir)?;
+        project_config.git_integration_enabled = crate::utils::git::is_in_git_repository(&ctx_dir)?;
 
         let file_access = Arc::new(ProjectFileAccessor::new(root_path, None));
         let path_res = Arc::new(ProjectPathResolver::new(

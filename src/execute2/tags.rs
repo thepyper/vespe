@@ -6,7 +6,7 @@ use super::{ExecuteError, Result};
 
 use serde::{Deserialize, Serialize};
 
-use super::content::{ModelContent, ModelContentItem};
+use super::content::ModelContent;
 use super::execute::Collector;
 use super::execute::Worker;
 
@@ -634,7 +634,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             input_hash,
         };
         let mono_result = P::mono(mono_inputs)?;
-        let mut collector = mono_result.collector;
+        let collector = mono_result.collector;
         let mut patches = mono_result.new_patches;
         // If there is a new state, save it
         if let Some(new_state) = mono_result.new_state {
@@ -716,7 +716,7 @@ impl<P: DynamicPolicy> TagBehavior for DynamicTagBehavior<P> {
             input_hash,
         };
         let mono_result = P::mono(mono_inputs)?;
-        let mut collector = mono_result.collector;
+        let collector = mono_result.collector;
         // If there is some patches, just discard them and new state as well as it cannot be applied
         if !mono_result.new_patches.is_empty() {
             panic!("Warning, anchor produced some patches even on readonly phase.\nAnchor = {:?}\nPatches = {:?}\n", anchor_begin, mono_result.new_patches);

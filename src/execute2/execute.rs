@@ -703,10 +703,11 @@ impl Worker {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let data = match parameters.get("prefix_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(_) => {
-                        return Err(ExecuteError::UnsupportedPrefixData {
-                            range: parameters.range,
-                        });
+                    Some(x) => {
+                        return Err(ExecuteError::UnsupportedParameterValue(format!(
+                            "bad prefix_data: {:?}",
+                            x
+                        )));
                     }
                     None => None,
                 };
@@ -715,9 +716,10 @@ impl Worker {
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
             }
-            Some(_) => Err(ExecuteError::UnsupportedPrefix {
-                range: parameters.range,
-            }),
+            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
+                "bad prefix: {:?}",
+                x
+            ))),
             None => Ok(content),
         }
     }
@@ -773,10 +775,11 @@ impl Worker {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let data = match parameters.get("postfix_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(_) => {
-                        return Err(ExecuteError::UnsupportedPostfixData {
-                            range: parameters.range,
-                        });
+                    Some(x) => {
+                        return Err(ExecuteError::UnsupportedParameterValue(format!(
+                            "bad postfix_data: {:?}",
+                            x
+                        )));
                     }
                     None => None,
                 };
@@ -785,9 +788,10 @@ impl Worker {
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))
             }
-            Some(_) => Err(ExecuteError::UnsupportedPostfix {
-                range: parameters.range,
-            }),
+            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
+                "bad postfix: {:?}",
+                x
+            ))),
             None => Ok(content),
         }
     }
@@ -827,15 +831,14 @@ impl Worker {
                 | JsonPlusEntity::SingleQuotedString(x)
                 | JsonPlusEntity::DoubleQuotedString(x),
             ) => x,
-            Some(_) => {
-                return Err(ExecuteError::UnsupportedProvider {
-                    range: parameters.range,
-                });
+            Some(x) => {
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "bad provider: {:?}",
+                    x
+                )));
             }
             None => {
-                return Err(ExecuteError::MissingProvider {
-                    range: parameters.range,
-                });
+                return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
         let prompt_config = PromptConfig {
@@ -970,12 +973,9 @@ impl Worker {
                             collector = collector.push_item(ModelContentItem::user(&text.content));
                         } else {
                             // Unedited content, then it's assistant
-                            let latest_agent_hash =
-                                collector.latest_agent_hash().unwrap_or(String::new());
-                            collector = collector.push_item(ModelContentItem::agent(
-                                &latest_agent_hash,
-                                &text.content,
-                            ));
+                            let agent_hash = collector.latest_agent_hash();
+                            collector = collector
+                                .push_item(ModelContentItem::agent(agent_hash, &text.content));
                         }
                     } else {
                         // User writes outside answer anchors
@@ -1394,10 +1394,11 @@ impl Worker {
                 let output_path = self.path_res.resolve_output_file(&x)?;
                 return Ok(Some(output_path));
             }
-            Some(_) => {
-                return Err(ExecuteError::UnsupportedOutput {
-                    range: parameters.range,
-                });
+            Some(x) => {
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "output: {:?}",
+                    x
+                )));
             }
             None => {
                 return Ok(None);
@@ -1474,10 +1475,11 @@ impl Worker {
             Some(JsonPlusEntity::NudeString(x)) => {
                 let data = match parameters.get("input_data") {
                     Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(_) => {
-                        return Err(ExecuteError::UnsupportedInputData {
-                            range: parameters.range,
-                        });
+                    Some(x) => {
+                        return Err(ExecuteError::UnsupportedParameterValue(format!(
+                            "bad input_data: {:?}",
+                            x
+                        )));
                     }
                     None => None,
                 };
@@ -1485,10 +1487,11 @@ impl Worker {
                 let input_hash = Collector::normalized_hash(&input.to_string());
                 Ok((input, input_hash))
             }
-            Some(_) => {
-                return Err(ExecuteError::UnsupportedInput {
-                    range: parameters.range,
-                });
+            Some(x) => {
+                return Err(ExecuteError::UnsupportedParameterValue(format!(
+                    "input: {:?}",
+                    x
+                )));
             }
             None => {
                 return Ok((collector.context().clone(), collector.context_hash()));
@@ -1583,5 +1586,9 @@ impl Worker {
         tracing::debug!("data: {:?}", data);
         let context = handlebars.render_template(&context, &data)?;
         Ok(context)
+    }
+
+    pub fn read_file(&self, file_path: &Path) -> Result<String> {
+        Ok(self.file_access.read_file(file_path)?)
     }
 }

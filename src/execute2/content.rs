@@ -32,7 +32,7 @@ pub struct UserModelContent {
 /// and contextual responses.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentModelContent {
-    author: String,
+    author: Option<String>,
     text: String,
 }
 
@@ -96,9 +96,9 @@ impl ModelContentItem {
     /// # Returns
     ///
     /// A `ModelContentItem` variant containing the agent's text.
-    pub fn agent(author: &str, text: &str) -> Self {
+    pub fn agent(author: Option<String>, text: &str) -> Self {
         ModelContentItem::Agent(AgentModelContent {
-            author: author.into(),
+            author,
             text: text.into(),
         })
     }
@@ -280,8 +280,14 @@ impl ModelContent {
             ModelContentItem::Agent(content) => {
                 let text = content.text.trim();
                 if !text.is_empty() {
-                    if config.with_agent_names {
-                        let name = super::names::generate_name(&content.author);
+                    let name = match config.with_agent_names {
+                        false => None,
+                        true => content
+                            .author
+                            .clone()
+                            .map(|x| super::names::generate_name(&x)),
+                    };
+                    if let Some(name) = name {
                         format!("Assistant {}:\n{}\n", name, text)
                     } else {
                         format!("Assistant:\n{}\n", text)
@@ -378,7 +384,8 @@ impl ModelContent {
                         downstream_merges.clear();
                     }
 
-                    let new_item = ModelContentItem::agent(&agent_item.author, &current_text);
+                    let new_item =
+                        ModelContentItem::agent(agent_item.author.clone(), &current_text);
 
                     merged_items.push(new_item);
                 }

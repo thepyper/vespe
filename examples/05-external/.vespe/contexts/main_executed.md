@@ -3,7 +3,7 @@
 }
 
 @set { 
-    provider: 'gemini -y -m gemini-2.5-flash',
+    provider: 'ollama run gemma3:1b',
     prefix: agent/epoque.md,
     with_agent_names,
     with_invitation
@@ -11,26 +11,26 @@
 
 Tell me something that happened recently.
 
-<!-- answer-68139d3d-932d-41e8-8b90-21eda774a556:begin +completed+ {
+<!-- answer-f87f98fd-0966-4162-963d-687b3acae54d:begin +completed+ {
 	output: epoque/1200.txt,
 	prefix: agent/epoque.md,
 	prefix_data: { year: 1200 },
-	provider: 'gemini -y -m gemini-2.5-flash',
+	provider: 'ollama run gemma3:1b',
 	with_agent_names,
 	with_invitation
 }  -->
-<!-- answer-68139d3d-932d-41e8-8b90-21eda774a556:end  {}  -->
+<!-- answer-f87f98fd-0966-4162-963d-687b3acae54d:end  {}  -->
 
 Tell me something that happened recently.
 
-<!-- answer-da36b733-be80-4b70-b3c5-88624add4241:begin +completed+ {
+<!-- answer-4967f94e-52de-4d6d-9dbb-bc89d5d78d86:begin +completed+ {
 	output: epoque/1980.txt,
 	prefix: agent/epoque.md,
 	prefix_data: { year: 1980 },
-	provider: 'gemini -y -m gemini-2.5-flash',
+	provider: 'ollama run gemma3:1b',
 	with_agent_names,
 	with_invitation
 }  -->
-<!-- answer-da36b733-be80-4b70-b3c5-88624add4241:end  {}  -->
+<!-- answer-4967f94e-52de-4d6d-9dbb-bc89d5d78d86:end  {}  -->
 
 

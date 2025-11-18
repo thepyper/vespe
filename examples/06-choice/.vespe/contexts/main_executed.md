@@ -8,31 +8,27 @@ C - system drive
 D - my all works drive
 E - my spare drive, almost empty
 
-<!-- answer-99e6d200-0ca3-40ce-8199-471ed3d03447:begin +completed+ {
+<!-- answer-97c4b5a6-fa53-4a57-8c13-eaf88e0af4f7:begin +completed+ {
 	choose: {
 		C: 'format C:',
 		D: 'format D:',
 		E: 'format E:'
 	},
-	provider: 'ollama run gemma3:1b'
+	provider: 'ollama run qwen2.5:1.5b'
 }  -->
-[No choice was taken - E§
-
-
-].
-<!-- answer-99e6d200-0ca3-40ce-8199-471ed3d03447:end  {}  -->
+format E:
+<!-- answer-97c4b5a6-fa53-4a57-8c13-eaf88e0af4f7:end  {}  -->
 
 Are you sure?
 
-<!-- answer-3aee16dd-f4f4-40dc-99ec-c00db4039d51:begin +completed+ {
+<!-- answer-ec5178d7-d595-4d83-9f7b-0a23e5ee9615:begin +completed+ {
 	choose: {
 		no: 'Let me think about it...',
 		yes: 'Of course!'
 	},
-	provider: 'ollama run gemma3:1b'
+	provider: 'ollama run qwen2.5:1.5b'
 }  -->
-[No choice was taken - yes
-
+[No choice was taken - Yes
 
 ].
-<!-- answer-3aee16dd-f4f4-40dc-99ec-c00db4039d51:end  {}  -->
+<!-- answer-ec5178d7-d595-4d83-9f7b-0a23e5ee9615:end  {}  -->

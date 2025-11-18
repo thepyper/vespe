@@ -19,12 +19,14 @@ mod parse;
 mod model;
 
 pub use model::anchor::{Anchor, AnchorKind};
-pub use model::argument::{Argument, Arguments};
+pub use model::arguments::{Argument, Arguments};
 pub use model::command_kind::{CommandKind};
-pub use model::{Content, Document};
+pub use model::content::Content;
+pub use model::document::Document;
 pub use model::json_plus::{JsonPlusEntity, JsonPlusObject};
 pub use model::parameters::Parameters;
 pub use model::position::Position;
+pub use model::range::Range;
 pub use model::tag::Tag;
 pub use model::text::Text;
 

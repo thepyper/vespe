@@ -1,8 +1,28 @@
-use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
-use crate::error::Error;
-use anyhow::Result;
+use thiserror::Error as ThisError;
 use std::path::PathBuf;
+use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
 use uuid::Uuid;
+
+#[derive(Debug, ThisError)]
+pub enum Error {
+    #[error("File not found: '{file_name}'. Searched paths: {searched_paths:?}")]
+    FileNotFound {
+        file_name: String,
+        searched_paths: Vec<PathBuf>,
+    },
+    #[error("Parent directory not found for path: '{file_path}'")]
+    ParentDirectoryNotFound {
+        file_path: PathBuf,
+    },
+    #[error("Failed to create directory '{path}': {source}")]
+    FailedToCreateDirectory {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+}
 
 pub trait PathResolver {
     /// Resolve a file name to a path
@@ -56,7 +76,7 @@ impl ProjectPathResolver {
 
 impl PathResolver for ProjectPathResolver {
     /// Resolve a file name to a path, create directory if doesn't exist
-    fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf> {
+    fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf, Error> {
         tracing::debug!("resolve_input_file: Resolving {}", file_name);
         let mut searched_paths = vec![self.contexts_root()];
         if let Ok(file_path) = std::path::absolute(self.contexts_root().join(file_name)) {
@@ -77,17 +97,16 @@ impl PathResolver for ProjectPathResolver {
         Err(Error::FileNotFound {
             file_name: file_name.to_string(),
             searched_paths,
-        }
-        .into())
+        })
     }
     /// Resolve a file name to a path, create directory if doesn't exist
-    fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf> {
+    fn resolve_output_file(&self, file_name: &str) -> Result<PathBuf, Error> {
         tracing::debug!("resolve_output_file: Resolving {}", file_name);
         let base_path = std::path::absolute(if let Some(ref path) = self.output_path {
             path.clone()
         } else {
             self.contexts_root()
-        })?;
+        }).map_err(Error::Io)?;
         tracing::debug!("resolve_output_file: Base path {}", base_path.display());
         let file_path = base_path.join(format!("{}", file_name));
         tracing::debug!("resolve_output_file: File path {}", file_path.display());
@@ -103,7 +122,7 @@ impl PathResolver for ProjectPathResolver {
         Ok(file_path)
     }
     /// Resolve a meta kind / uuid to a path, create directory if doesn't exist
-    fn resolve_metadata(&self, meta_kind: &str, meta_uuid: &Uuid) -> Result<PathBuf> {
+    fn resolve_metadata(&self, meta_kind: &str, meta_uuid: &Uuid) -> Result<PathBuf, Error> {
         tracing::debug!(
             "resolve_metadata: Resolving {}-{}",
             meta_kind,

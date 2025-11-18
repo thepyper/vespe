@@ -1,29 +1,55 @@
-use anyhow::Result;
+use thiserror::Error as ThisError;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 use uuid::{uuid, Uuid};
 
 use crate::editor::EditorCommunicator;
 use super::git::git_commit_files;
-use crate::error::Error;
+
+#[derive(Debug, ThisError)]
+pub enum Error {
+    #[error("Failed to read file '{path}': {source}")]
+    FileRead {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Editor interface error: {message}: {source}")]
+    EditorInterface {
+        message: String,
+        #[source]
+        source: anyhow::Error,
+    },
+    #[error("Failed to write file '{path}': {source}")]
+    FileWrite {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Git error: {0}")]
+    Git(#[from] super::git::Error),
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Mutex poisoned")]
+    MutexPoisoned,
+}
 
 pub trait FileAccessor {
     /// Read whole file to a string
-    fn read_file(&self, path: &Path) -> Result<String> {
+    fn read_file(&self, path: &Path) -> Result<String, Error> {
         std::fs::read_to_string(path)
-            .map_err(|e| Error::FileReadError {
+            .map_err(|e| Error::FileRead {
                 path: path.to_path_buf(),
                 source: e,
             })
-            .map_err(anyhow::Error::from)
     }
     /// Require exclusive access to a file
-    fn lock_file(&self, path: &Path) -> Result<Uuid>;
+    fn lock_file(&self, path: &Path) -> Result<Uuid, Error>;
     /// Release excludive access to a file
-    fn unlock_file(&self, uuid: &Uuid) -> Result<()>;
+    fn unlock_file(&self, uuid: &Uuid) -> Result<(), Error>;
     /// Write whole file, optional comment to the operation
-    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()>;
+    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<(), Error>;
 }
 
 /// Mutable part of ProjectFileAccessor struct
@@ -54,24 +80,23 @@ impl ProjectFileAccessor {
             }),
         }
     }
-    pub fn modified_files(&self) -> Vec<PathBuf> {
-        self.mutable
+    pub fn modified_files(&self) -> Result<Vec<PathBuf>, Error> {
+        Ok(self.mutable
             .lock()
-            .unwrap()
+            .map_err(|_| Error::MutexPoisoned)?
             .modified_files
             .iter()
             .cloned()
-            .collect::<Vec<PathBuf>>()
+            .collect::<Vec<PathBuf>>())
     }
-    pub fn modified_files_comments(&self) -> String {
-        self.mutable
+    pub fn modified_files_comments(&self) -> Result<String, Error> {
+        Ok(self.mutable
             .lock()
-            .unwrap()
+            .map_err(|_| Error::MutexPoisoned)?
             .modified_files_comments
-            .join("\n")
+            .join("\n"))
     }
-    pub fn commit(&self, title_message: Option<String>) -> Result<()> {
-        let mut mutable = self.mutable.lock().unwrap();
+            let mut mutable = self.mutable.lock().map_err(|_| Error::MutexPoisoned)?;
         if !mutable.modified_files.is_empty() {
             let message_1 = match title_message {
                 Some(x) => format!("{}\n", x),
@@ -98,50 +123,46 @@ const DUMMY_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000000");
 
 impl FileAccessor for ProjectFileAccessor {
     /// Read whole file to a string
-    fn read_file(&self, path: &Path) -> Result<String> {
+    fn read_file(&self, path: &Path) -> Result<String, Error> {
         let content = std::fs::read_to_string(path)
-            .map_err(|e| Error::FileReadError {
+            .map_err(|e| Error::FileRead {
                 path: path.to_path_buf(),
                 source: e,
-            })
-            .map_err(anyhow::Error::from)?;
+            })?;
         Ok(content)
     }
     /// Require exclusive access to a file
-    fn lock_file(&self, path: &Path) -> Result<Uuid> {
+    fn lock_file(&self, path: &Path) -> Result<Uuid, Error> {
         match &self.editor_interface {
             None => Ok(DUMMY_ID),
             Some(x) => x
                 .save_and_lock_file(path)
-                .map_err(|e| Error::EditorInterfaceError {
+                .map_err(|e| Error::EditorInterface {
                     message: "Failed to save and lock file".to_string(),
                     source: e,
-                })
-                .map_err(anyhow::Error::from),
+                }),
         }
     }
     /// Release excludive access to a file
-    fn unlock_file(&self, uuid: &Uuid) -> Result<()> {
+    fn unlock_file(&self, uuid: &Uuid) -> Result<(), Error> {
         match &self.editor_interface {
             None => Ok(()),
             Some(x) => x
                 .unlock_and_reload_file(*uuid)
-                .map_err(|e| Error::EditorInterfaceError {
+                .map_err(|e| Error::EditorInterface {
                     message: "Failed to unlock and reload file".to_string(),
                     source: e,
-                })
-                .map_err(anyhow::Error::from),
+                }),
         }
     }
     /// Write whole file, optional comment to the operation
-    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()> {
+    fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<(), Error> {
         tracing::debug!("Writing file {:?}", path);
         std::fs::write(path, content)
-            .map_err(|e| Error::FileWriteError {
+            .map_err(|e| Error::FileWrite {
                 path: path.to_path_buf(),
                 source: e,
-            })
-            .map_err(anyhow::Error::from)?;
+            })?;
         let mut mutable = self.mutable.lock().unwrap();
         mutable.modified_files.insert(path.into());
         if let Some(comment) = comment {
@@ -159,7 +180,7 @@ pub struct FileLock {
 
 impl FileLock {
     /// Creates a new `FileLock`, acquiring a lock on the given path.
-    pub fn new(file_access: Arc<dyn FileAccessor>, path: &Path) -> Result<Self> {
+    pub fn new(file_access: Arc<dyn FileAccessor>, path: &Path) -> Result<Self, Error> {
         let lock_id = file_access.lock_file(path)?;
         Ok(Self {
             file_access,

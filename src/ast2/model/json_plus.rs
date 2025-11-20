@@ -41,7 +41,7 @@ impl JsonPlusEntity {
     }
     pub fn as_integer_only(&self) -> Option<i64> {
         match self {
-            JsonPlusEntity::Integer(x) => Some(x),
+            JsonPlusEntity::Integer(x) => Some(*x),
             _ => None,
         }
     }
@@ -193,6 +193,12 @@ impl JsonPlusObject {
         match self.get(key) {
             None => None,
             Some(x) => x.as_object(),
+        }
+    }
+    pub fn get_as_bool(&self, key: &str) -> Option<bool> {
+        match self.get(key) {
+            None => None,
+            Some(x) => x.as_bool(),
         }
     }
     pub fn get_as_string_only(&self, key: &str) -> Option<String> {

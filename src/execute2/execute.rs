@@ -861,8 +861,8 @@ impl Worker {
         let prompt_config = PromptConfig {
             agent: agent_hash,
             format: PromptFormat::Parts,
-            with_agent_names: parameters.get_as_bool("with_agent_names"),
-            with_invitation: parameters.get_as_bool("with_invitation"),
+            with_agent_names: parameters.get_as_bool("with_agent_names").unwrap_or(false),
+            with_invitation: parameters.get_as_bool("with_invitation").unwrap_or(false),
         };
         let prompt = prompt.to_prompt(&prompt_config);
         let response = crate::agent::shell::shell_call(&provider, &prompt)

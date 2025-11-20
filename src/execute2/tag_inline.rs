@@ -134,6 +134,13 @@ impl DynamicPolicy for InlinePolicy {
                     residual.state.status = InlineStatus::Completed;
                     result.new_state = Some(residual.state);
                     let context = residual.worker.read_context(&context_name)?;
+                    let context = Self::slice_with_markers(
+                        &context,
+                        residual.parameters.get_as_integer_only("begin_line"),
+                        residual.parameters.get_as_string_only("begin_marker").as_deref(),
+                        residual.parameters.get_as_integer_only("end_line"),
+                        residual.parameters.get_as_string_only("end_marker").as_deref(),
+                    );
                     let context = match residual.parameters.get("data") {
                         Some(JsonPlusEntity::Object(data)) => {
                             residual.worker.process_context_with_data(context, data)?
@@ -164,6 +171,50 @@ impl DynamicPolicy for InlinePolicy {
             _ => {}
         }
         Ok(result)
+    }
+}
+
+impl InlinePolicy {
+    fn slice_with_markers(
+        text: &str,
+        begin_line: Option<i64>,
+        begin_marker: Option<&str>,
+        end_line: Option<i64>,
+        end_marker: Option<&str>,
+    ) -> String {
+        let lines: Vec<&str> = text.lines().collect();
+
+        let begin_marker_line = if let Some(marker) = begin_marker {
+            lines
+                .iter()
+                .position(|l| l.contains(marker))
+                .map(|idx| idx as i64)
+                .unwrap_or(0) // default se marker non trovato
+        } else {
+            0
+        };
+
+        let end_marker_line = if let Some(marker) = end_marker {
+            lines
+                .iter()
+                .rposition(|l| l.contains(marker))
+                .map(|idx| idx as i64)
+                .unwrap_or(lines.len() as i64) // default se non trovato
+        } else {
+            lines.len() as i64
+        };
+
+        let begin = begin_marker_line + begin_line.unwrap_or(0);
+        let end = end_marker_line + end_line.unwrap_or(0);
+
+        let begin = begin.clamp(0, lines.len() as i64) as usize;
+        let end = end.clamp(0, lines.len() as i64) as usize;
+
+        if begin >= end {
+            return String::new();
+        }
+
+        lines[begin..end].join("\n")
     }
 }
 

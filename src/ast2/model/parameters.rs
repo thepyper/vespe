@@ -26,19 +26,16 @@ impl Parameters {
         Parameters { parameters, range }
     }
     pub fn get(&self, key: &str) -> Option<&JsonPlusEntity> {
-        self.parameters.properties.get(key)
+        self.parameters.get(key)
     }
     pub fn get_as_string_only(&self, key: &str) -> Option<String> {
-        match self.get(key) {
-            None => None,
-            Some(x) => x.as_string_only(),
-        }
+        self.parameters.get_as_string_only(key)
     }
-    pub fn get_as_bool(&self, key: &str) -> bool {
-        match self.get(key) {
-            None => false,
-            Some(x) => x.as_bool().unwrap_or(false),
-        }
+    pub fn get_as_bool(&self, key: &str) -> Option<bool> {
+        self.parameters.get_as_bool(key)
+    }
+    pub fn get_as_integer_only(&self, key: &str) -> Option<i64> {
+        self.parameters.get_as_integer_only(key)
     }
     pub fn insert(&mut self, key: String, value: JsonPlusEntity) {
         self.parameters.properties.insert(key, value);

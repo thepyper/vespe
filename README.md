@@ -319,12 +319,45 @@ You can make an answer dynamic, so it automatically updates if the input context
 
 **Advanced Prompt Control:**
 
-You can fine-tune the prompt sent to the LLM and manage the output using a set of advanced parameters.
+You can fine-tune the prompt sent to the LLM and manage the output using a set of advanced parameters for `input`, `prefix`, and `postfix`. These parameters give you powerful control over context composition.
 
-**Input Redirection:**
+**Input Redirection (`input`)**
 
--   `input: "path/to/context"`: Replaces the current prompt with the content of another context file. This is useful for running a standard prompt from a different file.
--   `input_data: { ... }`: Used with `input` to pass data to the specified context file, which is treated as a Handlebars template.
+The `input` parameter replaces the current prompt (the content before the `@answer` tag) with content from one or more external files.
+
+It can be specified in three ways:
+
+1.  **A single file path**:
+
+    ```json
+    input: "path/to/your/context.md"
+    ```
+
+2.  **A file with template data**:
+
+    If your context file is a Handlebars template, you can provide data to it.
+
+    ```json
+    input: {
+      context: "path/to/template.md",
+      data: { topic: "Rust", year: 2025 }
+    }
+    ```
+
+3.  **A list of contexts**:
+
+    You can concatenate multiple files and templates into a single prompt.
+
+    ```json
+    input: [
+      "prompts/intro.md",
+      {
+        context: "prompts/question-template.md",
+        data: { question: "What is the capital of France?" }
+      },
+      "prompts/outro.md"
+    ]
+    ```
 
 *Example:*
 
@@ -339,36 +372,23 @@ You can use it in another file like this:
 ```markdown
 @answer {
   provider: "gemini -y",
-  input: my_prompts/question,
-  input_data: { topic: "Rust" }
+  input: {
+    context: "my_prompts/question",
+    data: { topic: "Rust" }
+  }
 }
 ```
 
 This will send "Tell me about Rust." to the LLM.
 
-**Output Redirection:**
+**Prompt Augmentation (`prefix` and `postfix`)**
 
--   `output: "path/to/context"`: Redirects the LLM's response to a specified context instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
+The `prefix` and `postfix` parameters allow you to add content before or after the main prompt. This is ideal for adding system messages, instructions, or formatting rules without cluttering your main context.
 
-*Example:*
+Both `prefix` and `postfix` support the exact same formats as the `input` parameter (a single file path, a file with template data, or a list of contexts).
 
-```markdown
-Summarize the following text and save it to a file.
-
-@answer {
-  provider: "gemini -y",
-  output: output/summary.txt
-}
-```
-
-The LLM's summary will be saved in `.vespe/contexts/output/summary.txt`.
-
-**Prompt Augmentation:**
-
--   `prefix: "path/to/context"`: Prepends the content of another file to the current prompt as a `system` message. This is ideal for setting a persona or providing instructions to the LLM.
--   `prefix_data: { ... }`: Used with `prefix` to pass data to the prefix file.
--   `postfix: "path/to/context"`: Appends the content of another file to the current prompt as a `system` message. Useful for adding constraints or formatting instructions.
--   `postfix_data: { ... }`: Used with `postfix` to pass data to the postfix file.
+-   `prefix`: Prepends content to the prompt. Often used for system instructions or to set a persona for the LLM.
+-   `postfix`: Appends content to the prompt. Useful for adding constraints, output formatting instructions, or final reminders.
 
 *Example:*
 
@@ -388,12 +408,29 @@ What is the capital of France?
 
 @answer {
   provider: "gemini -y",
-  prefix: my_prompts/persona,
-  postfix: my_prompts/format
+  prefix: "my_prompts/persona",
+  postfix: "my_prompts/format"
 }
 ```
 
-This will construct a prompt where the LLM is first instructed to act like a pirate, then given the question, and finally told to keep the answer short.
+This constructs a prompt where the LLM is first instructed to act like a pirate, then given the question, and finally told to keep the answer short.
+
+**Output Redirection:**
+
+-   `output: "path/to/context"`: Redirects the LLM's response to a specified context instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
+
+*Example:*
+
+```markdown
+Summarize the following text and save it to a file.
+
+@answer {
+  provider: "gemini -y",
+  output: "output/summary.txt"
+}
+```
+
+The LLM's summary will be saved in `.vespe/contexts/output/summary.txt`.
 
 **Agent Persona and Conversation Flow:**
 
@@ -529,7 +566,7 @@ For the next execution, you would move the `@answer` and `@done` tags to be afte
 
 ## Templating with Handlebars
 
-All contexts in `vespe` are processed as [Handlebars](https://handlebarsjs.com/) templates. This means you can use Handlebars syntax to create dynamic and reusable content within your Markdown files, and inject values with the `data`, `input_data`, `prefix_data`, `postfix_data` parameters.
+All contexts in `vespe` are processed as [Handlebars](https://handlebarsjs.com/) templates. This means you can use Handlebars syntax to create dynamic and reusable content within your Markdown files. You can inject values using the `data` parameter within `input`, `prefix`, `postfix` blocks, or with the `data` parameter on an `@include` or `@inline` tag.
 
 ### Special Variables
 

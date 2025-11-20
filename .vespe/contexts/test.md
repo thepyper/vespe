@@ -1,12 +1,12 @@
-<!-- inline-76f55be7-ab9c-40d9-bed4-afd8a6ab77a2:begin +completed+ {
+<!-- inline-934c55bb-1e47-450a-bdd4-37aa11f61b7a:begin +completed+ {
 	begin_line: 7,
 	end_line: 8
 } test2.md -->
 b
 c
-<!-- inline-76f55be7-ab9c-40d9-bed4-afd8a6ab77a2:end  {}  -->
+<!-- inline-934c55bb-1e47-450a-bdd4-37aa11f61b7a:end  {}  -->
 
-<!-- inline-026afe3e-c768-4bc3-888e-2f4c8881e029:begin +completed+ {
+<!-- inline-a6a6f25f-a626-4d40-a5e9-392ef85cd4a1:begin +completed+ {
 	begin_marker: "***1",
 	end_marker: "***2"
 } test2.md -->
@@ -14,4 +14,15 @@ c
 a
 b
 c
-<!-- inline-026afe3e-c768-4bc3-888e-2f4c8881e029:end  {}  -->
+<!-- inline-a6a6f25f-a626-4d40-a5e9-392ef85cd4a1:end  {}  -->
+
+<!-- inline-9c77ce16-37a7-429c-b709-c4c5bfb49269:begin +completed+ {
+	begin_line: 1,
+	begin_marker: "***3",
+	end_line: -2,
+	end_marker: "***4"
+} test2.md -->
+d
+e
+f
+<!-- inline-9c77ce16-37a7-429c-b709-c4c5bfb49269:end  {}  -->

@@ -1,64 +1,53 @@
 
-<!-- answer-645f110a-7137-4ca1-b128-d55fa9912b8b:begin +completed+ {
-	input: {
-		context: test2.md,
-		data: { color: orange }
-	},
+<!-- answer-f2313e44-ed1b-4505-8838-a18f0feff9e7:begin +completed+ {
+	input: [
+		{
+			context: test2.md,
+			data: { color: lime }
+		},
+		{
+			context: test2.md,
+			data: { color: violet }
+		}
+	],
 	provider: 'ollama run gemma3:1b'
 }  -->
-Okay, here's some information about oranges, covering a range of topics:
+Okay, here’s some information about lime and violet:
 
-**1. The Basics:**
+**Lime**
 
-* **What it is:** Oranges are citrus fruits, scientifically known as *Citrus sinensis*. They're globally popular fruits prized for their sweet and tangy flavor.
-* **Origin:** Oranges originated in Southeast Asia, particularly China, Malaysia, and Indonesia.
-* **Variety:** There are hundreds of varieties of oranges, each with slightly different characteristics like color, size, and sweetness. Some popular varieties include:
-    * **Navel:**  A classic, round, and sweet orange.
-    * **Valencia:**  Known for its exceptionally juicy and sweet flesh.
-    * **Blood Orange:**  Deep red and intensely flavored.
-    * **Mandarin:** Small, round, and intensely flavored.
-
-
-**2. Nutritional Benefits:**
-
-* **Vitamin C:** Oranges are an excellent source of Vitamin C, a powerful antioxidant that supports the immune system and protects against cell damage.
-* **Fiber:**  They contain a good amount of fiber, which aids in digestion and can help you feel full.
-* **Potassium:**  Oranges are rich in potassium, an important mineral for maintaining healthy blood pressure.
-* **B Vitamins:** They contain B vitamins, which contribute to energy metabolism.
+*   **What it is:** Lime is a citrus fruit belonging to the *Citrus* genus. It's prized for its tart, refreshing flavor and vibrant color.
+*   **Taste & Texture:** Lime fruits are intensely tart, with a slightly acidic and refreshing flavor. They have a juicy, slightly fibrous texture.
+*   **Uses:**
+    *   **Fresh Consumption:** The most popular way to enjoy lime is as a squeeze on everything - salads, tacos, grilled meats, and even desserts.
+    *   **Beverages:** Lime is a staple in cocktails like Mojitos, margaritas, and Pina Coladas. It's also used in juice and limeade.
+    *   **Cooking:** Lime adds a zingy flavor to many dishes - think lime rice, lime vinaigrette, or lime-infused chicken.
+*   **Variety:** There are many varieties of limes, including:
+    *   **Tahitian Lime:** Known for its intense, floral aroma and flavor.
+    *   **Key Lime:** From Florida, it’s characterized by a sweeter, more mellow flavor.
+    *   **Lamb Lime:** A hybrid that combines the best traits of both.
+*   **Health Benefits:**  Lime is rich in Vitamin C, antioxidants, and potassium. It's often touted for aiding digestion and boosting the immune system.
 
 
-**3. History and Culture:**
 
-* **Ancient Use:**  Oranges have been used for centuries in traditional medicine and as a food source by various cultures.  In ancient Egypt, they were considered sacred.
-* **Symbolism:** Oranges often symbolize love, good luck, and prosperity in many cultures.
+**Violet**
 
-**4.  Taste & Texture:**
-
-* **Flavor Profile:**  Oranges have a bright, slightly acidic flavor with a complex taste that evolves as you eat them.  The sweetness is balanced by a tartness.
-* **Texture:** They have a juicy and slightly segmented texture that's incredibly refreshing.
-
-
-**5.  How to Enjoy Them:**
-
-* **Fresh:**  The most popular way to enjoy oranges is fresh, eaten whole.
-* **Juice:** Orange juice is a delicious and healthy way to get your daily dose of Vitamin C.
-* **Slices:** Oranges can be sliced and enjoyed as a snack.
-* **Desserts:**  Oranges are great in pies, tarts, and other desserts.
-
-
-**6. Interesting Facts:**
-
-* **The Orange Blossom:** The name "orange" comes from the Arabic word "arog" meaning "orange," referring to the color of the fruit.
-* **Orange Blossom Water:**  Orange blossoms are used to make a fragrant and soothing water.
+*   **What it is:** Violet is a flower known for its deep, rich purple color, which is produced by pigments called anthocyanins.
+*   **History & Symbolism:** Violet has long been associated with royalty, spirituality, and wisdom in many cultures, including ancient Greece and Rome. It was considered a color of nobility and sacredness.
+*   **Uses:**
+    *   **Floral Arrangements:**  Violet is a popular choice for bouquets and centerpieces.
+    *   **Decoration:**  Dried violet flowers are used to decorate spaces and create a calming atmosphere.
+    *   **Jewelry:** Purple amethyst, a type of violet, is used to create jewelry and accessories.
+    *   **Fragrance:**  Violet is also used in perfumes and fragrances.
+*   **Scientific Significance:** Violet flowers are believed to have medicinal properties, including soothing the skin and alleviating anxiety.
 
 
 ---
 
-**Do you want me to:**
+Do you want to know more about either of these topics? For example, would you like to delve deeper into:
 
-*   Tell you about a specific type of orange? (e.g., Valencia oranges)
-*   Discuss orange juice benefits in more detail?
-*   Provide information on how to grow oranges at home?
-*   Something else entirely?
+*   **The history of lime production?**
+*   **Different ways to use violet in home decor?**
+*   **The scientific properties of violet flowers?**
 
-<!-- answer-645f110a-7137-4ca1-b128-d55fa9912b8b:end  {}  -->
+<!-- answer-f2313e44-ed1b-4505-8838-a18f0feff9e7:end  {}  -->

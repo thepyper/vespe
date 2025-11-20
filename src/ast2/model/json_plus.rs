@@ -39,6 +39,12 @@ impl JsonPlusEntity {
             _ => None,
         }
     }
+    pub fn as_integer_only(&self) -> Option<i64> {
+        match self {
+            JsonPlusEntity::Integer(x) => Some(x),
+            _ => None,
+        }
+    }
     pub fn to_prompt(&self) -> String {
         match self {
             JsonPlusEntity::Flag => String::new(),
@@ -193,6 +199,12 @@ impl JsonPlusObject {
         match self.get(key) {
             None => None,
             Some(x) => x.as_string_only(),
+        }
+    }
+    pub fn get_as_integer_only(&self, key: &str) -> Option<i64> {
+        match self.get(key) {
+            None => None,
+            Some(x) => x.as_integer_only(),
         }
     }
 }

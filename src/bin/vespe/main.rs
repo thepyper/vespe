@@ -61,6 +61,14 @@ enum ProjectCommands {
         #[arg(value_name = "PATH")]
         path: PathBuf,
     },
+    /// Removes an auxiliary path from the project configuration.
+    RemoveAuxPath {
+        /// The path to remove.
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
+    /// Lists the auxiliary paths in the project configuration.
+    ListAuxPaths {},
 }
 
 #[derive(Subcommand)]
@@ -215,6 +223,21 @@ fn main() -> Result<()> {
                 ProjectCommands::AddAuxPath { path } => {
                     project.add_aux_path(path.clone())?;
                     tracing::info!("Added auxiliary path: {}", path.display());
+                }
+                ProjectCommands::RemoveAuxPath { path } => {
+                    project.remove_aux_path(&path)?;
+                    tracing::info!("Removed auxiliary path: {}", path.display());
+                }
+                ProjectCommands::ListAuxPaths {} => {
+                    let aux_paths = project.get_aux_paths();
+                    if aux_paths.is_empty() {
+                        println!("No auxiliary paths configured.");
+                    } else {
+                        println!("Auxiliary paths:");
+                        for path in aux_paths {
+                            println!("  - {}", path.display());
+                        }
+                    }
                 }
             }
         }

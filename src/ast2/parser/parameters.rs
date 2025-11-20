@@ -1,9 +1,8 @@
-
-use super::parser::Parser;
+use super::super::{Ast2Error, Parameters, Range, Result};
 use super::identifier::_try_parse_identifier;
 use super::json_plus::_try_parse_jsonplus_object;
+use super::parser::Parser;
 use super::values::_try_parse_value;
-use super::super::{Result, Parameters, Range, Ast2Error};
 
 use serde_json::json;
 

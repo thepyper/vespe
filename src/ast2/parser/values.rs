@@ -1,8 +1,8 @@
+use super::super::{Ast2Error, Result};
 use super::parser::Parser;
-use super::super::{Result, Ast2Error};
 
-use std::str::FromStr;
 use serde_json::json;
+use std::str::FromStr;
 use uuid::Uuid;
 
 pub(crate) fn _try_parse_value<'doc>(
@@ -178,4 +178,3 @@ pub(crate) fn _try_parse_uuid<'doc>(parser: &Parser<'doc>) -> Result<Option<(Uui
         }),
     }
 }
-

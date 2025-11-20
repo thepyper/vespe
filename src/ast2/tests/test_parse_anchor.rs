@@ -1,6 +1,6 @@
 use super::super::{AnchorKind, Ast2Error, CommandKind};
-use super::parser::Parser;
 use super::anchor::_try_parse_anchor;
+use super::parser::Parser;
 use uuid::Uuid;
 
 #[test]

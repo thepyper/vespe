@@ -1,4 +1,3 @@
-
 pub mod anchor;
 pub mod arguments;
 pub mod command_kind;
@@ -10,4 +9,3 @@ pub mod position;
 pub mod range;
 pub mod tag;
 pub mod text;
-

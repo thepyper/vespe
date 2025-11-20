@@ -1,5 +1,5 @@
+use super::json_plus::{_try_parse_jsonplus_array, _try_parse_jsonplus_object};
 use super::parser::Parser;
-use super::json_plus::{_try_parse_jsonplus_object, _try_parse_jsonplus_array};
 
 #[test]
 fn test_try_parse_jsonplus_object() {

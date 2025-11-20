@@ -25,7 +25,6 @@ pub enum CommandKind {
     Done,
 }
 
-
 impl ToString for CommandKind {
     fn to_string(&self) -> String {
         match self {

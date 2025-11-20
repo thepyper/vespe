@@ -1,5 +1,5 @@
-use super::parser::Parser;
 use super::arguments::_try_parse_arguments;
+use super::parser::Parser;
 
 #[test]
 fn test_try_parse_arguments_single() {

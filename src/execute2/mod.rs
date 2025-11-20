@@ -98,7 +98,7 @@ const TASK_ANCHOR_PLACEHOLDER: &str =
 const NO_CHOICE_MESSAGE: &str = "[No choice was taken - {{reply}}].";
 const MANY_CHOICES_MESSAGE: &str = "[Many choices were taken - {{reply}}].";
 
-const CHOICE_TEMPLATE : &str = r#"
+const CHOICE_TEMPLATE: &str = r#"
 
 INSTRUCTIONS:
 You must choose one option in {{{choices}}}.

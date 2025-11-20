@@ -1,6 +1,6 @@
-use super::super::{Ast2Error};
+use super::super::Ast2Error;
+use super::parameters::{_try_parse_parameter, _try_parse_parameters};
 use super::parser::Parser;
-use super::parameters::{_try_parse_parameters, _try_parse_parameter};
 use serde_json::json;
 
 #[test]

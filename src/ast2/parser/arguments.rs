@@ -1,6 +1,6 @@
+use super::super::{Argument, Arguments, Range, Result};
 use super::parser::Parser;
 use super::values::{_try_parse_enclosed_string, _try_parse_nude_string};
-use super::super::{Result, Argument, Arguments, Range};
 
 pub(crate) fn _try_parse_arguments<'doc>(
     parser: &Parser<'doc>,

@@ -1,8 +1,8 @@
+use super::super::{Ast2Error, Content, Range, Result, Text};
+use super::anchor::_try_parse_anchor;
 use super::parser::Parser;
 use super::tag::_try_parse_tag;
-use super::anchor::_try_parse_anchor;
 use super::text::_try_parse_text;
-use super::super::{Result, Content, Ast2Error, Range, Text};
 
 pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
     let mut contents = Vec::new();

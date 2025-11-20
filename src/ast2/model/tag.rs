@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use super::arguments::Arguments;
 use super::command_kind::CommandKind;
 use super::parameters::Parameters;
-use super::arguments::Arguments;
 use super::range::Range;
 
 /// Represents a command tag, starting with `@`.

@@ -127,6 +127,14 @@ pub enum ExecuteError {
     #[error("Unsupported 'data' parameter for '@include' tag at {range:?}, must be an object")]
     UnsupportedDataParameter { range: Range },
 
+    /// Indicates that the `context` is missing from a { context: `file_name`, data: {`...data...`} } declaration
+    #[error("Missing 'context' parameter at {range:?}")]
+    MissingContextParameter { range: Range },
+
+    /// Indicates that the context parameter has an unsupported value.
+    #[error("Wrong 'context' parameter at {range:?}")]
+    UnsupportedContextParameter { range: Range },
+
     /// Indicates that the execution of a context included via `@include` has failed.
     #[error("Execution of included context '{context}' failed at {range:?}")]
     IncludeExecutionFailed { context: String, range: Range },

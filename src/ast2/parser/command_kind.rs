@@ -1,5 +1,5 @@
+use super::super::{CommandKind, Result};
 use super::parser::Parser;
-use super::super::{Result, CommandKind};
 
 pub(crate) fn _try_parse_command_kind<'doc>(
     parser: &Parser<'doc>,

@@ -10,4 +10,3 @@ pub struct Text {
     /// The location of the text block in the source document.
     pub range: Range,
 }
-

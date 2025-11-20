@@ -1,8 +1,8 @@
-use thiserror::Error as ThisError;
-use std::path::PathBuf;
-use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
-use uuid::Uuid;
 use super::Result;
+use crate::constants::{CONTEXTS_DIR_NAME, CTX_DIR_NAME, METADATA_DIR_NAME};
+use std::path::PathBuf;
+use thiserror::Error as ThisError;
+use uuid::Uuid;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
@@ -12,9 +12,7 @@ pub enum Error {
         searched_paths: Vec<PathBuf>,
     },
     #[error("Parent directory not found for path: '{file_path}'")]
-    ParentDirectoryNotFound {
-        file_path: PathBuf,
-    },
+    ParentDirectoryNotFound { file_path: PathBuf },
     #[error("Failed to create directory '{path}': {source}")]
     FailedToCreateDirectory {
         path: PathBuf,
@@ -105,7 +103,8 @@ impl PathResolver for ProjectPathResolver {
             path.clone()
         } else {
             self.contexts_root()
-        }).map_err(Error::Io)?;
+        })
+        .map_err(Error::Io)?;
         let file_path = base_path.join(format!("{}", file_name));
         let parent_dir = file_path
             .parent()

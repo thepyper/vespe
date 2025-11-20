@@ -1,6 +1,6 @@
 use super::super::{AnchorKind, Ast2Error, CommandKind};
-use super::parser::Parser;
 use super::arguments::_try_parse_argument;
+use super::parser::Parser;
 
 #[test]
 fn test_try_parse_argument_single_quoted() {

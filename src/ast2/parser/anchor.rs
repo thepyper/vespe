@@ -1,10 +1,10 @@
-use super::parser::Parser;
-use super::command_kind::_try_parse_command_kind;
-use super::values::_try_parse_uuid;
-use super::identifier::_try_parse_identifier;
+use super::super::{Anchor, AnchorKind, Arguments, Ast2Error, Parameters, Range, Result};
 use super::arguments::_try_parse_arguments;
+use super::command_kind::_try_parse_command_kind;
+use super::identifier::_try_parse_identifier;
 use super::parameters::_try_parse_parameters;
-use super::super::{Result, Anchor, AnchorKind, Arguments, Parameters, Range, Ast2Error};
+use super::parser::Parser;
+use super::values::_try_parse_uuid;
 
 pub(crate) fn _try_parse_anchor<'doc>(
     parser: &Parser<'doc>,
@@ -139,7 +139,6 @@ pub(crate) fn _try_parse_anchor<'doc>(
 
     Ok(Some((anchor, p15)))
 }
-
 
 pub(crate) fn _try_parse_anchor_kind<'doc>(
     parser: &Parser<'doc>,

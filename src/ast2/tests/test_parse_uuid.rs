@@ -1,6 +1,6 @@
-use super::super::{Ast2Error};
+use super::super::Ast2Error;
 use super::parser::Parser;
-use super::values::{_try_parse_uuid};
+use super::values::_try_parse_uuid;
 use uuid::Uuid;
 
 #[test]

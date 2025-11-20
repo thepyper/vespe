@@ -59,11 +59,9 @@ impl Project {
         })?;
 
         let ctx_root_file = ctx_dir.join(CTX_ROOT_FILE_NAME);
-        std::fs::write(&ctx_root_file, "Feel The BuZZ!!").map_err(|source| {
-            Error::FileWrite {
-                path: ctx_root_file.clone(),
-                source,
-            }
+        std::fs::write(&ctx_root_file, "Feel The BuZZ!!").map_err(|source| Error::FileWrite {
+            path: ctx_root_file.clone(),
+            source,
         })?;
 
         let mut project_config = ProjectConfig::default();
@@ -96,12 +94,13 @@ impl Project {
         loop {
             let ctx_dir = current_path.join(CTX_DIR_NAME);
             if ctx_dir.is_dir() && ctx_dir.join(CTX_ROOT_FILE_NAME).is_file() {
-                let root_path = current_path.canonicalize().map_err(|source| {
-                    Error::CanonicalizePath {
-                        path: current_path.clone(),
-                        source,
-                    }
-                })?;
+                let root_path =
+                    current_path
+                        .canonicalize()
+                        .map_err(|source| Error::CanonicalizePath {
+                            path: current_path.clone(),
+                            source,
+                        })?;
                 let project_config_path = root_path
                     .join(CTX_DIR_NAME)
                     .join(METADATA_DIR_NAME)

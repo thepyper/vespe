@@ -1,6 +1,5 @@
-
+use super::super::Result;
 use super::parser::Parser;
-use super::super::{Result};
 
 pub(crate) fn _try_parse_identifier<'doc>(
     parser: &Parser<'doc>,

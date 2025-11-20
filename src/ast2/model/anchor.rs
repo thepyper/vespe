@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use uuid::{uuid, Uuid};
 
+use super::arguments::Arguments;
 use super::command_kind::CommandKind;
 use super::parameters::Parameters;
-use super::arguments::Arguments;
 use super::range::Range;
 
 /// The kind of an `Anchor`, indicating if it's the start or end of a block.
@@ -117,4 +117,3 @@ impl ToString for Anchor {
         )
     }
 }
-

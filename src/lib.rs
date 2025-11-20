@@ -7,8 +7,6 @@ pub mod error;
 pub mod execute2;
 pub mod utils;
 
-
-
 pub mod project;
 
 pub fn init_telemetry() {

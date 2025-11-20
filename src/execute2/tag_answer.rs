@@ -383,7 +383,10 @@ impl AnswerPolicy {
                 let handlebars = Handlebars::new();
 
                 let response = match choice_tags.len() {
-                    1 => choice_tags.get(0).expect("There is one element!").to_string(),
+                    1 => choice_tags
+                        .get(0)
+                        .expect("There is one element!")
+                        .to_string(),
                     0 => handlebars
                         .render_template(super::NO_CHOICE_MESSAGE, &json!({ "reply": response }))?,
                     _ => handlebars.render_template(

@@ -1,12 +1,12 @@
-use thiserror::Error as ThisError;
+use super::Result;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use thiserror::Error as ThisError;
 use uuid::{uuid, Uuid};
-use super::Result;
 
-use crate::editor::EditorCommunicator;
 use super::git::git_commit_files;
+use crate::editor::EditorCommunicator;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
@@ -39,11 +39,10 @@ pub enum Error {
 pub trait FileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String> {
-        Ok(std::fs::read_to_string(path)
-            .map_err(|e| Error::FileRead {
-                path: path.to_path_buf(),
-                source: e,
-            })?)
+        Ok(std::fs::read_to_string(path).map_err(|e| Error::FileRead {
+            path: path.to_path_buf(),
+            source: e,
+        })?)
     }
     /// Require exclusive access to a file
     fn lock_file(&self, path: &Path) -> Result<Uuid>;
@@ -82,7 +81,8 @@ impl ProjectFileAccessor {
         }
     }
     pub fn modified_files(&self) -> Result<Vec<PathBuf>> {
-        Ok(self.mutable
+        Ok(self
+            .mutable
             .lock()
             .map_err(|_| Error::MutexPoisoned)?
             .modified_files
@@ -91,7 +91,8 @@ impl ProjectFileAccessor {
             .collect::<Vec<PathBuf>>())
     }
     pub fn modified_files_comments(&self) -> Result<String> {
-        Ok(self.mutable
+        Ok(self
+            .mutable
             .lock()
             .map_err(|_| Error::MutexPoisoned)?
             .modified_files_comments
@@ -126,11 +127,10 @@ const DUMMY_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000000");
 impl FileAccessor for ProjectFileAccessor {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| Error::FileRead {
-                path: path.to_path_buf(),
-                source: e,
-            })?;
+        let content = std::fs::read_to_string(path).map_err(|e| Error::FileRead {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
         Ok(content)
     }
     /// Require exclusive access to a file
@@ -160,11 +160,10 @@ impl FileAccessor for ProjectFileAccessor {
     /// Write whole file, optional comment to the operation
     fn write_file(&self, path: &Path, content: &str, comment: Option<&str>) -> Result<()> {
         tracing::debug!("Writing file {:?}", path);
-        std::fs::write(path, content)
-            .map_err(|e| Error::FileWrite {
-                path: path.to_path_buf(),
-                source: e,
-            })?;
+        std::fs::write(path, content).map_err(|e| Error::FileWrite {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
         let mut mutable = self.mutable.lock().unwrap();
         mutable.modified_files.insert(path.into());
         if let Some(comment) = comment {

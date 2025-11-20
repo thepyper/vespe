@@ -1,7 +1,0 @@
-{
-  "status": "Completed",
-  "query": "---\nUser:\n# Hello vespe\r\n\r\nHi, tell me something nice!\nAssistant:\n",
-  "reply": "Hello! It's a beautiful day to create something amazing. Keep up the great work!\n",
-  "context_hash": "a8525b1475e4935329c8d79b39a7446a5a9c4c3461f21dafa2ab0d09deee043a",
-  "reply_hash": "a0475308ee9893e07716d4893cc56dcc7b6cf12a8cf16042404ef721e85729ec"
-}

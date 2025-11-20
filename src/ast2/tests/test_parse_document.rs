@@ -1,7 +1,7 @@
-use super::super::{AnchorKind, Ast2Error, Content, CommandKind};
-use super::parser::Parser;
+use super::super::{AnchorKind, Ast2Error, CommandKind, Content};
 use super::content::parse_content;
 use super::document::parse_document;
+use super::parser::Parser;
 use serde_json::json;
 use uuid::Uuid;
 

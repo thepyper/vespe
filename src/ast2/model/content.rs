@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::text::Text;
-use super::tag::Tag;
 use super::anchor::Anchor;
+use super::tag::Tag;
+use super::text::Text;
 
 /// An enum representing any of the top-level content types in a document.
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]

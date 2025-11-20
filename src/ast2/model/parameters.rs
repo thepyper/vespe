@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::json_plus::{JsonPlusObject, JsonPlusEntity};
+use super::json_plus::{JsonPlusEntity, JsonPlusObject};
 use super::range::Range;
 
 /// A collection of key-value parameters associated with a `Tag` or `Anchor`.
@@ -72,4 +72,3 @@ impl ToString for Parameters {
         self.parameters.to_string()
     }
 }
-

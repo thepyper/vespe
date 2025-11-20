@@ -1,11 +1,11 @@
-use super::parser::Parser;
+use super::super::{Ast2Error, JsonPlusEntity, JsonPlusObject, Result};
 use super::identifier::_try_parse_identifier;
+use super::parser::Parser;
 use super::values::_try_parse_enclosed_string;
 use super::values::_try_parse_nude_bool;
 use super::values::_try_parse_nude_float;
 use super::values::_try_parse_nude_integer;
 use super::values::_try_parse_nude_string;
-use super::super::{Result, JsonPlusEntity, JsonPlusObject, Ast2Error};
 
 use std::collections::BTreeMap;
 

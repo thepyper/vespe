@@ -180,6 +180,21 @@ impl JsonPlusObject {
     pub fn insert(&mut self, key: String, value: JsonPlusEntity) {
         self.properties.insert(key, value);
     }
+    pub fn get(&self, key: &str) -> Option<&JsonPlusEntity> {
+        self.properties.get(key)
+    }
+    pub fn get_as_object(&self, key: &str) -> Option<&JsonPlusObject> {
+        match self.get(key) {
+            None => None,
+            Some(x) => x.as_object(),
+        }
+    }
+    pub fn get_as_string_only(&self, key: &str) -> Option<String> {
+        match self.get(key) {
+            None => None,
+            Some(x) => x.as_string_only(),
+        }
+    }
 }
 
 impl ToString for JsonPlusObject {

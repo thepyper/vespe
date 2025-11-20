@@ -1,5 +1,4 @@
-
-use super::super::{Position};
+use super::super::Position;
 
 use std::str::Chars;
 
@@ -168,4 +167,3 @@ impl<'a> Parser<'a> {
         }
     }
 }
-

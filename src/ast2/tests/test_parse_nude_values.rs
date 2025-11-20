@@ -1,5 +1,8 @@
 use super::parser::Parser;
-use super::values::{_try_parse_nude_integer, _try_parse_nude_float, _try_parse_nude_bool, _try_parse_nude_string, _try_parse_value};
+use super::values::{
+    _try_parse_nude_bool, _try_parse_nude_float, _try_parse_nude_integer, _try_parse_nude_string,
+    _try_parse_value,
+};
 use serde_json::json;
 
 #[test]
@@ -12,15 +15,11 @@ fn test_try_parse_nude_integer() {
 
     let doc_no_int = "abc";
     let parser_no_int = Parser::new(doc_no_int);
-    assert!(_try_parse_nude_integer(&parser_no_int)
-        .unwrap()
-        .is_none());
+    assert!(_try_parse_nude_integer(&parser_no_int).unwrap().is_none());
 
     let doc_empty = "";
     let parser_empty = Parser::new(doc_empty);
-    assert!(_try_parse_nude_integer(&parser_empty)
-        .unwrap()
-        .is_none());
+    assert!(_try_parse_nude_integer(&parser_empty).unwrap().is_none());
 }
 
 #[test]
@@ -33,21 +32,15 @@ fn test_try_parse_nude_float() {
 
     let doc_no_float = "123 rest";
     let parser_no_float = Parser::new(doc_no_float);
-    assert!(_try_parse_nude_float(&parser_no_float)
-        .unwrap()
-        .is_none());
+    assert!(_try_parse_nude_float(&parser_no_float).unwrap().is_none());
 
     let doc_just_dot = ". rest";
     let parser_just_dot = Parser::new(doc_just_dot);
-    assert!(_try_parse_nude_float(&parser_just_dot)
-        .unwrap()
-        .is_none());
+    assert!(_try_parse_nude_float(&parser_just_dot).unwrap().is_none());
 
     let doc_empty = "";
     let parser_empty = Parser::new(doc_empty);
-    assert!(_try_parse_nude_float(&parser_empty)
-        .unwrap()
-        .is_none());
+    assert!(_try_parse_nude_float(&parser_empty).unwrap().is_none());
 }
 
 #[test]
@@ -66,9 +59,7 @@ fn test_try_parse_nude_bool() {
 
     let doc_no_bool = "other rest";
     let parser_no_bool = Parser::new(doc_no_bool);
-    assert!(_try_parse_nude_bool(&parser_no_bool)
-        .unwrap()
-        .is_none());
+    assert!(_try_parse_nude_bool(&parser_no_bool).unwrap().is_none());
 }
 
 #[test]
@@ -81,15 +72,11 @@ fn test_try_parse_nude_string() {
 
     let doc_empty = "";
     let parser_empty = Parser::new(doc_empty);
-    assert!(_try_parse_nude_string(&parser_empty)
-        .unwrap()
-        .is_none());
+    assert!(_try_parse_nude_string(&parser_empty).unwrap().is_none());
 
     let doc_with_space = "hello world";
     let parser_with_space = Parser::new(doc_with_space);
-    let (value_space, p_next_space) = _try_parse_nude_string(&parser_with_space)
-        .unwrap()
-        .unwrap();
+    let (value_space, p_next_space) = _try_parse_nude_string(&parser_with_space).unwrap().unwrap();
     assert_eq!(value_space, "hello");
     assert_eq!(p_next_space.remain(), " world");
 }

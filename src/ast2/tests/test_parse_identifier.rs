@@ -1,5 +1,5 @@
-use super::parser::Parser;
 use super::identifier::_try_parse_identifier;
+use super::parser::Parser;
 
 #[test]
 fn test_try_parse_identifier_valid() {

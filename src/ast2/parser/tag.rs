@@ -1,9 +1,8 @@
-
-use super::parser::Parser;
-use super::command_kind::_try_parse_command_kind;
+use super::super::{Arguments, Parameters, Range, Result, Tag};
 use super::arguments::_try_parse_arguments;
+use super::command_kind::_try_parse_command_kind;
 use super::parameters::_try_parse_parameters;
-use super::super::{Result, Tag, Arguments, Parameters, Range};
+use super::parser::Parser;
 
 pub(crate) fn _try_parse_tag<'doc>(parser: &Parser<'doc>) -> Result<Option<(Tag, Parser<'doc>)>> {
     let begin = parser.get_position();

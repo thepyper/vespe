@@ -1,7 +1,6 @@
-
-use super::parser::Parser;
+use super::super::{Document, Range, Result};
 use super::content::parse_content;
-use super::super::{Result, Document, Range};
+use super::parser::Parser;
 
 /// Parses a string slice into a `Document` AST.
 ///
@@ -25,4 +24,3 @@ pub fn parse_document(document: &str) -> Result<Document> {
         range: Range { begin, end },
     })
 }
-

@@ -21,6 +21,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use uuid::Uuid;
 
+const TAB_SIZE: usize = 4;
+
 /// Executes a context and all its dependencies, processing all commands.
 ///
 /// This function orchestrates the full, multi-pass execution of a context file.
@@ -145,6 +147,53 @@ impl Collector {
         format!("{:x}", context_hasher.finalize())
     }
 
+    pub fn normalize_text(input: &str) -> String {
+        let mut out = String::with_capacity(input.len());
+        let mut chars = input.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                '\r' => {
+                    if matches!(chars.peek(), Some('\n')) {
+                        chars.next();
+                    }
+                    out.push('\n');
+                }
+                '\n' => out.push('\n'),
+                _ => {
+                    let mut line_buf = String::new();
+                    let mut col = 0;
+
+                    Self::push_with_tabs(c, &mut line_buf, &mut col);
+
+                    while let Some(&ch) = chars.peek() {
+                        if ch == '\n' || ch == '\r' {
+                            break;
+                        }
+                        chars.next();
+                        Self::push_with_tabs(ch, &mut line_buf, &mut col);
+                    }
+
+                    let trimmed_len = line_buf.trim_end().len();
+                    out.push_str(&line_buf[..trimmed_len]);
+                }
+            }
+        }
+
+        out
+    }
+
+    #[inline]
+    fn push_with_tabs(ch: char, buf: &mut String, col: &mut usize) {
+        if ch == '\t' {
+            let spaces = TAB_SIZE - (*col % TAB_SIZE);
+            buf.extend(std::iter::repeat(' ').take(spaces));
+            *col += spaces;
+        } else {
+            buf.push(ch);
+            *col += 1;
+        }
+    }
+
     /// Computes the normalized SHA256 hash of a given input string.
     ///
     /// Normalization involves replacing `\r\n` with `\n` and trimming whitespace
@@ -159,12 +208,7 @@ impl Collector {
     ///
     /// A `String` representing the hexadecimal SHA256 hash of the normalized input.
     pub fn normalized_hash(input: &str) -> String {
-        let normalized_input = input
-            .replace("\r\n", "\n")
-            .lines()
-            .map(|line| line.trim())
-            .collect::<Vec<_>>()
-            .join("\n");
+        let normalized_input = Self::normalize_text(input);
         Self::hash(&normalized_input)
     }
 
@@ -350,8 +394,9 @@ impl Collector {
     ///
     /// The `Collector` with the new item added to its context.
     pub fn push_item(mut self, item: ModelContentItem) -> Self {
+        let normalized_item = Self::normalize_text(&item.to_string());
         self.context_hasher
-            .update(item.to_string().replace("\r\n", "\n").trim());
+            .update(normalized_item);
         self.context.push(item);
         self
     }
@@ -699,27 +744,13 @@ impl Worker {
         content: ModelContent,
         parameters: &Parameters,
     ) -> Result<ModelContent> {
-        match parameters.get("prefix") {
-            Some(JsonPlusEntity::NudeString(x)) => {
-                let data = match parameters.get("prefix_data") {
-                    Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!(
-                            "bad prefix_data: {:?}",
-                            x
-                        )));
-                    }
-                    None => None,
-                };
-                let prefix = self.execute(x, data)?.to_string();
-                let prefix = ModelContentItem::system(&prefix);
+        let prefix = self.process_context_with_data_from_parameters(parameters, "prefix")?;
+        match prefix {
+            Some(prefix) => {                
+                let prefix = ModelContentItem::system(&prefix.to_string());
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
             }
-            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
-                "bad prefix: {:?}",
-                x
-            ))),
             None => Ok(content),
         }
     }
@@ -771,27 +802,13 @@ impl Worker {
         content: ModelContent,
         parameters: &Parameters,
     ) -> Result<ModelContent> {
-        match parameters.get("postfix") {
-            Some(JsonPlusEntity::NudeString(x)) => {
-                let data = match parameters.get("postfix_data") {
-                    Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!(
-                            "bad postfix_data: {:?}",
-                            x
-                        )));
-                    }
-                    None => None,
-                };
-                let postfix = self.execute(x, data)?.to_string();
-                let postfix = ModelContentItem::merge_upstream(&postfix);
+        let postfix = self.process_context_with_data_from_parameters(parameters, "postfix")?;
+        match postfix {
+            Some(postfix) => {
+                let postfix = ModelContentItem::merge_upstream(&postfix.to_string());
                 let postfix = ModelContent::from_item(postfix);
                 Ok(self.postfix_content(content, postfix))
             }
-            Some(x) => Err(ExecuteError::UnsupportedParameterValue(format!(
-                "bad postfix: {:?}",
-                x
-            ))),
             None => Ok(content),
         }
     }
@@ -1471,32 +1488,16 @@ impl Worker {
         collector: &Collector,
         parameters: &Parameters,
     ) -> Result<(ModelContent, String)> {
-        match &parameters.get("input") {
-            Some(JsonPlusEntity::NudeString(x)) => {
-                let data = match parameters.get("input_data") {
-                    Some(JsonPlusEntity::Object(data)) => Some(data),
-                    Some(x) => {
-                        return Err(ExecuteError::UnsupportedParameterValue(format!(
-                            "bad input_data: {:?}",
-                            x
-                        )));
-                    }
-                    None => None,
-                };
-                let input = self.execute(&x, data)?;
+        let input = self.process_context_with_data_from_parameters(parameters, "input")?;
+        match input {
+            None => {
+                Ok((collector.context().clone(), collector.context_hash()))
+            }
+            Some(input) => {
                 let input_hash = Collector::normalized_hash(&input.to_string());
                 Ok((input, input_hash))
             }
-            Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "input: {:?}",
-                    x
-                )));
-            }
-            None => {
-                return Ok((collector.context().clone(), collector.context_hash()));
-            }
-        }
+        }        
     }
 
     /// Generates patches to mutate an existing anchor in the document.
@@ -1583,9 +1584,48 @@ impl Worker {
     ) -> Result<String> {
         let handlebars = Handlebars::new();
         let data: serde_json::Value = data.into();
-        tracing::debug!("data: {:?}", data);
         let context = handlebars.render_template(&context, &data)?;
         Ok(context)
+    }
+
+    pub fn process_context_with_data_from_parameters(
+        &self,
+        parameters: &Parameters,
+        key: &str,
+    ) -> Result<Option<ModelContent>> {
+        match parameters.get(key) {
+            None => Ok(None),
+            Some(x) => Ok(Some(self.process_context_from_jpe(&x, &parameters.range)?)),
+        }
+    }
+
+    pub fn process_context_from_jpe(
+        &self, 
+        jpe: &JsonPlusEntity,
+        range: &Range,
+    ) -> Result<ModelContent> {
+        match jpe {
+            JsonPlusEntity::NudeString(file_name) | JsonPlusEntity::SingleQuotedString(file_name) | JsonPlusEntity::DoubleQuotedString(file_name) => {
+                let output = self.execute(&file_name, None)?;
+                Ok(output)
+            }
+            JsonPlusEntity::Object(jpo) => {
+                let file_name = jpo.get_as_string_only("context").ok_or_else(|| ExecuteError::MissingContextParameter{range:range.clone()})?;
+                let data = jpo.get_as_object("data");
+                let output = self.execute(&file_name, data)?;
+                Ok(output)
+            }
+            JsonPlusEntity::Array(jpa) => {
+                let mut output = ModelContent::new();
+                for item in jpa {
+                    output.extend(self.process_context_from_jpe(&item, range)?);
+                }
+                Ok(output)
+            }
+            _ => {
+                Err(ExecuteError::UnsupportedContextParameter{range:range.clone()})
+            }
+        }
     }
 
     pub fn read_file(&self, file_path: &Path) -> Result<String> {

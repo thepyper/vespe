@@ -1,9 +1,9 @@
-use thiserror::Error as ThisError;
-use std::path::PathBuf;
 use git2::{Repository, Signature, StatusOptions};
 use std::collections::HashSet;
 #[allow(unused_imports)]
 use std::path::Path;
+use std::path::PathBuf;
+use thiserror::Error as ThisError;
 use tracing::debug; // Added HashSet
 
 #[derive(Debug, ThisError)]
@@ -133,25 +133,20 @@ pub fn git_commit_files(
     }
 
     // 5. Reset the index to the HEAD. This "unstages" everything.
-    index
-        .read_tree(&head_tree)
-        .map_err(Error::RestoreIndex)?;
+    index.read_tree(&head_tree).map_err(Error::RestoreIndex)?;
 
     // 6. Selectively add files_to_commit to the staging area (index).
     for path in files_to_commit {
-        let canonical_path = path
+        let canonical_path = path.canonicalize().map_err(|e| Error::CanonicalizePath {
+            path: path.clone(),
+            source: e,
+        })?;
+        let canonical_workdir = workdir
             .canonicalize()
             .map_err(|e| Error::CanonicalizePath {
-                path: path.clone(),
+                path: workdir.to_path_buf(),
                 source: e,
             })?;
-        let canonical_workdir =
-            workdir
-                .canonicalize()
-                .map_err(|e| Error::CanonicalizePath {
-                    path: workdir.to_path_buf(),
-                    source: e,
-                })?;
 
         let relative_path = canonical_path
             .strip_prefix(&canonical_workdir)
@@ -208,19 +203,16 @@ pub fn git_commit_files(
 
     // 12. Re-add the `files_to_re_stage` to the index.
     for path in files_to_re_stage {
-        let canonical_path = path
+        let canonical_path = path.canonicalize().map_err(|e| Error::CanonicalizePath {
+            path: path.clone(),
+            source: e,
+        })?;
+        let canonical_workdir = workdir
             .canonicalize()
             .map_err(|e| Error::CanonicalizePath {
-                path: path.clone(),
+                path: workdir.to_path_buf(),
                 source: e,
             })?;
-        let canonical_workdir =
-            workdir
-                .canonicalize()
-                .map_err(|e| Error::CanonicalizePath {
-                    path: workdir.to_path_buf(),
-                    source: e,
-                })?;
 
         let relative_path = canonical_path
             .strip_prefix(&canonical_workdir)

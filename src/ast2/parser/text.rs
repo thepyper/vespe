@@ -1,6 +1,5 @@
-
+use super::super::{Range, Result, Text};
 use super::parser::Parser;
-use super::super::{Result, Text, Range};
 
 pub(crate) fn _try_parse_text<'doc>(parser: &Parser<'doc>) -> Result<Option<(Text, Parser<'doc>)>> {
     let begin = parser.get_position();

@@ -1,4 +1,4 @@
-use super::super::{Position};
+use super::super::Position;
 use super::parser::Parser;
 
 #[test]

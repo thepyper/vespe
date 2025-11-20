@@ -1,7 +1,7 @@
 use super::super::{AnchorKind, CommandKind};
-use super::parser::Parser;
-use super::command_kind::_try_parse_command_kind;
 use super::anchor::_try_parse_anchor_kind;
+use super::command_kind::_try_parse_command_kind;
+use super::parser::Parser;
 
 #[test]
 fn test_try_parse_command_kind_valid() {

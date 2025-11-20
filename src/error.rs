@@ -42,9 +42,7 @@ pub enum Error {
         source: std::io::Error,
     },
     #[error("Parent directory not found for path: '{file_path}'")]
-    ParentDirectoryNotFound {
-        file_path: PathBuf,
-    },
+    ParentDirectoryNotFound { file_path: PathBuf },
     #[error("Failed to read file '{path}': {source}")]
     FileRead {
         path: PathBuf,

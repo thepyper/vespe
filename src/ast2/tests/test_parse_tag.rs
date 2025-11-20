@@ -1,4 +1,4 @@
-use super::super::{CommandKind};
+use super::super::CommandKind;
 use super::parser::Parser;
 use super::tag::_try_parse_tag;
 

@@ -278,6 +278,22 @@ impl Project {
         Ok(())
     }
 
+    pub fn remove_aux_path(&mut self, path: &Path) -> Result<()> {
+        let initial_len = self.project_config.aux_paths.len();
+        self.project_config.aux_paths.retain(|p| p != path);
+        if self.project_config.aux_paths.len() < initial_len {
+            self.save_project_config()?;
+            self.commit(Some(
+                "Removed auxiliary path from project config.".into(),
+            ))?;
+        }
+        Ok(())
+    }
+
+    pub fn get_aux_paths(&self) -> &Vec<PathBuf> {
+        &self.project_config.aux_paths
+    }
+
     pub fn commit(&self, title_message: Option<String>) -> Result<()> {
         if self.project_config.git_integration_enabled {
             Ok(self.file_access.commit(title_message)?)

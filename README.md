@@ -57,6 +57,8 @@ At its core, `vespe` operates on a collection of textual documents, referred to 
   - [`vespe context run`](#vespe-context-run)
   - [`vespe watch`](#vespe-watch)
   - [`vespe project add-aux-path`](#vespe-project-add-aux-path)
+  - [`vespe project remove-aux-path`](#vespe-project-remove-aux-path)
+  - [`vespe project list-aux-paths`](#vespe-project-list-aux-paths)
   - [`vespe context analyze`](#vespe-context-analyze)  
 - [Piping Data into Contexts](#piping-data-into-contexts)
 - [License](#license)
@@ -655,6 +657,28 @@ vespe project add-aux-path <PATH>
 ```
 
 *   `<PATH>`: The directory path to add to the project's auxiliary search paths.
+
+### `vespe project remove-aux-path`
+
+Removes a persistent auxiliary search path from the project's configuration.
+
+**Usage:**
+
+```shell
+vespe project remove-aux-path <PATH>
+```
+
+*   `<PATH>`: The directory path to remove from the project's auxiliary search paths.
+
+### `vespe project list-aux-paths`
+
+Lists all the persistent auxiliary search paths configured for the project.
+
+**Usage:**
+
+```shell
+vespe project list-aux-paths
+```
 
 ### `vespe context analyze`
 

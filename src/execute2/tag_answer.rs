@@ -42,10 +42,10 @@ pub enum AnswerStatus {
 impl ToString for AnswerStatus {
     fn to_string(&self) -> String {
         match self {
-            AnswerStatus::JustCreated => "just_created".to_string(),
+            AnswerStatus::JustCreated => "created".to_string(),
             AnswerStatus::Repeat => "repeat".to_string(),
-            AnswerStatus::NeedProcessing => "need_processing".to_string(),
-            AnswerStatus::NeedInjection => "need_injection".to_string(),
+            AnswerStatus::NeedProcessing => "processing".to_string(),
+            AnswerStatus::NeedInjection => "injection".to_string(),
             AnswerStatus::Completed => "completed".to_string(),
             AnswerStatus::Edited => "edited".to_string(),
         }
@@ -57,10 +57,10 @@ impl FromStr for AnswerStatus {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "just_created" => Ok(AnswerStatus::JustCreated),
+            "created" => Ok(AnswerStatus::JustCreated),
             "repeat" => Ok(AnswerStatus::Repeat),
-            "need_processing" => Ok(AnswerStatus::NeedProcessing),
-            "need_injection" => Ok(AnswerStatus::NeedInjection),
+            "processing" => Ok(AnswerStatus::NeedProcessing),
+            "injection" => Ok(AnswerStatus::NeedInjection),
             "completed" => Ok(AnswerStatus::Completed),
             "edited" => Ok(AnswerStatus::Edited),
             _ => Err(ExecuteError::UnsupportedStatus(s.to_string())),

@@ -34,7 +34,7 @@ pub enum InlineStatus {
 impl ToString for InlineStatus {
     fn to_string(&self) -> String {
         match self {
-            InlineStatus::JustCreated => "just_created".to_string(),
+            InlineStatus::JustCreated => "created".to_string(),
             InlineStatus::Repeat => "repeat".to_string(),
             InlineStatus::Completed => "completed".to_string(),
         }
@@ -46,7 +46,7 @@ impl FromStr for InlineStatus {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "just_created" => Ok(InlineStatus::JustCreated),
+            "created" => Ok(InlineStatus::JustCreated),
             "repeat" => Ok(InlineStatus::Repeat),
             "completed" => Ok(InlineStatus::Completed),
             _ => Err(ExecuteError::UnsupportedStatus(s.to_string())),

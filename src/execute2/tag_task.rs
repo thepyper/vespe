@@ -65,7 +65,7 @@ pub enum TaskStatus {
 impl ToString for TaskStatus {
     fn to_string(&self) -> String {
         match self {
-            TaskStatus::JustCreated => "just_created".to_string(),
+            TaskStatus::JustCreated => "created".to_string(),
             TaskStatus::Waiting => "waiting".to_string(),
             TaskStatus::Eating => "eating".to_string(),
         }
@@ -77,7 +77,7 @@ impl FromStr for TaskStatus {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "just_created" => Ok(TaskStatus::JustCreated),
+            "created" => Ok(TaskStatus::JustCreated),
             "waiting" => Ok(TaskStatus::Waiting),
             "eating" => Ok(TaskStatus::Eating),
             _ => Err(super::error::ExecuteError::UnsupportedStatus(s.to_string())),

@@ -175,7 +175,7 @@ impl Project {
             }
         }
         data.insert(
-            "$input".to_string(),
+            "$stdin".to_string(),
             JsonPlusEntity::DoubleQuotedString(input.input_file.unwrap_or(String::new())),
         );
         let mut path_res_builder = self.path_res.clone();

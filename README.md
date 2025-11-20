@@ -574,7 +574,7 @@ All contexts in `vespe` are processed as [Handlebars](https://handlebarsjs.com/)
 
 *   `{{$1}}`, `{{$2}}`, ... `{{$n}}`: Represents the first positional command-line argument passed to `vespe context run`. For example, if you run `vespe context run my-context arg1 arg2`, `{{$1}}` will be `arg1`.
 *   `{{$args}}`: Represents all positional command-line arguments as a space-separated string. Using the previous example, `{{$args}}` would be `arg1 arg2`.
-*   `{{$input}}`: Represents the input received from `stdin`. If you pipe content to `vespe context run`, this variable will hold that content.
+*   `{{$stdin}}`: Represents the input received from `stdin`. If you pipe content to `vespe context run`, this variable will hold that content.
 
 ## Examples
 

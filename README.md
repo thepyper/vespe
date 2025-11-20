@@ -55,11 +55,11 @@ At its core, `vespe` operates on a collection of textual documents, referred to 
   - [`vespe init`](#vespe-init)
   - [`vespe context new`](#vespe-context-new)
   - [`vespe context run`](#vespe-context-run)
+  - [`vespe context analyze`](#vespe-context-analyze)  
   - [`vespe watch`](#vespe-watch)
   - [`vespe project add-aux-path`](#vespe-project-add-aux-path)
   - [`vespe project remove-aux-path`](#vespe-project-remove-aux-path)
   - [`vespe project list-aux-paths`](#vespe-project-list-aux-paths)
-  - [`vespe context analyze`](#vespe-context-analyze)  
 - [Piping Data into Contexts](#piping-data-into-contexts)
 - [License](#license)
 - [NO-WARRANTY](#no-warranty)
@@ -634,6 +634,19 @@ cat my-data.txt | vespe context run [NAME]
 *   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{$1}}` for first argument, `{{$2}}` for second argument, and so on; {{$args}} for all of the arguments space-separated).
 *   **Piped Input**: The `run` command can also receive text from `stdin`. This input is available within the context via the `{{$input}}` Handlebars variable.
 
+### `vespe context analyze`
+
+Analyzes a specified context file and generates a report on the status of all its anchors (`@answer`, `@inline`, `@task`, etc.). This is useful for inspecting the state of dynamic content, such as viewing the query and reply for an `@answer` anchor.
+
+**Usage:**
+
+```shell
+vespe context analyze <NAME> [--filter-uuid <UUID_PREFIX>]
+```
+
+*   `<NAME>`: The name of the context to analyze.
+*   `--filter-uuid <UUID_PREFIX>`: (Optional) Filters the report to show only the anchors whose UUID starts with the specified prefix. This is useful for focusing on a specific anchor.
+
 ### `vespe watch`
 
 Starts a watcher that monitors your context files for any changes. When a file is modified, `vespe` automatically re-executes it, providing a live-editing experience.
@@ -679,19 +692,6 @@ Lists all the persistent auxiliary search paths configured for the project.
 ```shell
 vespe project list-aux-paths
 ```
-
-### `vespe context analyze`
-
-Analyzes a specified context file and generates a report on the status of all its anchors (`@answer`, `@inline`, `@task`, etc.). This is useful for inspecting the state of dynamic content, such as viewing the query and reply for an `@answer` anchor.
-
-**Usage:**
-
-```shell
-vespe context analyze <NAME> [--filter-uuid <UUID_PREFIX>]
-```
-
-*   `<NAME>`: The name of the context to analyze.
-*   `--filter-uuid <UUID_PREFIX>`: (Optional) Filters the report to show only the anchors whose UUID starts with the specified prefix. This is useful for focusing on a specific anchor.
 
 ## Piping Data into Contexts
 

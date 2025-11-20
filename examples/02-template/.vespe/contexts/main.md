@@ -15,7 +15,7 @@
 
 @inline { data: { color: '{{$args}}' } } template/about_color.md
 
-@inline { data: { color: '{{$input}}' } } template/about_color.md
+@inline { data: { color: '{{$stdin}}' } } template/about_color.md
 
 @inline { data: { color: '{{$my_var}}' } } template/about_color.md
 

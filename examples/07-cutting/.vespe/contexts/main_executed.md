@@ -1,12 +1,12 @@
-<!-- inline-173dc55f-76e6-41f5-a305-b5e47ff1476d:begin +completed+ {
+<!-- inline-98231acb-44c4-4944-b656-a87a03bf1468:begin +completed+ {
 	begin_line: 7,
 	end_line: 8
 } other.md -->
 l7
 l8
-<!-- inline-173dc55f-76e6-41f5-a305-b5e47ff1476d:end  {}  -->
+<!-- inline-98231acb-44c4-4944-b656-a87a03bf1468:end  {}  -->
 
-<!-- inline-202e9462-cf00-419a-a788-895aefb28f21:begin +completed+ {
+<!-- inline-afc917e1-7d55-491b-82d1-8bd927d7dbae:begin +completed+ {
 	begin_marker: "+++1",
 	end_marker: "+++2"
 } other.md -->
@@ -14,14 +14,13 @@ l8
 l6
 l7
 l8
-<!-- inline-202e9462-cf00-419a-a788-895aefb28f21:end  {}  -->
+<!-- inline-afc917e1-7d55-491b-82d1-8bd927d7dbae:end  {}  -->
 
-<!-- inline-c02112b3-d4f7-4dca-b92d-0b6064fb93b2:begin +completed+ {
+<!-- inline-df7e2098-111c-4999-ab45-12307e6f8f52:begin +completed+ {
 	begin_line: 1,
 	begin_marker: "+++3",
 	end_line: -2,
 	end_marker: "+++4"
 } other.md -->
 l13
-<!-- inline-c02112b3-d4f7-4dca-b92d-0b6064fb93b2:end  {}  -->
-\
+<!-- inline-df7e2098-111c-4999-ab45-12307e6f8f52:end  {}  -->

@@ -329,7 +329,7 @@ It can be specified in three ways:
 
 1.  **A single file path**:
 
-    ```json
+    ```markdown
     input: "path/to/your/context.md"
     ```
 
@@ -337,7 +337,7 @@ It can be specified in three ways:
 
     If your context file is a Handlebars template, you can provide data to it.
 
-    ```json
+    ```markdown
     input: {
       context: "path/to/template.md",
       data: { topic: "Rust", year: 2025 }
@@ -348,7 +348,7 @@ It can be specified in three ways:
 
     You can concatenate multiple files and templates into a single prompt.
 
-    ```json
+    ```markdown
     input: [
       "prompts/intro.md",
       {

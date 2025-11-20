@@ -97,14 +97,26 @@ pub(crate) fn _try_parse_nude_value<'doc>(
 pub(crate) fn _try_parse_nude_integer<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(i64, Parser<'doc>)>> {
-    let (number_str, new_parser) = parser.consume_many_if_immutable(|x| x.is_digit(10));
+
+    let (sign, p0_5) = match parser.consume_matching_char_immutable('-') {
+        None => (false, parser.clone()),
+        Some(p0_5) => (true, p0_5) 
+    };
+
+    let (number_str, new_parser) = p0_5.consume_many_if_immutable(|x| x.is_digit(10));
 
     if number_str.is_empty() {
         return Ok(None);
     }
 
     match i64::from_str_radix(&number_str, 10) {
-        Ok(num) => Ok(Some((num, new_parser))),
+        Ok(num) => {
+            if sign {
+                Ok(Some((-num, new_parser)))
+            } else {
+                Ok(Some((num, new_parser)))
+            }
+        }
 
         Err(e) => Err(Ast2Error::ParseIntError(e)),
     }
@@ -113,9 +125,13 @@ pub(crate) fn _try_parse_nude_integer<'doc>(
 pub(crate) fn _try_parse_nude_float<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(f64, Parser<'doc>)>> {
-    let (sign, p1) = parser.consume_matching_char_immutable('-'); TODO
 
-    let (int_part, p1) = parser.consume_many_if_immutable(|x| x.is_digit(10));
+    let (sign, p0_5) = match parser.consume_matching_char_immutable('-') {
+        None => (false, parser.clone()),
+        Some(p0_5) => (true, p0_5) 
+    };
+
+    let (int_part, p1) = p0_5.consume_many_if_immutable(|x| x.is_digit(10));
 
     if let Some(p2) = p1.consume_matching_char_immutable('.') {
         // Found a dot.
@@ -129,8 +145,13 @@ pub(crate) fn _try_parse_nude_float<'doc>(
         let num_str = format!("{}.{}", int_part, frac_part);
 
         match f64::from_str(&num_str) {
-            Ok(n) => Ok(Some((n, p3))),
-
+            Ok(n) => {
+                if sign {
+                    Ok(Some((-n, p3)))
+                } else {
+                    Ok(Some((n, p3)))
+                }
+            }
             Err(e) => Err(Ast2Error::ParseFloatError(e)),
         }
     } else {

@@ -189,9 +189,9 @@ impl InlinePolicy {
                 .iter()
                 .position(|l| l.contains(marker))
                 .map(|idx| idx as i64)
-                .unwrap_or(0) // default se marker non trovato
+                .unwrap_or(0)  
         } else {
-            0
+            -1
         };
 
         let end_marker_line = if let Some(marker) = end_marker {
@@ -199,9 +199,9 @@ impl InlinePolicy {
                 .iter()
                 .rposition(|l| l.contains(marker))
                 .map(|idx| idx as i64)
-                .unwrap_or(lines.len() as i64) // default se non trovato
+                .unwrap_or(lines.len() as i64)  
         } else {
-            lines.len() as i64
+            0 
         };
 
         let begin = begin_marker_line + begin_line.unwrap_or(0);
@@ -214,7 +214,9 @@ impl InlinePolicy {
             return String::new();
         }
 
-        lines[begin..end].join("\n")
+        let mut joint = lines[begin..end].join("\n");
+        joint.push('\n');
+        joint
     }
 }
 

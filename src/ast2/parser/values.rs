@@ -113,6 +113,8 @@ pub(crate) fn _try_parse_nude_integer<'doc>(
 pub(crate) fn _try_parse_nude_float<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(f64, Parser<'doc>)>> {
+    let (sign, p1) = parser.consume_matching_char_immutable('-'); TODO
+
     let (int_part, p1) = parser.consume_many_if_immutable(|x| x.is_digit(10));
 
     if let Some(p2) = p1.consume_matching_char_immutable('.') {

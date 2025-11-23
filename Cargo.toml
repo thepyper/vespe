@@ -19,7 +19,6 @@ chrono = "0.4"
 handlebars = "5.1.0"
 regex = "1.10.0"
 sha2 = "0.10"
-gix = "0.75"
 
 [[bin]]
 name = "vespe"

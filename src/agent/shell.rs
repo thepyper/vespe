@@ -20,7 +20,7 @@ pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String>
         }
         #[cfg(not(windows))]
         {
-            Command::new(program).args(args)
+            Command::new(program).args(args.clone())
         }
     };
 

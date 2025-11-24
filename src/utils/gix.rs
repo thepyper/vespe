@@ -261,7 +261,7 @@ pub fn git_commit_files(
             })?;
 
             let odb = repo.objects.clone();
-            let blob_id = odb.write(&content[..])?;
+            let blob_id = odb.write(gix::object::Blob::from_bytes(&content))?;
 
             let metadata = std::fs::metadata(&path).map_err(|e| Error::FileMetadata {
                 file_path: path.clone(),
@@ -313,7 +313,7 @@ pub fn git_commit_files(
 pub fn is_in_git_repository(root_path: &Path) -> Result<bool, Error> {
     match gix::discover(root_path) {
         Ok(_) => Ok(true),
-        Err(gix::open::Error::NotARepository) => Ok(false),
+        Err(gix::open::Error::NotARepository { .. }) => Ok(false),
         Err(e) => Err(e.into()),
     }
 }

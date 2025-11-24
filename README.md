@@ -83,19 +83,11 @@ To use `vespe`, you'll need to have **Rust** and its package manager, **Cargo**,
 
 ### Steps
 
-1.  **Clone the Repository**:
-    First, clone the `vespe` repository to your local machine:
+    **Install `vespe`**:
+    Use Cargo to install the `vespe` command-line tool. This will compile it and place the `vespe` executable in your Cargo bin directory, making it available globally in your shell's PATH.
 
     ```shell
-    git clone https://github.com/thepyper/vespe.git
-    cd vespe
-    ```
-
-2.  **Install `vespe`**:
-    Navigate into the cloned directory and use Cargo to install the `vespe` command-line tool. This will compile the project and place the `vespe` executable in your Cargo bin directory, making it available globally in your shell's PATH.
-
-    ```shell
-    cargo install --path .
+    cargo install vespe
     ```
 
     If you encounter any issues, ensure your Cargo bin directory is in your system's PATH. You can usually find instructions for this in the Rust installation guide.

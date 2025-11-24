@@ -9,49 +9,69 @@ use tracing::debug;
 
 #[derive(Debug, ThisError)]
 pub enum Error {
-    #[error("Failed to open repository: {message}")]
-    GitRepository { message: String },
+    #[error("Failed to open repository: {0}")]
+    OpenRepository(#[from] gix::open::Error),
     #[error("No work directory found for the repository")]
     NoWorkdir,
+    #[error("Failed to get HEAD reference: {0}")]
+    HeadReference(#[from] gix::reference::peel::Error),
     #[error("Failed to get HEAD commit: {0}")]
-    HeadCommit(String),
+    HeadCommit(#[from] gix::reference::peel::to_commit::Error),
     #[error("Failed to get tree from commit: {0}")]
-    TreeFromCommit(String),
+    TreeFromCommit(#[from] gix::object::peel::to_tree::Error),
     #[error("Failed to load repository index: {0}")]
-    RepositoryIndex(String),
+    RepositoryIndex(#[from] gix::index::init::Error),
     #[error("Failed to get repository status: {0}")]
-    RepositoryStatus(String),
+    RepositoryStatus(#[from] gix::status::Error),
     #[error("Failed to restore index: {0}")]
-    RestoreIndex(String),
+    RestoreIndex(#[from] gix::index::State::Error),
     #[error("Failed to canonicalize path '{path}': {source}")]
     CanonicalizePath {
         path: PathBuf,
+        #[source]
         source: std::io::Error,
     },
     #[error("Path '{file_path}' is outside the work directory '{workdir}'")]
-    PathOutsideWorkdir { file_path: PathBuf, workdir: PathBuf },
-    #[error("Failed to add file '{file_path}' to index: {message}")]
-    AddFileToIndex { file_path: PathBuf, message: String },
+    PathOutsideWorkdir {
+        file_path: PathBuf,
+        workdir: PathBuf,
+    },
+    #[error("Failed to add file '{file_path}' to index: {source}")]
+    AddFileToIndex {
+        file_path: PathBuf,
+        #[source]
+        source: std::io::Error, // For fs::read
+    },
+    #[error("Failed to write blob: {0}")]
+    WriteBlob(#[from] gix::object::write::Error),
+    #[error("Failed to get file metadata for '{file_path}': {source}")]
+    FileMetadata {
+        file_path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("Failed to create index entry from stat: {0}")]
+    IndexEntryFromStat(#[from] gix::index::entry::stat::Error),
+    #[error("Failed to set index entry for '{file_path}': {source}")]
+    SetIndexEntry {
+        file_path: PathBuf,
+        #[source]
+        source: gix::index::entry::Error,
+    },
     #[error("Failed to write index: {0}")]
-    WriteIndex(String),
+    WriteIndex(#[from] gix::index::file::write::Error),
     #[error("Failed to write tree: {0}")]
-    WriteTree(String),
-    #[error("Failed to find tree '{oid}': {message}")]
-    FindTree { oid: ObjectId, message: String },
-    #[error("Failed to create signature: {0}")]
-    CreateSignature(String),
+    WriteTree(#[from] gix::index::write_tree::Error),
     #[error("Failed to create commit: {0}")]
-    CreateCommit(String),
-    #[error("Failed to find commit '{oid}': {message}")]
-    FindCommit { oid: ObjectId, message: String },
+    CreateCommit(#[from] gix::commit::create::Error),
+    #[error("Failed to find commit '{oid}': {0}")]
+    FindCommit {
+        oid: ObjectId,
+        #[source]
+        source: gix::object::find::Error,
+    },
     #[error("Gix error: {0}")]
-    Gix(String),
-}
-
-impl From<Box<dyn std::error::Error + Send + Sync>> for Error {
-    fn from(e: Box<dyn std::error::Error + Send + Sync>) -> Self {
-        Error::Gix(e.to_string())
-    }
+    Gix(#[from] Box<dyn std::error::Error + Send + Sync>),
 }
 
 pub fn git_commit_files(
@@ -64,54 +84,35 @@ pub fn git_commit_files(
         message, files_to_commit
     );
 
-    let repo = gix::discover(root_path)
-        .map_err(|e| Error::GitRepository {
-            message: format!("Failed to open repository: {}", e),
-        })?;
+    let repo = gix::discover(root_path)?;
 
     let workdir = repo
         .work_dir()
         .ok_or(Error::NoWorkdir)?
         .to_path_buf();
 
-    // Convert files_to_commit to a HashSet for efficient lookup
     let files_to_commit_set: HashSet<PathBuf> = files_to_commit.iter().cloned().collect();
 
     // 1. Get the current HEAD commit
-    let head_ref = repo
-        .head()
-        .map_err(|e| Error::HeadCommit(e.to_string()))?;
-    let head_commit = head_ref
-        .peel_to_commit_in_place()
-        .map_err(|e| Error::HeadCommit(e.to_string()))?;
+    let head_ref = repo.head()?;
+    let head_commit = head_ref.peel_to_commit_in_place()?;
     let head_commit_id = head_commit.id;
 
     // 2. Get the tree associated with the HEAD commit
-    let head_tree_id = head_commit.tree_id().map_err(|e| Error::TreeFromCommit(e.to_string()))?;
+    let head_tree_id = head_commit.tree_id()?;
 
     // 3. Load the repository index
-    let mut index = repo
-        .index_or_empty()
-        .map_err(|e| Error::RepositoryIndex(e.to_string()))?;
+    let mut index = repo.index_or_empty()?;
 
     // 4. Identify files that were staged before our operation
     let mut files_to_re_stage: Vec<PathBuf> = Vec::new();
 
-    // Get status to find staged files
-    let mut status_platform = repo
-        .status(gix::progress::Discard)
-        .map_err(|e| Error::RepositoryStatus(e.to_string()))?;
+    let status_platform = repo.status(gix::progress::Discard)?;
 
-    for item in status_platform
-        .into_iter()
-        .map_err(|e| Error::RepositoryStatus(e.to_string()))?
-    {
-        let item = item.map_err(|e| Error::RepositoryStatus(e.to_string()))?;
-        let rela_path = item.rela_path().to_path().map_err(|e| {
-            Error::RepositoryStatus(format!("Failed to convert path: {}", e))
-        })?;
+    for item in status_platform.into_iter() {
+        let item = item?;
+        let rela_path = item.rela_path().to_path()?;
         
-        // Check if file is staged (index changed) and not in our commit list
         if item.index_status().is_some() {
             let path = workdir.join(rela_path);
             if !files_to_commit_set.contains(&path) {
@@ -121,18 +122,7 @@ pub fn git_commit_files(
     }
 
     // 5. Reset the index to HEAD
-    let head_tree = repo
-        .find_object(head_tree_id)
-        .map_err(|e| Error::FindTree {
-            oid: head_tree_id,
-            message: e.to_string(),
-        })?
-        .peel_to_tree()
-        .map_err(|e| Error::TreeFromCommit(e.to_string()))?;
-
-    index
-        .set_state_from_tree(&head_tree_id)
-        .map_err(|e| Error::RestoreIndex(e.to_string()))?;
+    index.set_state_from_tree(&head_tree_id)?;
 
     // 6. Add files_to_commit to the index
     for path in files_to_commit {
@@ -157,24 +147,17 @@ pub fn git_commit_files(
                 workdir: workdir.clone(),
             })?;
 
-        // Read file content and add to index
         let content = std::fs::read(path).map_err(|e| Error::AddFileToIndex {
             file_path: path.clone(),
-            message: e.to_string(),
+            source: e,
         })?;
 
         let odb = repo.objects.clone();
-        let blob_id = odb
-            .write_blob(&content)
-            .map_err(|e| Error::AddFileToIndex {
-                file_path: path.clone(),
-                message: e.to_string(),
-            })?;
+        let blob_id = odb.write_blob(&content)?;
 
-        // Get file metadata for mode
-        let metadata = std::fs::metadata(path).map_err(|e| Error::AddFileToIndex {
+        let metadata = std::fs::metadata(path).map_err(|e| Error::FileMetadata {
             file_path: path.clone(),
-            message: e.to_string(),
+            source: e,
         })?;
 
         let mode = if metadata.is_dir() {
@@ -196,31 +179,23 @@ pub fn git_commit_files(
         };
 
         let entry = gix::index::Entry::from_stat(
-            &gix::index::entry::stat::Stat::from_fs(&metadata)
-                .map_err(|e| Error::AddFileToIndex {
-                    file_path: path.clone(),
-                    message: e.to_string(),
-                })?,
+            &gix::index::entry::stat::Stat::from_fs(&metadata)?,
             blob_id,
             gix::index::entry::Flags::empty(),
-        );
+        )?;
 
         index
-            .set_entry(relative_path, entry)
-            .map_err(|e| Error::AddFileToIndex {
+            .set_entry(relative_path.as_ref(), entry)
+            .map_err(|e| Error::SetIndexEntry {
                 file_path: path.clone(),
-                message: e.to_string(),
+                source: e,
             })?;
     }
 
-    index
-        .write(Default::default())
-        .map_err(|e| Error::WriteIndex(e.to_string()))?;
+    index.write(Default::default())?;
 
     // 8. Create a new tree from the index
-    let tree_id = index
-        .write_tree()
-        .map_err(|e| Error::WriteTree(e.to_string()))?;
+    let tree_id = index.write_tree()?;
 
     // 9. Create the commit
     let author = gix::actor::SignatureRef {
@@ -238,23 +213,16 @@ pub fn git_commit_files(
             message,
             tree_id,
             [head_commit_id],
-        )
-        .map_err(|e| Error::CreateCommit(e.to_string()))?
+        )?
         .detach();
 
     // 11. Reset index to the new HEAD
     let new_tree_id = repo
-        .find_commit(new_commit_id)
-        .map_err(|e| Error::FindCommit {
-            oid: new_commit_id,
-            message: e.to_string(),
-        })?
-        .tree_id()
-        .map_err(|e| Error::TreeFromCommit(e.to_string()))?;
+        .find_object(new_commit_id)?
+        .peel_to_commit()? // This line was changed in the file
+        .tree_id()?; // This line was changed in the file
 
-    index
-        .set_state_from_tree(&new_tree_id)
-        .map_err(|e| Error::RestoreIndex(e.to_string()))?;
+    index.set_state_from_tree(&new_tree_id)?;
 
     // 12. Re-add the files_to_re_stage
     for path in files_to_re_stage {
@@ -282,20 +250,15 @@ pub fn git_commit_files(
         if path.exists() {
             let content = std::fs::read(&path).map_err(|e| Error::AddFileToIndex {
                 file_path: path.clone(),
-                message: e.to_string(),
+                source: e,
             })?;
 
             let odb = repo.objects.clone();
-            let blob_id = odb
-                .write_blob(&content)
-                .map_err(|e| Error::AddFileToIndex {
-                    file_path: path.clone(),
-                    message: e.to_string(),
-                })?;
+            let blob_id = odb.write_blob(&content)?;
 
-            let metadata = std::fs::metadata(&path).map_err(|e| Error::AddFileToIndex {
+            let metadata = std::fs::metadata(&path).map_err(|e| Error::FileMetadata {
                 file_path: path.clone(),
-                message: e.to_string(),
+                source: e,
             })?;
 
             let mode = if metadata.is_dir() {
@@ -317,28 +280,22 @@ pub fn git_commit_files(
             };
 
             let entry = gix::index::Entry::from_stat(
-                &gix::index::entry::stat::Stat::from_fs(&metadata)
-                    .map_err(|e| Error::AddFileToIndex {
-                        file_path: path.clone(),
-                        message: e.to_string(),
-                    })?,
+                &gix::index::entry::stat::Stat::from_fs(&metadata)?,
                 blob_id,
                 gix::index::entry::Flags::empty(),
-            );
+            )?;
 
             index
-                .set_entry(relative_path, entry)
-                .map_err(|e| Error::AddFileToIndex {
+                .set_entry(relative_path.to_str().unwrap().as_bytes().into(), entry)
+                .map_err(|e| Error::SetIndexEntry {
                     file_path: path.clone(),
-                    message: e.to_string(),
+                    source: e,
                 })?;
         }
     }
 
     // 13. Write the restored index
-    index
-        .write(Default::default())
-        .map_err(|e| Error::WriteIndex(e.to_string()))?;
+    index.write(Default::default())?;
 
     debug!("Commit created with id {}", new_commit_id);
     Ok(())
@@ -348,13 +305,10 @@ pub fn is_in_git_repository(root_path: &Path) -> Result<bool, Error> {
     match gix::discover(root_path) {
         Ok(_) => Ok(true),
         Err(e) => {
-            // Check if the error is "not found"
-            if e.to_string().contains("not found")
-                || e.to_string().contains("Not a git repository")
-            {
+            if e.kind() == gix::open::Error::Kind::NotARepository {
                 Ok(false)
             } else {
-                Err(Error::Gix(e.to_string()))
+                Err(e.into()) // Convert other errors
             }
         }
     }

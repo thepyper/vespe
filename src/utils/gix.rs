@@ -64,9 +64,10 @@ pub fn git_commit_files(
         message, files_to_commit
     );
 
-    let repo = Repository::discover(root_path).map_err(|e| Error::GitRepository {
-        message: format!("Failed to open repository: {}", e),
-    })?;
+    let repo = gix::discover(root_path)
+        .map_err(|e| Error::GitRepository {
+            message: format!("Failed to open repository: {}", e),
+        })?;
 
     let workdir = repo
         .work_dir()
@@ -177,35 +178,35 @@ pub fn git_commit_files(
         })?;
 
         let mode = if metadata.is_dir() {
-            EntryMode::Tree
-        } else if metadata.permissions().readonly() {
-            EntryMode::Blob
+            gix::objs::tree::EntryKind::Tree
         } else {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
                 if metadata.permissions().mode() & 0o111 != 0 {
-                    EntryMode::BlobExecutable
+                    gix::objs::tree::EntryKind::BlobExecutable
                 } else {
-                    EntryMode::Blob
+                    gix::objs::tree::EntryKind::Blob
                 }
             }
             #[cfg(not(unix))]
             {
-                EntryMode::Blob
+                gix::objs::tree::EntryKind::Blob
             }
         };
 
+        let entry = gix::index::Entry::from_stat(
+            &gix::index::entry::stat::Stat::from_fs(&metadata)
+                .map_err(|e| Error::AddFileToIndex {
+                    file_path: path.clone(),
+                    message: e.to_string(),
+                })?,
+            blob_id,
+            gix::index::entry::Flags::empty(),
+        );
+
         index
-            .set_entry(
-                relative_path,
-                gix::index::Entry {
-                    id: blob_id,
-                    mode: mode.into(),
-                    flags: gix::index::entry::Flags::empty(),
-                    stat: gix::index::entry::Stat::default(),
-                },
-            )
+            .set_entry(relative_path, entry)
             .map_err(|e| Error::AddFileToIndex {
                 file_path: path.clone(),
                 message: e.to_string(),
@@ -222,20 +223,21 @@ pub fn git_commit_files(
         .map_err(|e| Error::WriteTree(e.to_string()))?;
 
     // 9. Create the commit
-    let signature = gix::actor::SignatureRef {
+    let author = gix::actor::SignatureRef {
         name: "vespe".into(),
         email: "vespe@example.com".into(),
         time: gix::date::Time::now_local_or_utc(),
     };
+    let committer = author.clone();
 
     let new_commit_id = repo
-        .commit(
+        .commit_as(
+            &author,
+            &committer,
             "HEAD",
             message,
             tree_id,
             [head_commit_id],
-            signature,
-            signature,
         )
         .map_err(|e| Error::CreateCommit(e.to_string()))?
         .detach();
@@ -297,35 +299,35 @@ pub fn git_commit_files(
             })?;
 
             let mode = if metadata.is_dir() {
-                EntryMode::Tree
-            } else if metadata.permissions().readonly() {
-                EntryMode::Blob
+                gix::objs::tree::EntryKind::Tree
             } else {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
                     if metadata.permissions().mode() & 0o111 != 0 {
-                        EntryMode::BlobExecutable
+                        gix::objs::tree::EntryKind::BlobExecutable
                     } else {
-                        EntryMode::Blob
+                        gix::objs::tree::EntryKind::Blob
                     }
                 }
                 #[cfg(not(unix))]
                 {
-                    EntryMode::Blob
+                    gix::objs::tree::EntryKind::Blob
                 }
             };
 
+            let entry = gix::index::Entry::from_stat(
+                &gix::index::entry::stat::Stat::from_fs(&metadata)
+                    .map_err(|e| Error::AddFileToIndex {
+                        file_path: path.clone(),
+                        message: e.to_string(),
+                    })?,
+                blob_id,
+                gix::index::entry::Flags::empty(),
+            );
+
             index
-                .set_entry(
-                    relative_path,
-                    gix::index::Entry {
-                        id: blob_id,
-                        mode: mode.into(),
-                        flags: gix::index::entry::Flags::empty(),
-                        stat: gix::index::entry::Stat::default(),
-                    },
-                )
+                .set_entry(relative_path, entry)
                 .map_err(|e| Error::AddFileToIndex {
                     file_path: path.clone(),
                     message: e.to_string(),
@@ -343,7 +345,7 @@ pub fn git_commit_files(
 }
 
 pub fn is_in_git_repository(root_path: &Path) -> Result<bool, Error> {
-    match Repository::discover(root_path) {
+    match gix::discover(root_path) {
         Ok(_) => Ok(true),
         Err(e) => {
             // Check if the error is "not found"

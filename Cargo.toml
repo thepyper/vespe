@@ -16,7 +16,6 @@ exclude = [
     ".vespe/*",
     ".gitignore",
     ".gitattributes",
-    ".cargo_vcs_info.json",
 ]
 
 

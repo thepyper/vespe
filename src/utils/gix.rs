@@ -16,15 +16,15 @@ pub enum Error {
     #[error("Failed to get HEAD reference: {0}")]
     HeadReference(#[from] gix::reference::peel::Error),
     #[error("Failed to get HEAD commit: {0}")]
-    HeadCommit(#[from] gix::reference::peel::to_commit::Error),
+    HeadCommit(#[from] gix::reference::peel::Error),
     #[error("Failed to get tree from commit: {0}")]
-    TreeFromCommit(#[from] gix::object::peel::to_tree::Error),
+    TreeFromCommit(#[from] gix::object::peel::Error),
     #[error("Failed to load repository index: {0}")]
-    RepositoryIndex(#[from] gix::index::Error),
+    RepositoryIndex(#[from] gix::index::init::Error),
     #[error("Failed to get repository status: {0}")]
     RepositoryStatus(#[from] gix::status::Error),
     #[error("Failed to restore index: {0}")]
-    RestoreIndex(#[from] gix::index::State::Error),
+    RestoreIndex(#[from] gix::index::StateError),
     #[error("Failed to canonicalize path '{path}': {source}")]
     CanonicalizePath {
         path: PathBuf,
@@ -51,17 +51,17 @@ pub enum Error {
         source: std::io::Error,
     },
     #[error("Failed to create index entry from stat: {0}")]
-    IndexEntryFromStat(#[from] gix::index::entry::Error),
+    IndexEntryFromStat(#[from] gix::index::Error),
     #[error("Failed to set index entry for '{file_path}': {source}")]
     SetIndexEntry {
         file_path: PathBuf,
         #[source]
-        source: gix::index::entry::Error,
+        source: gix::index::Error,
     },
     #[error("Failed to write index: {0}")]
     WriteIndex(#[from] gix::index::file::write::Error),
     #[error("Failed to write tree: {0}")]
-    WriteTree(#[from] gix::index::write_tree::Error),
+    WriteTree(#[from] gix::index::file::write_tree::Error),
     #[error("Failed to create commit: {0}")]
     CreateCommit(#[from] gix::commit::create::Error),
     #[error("Failed to find commit '{oid}': {oid}")]
@@ -151,7 +151,7 @@ pub fn git_commit_files(
         })?;
 
         let odb = repo.objects.clone();
-        let blob_id = odb.write(&content)?;
+        let blob_id = odb.write(&content[..])?;
 
         let metadata = std::fs::metadata(path).map_err(|e| Error::FileMetadata {
             file_path: path.clone(),
@@ -176,11 +176,19 @@ pub fn git_commit_files(
             }
         };
 
-        let entry = gix::index::Entry::from_stat(
-            &gix::index::entry::stat::Stat::from_fs(&metadata)?,
-            blob_id,
-            gix::index::entry::Flags::empty(),
-        )?;
+        let entry = gix::index::Entry {
+            mode: mode.into(),
+            id: blob_id,
+            path: relative_path.to_str().unwrap().as_bytes().into(),
+            flags: gix::index::entry::Flags::empty(),
+            ctime: gix::index::entry::Time::from_systemtime(metadata.created().unwrap_or_else(|_| metadata.modified().unwrap_or_default())),
+            mtime: gix::index::entry::Time::from_systemtime(metadata.modified().unwrap_or_default()),
+            dev: metadata.dev(),
+            ino: metadata.ino(),
+            uid: metadata.uid(),
+            gid: metadata.gid(),
+            file_size: metadata.len(),
+        };
 
         index
             .set_entry(relative_path.as_ref(), entry)
@@ -205,8 +213,8 @@ pub fn git_commit_files(
 
     let new_commit_id = repo
         .commit_as(
-            &author,
-            &committer,
+            author,
+            committer,
             "HEAD",
             message,
             tree_id,
@@ -252,7 +260,7 @@ pub fn git_commit_files(
             })?;
 
             let odb = repo.objects.clone();
-            let blob_id = odb.write(&content)?;
+            let blob_id = odb.write(&content[..])?;
 
             let metadata = std::fs::metadata(&path).map_err(|e| Error::FileMetadata {
                 file_path: path.clone(),
@@ -277,11 +285,19 @@ pub fn git_commit_files(
                 }
             };
 
-            let entry = gix::index::Entry::from_stat(
-                &gix::index::entry::stat::Stat::from_fs(&metadata)?,
-                blob_id,
-                gix::index::entry::Flags::empty(),
-            )?;
+            let entry = gix::index::Entry {
+                mode: mode.into(),
+                id: blob_id,
+                path: relative_path.to_str().unwrap().as_bytes().into(),
+                flags: gix::index::entry::Flags::empty(),
+                ctime: gix::index::entry::Time::from_systemtime(metadata.created().unwrap_or_else(|_| metadata.modified().unwrap_or_default())),
+                mtime: gix::index::entry::Time::from_systemtime(metadata.modified().unwrap_or_default()),
+                dev: metadata.dev(),
+                ino: metadata.ino(),
+                uid: metadata.uid(),
+                gid: metadata.gid(),
+                file_size: metadata.len(),
+            };
 
             index
                 .set_entry(relative_path.to_str().unwrap().as_bytes().into(), entry)
@@ -302,12 +318,7 @@ pub fn git_commit_files(
 pub fn is_in_git_repository(root_path: &Path) -> Result<bool, Error> {
     match gix::discover(root_path) {
         Ok(_) => Ok(true),
-        Err(e) => {
-            if e.kind() == gix::open::Error::Kind::NotARepository {
-                Ok(false)
-            } else {
-                Err(e.into()) // Convert other errors
-            }
-        }
+        Err(gix::open::Error::NotARepository) => Ok(false),
+        Err(e) => Err(e.into()),
     }
 }

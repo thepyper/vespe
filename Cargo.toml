@@ -9,6 +9,12 @@ keywords = ["llm", "cli", "automation", "prompt-engineering", "context-engineeri
 license-file = "LICENSE-AGPL3.md"
 readme = "README.md"
 
+exclude = [
+    "extensions/*",
+    "examples/*",
+]
+
+
 [dependencies]
 anyhow = "1"
 thiserror = "1"

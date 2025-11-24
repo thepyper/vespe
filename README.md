@@ -81,9 +81,7 @@ To use `vespe`, you'll need to have **Rust** and its package manager, **Cargo**,
 
     Essentially, any command that can take a prompt from standard input and return a response to standard output will work as a `provider`.
 
-### Steps
-
-#### Install `vespe`
+### Install `vespe`
 
 Use Cargo to install the `vespe` command-line tool. This will compile it and place the `vespe` executable in your Cargo bin directory, making it available globally in your shell's PATH.
 

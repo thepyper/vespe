@@ -1,5 +1,6 @@
 pub mod file;
 pub mod git;
+pub mod gix;
 pub mod path;
 
 use thiserror::Error as ThisError;

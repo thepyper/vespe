@@ -83,14 +83,15 @@ To use `vespe`, you'll need to have **Rust** and its package manager, **Cargo**,
 
 ### Steps
 
-    **Install `vespe`**:
-    Use Cargo to install the `vespe` command-line tool. This will compile it and place the `vespe` executable in your Cargo bin directory, making it available globally in your shell's PATH.
+**Install `vespe`**:
+
+  Use Cargo to install the `vespe` command-line tool. This will compile it and place the `vespe` executable in your Cargo bin directory, making it available globally in your shell's PATH.
 
     ```shell
     cargo install vespe
     ```
 
-    If you encounter any issues, ensure your Cargo bin directory is in your system's PATH. You can usually find instructions for this in the Rust installation guide.
+  If you encounter any issues, ensure your Cargo bin directory is in your system's PATH. You can usually find instructions for this in the Rust installation guide.
 
 After these steps, you should be able to run `vespe` from any directory in your terminal.
 

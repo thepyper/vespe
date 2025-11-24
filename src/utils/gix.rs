@@ -20,7 +20,7 @@ pub enum Error {
     #[error("Failed to get tree from commit: {0}")]
     TreeFromCommit(#[from] gix::object::peel::to_tree::Error),
     #[error("Failed to load repository index: {0}")]
-    RepositoryIndex(#[from] gix::index::init::Error),
+    RepositoryIndex(#[from] gix::index::Error),
     #[error("Failed to get repository status: {0}")]
     RepositoryStatus(#[from] gix::status::Error),
     #[error("Failed to restore index: {0}")]
@@ -51,7 +51,7 @@ pub enum Error {
         source: std::io::Error,
     },
     #[error("Failed to create index entry from stat: {0}")]
-    IndexEntryFromStat(#[from] gix::index::entry::stat::Error),
+    IndexEntryFromStat(#[from] gix::index::entry::Error),
     #[error("Failed to set index entry for '{file_path}': {source}")]
     SetIndexEntry {
         file_path: PathBuf,
@@ -64,14 +64,12 @@ pub enum Error {
     WriteTree(#[from] gix::index::write_tree::Error),
     #[error("Failed to create commit: {0}")]
     CreateCommit(#[from] gix::commit::create::Error),
-    #[error("Failed to find commit '{oid}': {0}")]
+    #[error("Failed to find commit '{oid}': {oid}")]
     FindCommit {
         oid: ObjectId,
         #[source]
         source: gix::object::find::Error,
-    },
-    #[error("Gix error: {0}")]
-    Gix(#[from] Box<dyn std::error::Error + Send + Sync>),
+    }
 }
 
 pub fn git_commit_files(
@@ -102,14 +100,14 @@ pub fn git_commit_files(
     let head_tree_id = head_commit.tree_id()?;
 
     // 3. Load the repository index
-    let mut index = repo.index_or_empty()?;
+    let mut index = repo.index_or_empty()?.into_mutable();
 
     // 4. Identify files that were staged before our operation
     let mut files_to_re_stage: Vec<PathBuf> = Vec::new();
 
     let status_platform = repo.status(gix::progress::Discard)?;
 
-    for item in status_platform.into_iter() {
+    for item in status_platform.iter() {
         let item = item?;
         let rela_path = item.rela_path().to_path()?;
         
@@ -153,7 +151,7 @@ pub fn git_commit_files(
         })?;
 
         let odb = repo.objects.clone();
-        let blob_id = odb.write_blob(&content)?;
+        let blob_id = odb.write(&content)?;
 
         let metadata = std::fs::metadata(path).map_err(|e| Error::FileMetadata {
             file_path: path.clone(),
@@ -254,7 +252,7 @@ pub fn git_commit_files(
             })?;
 
             let odb = repo.objects.clone();
-            let blob_id = odb.write_blob(&content)?;
+            let blob_id = odb.write(&content)?;
 
             let metadata = std::fs::metadata(&path).map_err(|e| Error::FileMetadata {
                 file_path: path.clone(),

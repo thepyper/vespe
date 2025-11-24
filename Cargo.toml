@@ -12,6 +12,7 @@ readme = "README.md"
 exclude = [
     "extensions/*",
     "examples/*",
+    "doc/*",
 ]
 
 

@@ -366,7 +366,7 @@ You can use it in another file like this:
 @answer {
   provider: "gemini -y",
   input: {
-    context: "my_prompts/question",
+    context: "my_prompts/question.md",
     data: { topic: "Rust" }
   }
 }
@@ -380,7 +380,7 @@ The `prefix` and `postfix` parameters allow you to add content before or after t
 
 Both `prefix` and `postfix` support the exact same formats as the `input` parameter (a single file path, a file with template data, or a list of contexts).
 
--   `prefix`: Prepends content to the prompt. Often used for system instructions or to set a persona for the LLM.
+-   `prefix`: Prepends content to the prompt as system message. Often used for system instructions or to set a persona for the LLM.
 -   `postfix`: Appends content to the prompt. Useful for adding constraints, output formatting instructions, or final reminders.
 
 *Example:*
@@ -401,8 +401,8 @@ What is the capital of France?
 
 @answer {
   provider: "gemini -y",
-  prefix: "my_prompts/persona",
-  postfix: "my_prompts/format"
+  prefix: "my_prompts/persona.md",
+  postfix: "my_prompts/format.md"
 }
 ```
 
@@ -410,7 +410,7 @@ This constructs a prompt where the LLM is first instructed to act like a pirate,
 
 **Output Redirection:**
 
--   `output: "path/to/context"`: Redirects the LLM's response to a specified context instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
+-   `output: "path/to/file"`: Redirects the LLM's response to a specified context instead of injecting it back into the current document. The content of the `@answer` tag will be cleared.
 
 *Example:*
 
@@ -427,7 +427,7 @@ The LLM's summary will be saved in `.vespe/contexts/output/summary.txt`.
 
 **Agent Persona and Conversation Flow:**
 
--   `with_agent_names: true`: When dealing with a conversation history involving multiple agents (answer with different prefix / prefix_data), this option assigns a unique, consistent name to each agent (e.g., "Agent-A", "Agent-B"). This helps the LLM maintain a coherent persona for each participant. The system prompt will also be updated with "You are <agent_name>" to reinforce the current agent's identity.
+-   `with_agent_names: true`: When dealing with a conversation history involving multiple agents (answer with different prefix / prefix_data), this option assigns a unique, consistent name to each agent (e.g., "Agent-A", "Agent-B"). This helps the LLM maintain a coherent persona for each participant. The system prompt will also be prefixed with "You are <agent_name>" to reinforce the current agent's identity.
 -   `with_invitation: true`: Appends "Assistant:" (or "Assistant <agent_name>:" if `with_agent_names` is active) at the end of the prompt. This serves as a clear signal for the LLM to begin its response, guiding the turn-taking in the conversation.
 
 ### @inline
@@ -621,9 +621,9 @@ cat my-data.txt | vespe context run [NAME]
 *   `--today`: A flag to execute the context for the current date.
 *   `-D <KEY>=<VALUE>`: (Optional) Defines a variable that can be used within the context via Handlebars syntax (e.g., `{{$KEY}}`). This is useful for passing dynamic values to your templates. For example, running with `-D name=World` allows you to use `{{$name}}` in your context. This option can be specified multiple times.
 *   `-I <PATH>`: (Optional) Adds an auxiliary directory path to search for input files (e.g., for `@include`, `@inline` or `@answer input/prefix/postfix:` ). When resolving a file, `vespe` will first check the project's root path and then search the specified auxiliary paths in order. This allows you to organize and reuse context files from shared locations. This option can be specified multiple times.
-*   `-O <PATH>`, `--output-path <PATH>`: (Optional) Specifies a directory where output files should be written. When an `@answer` tag uses the `output:` parameter, the resulting file will be created in this directory instead of the default `.vespe/contexts` location. This is useful for directing generated content to a specific folder, such as `dist` or `build`.
+*   `-O <PATH>`, `--output-path <PATH>`: (Optional) Specifies a directory where output files should be written. When an `@answer` tag uses the `output:` parameter, the resulting file will be created in this directory instead of the default `.vespe/contexts` location. This is useful for directing generated content to a specific folder.
 *   `[ARGS]...`: (Optional) A list of string arguments that can be accessed within the context file using Handlebars syntax (e.g., `{{$1}}` for first argument, `{{$2}}` for second argument, and so on; {{$args}} for all of the arguments space-separated).
-*   **Piped Input**: The `run` command can also receive text from `stdin`. This input is available within the context via the `{{$input}}` Handlebars variable.
+*   **Piped Input**: The `run` command can also receive text from `stdin`. This input is available within the context via the `{{$stdin}}` Handlebars variable.
 
 ### `vespe context analyze`
 

@@ -2,6 +2,12 @@
 name = "vespe"
 version = "0.1.0"
 edition = "2021"
+description = "Text as a Canvas for LLM Collaboration and Automation"
+repository = "https://github.com/thepyper/vespe.git"
+categories = ["development-tools", "text-processing"]
+keywords = ["llm", "cli", "automation", "prompt-engineering", "context-engineering"]
+license-file = "LICENSE-AGPL3.md"
+readme = "README.md"
 
 [dependencies]
 anyhow = "1"

@@ -14,17 +14,17 @@ pub enum Error {
     #[error("No work directory found for the repository")]
     NoWorkdir,
     #[error("Failed to get HEAD reference: {0}")]
-    HeadReference(#[from] gix::reference::peel::Error),
+    HeadReference(#[from] gix::reference::find::existing::Error),
     #[error("Failed to get HEAD commit: {0}")]
-    HeadCommit(#[from] gix::reference::peel::Error),
+    HeadCommit(#[from] gix::head::peel::to_commit::Error),
     #[error("Failed to get tree from commit: {0}")]
-    TreeFromCommit(#[from] gix::object::peel::Error),
+    TreeFromCommit(#[from] gix::object::peel::to_kind::Error),
     #[error("Failed to load repository index: {0}")]
-    RepositoryIndex(#[from] gix::index::init::Error),
+    RepositoryIndex(#[from] gix::worktree::open_index::Error),
     #[error("Failed to get repository status: {0}")]
     RepositoryStatus(#[from] gix::status::Error),
     #[error("Failed to restore index: {0}")]
-    RestoreIndex(#[from] gix::index::StateError),
+    RestoreIndex(#[from] gix::index::State::Error), // This might still be ambiguous
     #[error("Failed to canonicalize path '{path}': {source}")]
     CanonicalizePath {
         path: PathBuf,
@@ -51,25 +51,31 @@ pub enum Error {
         source: std::io::Error,
     },
     #[error("Failed to create index entry from stat: {0}")]
-    IndexEntryFromStat(#[from] gix::index::Error),
+    IndexEntryFromStat(#[from] gix::index::Error), // This might still be ambiguous
     #[error("Failed to set index entry for '{file_path}': {source}")]
     SetIndexEntry {
         file_path: PathBuf,
         #[source]
-        source: gix::index::Error,
+        source: gix::index::Error, // This might still be ambiguous
     },
     #[error("Failed to write index: {0}")]
     WriteIndex(#[from] gix::index::file::write::Error),
     #[error("Failed to write tree: {0}")]
-    WriteTree(#[from] gix::index::file::write_tree::Error),
+    WriteTree(#[from] gix::index::write_tree::Error),
     #[error("Failed to create commit: {0}")]
-    CreateCommit(#[from] gix::commit::create::Error),
+    CreateCommit(#[from] gix::commit::Error),
     #[error("Failed to find commit '{oid}': {oid}")]
     FindCommit {
         oid: ObjectId,
         #[source]
         source: gix::object::find::Error,
-    }
+    },
+    #[error("Gix discover error: {0}")]
+    GixDiscover(#[from] gix::discover::Error),
+    #[error("Gix object decode error: {0}")]
+    GixObjectDecode(#[from] gix::object::decode::Error),
+    #[error("Gix commit error: {0}")]
+    GixCommit(#[from] gix::commit::Error),
 }
 
 pub fn git_commit_files(
@@ -151,7 +157,7 @@ pub fn git_commit_files(
         })?;
 
         let odb = repo.objects.clone();
-        let blob_id = odb.write(&content[..])?;
+        let blob_id = odb.write(gix::object::Blob::from_bytes(&content))?;
 
         let metadata = std::fs::metadata(path).map_err(|e| Error::FileMetadata {
             file_path: path.clone(),
@@ -176,18 +182,13 @@ pub fn git_commit_files(
             }
         };
 
+        let stat = gix::index::entry::Stat::from_metadata(gix::index::fs::Metadata::from(metadata))?;
         let entry = gix::index::Entry {
+            stat,
             mode: mode.into(),
             id: blob_id,
-            path: relative_path.to_str().unwrap().as_bytes().into(),
+            path: relative_path.as_ref().into(),
             flags: gix::index::entry::Flags::empty(),
-            ctime: gix::index::entry::Time::from_systemtime(metadata.created().unwrap_or_else(|_| metadata.modified().unwrap_or_default())),
-            mtime: gix::index::entry::Time::from_systemtime(metadata.modified().unwrap_or_default()),
-            dev: metadata.dev(),
-            ino: metadata.ino(),
-            uid: metadata.uid(),
-            gid: metadata.gid(),
-            file_size: metadata.len(),
         };
 
         index
@@ -285,20 +286,14 @@ pub fn git_commit_files(
                 }
             };
 
-            let entry = gix::index::Entry {
-                mode: mode.into(),
-                id: blob_id,
-                path: relative_path.to_str().unwrap().as_bytes().into(),
-                flags: gix::index::entry::Flags::empty(),
-                ctime: gix::index::entry::Time::from_systemtime(metadata.created().unwrap_or_else(|_| metadata.modified().unwrap_or_default())),
-                mtime: gix::index::entry::Time::from_systemtime(metadata.modified().unwrap_or_default()),
-                dev: metadata.dev(),
-                ino: metadata.ino(),
-                uid: metadata.uid(),
-                gid: metadata.gid(),
-                file_size: metadata.len(),
-            };
-
+                            let stat = gix::index::entry::Stat::from_metadata(gix::index::fs::Metadata::from(metadata))?;
+                            let entry = gix::index::Entry {
+                                stat,
+                                mode: mode.into(),
+                                id: blob_id,
+                                path: relative_path.as_ref().into(),
+                                flags: gix::index::entry::Flags::empty(),
+                            };
             index
                 .set_entry(relative_path.to_str().unwrap().as_bytes().into(), entry)
                 .map_err(|e| Error::SetIndexEntry {

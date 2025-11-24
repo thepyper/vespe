@@ -198,11 +198,11 @@ What is the capital of France?
 ### @include
 
 The `@include` tag statically inserts the content of another context file. This is useful for reusing prompts or structuring complex contexts.
-File lookup happens in .vespe directory, and .md extension is added to given path.
+File lookup happens in .vespe directory, and in auxiliary paths specified in project settings or by command line.
 
 **Usage:**
 ```markdown
-@include my_common_prompts/preamble
+@include my_common_prompts/preamble.md
 
 Now, do something specific.
 

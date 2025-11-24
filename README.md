@@ -218,7 +218,7 @@ Hello, {{name}}!
 
 **`main.md`:**
 ```markdown
-@include data-example { data: { name: "World" } }
+@include data-example.md { data: { name: "World" } }
 ```
 This will resolve to "Hello, World!".
 
@@ -259,7 +259,7 @@ This prompt is sent without the context of the first one.
 ### @comment
 
 The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `vespe` engine and is not sent to the LLM.
-Note that json+ syntax is anyway required, so you can use strings for example to annotate comments.
+Note that json+ syntax is required, so you can use strings for example to annotate comments.
 
 **Usage:**
 ```markdown

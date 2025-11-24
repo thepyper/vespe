@@ -20,7 +20,9 @@ pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String>
         }
         #[cfg(not(windows))]
         {
-            Command::new(program).args(args.clone())
+            let mut cmd = Command::new("sh");
+            cmd.arg("-c").arg(command_template);
+            cmd
         }
     };
 

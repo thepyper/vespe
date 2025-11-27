@@ -152,7 +152,7 @@ where
             None
         }
     }
-    
+
     pub fn cleanup(&self) {
         let mut tasks = self.tasks.lock().unwrap();
         // Retain a task if it is not finished, OR if it is finished and has a result.

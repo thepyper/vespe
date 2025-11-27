@@ -3,6 +3,7 @@
 //! state machine for the `@answer` tag's lifecycle, from initial creation to
 //! processing the model's response and injecting it into the document.
 use super::Result;
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -13,6 +14,7 @@ use super::tags::{
     Container, DynamicPolicy, DynamicPolicyMonoInput, DynamicPolicyMonoResult, DynamicState,
 };
 use crate::ast2::{JsonPlusEntity, Parameters, Range};
+use crate::utils::task::TaskStatus;
 use std::str::FromStr;
 
 use handlebars::Handlebars;
@@ -31,6 +33,8 @@ pub enum AnswerStatus {
     Repeat,
     /// The `@answer` tag needs to call the external model to get a response.
     NeedProcessing,
+
+    Processing,
     /// The model has responded, and its reply needs to be injected into the document.
     NeedInjection,
     /// The `@answer` tag has completed its execution, and its response is in the document.
@@ -44,7 +48,8 @@ impl ToString for AnswerStatus {
         match self {
             AnswerStatus::JustCreated => "created".to_string(),
             AnswerStatus::Repeat => "repeat".to_string(),
-            AnswerStatus::NeedProcessing => "processing".to_string(),
+            AnswerStatus::NeedProcessing => "starting".to_string(),
+            AnswerStatus::Processing => "processing".to_string(),
             AnswerStatus::NeedInjection => "injection".to_string(),
             AnswerStatus::Completed => "completed".to_string(),
             AnswerStatus::Edited => "edited".to_string(),
@@ -59,7 +64,8 @@ impl FromStr for AnswerStatus {
         match s {
             "created" => Ok(AnswerStatus::JustCreated),
             "repeat" => Ok(AnswerStatus::Repeat),
-            "processing" => Ok(AnswerStatus::NeedProcessing),
+            "starting" => Ok(AnswerStatus::NeedProcessing),
+            "processing" => Ok(AnswerStatus::Processing),
             "injection" => Ok(AnswerStatus::NeedInjection),
             "completed" => Ok(AnswerStatus::Completed),
             "edited" => Ok(AnswerStatus::Edited),
@@ -160,7 +166,7 @@ impl DynamicPolicy for AnswerPolicy {
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
-            (Container::BeginAnchor(_, _), AnswerStatus::NeedProcessing) => {
+            (Container::BeginAnchor(a0, _), AnswerStatus::NeedProcessing) => {
                 // Execute the model query
                 let prompt = residual
                     .worker
@@ -173,19 +179,50 @@ impl DynamicPolicy for AnswerPolicy {
                     prompt,
                     residual.parameters,
                 )?;
-                let (prompt, response) =
+                let prompt =
                     residual
                         .worker
-                        .call_model(agent_hash, residual.parameters, &prompt)?;
-                residual.state.raw_reply = response.clone();
-                let response = Self::process_response_with_choice(response, residual.parameters)?;
-                residual.state.query = prompt;
-                residual.state.reply_hash = Collector::normalized_hash(&response);
-                residual.state.reply = response;
-                residual.state.status = AnswerStatus::NeedInjection;
+                        .craft_prompt(agent_hash, residual.parameters, &prompt)?;
+                residual.state.query = prompt.clone();
+                residual.worker.start_task(&a0.uuid, |x| {
+                    /* TODO
+                    let (prompt, response) =
+                        residual
+                            .worker
+                            .call_model(agent_hash, residual.parameters, &prompt)?;
+                        */
+                });
+                residual.state.status = AnswerStatus::Processing;
                 residual.state.context_hash = residual.input_hash;
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
+            }
+            (Container::BeginAnchor(a0, _), AnswerStatus::Processing) => {
+                // Execute the model query
+                if let Some(new_output) = residual.worker.wait_task(&a0.uuid) {
+                    residual.state.raw_reply.push_str(&new_output);
+                    result.new_state = Some(residual.state);
+                    result.do_next_pass = true;
+                }
+                match residual.worker.task_status(&a0.uuid) {
+                    TaskStatus::NonExistent => panic!("Task disappeared"),
+                    TaskStatus::Panicked => panic!("Task panicked"),
+                    TaskStatus::Busy => {
+                        result.do_next_pass = true;
+                    }
+                    TaskStatus::Done(response) => {
+                        residual.state.raw_reply = response.clone();
+                        let response =
+                            Self::process_response_with_choice(response, residual.parameters)?;
+                        residual.state.reply_hash = Collector::normalized_hash(&response);
+                        residual.state.reply = response;
+                        residual.state.status = AnswerStatus::NeedInjection;
+                        residual.state.context_hash = residual.input_hash;
+                        result.new_state = Some(residual.state);
+                        result.do_next_pass = true;
+                    }
+                    TaskStatus::Error(error) => panic!("Task error: {}", error),
+                }
             }
             (Container::BeginAnchor(_, _), AnswerStatus::NeedInjection) => {
                 // Inject the reply into the document

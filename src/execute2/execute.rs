@@ -14,6 +14,7 @@ use crate::execute2::tag_answer::AnswerStatus;
 use crate::execute2::tags::TagBehaviorDispatch;
 use crate::utils::file::FileAccessor;
 use crate::utils::path::PathResolver;
+use crate::utils::task::{TaskManager, TaskStatus};
 
 use handlebars::Handlebars;
 use sha2::{Digest, Sha256};
@@ -488,6 +489,7 @@ impl Collector {
 pub(crate) struct Worker {
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
+    task_manager: TaskManager<String, String, String>,
 }
 
 impl std::fmt::Debug for Worker {
@@ -513,6 +515,7 @@ impl Worker {
         Worker {
             file_access,
             path_res,
+            task_manager: TaskManager::new(),
         }
     }
 
@@ -835,12 +838,7 @@ impl Worker {
     /// parameters have invalid values.
     /// Returns [`ExecuteError::MissingParameter`] if the `provider` parameter is not found.
     /// Returns [`ExecuteError::ShellError`] if the external shell command fails.
-    pub(crate) fn call_model(
-        &self,
-        agent_hash: Option<String>,
-        parameters: &Parameters,
-        prompt: &ModelContent,
-    ) -> Result<(String, String)> {
+    pub(crate) fn call_model(&self, parameters: &Parameters, prompt: String) -> Result<String> {
         let provider = match parameters.get("provider") {
             Some(
                 JsonPlusEntity::NudeString(x)
@@ -857,6 +855,17 @@ impl Worker {
                 return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
+        let response = crate::agent::shell::shell_call(&provider, &prompt, |_| {})
+            .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
+        Ok(response)
+    }
+
+    pub fn craft_prompt(
+        &self,
+        agent_hash: Option<String>,
+        parameters: &Parameters,
+        prompt: &ModelContent,
+    ) -> Result<String> {
         let prompt_config = PromptConfig {
             agent: agent_hash,
             format: PromptFormat::Parts,
@@ -864,9 +873,7 @@ impl Worker {
             with_invitation: parameters.get_as_bool("with_invitation").unwrap_or(false),
         };
         let prompt = prompt.to_prompt(&prompt_config);
-        let response = crate::agent::shell::shell_call(&provider, &prompt, |_| {})
-            .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
-        Ok((prompt, response))
+        Ok(prompt)
     }
 
     /// Executes a single read-only pass over the context file.
@@ -1637,5 +1644,21 @@ impl Worker {
 
     pub fn read_file(&self, file_path: &Path) -> Result<String> {
         Ok(self.file_access.read_file(file_path)?)
+    }
+
+    pub fn start_task(
+        &self,
+        id: &Uuid,
+        task: impl FnOnce() -> std::result::Result<String, String> + Send + 'static,
+    ) {
+        self.task_manager.start_task(id.clone(), move |_| task());
+    }
+
+    pub fn wait_task(&self, id: &Uuid) -> Option<String> {
+        self.task_manager.wait_output(id).map(|x| x.join("\n"))
+    }
+
+    pub fn task_status(&self, id: &Uuid) -> TaskStatus<String, String> {
+        self.task_manager.task_status(id)
     }
 }

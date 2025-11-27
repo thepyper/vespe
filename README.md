@@ -102,7 +102,7 @@ Let's dive right in with a simple example.
     Open your terminal, navigate to your project and run:
 
     ```shell
-    vespe project init
+    vespe init
     ```
 
     This creates a `.vespe` directory in your project, where all your contexts will be stored.

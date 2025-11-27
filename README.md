@@ -6,7 +6,7 @@
 
 ## How it Works
 
-![Demo in VSCode](doc/demo_in_vscode.gif)
+![Demo in VSCode](doc/demo_in_vscode_2.gif)
 
 At its core, `vespe` operates on a collection of textual documents, referred to as "contexts." These documents are managed within the `.vespe` folder, which acts as a sidecar to your main project. These are standard Markdown files augmented with special custom commands (tags) that allow for direct interaction with LLMs and dynamic content generation. This approach transforms static documents into living, evolving knowledge bases.
 

@@ -1,6 +1,4 @@
-@comment {
-    _1: "Run this with 'vespe context run main'.",
-}
+%% Run this with 'vespe context run main'
 
 @set {
 	with_agent_names,

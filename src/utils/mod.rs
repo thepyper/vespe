@@ -1,6 +1,7 @@
 pub mod file;
 pub mod git;
 pub mod path;
+pub mod task;
 
 use thiserror::Error as ThisError;
 

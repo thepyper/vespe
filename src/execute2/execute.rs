@@ -395,8 +395,7 @@ impl Collector {
     /// The `Collector` with the new item added to its context.
     pub fn push_item(mut self, item: ModelContentItem) -> Self {
         let normalized_item = Self::normalize_text(&item.to_string());
-        self.context_hasher
-            .update(normalized_item);
+        self.context_hasher.update(normalized_item);
         self.context.push(item);
         self
     }
@@ -746,7 +745,7 @@ impl Worker {
     ) -> Result<ModelContent> {
         let prefix = self.process_context_with_data_from_parameters(parameters, "prefix")?;
         match prefix {
-            Some(prefix) => {                
+            Some(prefix) => {
                 let prefix = ModelContentItem::system(&prefix.to_string());
                 let prefix = ModelContent::from_item(prefix);
                 Ok(self.prefix_content(content, prefix))
@@ -1494,14 +1493,12 @@ impl Worker {
     ) -> Result<(ModelContent, String)> {
         let input = self.process_context_with_data_from_parameters(parameters, "input")?;
         match input {
-            None => {
-                Ok((collector.context().clone(), collector.context_hash()))
-            }
+            None => Ok((collector.context().clone(), collector.context_hash())),
             Some(input) => {
                 let input_hash = Collector::normalized_hash(&input.to_string());
                 Ok((input, input_hash))
             }
-        }        
+        }
     }
 
     /// Generates patches to mutate an existing anchor in the document.
@@ -1604,17 +1601,23 @@ impl Worker {
     }
 
     pub fn process_context_from_jpe(
-        &self, 
+        &self,
         jpe: &JsonPlusEntity,
         range: &Range,
     ) -> Result<ModelContent> {
         match jpe {
-            JsonPlusEntity::NudeString(file_name) | JsonPlusEntity::SingleQuotedString(file_name) | JsonPlusEntity::DoubleQuotedString(file_name) => {
+            JsonPlusEntity::NudeString(file_name)
+            | JsonPlusEntity::SingleQuotedString(file_name)
+            | JsonPlusEntity::DoubleQuotedString(file_name) => {
                 let output = self.execute(&file_name, None)?;
                 Ok(output)
             }
             JsonPlusEntity::Object(jpo) => {
-                let file_name = jpo.get_as_string_only("context").ok_or_else(|| ExecuteError::MissingContextParameter{range:range.clone()})?;
+                let file_name = jpo.get_as_string_only("context").ok_or_else(|| {
+                    ExecuteError::MissingContextParameter {
+                        range: range.clone(),
+                    }
+                })?;
                 let data = jpo.get_as_object("data");
                 let output = self.execute(&file_name, data)?;
                 Ok(output)
@@ -1626,9 +1629,9 @@ impl Worker {
                 }
                 Ok(output)
             }
-            _ => {
-                Err(ExecuteError::UnsupportedContextParameter{range:range.clone()})
-            }
+            _ => Err(ExecuteError::UnsupportedContextParameter {
+                range: range.clone(),
+            }),
         }
     }
 

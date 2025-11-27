@@ -4,7 +4,11 @@ use std::process::{Command, Stdio};
 use std::thread;
 use tracing::{debug, error};
 
-pub fn shell_call<F>(command_template: &str, input: &str, mut on_output: F) -> anyhow::Result<String>
+pub fn shell_call<F>(
+    command_template: &str,
+    input: &str,
+    mut on_output: F,
+) -> anyhow::Result<String>
 where
     F: FnMut(&str) + Send + 'static,
 {

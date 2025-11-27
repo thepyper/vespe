@@ -137,9 +137,15 @@ impl DynamicPolicy for InlinePolicy {
                     let context = Self::slice_with_markers(
                         &context,
                         residual.parameters.get_as_integer_only("begin_line"),
-                        residual.parameters.get_as_string_only("begin_marker").as_deref(),
+                        residual
+                            .parameters
+                            .get_as_string_only("begin_marker")
+                            .as_deref(),
                         residual.parameters.get_as_integer_only("end_line"),
-                        residual.parameters.get_as_string_only("end_marker").as_deref(),
+                        residual
+                            .parameters
+                            .get_as_string_only("end_marker")
+                            .as_deref(),
                     );
                     let context = match residual.parameters.get("data") {
                         Some(JsonPlusEntity::Object(data)) => {
@@ -184,26 +190,26 @@ impl InlinePolicy {
     ) -> String {
         let lines: Vec<&str> = text.lines().collect();
 
-        let (begin_marker_line, begin) = if let Some(marker) = begin_marker {
+        let begin = if let Some(marker) = begin_marker {
             let begin_marker_line = lines
                 .iter()
                 .position(|l| l.contains(marker))
                 .map(|idx| idx as i64)
                 .unwrap_or(0);
-            (begin_marker_line, begin_marker_line + begin_line.unwrap_or(0))
+            begin_marker_line + begin_line.unwrap_or(0)
         } else {
-            (-1, begin_line.unwrap_or(1) - 1)
+            begin_line.unwrap_or(1) - 1
         };
 
-        let (end_marker_line, end) = if let Some(marker) = end_marker {
+        let end = if let Some(marker) = end_marker {
             let end_marker_line = lines
                 .iter()
                 .rposition(|l| l.contains(marker))
                 .map(|idx| idx as i64)
                 .unwrap_or(lines.len() as i64);
-            (end_marker_line, end_marker_line + end_line.unwrap_or(0))
+            end_marker_line + end_line.unwrap_or(0)
         } else {
-            (-1, end_line.unwrap_or(lines.len() as i64))
+            end_line.unwrap_or(lines.len() as i64)
         };
 
         tracing::debug!(

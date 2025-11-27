@@ -283,9 +283,7 @@ impl Project {
         self.project_config.aux_paths.retain(|p| p != path);
         if self.project_config.aux_paths.len() < initial_len {
             self.save_project_config()?;
-            self.commit(Some(
-                "Removed auxiliary path from project config.".into(),
-            ))?;
+            self.commit(Some("Removed auxiliary path from project config.".into()))?;
         }
         Ok(())
     }

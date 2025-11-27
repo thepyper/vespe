@@ -97,10 +97,9 @@ pub(crate) fn _try_parse_nude_value<'doc>(
 pub(crate) fn _try_parse_nude_integer<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(i64, Parser<'doc>)>> {
-
     let (sign, p0_5) = match parser.consume_matching_char_immutable('-') {
         None => (false, parser.clone()),
-        Some(p0_5) => (true, p0_5) 
+        Some(p0_5) => (true, p0_5),
     };
 
     let (number_str, new_parser) = p0_5.consume_many_if_immutable(|x| x.is_digit(10));
@@ -125,10 +124,9 @@ pub(crate) fn _try_parse_nude_integer<'doc>(
 pub(crate) fn _try_parse_nude_float<'doc>(
     parser: &Parser<'doc>,
 ) -> Result<Option<(f64, Parser<'doc>)>> {
-
     let (sign, p0_5) = match parser.consume_matching_char_immutable('-') {
         None => (false, parser.clone()),
-        Some(p0_5) => (true, p0_5) 
+        Some(p0_5) => (true, p0_5),
     };
 
     let (int_part, p1) = p0_5.consume_many_if_immutable(|x| x.is_digit(10));

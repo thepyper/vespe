@@ -1,7 +1,9 @@
-use super::super::{Range, Result, Comment};
+use super::super::{Comment, Range, Result};
 use super::parser::Parser;
 
-pub(crate) fn _try_parse_comment<'doc>(parser: &Parser<'doc>) -> Result<Option<(Comment, Parser<'doc>)>> {
+pub(crate) fn _try_parse_comment<'doc>(
+    parser: &Parser<'doc>,
+) -> Result<Option<(Comment, Parser<'doc>)>> {
     let begin = parser.get_position();
 
     // Must start with '%%'

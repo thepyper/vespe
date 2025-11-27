@@ -1,9 +1,9 @@
-use super::super::{Ast2Error, Content, Range, Result, Text, Comment};
+use super::super::{Ast2Error, Comment, Content, Range, Result, Text};
 use super::anchor::_try_parse_anchor;
+use super::comment::_try_parse_comment;
 use super::parser::Parser;
 use super::tag::_try_parse_tag;
 use super::text::_try_parse_text;
-use super::comment::_try_parse_comment;
 
 pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
     let mut contents = Vec::new();
@@ -48,7 +48,7 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
             p_current = p_next;
             continue;
         }
-        
+
         if let Some((tag, p_next)) = _try_parse_tag(&p_current)? {
             contents.push(Content::Tag(tag));
             p_current = p_next;

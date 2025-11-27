@@ -1,6 +1,4 @@
-@comment {
-    _1: "Run this with 'vespe context run main'.",
-}
+%% Run this with 'vespe context run main'
 
 @set {
     provider: 'gemini -y -m gemini-2.5-flash',
@@ -12,20 +10,20 @@ C - system drive
 D - my all works drive
 E - my spare drive, almost empty
 
-<!-- answer-1654a78d-c47c-4d98-9b32-519ce528b14a:begin +completed+ {
+<!-- answer-6948c134-5aec-426c-846e-d1e7261b48a0:begin +completed+ {
 	choose: {
 		C: 'format C:',
 		D: 'format D:',
 		E: 'format E:'
 	},
+	output: deadly_script.bat.example,
 	provider: 'gemini -y -m gemini-2.5-flash'
 }  -->
-format E:
-<!-- answer-1654a78d-c47c-4d98-9b32-519ce528b14a:end  {}  -->
+<!-- answer-6948c134-5aec-426c-846e-d1e7261b48a0:end  {}  -->
 
 Are you sure?
 
-<!-- answer-ade5b3a5-592e-4440-87dc-1e08073abe44:begin +completed+ {
+<!-- answer-9c8999b6-906e-4710-a6eb-d3d73b433da8:begin +completed+ {
 	choose: {
 		no: 'Let me think about it...',
 		yes: 'Of course!'
@@ -33,4 +31,4 @@ Are you sure?
 	provider: 'gemini -y -m gemini-2.5-flash'
 }  -->
 Of course!
-<!-- answer-ade5b3a5-592e-4440-87dc-1e08073abe44:end  {}  -->
+<!-- answer-9c8999b6-906e-4710-a6eb-d3d73b433da8:end  {}  -->

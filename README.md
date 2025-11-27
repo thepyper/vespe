@@ -167,13 +167,13 @@ Let's break it down:
 
 ### `%%` Comments
 
-You can also use `%%` to add single-line comments anywhere in your context files. These comments are ignored by `vespe` and are not sent to the LLM.
+You can also use `%%` at line start to add single-line comments anywhere in your context files. These comments are ignored by `vespe` and are not sent to the LLM.
 
 **Usage:**
 
 ```markdown
 %% This is a single-line comment that vespe will ignore.
-Tell me a fact about {{topic}}. %% This part is also ignored.
+Tell me a fact about {{topic}}. 
 
 @answer { provider: "gemini -y" }
 ```

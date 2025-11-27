@@ -36,7 +36,7 @@ At its core, `vespe` operates on a collection of textual documents, referred to 
   - [Prerequisites](#prerequisites)
   - [Steps](#steps)
 - [Getting Started: A Quick Glimpse](#getting-started-a-quick-glimpse)
-- [Tag Syntax](#tag-syntax)
+- [Syntax](#syntax)
   - [Example](#example)
 - [Core Tags](#core-tags)
   - [@answer](#answer)
@@ -147,7 +147,7 @@ Let's dive right in with a simple example.
 
 And that's it! You've just used `vespe` to collaborate with an LLM on a document.
 
-## Tag Syntax
+## Syntax
 
 The power of `vespe` lies in its simple yet powerful tag syntax. Each tag follows a consistent structure that is easy to read and write.
 
@@ -164,6 +164,19 @@ Let's break it down:
     *   Quotes around keys are optional (e.g., `provider` is the same as `"provider"`).
     *   Quotes around string values are optional if the value doesn't contain spaces or special characters.
 *   **Positional Arguments**: Some tags can also take additional arguments after the parameter block. For example, `@include` takes a file path.
+
+### `%%` Comments
+
+You can also use `%%` to add single-line comments anywhere in your context files. These comments are ignored by `vespe` and are not sent to the LLM.
+
+**Usage:**
+
+```markdown
+%% This is a single-line comment that vespe will ignore.
+Tell me a fact about {{topic}}. %% This part is also ignored.
+
+@answer { provider: "gemini -y" }
+```
 
 ### Example
 

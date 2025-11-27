@@ -1,13 +1,11 @@
-@comment {
-    _1: "Run this with 'vespe context run hello'.",
-}
+%% Run this with 'vespe context run hello'
 
-# Hello vespe
+Hi, tell me a joke about cherries!
 
-Hi, tell me something nice!
+<!-- answer-4e2f86b8-7082-411b-a950-d0e9e72d1f57:begin +completed+ { provider: 'gemini -y -m gemini-2.5-flash' }  -->
+Why did the cherry turn red?
 
-<!-- answer-0d64115b-e254-4b8c-8010-596a9a91ced0:begin +completed+ { provider: 'gemini -y -m gemini-2.5-flash' }  -->
-Hello! It's a wonderful day to be creating and exploring. I hope you have a fantastic time with vespe!
-<!-- answer-0d64115b-e254-4b8c-8010-596a9a91ced0:end  {}  -->
+Because it saw the salad dressing!
+<!-- answer-4e2f86b8-7082-411b-a950-d0e9e72d1f57:end  {}  -->
 
 

@@ -865,7 +865,7 @@ impl Worker {
             with_invitation: parameters.get_as_bool("with_invitation").unwrap_or(false),
         };
         let prompt = prompt.to_prompt(&prompt_config);
-        let response = crate::agent::shell::shell_call(&provider, &prompt, |_| {})
+        let response = crate::agent::shell::shell_call(&provider, &prompt)
             .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
         Ok((prompt, response))
     }

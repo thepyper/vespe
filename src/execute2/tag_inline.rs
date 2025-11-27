@@ -201,11 +201,21 @@ impl InlinePolicy {
                 .map(|idx| idx as i64)
                 .unwrap_or(lines.len() as i64)  
         } else {
-            0 
+            lines.len() as i64
         };
 
         let begin = begin_marker_line + begin_line.unwrap_or(0);
         let end = end_marker_line + end_line.unwrap_or(0);
+
+        tracing::debug!(
+            "Slicing with markers: begin_line={:?}, begin_marker={:?}, end_line={:?}, end_marker={:?} => begin={}, end={}",
+            begin_line,
+            begin_marker,
+            end_line,
+            end_marker,
+            begin,
+            end
+        );
 
         let begin = begin.clamp(0, lines.len() as i64) as usize;
         let end = end.clamp(0, lines.len() as i64) as usize;

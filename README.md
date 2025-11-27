@@ -43,7 +43,6 @@ At its core, `vespe` operates on a collection of textual documents, referred to 
   - [@include](#include)
   - [@set](#set)
   - [@forget](#forget)
-  - [@comment](#comment)
   - [@repeat](#repeat)
   - [@answer Advanced](#answer-advanced)
   - [@inline](#inline)
@@ -267,19 +266,6 @@ Prompt for the first question.
 --- Second Conversation ---
 This prompt is sent without the context of the first one.
 @answer { provider: "gemini -y" }
-```
-
-### @comment
-
-The `@comment` tag is used to add comments within your context files. The content of this tag is completely ignored by the `vespe` engine and is not sent to the LLM.
-Note that json+ syntax is required, so you can use strings for example to annotate comments.
-
-**Usage:**
-```markdown
-@comment {
-  _1: "This is a note for myself.     ",
-  _2: "The LLM will not see this.     ",
-}
 ```
 
 ### @repeat

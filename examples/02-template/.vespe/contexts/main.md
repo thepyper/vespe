@@ -1,7 +1,4 @@
-
-@comment {
-    _1: "Run this with 'echo violet | vespe context run main sepia yellow -Dmy_var=green'.",
-}
+%% Run this with 'echo violet | vespe context run main light aquamarine -Dmy_var=green'
 
 @set {
     provider: 'gemini -y -m gemini-2.5-flash'
@@ -11,7 +8,7 @@
 
 @inline { data: { color: 'orange' } } template/about_color.md
 
-@inline { data: { color: '{{$1}}' } } template/about_color.md
+@inline { data: { color: '{{$2}}' } } template/about_color.md
 
 @inline { data: { color: '{{$args}}' } } template/about_color.md
 

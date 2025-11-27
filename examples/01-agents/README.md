@@ -1,5 +1,7 @@
 This project @include is used to include a setting, and prefix context (system prompt) is used 
 in @answer tags to reply with different personalities to different parts of the conversation.
+@set tag is used as well to enable invitation and agent names, which help models keep
+track of different personas in the same conversation.
 
 .vespe/contexts/main.md							    - this is the context as it is before being answered
 

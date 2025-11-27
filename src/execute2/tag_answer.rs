@@ -33,7 +33,7 @@ pub enum AnswerStatus {
     Repeat,
     /// The `@answer` tag needs to call the external model to get a response.
     NeedProcessing,
-
+    /// The `@answer` tag called the external model to get a response.
     Processing,
     /// The model has responded, and its reply needs to be injected into the document.
     NeedInjection,
@@ -162,6 +162,7 @@ impl DynamicPolicy for AnswerPolicy {
             (Container::Tag(_) | Container::BeginAnchor(_, _), &AnswerStatus::JustCreated) => {
                 // Prepare the query
                 residual.state.status = AnswerStatus::NeedProcessing;
+                residual.state.raw_reply = String::new();
                 residual.state.reply = String::new();
                 result.new_state = Some(residual.state);
                 result.do_next_pass = true;
@@ -183,6 +184,7 @@ impl DynamicPolicy for AnswerPolicy {
                     residual
                         .worker
                         .craft_prompt(agent_hash, residual.parameters, &prompt)?;
+
                 residual.state.query = prompt.clone();
                 residual.state.raw_reply = String::new();
                 residual.state.reply = String::new();
@@ -206,7 +208,6 @@ impl DynamicPolicy for AnswerPolicy {
                 .clone();
 
                 residual.worker.start_task(&a0.uuid, move |sender| {
-                    // Call start_task on a clone
                     let progress_callback = move |chunk: &str| {
                         // Send each chunk through the sender
                         let _ = sender.send(chunk.to_string());
@@ -214,10 +215,7 @@ impl DynamicPolicy for AnswerPolicy {
                     let response =
                         crate::agent::shell::shell_call(&provider, &prompt, progress_callback)
                             .map_err(|e| ExecuteError::ShellError(e.to_string()));
-                    match response {
-                        Ok(response) => Ok(response),
-                        Err(e) => Err(e.to_string()),
-                    }
+                    response.map_err(|x| x.to_string())
                 });
                 residual.state.status = AnswerStatus::Processing;
                 residual.state.context_hash = residual.input_hash;
@@ -233,8 +231,15 @@ impl DynamicPolicy for AnswerPolicy {
                     // Execute the model query
                     let new_output = residual.worker.wait_task(&a0.uuid);
                     match (residual.worker.task_status(&a0.uuid), new_output) {
-                        (TaskStatus::NonExistent, _) => panic!("Task disappeared"),
-                        (TaskStatus::Panicked, _) => panic!("Task panicked"),
+                        (TaskStatus::NonExistent, _) => {
+                            // Task disappeared, restart the task
+                            residual.state.status = AnswerStatus::NeedProcessing;
+                            result.new_state = Some(residual.state);
+                            result.do_next_pass = true;
+                        }
+                        (TaskStatus::Panicked, _) => {
+                            return Err(ExecuteError::TaskPanicked(a0.uuid.to_string()))
+                        }
                         (TaskStatus::Busy, Some(new_output)) => {
                             residual.state.raw_reply.push_str(&new_output);
                             result.new_state = Some(residual.state);
@@ -254,16 +259,18 @@ impl DynamicPolicy for AnswerPolicy {
                             result.new_state = Some(residual.state);
                             result.do_next_pass = true;
                         }
-                        (TaskStatus::Error(error), _) => panic!("Task error: {}", error),
+                        (TaskStatus::Error(error), _) => {
+                            return Err(ExecuteError::TaskError(error))
+                        }
                     }
                 }
             }
             (Container::BeginAnchor(_, _), &AnswerStatus::NeedInjection) => {
                 // Inject the reply into the document
                 if !residual.readonly {
-                    let output = residual.state.reply.clone(); // Modified
-                    residual.state.status = AnswerStatus::Completed; // Modified
-                    result.new_state = Some(residual.state); // Modified
+                    let output = residual.state.reply.clone();
+                    residual.state.status = AnswerStatus::Completed;
+                    result.new_state = Some(residual.state);
                     result.new_output = Some(output);
                 }
                 result.do_next_pass = true;

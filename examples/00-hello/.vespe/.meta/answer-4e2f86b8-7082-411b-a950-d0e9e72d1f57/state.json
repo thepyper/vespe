@@ -1,8 +1,0 @@
-{
-  "status": "Completed",
-  "query": "---\nUser:\nHi, tell me a joke about cherries!\n",
-  "raw_reply": "Why did the cherry turn red?\n\nBecause it saw the salad dressing!\n",
-  "reply": "Why did the cherry turn red?\n\nBecause it saw the salad dressing!\n",
-  "context_hash": "21ab07f2e0d9e115f7dabec8c1575503a8b5413b72d5db10ad350375c1efbadb",
-  "reply_hash": "55631eacc35e5ea9bcc30cfe1fefd9e2f883903fa31744712574b0f0f65cd83a"
-}

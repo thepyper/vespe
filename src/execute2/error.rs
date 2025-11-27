@@ -83,6 +83,14 @@ pub enum ExecuteError {
     #[error("Unsupported command: {0:?}")]
     UnsupportedCommand(CommandKind),
 
+    /// Task panicked during execution.
+    #[error("Task panicked during execution: {0}")]
+    TaskPanicked(String),
+
+    /// Task panicked during execution.
+    #[error("Task returned error: {0}")]
+    TaskError(String),
+
     /// Indicates that a circular dependency was detected when resolving contexts or includes.
     ///
     /// This prevents infinite loops when, for example, file A includes file B, and file B

@@ -184,28 +184,27 @@ impl InlinePolicy {
     ) -> String {
         let lines: Vec<&str> = text.lines().collect();
 
-        let begin_marker_line = if let Some(marker) = begin_marker {
-            lines
+        let (begin_marker_line, begin) = if let Some(marker) = begin_marker {
+            let begin_marker_line = lines
                 .iter()
                 .position(|l| l.contains(marker))
                 .map(|idx| idx as i64)
-                .unwrap_or(0)  
+                .unwrap_or(0);
+            (begin_marker_line, begin_marker_line + begin_line.unwrap_or(0))
         } else {
-            -1
+            (-1, begin_line.unwrap_or(1) - 1)
         };
 
-        let end_marker_line = if let Some(marker) = end_marker {
-            lines
+        let (end_marker_line, end) = if let Some(marker) = end_marker {
+            let end_marker_line = lines
                 .iter()
                 .rposition(|l| l.contains(marker))
                 .map(|idx| idx as i64)
-                .unwrap_or(lines.len() as i64)  
+                .unwrap_or(lines.len() as i64);
+            (end_marker_line, end_marker_line + end_line.unwrap_or(0))
         } else {
-            lines.len() as i64
+            (-1, end_line.unwrap_or(lines.len() as i64))
         };
-
-        let begin = begin_marker_line + begin_line.unwrap_or(0);
-        let end = end_marker_line + end_line.unwrap_or(0);
 
         tracing::debug!(
             "Slicing with markers: begin_line={:?}, begin_marker={:?}, end_line={:?}, end_marker={:?} => begin={}, end={}",

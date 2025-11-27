@@ -1,6 +1,4 @@
-@comment {
-    _1: "Run this with 'vespe context run main -Iindir -Ooutdir'.",
-}
+%% Run this with 'vespe context run main -Iindir -Ooutdir'
 
 @set { 
     provider: 'gemini -y -m gemini-2.5-flash',

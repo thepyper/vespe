@@ -1,6 +1,5 @@
-@comment {
-    _1: "Run this with 'vespe context run main'.",
-}
+%% Run this with 'vespe context run main'
+%% Then run 'vespe context analyze main' to know the reasoning behind the choice
 
 @set {
     provider: 'gemini -y -m gemini-2.5-flash',
@@ -17,7 +16,8 @@ E - my spare drive, almost empty
         C: 'format C:',
         D: 'format D:',
         E: 'format E:',
-    }
+    },
+    output: deadly_script.bat.example
 }
 
 Are you sure?

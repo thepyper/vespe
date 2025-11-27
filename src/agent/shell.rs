@@ -4,7 +4,10 @@ use std::process::{Command, Stdio};
 use std::thread;
 use tracing::{debug, error};
 
-pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String> {
+pub fn shell_call<F>(command_template: &str, input: &str, mut on_output: F) -> anyhow::Result<String>
+where
+    F: FnMut(&str) + Send + 'static,
+{
     let mut command_parts = command_template.split_whitespace();
     let program = command_parts
         .next()
@@ -63,6 +66,7 @@ pub fn shell_call(command_template: &str, input: &str) -> anyhow::Result<String>
                 Ok(0) => break,
                 Ok(_) => {
                     debug!("Child stdout: {}", line.trim_end());
+                    on_output(&line);
                     buffer.extend_from_slice(line.as_bytes());
                 }
                 Err(e) => {

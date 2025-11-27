@@ -811,7 +811,6 @@ impl Worker {
         }
     }
 
- 
     pub fn craft_prompt(
         &self,
         agent_hash: Option<String>,

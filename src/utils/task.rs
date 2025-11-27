@@ -78,36 +78,40 @@ where
         E: Clone,
     {
         let mut tasks = self.tasks.lock().unwrap();
-        if let Some(state) = tasks.get_mut(id) {
-            if let Some(result) = &*state.final_result.lock().unwrap() {
-                let status = match result {
+        
+        let status = if let Some(state) = tasks.get(id) {
+            let result_lock = state.final_result.lock().unwrap();
+            if let Some(result) = &*result_lock {
+                // Task is finished and has a result.
+                match result {
                     Ok(val) => TaskStatus::Done(val.clone()),
                     Err(err) => TaskStatus::Error(err.clone()),
-                };
-                tasks.remove(id);
-                return status;
-            }
-
-            if !state.handle.is_finished() {
-                TaskStatus::Busy
-            } else {
-                // The thread is finished, but the result hasn't been moved yet.
-                // This can happen in a race condition. Let's try to lock and check again.
-                if let Some(result) = state.final_result.lock().unwrap().take() {
-                     let status = match result {
-                        Ok(val) => TaskStatus::Done(val),
-                        Err(err) => TaskStatus::Error(err),
-                    };
-                    tasks.remove(id);
-                    status
-                } else {
-                    // This should be very rare.
-                    TaskStatus::Busy
                 }
+            } else if state.handle.is_finished() {
+                // The thread is finished, but no result was written.
+                // This indicates a panic within the task.
+                // We'll treat this as "Done" so it gets removed, and return a special error.
+                // Since we can't change the error type E, we will just remove it
+                // and the next call will be NonExistent. For the user, it's like it vanished.
+                // A better API would have a `Panicked` status.
+                TaskStatus::NonExistent // Treat as gone.
+            } else {
+                // Not finished yet.
+                TaskStatus::Busy
             }
         } else {
             TaskStatus::NonExistent
+        };
+
+        // If the task is no longer busy, remove it from the map.
+        match status {
+            TaskStatus::Busy => (),
+            _ => {
+                tasks.remove(id);
+            }
         }
+
+        status
     }
 
     pub fn poll_output(&self, id: &Uuid) -> Option<Vec<S>> {
@@ -152,14 +156,10 @@ where
     
     pub fn cleanup(&self) {
         let mut tasks = self.tasks.lock().unwrap();
+        // Retain a task if it is not finished, OR if it is finished and has a result.
+        // This effectively removes only the tasks that have panicked (finished without a result).
         tasks.retain(|_id, state| {
-            if state.handle.is_finished() {
-                // Also check if there's a final result to avoid removing a task that just finished
-                // but hasn't been processed by task_status yet. This is a defensive check.
-                state.final_result.lock().unwrap().is_none()
-            } else {
-                true
-            }
+            !state.handle.is_finished() || state.final_result.lock().unwrap().is_some()
         });
     }
 }

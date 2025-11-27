@@ -494,8 +494,6 @@ pub(crate) struct Worker {
     task_manager: TaskManager<String, String, String>,
 }
 
-
-
 impl Worker {
     /// Creates a new `Worker` with the necessary tools.
     ///
@@ -813,56 +811,7 @@ impl Worker {
         }
     }
 
-    /// Calls an external model (LLM) with the provided content and parameters.
-    ///
-    /// This function constructs a prompt using the given `content` and any `prefix`
-    /// or `postfix` specified in the `parameters`. It then uses the `provider`
-    /// parameter to determine which external model to call via the shell.
-    ///
-    /// # Arguments
-    ///
-    /// * `parameters` - The [`Parameters`] containing model-specific settings like `provider`,
-    ///                  `prefix`, and `postfix`.
-    /// * `content` - The [`ModelContent`] to be sent to the model as the main prompt body.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the model's response as a `String`, or an [`ExecuteError`]
-    /// if any parameter is invalid, missing, or the shell call fails.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ExecuteError::UnsupportedParameterValue`] if `prefix`, `postfix`, or `provider`
-    /// parameters have invalid values.
-    /// Returns [`ExecuteError::MissingParameter`] if the `provider` parameter is not found.
-    /// Returns [`ExecuteError::ShellError`] if the external shell command fails.
-    pub(crate) fn call_model(
-        &self,
-        parameters: &Parameters,
-        prompt: String,
-        progress_callback: impl Fn(&str) + Send + Sync + 'static,
-    ) -> Result<String> {
-        let provider = match parameters.get("provider") {
-            Some(
-                JsonPlusEntity::NudeString(x)
-                | JsonPlusEntity::SingleQuotedString(x)
-                | JsonPlusEntity::DoubleQuotedString(x),
-            ) => x,
-            Some(x) => {
-                return Err(ExecuteError::UnsupportedParameterValue(format!(
-                    "bad provider: {:?}",
-                    x
-                )));
-            }
-            None => {
-                return Err(ExecuteError::MissingParameter("provider".to_string()));
-            }
-        };
-        let response = crate::agent::shell::shell_call(&provider, &prompt, progress_callback)
-            .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
-        Ok(response)
-    }
-
+ 
     pub fn craft_prompt(
         &self,
         agent_hash: Option<String>,
@@ -1653,9 +1602,9 @@ impl Worker {
         &self,
         id: &Uuid,
         task: impl FnOnce(mpsc::Sender<String>) -> std::result::Result<String, String> + Send + 'static,
-    ) 
-    {
-        self.task_manager.start_task(id.clone(), move |sender| task(sender));
+    ) {
+        self.task_manager
+            .start_task(id.clone(), move |sender| task(sender));
     }
 
     pub fn wait_task(&self, id: &Uuid) -> Option<String> {

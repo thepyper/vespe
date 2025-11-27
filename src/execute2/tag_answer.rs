@@ -142,7 +142,7 @@ impl DynamicPolicy for AnswerPolicy {
             inputs.state,
             inputs.readonly,
         );
-        let (mut result, residual) =
+        let (mut result, mut residual) =
             DynamicPolicyMonoResult::<Self::State>::from_inputs(inputs);
 
         let agent_hash = residual.parameters.get_as_string_only("prefix").map(|x| {
@@ -158,14 +158,12 @@ impl DynamicPolicy for AnswerPolicy {
         });
         result.collector = result.collector.set_latest_agent_hash(agent_hash.clone());
 
-        let mut current_state = residual.state.clone(); // Clone here
-
-        match (residual.container, &current_state.status) {
+        match (residual.container, &residual.state.status) {
             (Container::Tag(_) | Container::BeginAnchor(_, _), &AnswerStatus::JustCreated) => {
                 // Prepare the query
-                current_state.status = AnswerStatus::NeedProcessing;
-                current_state.reply = String::new();
-                result.new_state = Some(current_state);
+                residual.state.status = AnswerStatus::NeedProcessing;
+                residual.state.reply = String::new();
+                result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
             (Container::BeginAnchor(a0, _), &AnswerStatus::NeedProcessing) => {
@@ -185,64 +183,87 @@ impl DynamicPolicy for AnswerPolicy {
                     residual
                         .worker
                         .craft_prompt(agent_hash, residual.parameters, &prompt)?;
-                current_state.query = prompt.clone();
-                let worker_clone = residual.worker.clone(); // Clone here
-                let parameters_clone = residual.parameters.clone(); // Clone here
+                residual.state.query = prompt.clone();
+                residual.state.raw_reply = String::new();
+                residual.state.reply = String::new();
 
-                worker_clone.clone().start_task(&a0.uuid, move |sender| { // Call start_task on a clone
+                let provider = match residual.parameters.get("provider") {
+                    Some(
+                        JsonPlusEntity::NudeString(x)
+                        | JsonPlusEntity::SingleQuotedString(x)
+                        | JsonPlusEntity::DoubleQuotedString(x),
+                    ) => x,
+                    Some(x) => {
+                        return Err(ExecuteError::UnsupportedParameterValue(format!(
+                            "bad provider: {:?}",
+                            x
+                        )));
+                    }
+                    None => {
+                        return Err(ExecuteError::MissingParameter("provider".to_string()));
+                    }
+                }
+                .clone();
+
+                residual.worker.start_task(&a0.uuid, move |sender| {
+                    // Call start_task on a clone
                     let progress_callback = move |chunk: &str| {
                         // Send each chunk through the sender
                         let _ = sender.send(chunk.to_string());
                     };
-                    // Call model and handle its result
-                    let call_model_result = worker_clone.call_model( // Use worker_clone here
-                        &parameters_clone, // Use parameters_clone here
-                        prompt.clone(),
-                        progress_callback,
-                    );
-                    match call_model_result {
-                        Ok(final_response) => Ok(final_response),
+                    let response =
+                        crate::agent::shell::shell_call(&provider, &prompt, progress_callback)
+                            .map_err(|e| ExecuteError::ShellError(e.to_string()));
+                    match response {
+                        Ok(response) => Ok(response),
                         Err(e) => Err(e.to_string()),
                     }
                 });
-                current_state.status = AnswerStatus::Processing;
-                current_state.context_hash = residual.input_hash;
-                result.new_state = Some(current_state);
+                residual.state.status = AnswerStatus::Processing;
+                residual.state.context_hash = residual.input_hash;
+                result.new_state = Some(residual.state);
                 result.do_next_pass = true;
             }
             (Container::BeginAnchor(a0, _), &AnswerStatus::Processing) => {
-                // Execute the model query
-                if let Some(new_output) = residual.worker.wait_task(&a0.uuid) {
-                    current_state.raw_reply.push_str(&new_output);
-                    result.new_state = Some(current_state.clone()); // Clone here to prevent move
+                // Inject the reply into the document
+                if !residual.readonly {
+                    result.new_output = Some(residual.state.raw_reply.clone());
                     result.do_next_pass = true;
-                }
-                match residual.worker.task_status(&a0.uuid) {
-                    TaskStatus::NonExistent => panic!("Task disappeared"),
-                    TaskStatus::Panicked => panic!("Task panicked"),
-                    TaskStatus::Busy => {
-                        result.do_next_pass = true;
+                } else {
+                    // Execute the model query
+                    let new_output = residual.worker.wait_task(&a0.uuid);
+                    match (residual.worker.task_status(&a0.uuid), new_output) {
+                        (TaskStatus::NonExistent, _) => panic!("Task disappeared"),
+                        (TaskStatus::Panicked, _) => panic!("Task panicked"),
+                        (TaskStatus::Busy, Some(new_output)) => {
+                            residual.state.raw_reply.push_str(&new_output);
+                            result.new_state = Some(residual.state);
+                            result.do_next_pass = true;
+                        }
+                        (TaskStatus::Busy, None) => {
+                            result.do_next_pass = true;
+                        }
+                        (TaskStatus::Done(response), _) => {
+                            residual.state.raw_reply = response.clone();
+                            let response =
+                                Self::process_response_with_choice(response, residual.parameters)?;
+                            residual.state.reply_hash = Collector::normalized_hash(&response);
+                            residual.state.reply = response;
+                            residual.state.status = AnswerStatus::NeedInjection;
+                            residual.state.context_hash = residual.input_hash;
+                            result.new_state = Some(residual.state);
+                            result.do_next_pass = true;
+                        }
+                        (TaskStatus::Error(error), _) => panic!("Task error: {}", error),
                     }
-                    TaskStatus::Done(response) => {
-                        current_state.raw_reply = response.clone();
-                        let response =
-                            Self::process_response_with_choice(response, residual.parameters)?;
-                        current_state.reply_hash = Collector::normalized_hash(&response);
-                        current_state.reply = response;
-                        current_state.status = AnswerStatus::NeedInjection;
-                        current_state.context_hash = residual.input_hash;
-                        result.new_state = Some(current_state);
-                        result.do_next_pass = true;
-                    }
-                    TaskStatus::Error(error) => panic!("Task error: {}", error),
                 }
             }
             (Container::BeginAnchor(_, _), &AnswerStatus::NeedInjection) => {
                 // Inject the reply into the document
                 if !residual.readonly {
-                    let output = current_state.reply.clone(); // Modified
-                    current_state.status = AnswerStatus::Completed; // Modified
-                    result.new_state = Some(current_state); // Modified
+                    let output = residual.state.reply.clone(); // Modified
+                    residual.state.status = AnswerStatus::Completed; // Modified
+                    result.new_state = Some(residual.state); // Modified
                     result.new_output = Some(output);
                 }
                 result.do_next_pass = true;
@@ -256,10 +277,11 @@ impl DynamicPolicy for AnswerPolicy {
                     .unwrap_or(false);
                 if !is_dynamic {
                     // Do nothing
-                } else if current_state.context_hash != residual.input_hash { // Modified
+                } else if residual.state.context_hash != residual.input_hash {
+                    // Modified
                     // Repeat
-                    current_state.status = AnswerStatus::Repeat; // Modified
-                    result.new_state = Some(current_state); // Modified
+                    residual.state.status = AnswerStatus::Repeat; // Modified
+                    result.new_state = Some(residual.state); // Modified
                     result.do_next_pass = true;
                 }
             }
@@ -268,11 +290,12 @@ impl DynamicPolicy for AnswerPolicy {
                     // Read back output
                     let output_content = residual.worker.read_file(&output_file)?;
                     let output_hash = Collector::normalized_hash(&output_content);
-                    if current_state.reply_hash != output_hash { // Modified
+                    if residual.state.reply_hash != output_hash {
+                        // Modified
                         // Content has been modified, transform into edited state
                         if !residual.readonly {
-                            current_state.status = AnswerStatus::Edited; // Modified
-                            result.new_state = Some(current_state); // Modified
+                            residual.state.status = AnswerStatus::Edited; // Modified
+                            result.new_state = Some(residual.state); // Modified
                         }
                         result.do_next_pass = true;
                     } else {
@@ -291,11 +314,12 @@ impl DynamicPolicy for AnswerPolicy {
                         },
                     )?;
                     let content_hash = Collector::normalized_hash(&content);
-                    if current_state.reply_hash != content_hash { // Modified
+                    if residual.state.reply_hash != content_hash {
+                        // Modified
                         // Content has been modified, transform into edited state
                         if !residual.readonly {
-                            current_state.status = AnswerStatus::Edited; // Modified
-                            result.new_state = Some(current_state); // Modified
+                            residual.state.status = AnswerStatus::Edited; // Modified
+                            result.new_state = Some(residual.state); // Modified
                         }
                         result.do_next_pass = true;
                     }
@@ -304,8 +328,8 @@ impl DynamicPolicy for AnswerPolicy {
             (Container::BeginAnchor(_, _), &AnswerStatus::Repeat) => {
                 // Return to need processing
                 if !residual.readonly {
-                    current_state.status = AnswerStatus::NeedProcessing; // Modified
-                    current_state.reply = String::new(); // Modified
+                    residual.state.status = AnswerStatus::NeedProcessing; // Modified
+                    residual.state.reply = String::new(); // Modified
                     result.new_state = Some(residual.state);
                     result.new_output = Some(String::new());
                 }

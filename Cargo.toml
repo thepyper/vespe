@@ -1,6 +1,6 @@
 [package]
 name = "vespe"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "Text as a Canvas for LLM Collaboration and Automation"
 repository = "https://github.com/thepyper/vespe.git"

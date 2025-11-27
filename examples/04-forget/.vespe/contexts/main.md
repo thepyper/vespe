@@ -1,7 +1,5 @@
 
-@comment {
-    _1: "Run this with 'vespe context run main'.",
-}
+%% Run this with 'vespe context run main'
 
 @set {
     provider: 'gemini -y -m gemini-2.5-flash'
@@ -9,7 +7,7 @@
 
 @include input/email_1.md
 
-Is this mail a problem enough for you to call me?
+Can you handle this by your own or should I know about that email?
 
 @answer {
     prefix: agent/secretary.md,
@@ -24,7 +22,7 @@ Is this mail a problem enough for you to call me?
 
 @include input/email_2.md
 
-Summarize me the issue there.
+Summarize the email please.
 
 @answer {
     prefix: agent/secretary.md,

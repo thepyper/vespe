@@ -1,4 +1,4 @@
-This project shows @answer used with choose, that forces llm to choose between a definite set of choices.
+This project shows @answer used with choose option that forces llm to choose between a definite set of choices.
 It also shows the @forget tag, that can be used to erase all collected context in current context file, and
 re-start a new conversation from scratch in the same file.
 

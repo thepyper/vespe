@@ -13,6 +13,7 @@ pub enum TaskStatus<T, E> {
     Busy,
     Done(T),
     Error(E),
+    Panicked,
 }
 
 #[derive(Clone)]
@@ -78,23 +79,19 @@ where
         E: Clone,
     {
         let mut tasks = self.tasks.lock().unwrap();
-        
+
+        // We need to check status and then maybe remove. We can't hold the `get` reference while removing.
+        // So, we determine the status, and if it's terminal, we remove the task afterwards.
         let status = if let Some(state) = tasks.get(id) {
-            let result_lock = state.final_result.lock().unwrap();
-            if let Some(result) = &*result_lock {
+            if let Some(result) = &*state.final_result.lock().unwrap() {
                 // Task is finished and has a result.
                 match result {
                     Ok(val) => TaskStatus::Done(val.clone()),
                     Err(err) => TaskStatus::Error(err.clone()),
                 }
             } else if state.handle.is_finished() {
-                // The thread is finished, but no result was written.
-                // This indicates a panic within the task.
-                // We'll treat this as "Done" so it gets removed, and return a special error.
-                // Since we can't change the error type E, we will just remove it
-                // and the next call will be NonExistent. For the user, it's like it vanished.
-                // A better API would have a `Panicked` status.
-                TaskStatus::NonExistent // Treat as gone.
+                // The thread is finished, but no result was written. This indicates a panic.
+                TaskStatus::Panicked
             } else {
                 // Not finished yet.
                 TaskStatus::Busy
@@ -103,11 +100,13 @@ where
             TaskStatus::NonExistent
         };
 
-        // If the task is no longer busy, remove it from the map.
+        // If the task is in a terminal state, remove it from the map.
         match status {
-            TaskStatus::Busy => (),
-            _ => {
+            TaskStatus::Done(_) | TaskStatus::Error(_) | TaskStatus::Panicked => {
                 tasks.remove(id);
+            }
+            TaskStatus::Busy | TaskStatus::NonExistent => {
+                // Do nothing
             }
         }
 

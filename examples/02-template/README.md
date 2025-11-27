@@ -1,7 +1,10 @@
-In this project @inline is used to instantiate a template (about_color.md) filled with different parameters.
-First two instances get a direct parameter, third instance takes parameter from the first positional 
-command-line argument; fourth instance takes parameter from the whole positional parameters string;
-last instance takes parameter from standard input.
+In this project @inline is used to instantiate a template (about_color.md) filled with different parameters:
+
+- first two instances get a direct parameter;
+- third instance takes parameter from the second positional command-line argument; 
+- fourth instance takes parameter from the whole positional parameters string;
+- fifth instance takes parameter from standard input; 
+- sixth instance takes parameter from a command-line definition flag
 
 .vespe/contexts/main.md							    - this is the context as it is before being answered
 

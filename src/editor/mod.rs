@@ -5,7 +5,9 @@ use std::path::Path;
 use uuid::Uuid;
 
 /// Trait for communicating with a text editor extension.
-pub trait EditorCommunicator {
+use std::fmt::Debug;
+
+pub trait EditorCommunicator: Send + Sync + Debug {
     /// Requests the editor to prepare a file for modification.
     /// If the file is open, the editor should save it and ideally lock it to prevent external changes.
     ///

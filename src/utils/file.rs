@@ -36,7 +36,9 @@ pub enum Error {
     MutexPoisoned,
 }
 
-pub trait FileAccessor {
+use std::fmt::Debug;
+
+pub trait FileAccessor: Send + Sync + Debug {
     /// Read whole file to a string
     fn read_file(&self, path: &Path) -> Result<String> {
         Ok(std::fs::read_to_string(path).map_err(|e| Error::FileRead {
@@ -53,6 +55,7 @@ pub trait FileAccessor {
 }
 
 /// Mutable part of ProjectFileAccessor struct
+#[derive(Debug)]
 struct ProjectFileAccessorMutable {
     /// Set of modified files
     modified_files: HashSet<PathBuf>,
@@ -60,6 +63,7 @@ struct ProjectFileAccessorMutable {
     modified_files_comments: Vec<String>,
 }
 
+#[derive(Debug)]
 pub struct ProjectFileAccessor {
     /// Project root path
     root_path: PathBuf,

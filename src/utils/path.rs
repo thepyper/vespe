@@ -23,7 +23,9 @@ pub enum Error {
     Io(#[from] std::io::Error),
 }
 
-pub trait PathResolver {
+use std::fmt::Debug;
+
+pub trait PathResolver: Send + Sync + Debug {
     /// Resolve a file name to a path
     fn resolve_input_file(&self, file_name: &str) -> Result<PathBuf>;
     /// Resolve a file name to a path
@@ -32,6 +34,7 @@ pub trait PathResolver {
     fn resolve_metadata(&self, meta_kind: &str, meta_uuid: &Uuid) -> Result<PathBuf>;
 }
 
+#[derive(Debug)]
 pub struct ProjectPathResolver {
     root_path: PathBuf,
     aux_paths: Vec<PathBuf>,

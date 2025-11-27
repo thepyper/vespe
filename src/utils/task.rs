@@ -16,7 +16,7 @@ pub enum TaskStatus<T, E> {
     Panicked,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TaskManager<T, E, S>
 where
     T: Send + 'static,
@@ -165,6 +165,7 @@ where
 
 // --- Dettagli Interni ---
 
+#[derive(Debug)]
 struct TaskState<T, E, S> {
     handle: Arc<thread::JoinHandle<()>>,
     output_receiver: mpsc::Receiver<S>,

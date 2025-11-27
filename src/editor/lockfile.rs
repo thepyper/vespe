@@ -46,6 +46,7 @@ pub enum ResponseState {
     None,
 }
 
+#[derive(Debug)]
 pub struct FileBasedEditorCommunicator {
     request_file_path: PathBuf,
     response_file_path: PathBuf,

@@ -487,17 +487,14 @@ impl Collector {
 /// The `Worker` holds thread-safe handles to the tools needed for execution,
 /// such as the file accessor and path resolver. It contains the core logic
 /// for the multi-pass execution strategy.
+#[derive(Debug, Clone)]
 pub(crate) struct Worker {
     file_access: Arc<dyn FileAccessor>,
     path_res: Arc<dyn PathResolver>,
     task_manager: TaskManager<String, String, String>,
 }
 
-impl std::fmt::Debug for Worker {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(())
-    }
-}
+
 
 impl Worker {
     /// Creates a new `Worker` with the necessary tools.

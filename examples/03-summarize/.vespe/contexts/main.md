@@ -1,7 +1,5 @@
 
-@comment {
-    _1: "Run this with 'vespe context run main'.",
-}
+%% Run this with 'vespe context run main'
 
 @answer {
     provider: 'gemini -y -m gemini-2.5-flash',

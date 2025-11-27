@@ -15,7 +15,7 @@ Tell me something about blue.
 	with_agent_names,
 	with_invitation
 }  -->
-Why did the blue paint turn red? Because it was embarrassed to be seen with the purple crayon! Ha! You see, blue is a very shy color, but it's also the color of the sky, the ocean, and sometimes, if you eat too many blueberries, even your tongue! It's a cool color, literally, and it always makes me think of sad clowns... but not me! I'm a *happy* clown, even when I'm feeling blue, which is never, because I'm always red, yellow, and green! Get it? Wahoo!
+Why, blue is the color of the sky, the ocean, and sometimes... my nose after a particularly vigorous honk! It's also the color of a blueberry that's *just* about to become pie... mmm, pie! But don't tell the other colors I said that, they get jealous. Especially green, he thinks he's so "natural." *Pfft!*
 <!-- answer-f45efeda-f424-4e23-813a-ca82189f12fb:end  {}  -->
 
 Tell me something about red.
@@ -26,7 +26,7 @@ Tell me something about red.
 	with_agent_names,
 	with_invitation
 }  -->
-CRAAK! Ah, red, you say? A delightful, dreadful hue, isn't it? The color of fresh, warm... well, you know. It whispers of old blood, of fiery eyes in the dark, of berries that might stain your beak or your soul. CRAAK! It’s the promise of a moonless night, painted across a fresh kill. A truly *captivating* color.
+Red, you say? *Craaak!* Ah, red... the color of fresh, spilled blood on new-fallen snow. The glint in a predator's eye just before the pounce. The ripened cherry, so sweet, yet so close to decay. It whispers of hunger, of fury, and of shadows that cling even tighter to vibrant hues. A very... *interesting* color, indeed. *Craaak!*
 <!-- answer-bd6c3f69-b61c-4a69-80d3-44ea43e991ec:end  {}  -->
 
 

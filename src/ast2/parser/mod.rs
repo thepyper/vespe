@@ -1,6 +1,7 @@
 pub mod anchor;
 pub mod arguments;
 pub mod command_kind;
+pub mod comment;
 pub mod content;
 pub mod document;
 pub mod identifier;

@@ -21,6 +21,7 @@ mod parser;
 pub use model::anchor::{Anchor, AnchorKind};
 pub use model::arguments::{Argument, Arguments};
 pub use model::command_kind::CommandKind;
+pub use model::comment::Comment;
 pub use model::content::Content;
 pub use model::document::Document;
 pub use model::json_plus::{JsonPlusEntity, JsonPlusObject};

@@ -1,8 +1,9 @@
-use super::super::{Ast2Error, Content, Range, Result, Text};
+use super::super::{Ast2Error, Content, Range, Result, Text, Comment};
 use super::anchor::_try_parse_anchor;
 use super::parser::Parser;
 use super::tag::_try_parse_tag;
 use super::text::_try_parse_text;
+use super::comment::_try_parse_comment;
 
 pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>, Parser<'doc>)> {
     let mut contents = Vec::new();
@@ -20,6 +21,34 @@ pub(crate) fn parse_content<'doc>(parser: Parser<'doc>) -> Result<(Vec<Content>,
             });
         }
 
+        if let Some((comment, p_next)) = _try_parse_comment(&p_current)? {
+            let latest_content = contents.pop();
+            match latest_content {
+                Some(Content::Comment(prev_comment)) => {
+                    let mut new_comment = String::new();
+                    new_comment.push_str(&prev_comment.content);
+                    new_comment.push_str(&comment.content);
+                    let new_range = Range {
+                        begin: prev_comment.range.begin,
+                        end: comment.range.end,
+                    };
+                    contents.push(Content::Comment(Comment {
+                        content: new_comment,
+                        range: new_range,
+                    }));
+                }
+                Some(x) => {
+                    contents.push(x);
+                    contents.push(Content::Comment(comment));
+                }
+                None => {
+                    contents.push(Content::Comment(comment));
+                }
+            }
+            p_current = p_next;
+            continue;
+        }
+        
         if let Some((tag, p_next)) = _try_parse_tag(&p_current)? {
             contents.push(Content::Tag(tag));
             p_current = p_next;

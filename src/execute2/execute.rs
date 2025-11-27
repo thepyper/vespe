@@ -975,6 +975,10 @@ impl Worker {
 
         for item in &ast.content {
             let (do_next_pass, next_collector, patches) = match item {
+                Content::Comment(_) => {
+                    // Ignore comments
+                    (false, collector, vec![])
+                }
                 Content::Text(text) => {
                     collector = collector.set_latest_range(&text.range);
                     if let Some(_) = collector.is_in_this_kind_of_anchor(CommandKind::Task) {

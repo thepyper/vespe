@@ -1,6 +1,4 @@
-@comment {
-    _1: "Run this with 'vespe context run main -Iindir -Ooutdir'.",
-}
+%% Run this with 'vespe context run main -Iindir -Ooutdir'
 
 @set { 
     provider: 'gemini -y -m gemini-2.5-flash',
@@ -10,7 +8,7 @@
 
 Tell me something that happened recently.
 
-<!-- answer-787d14ab-9e1e-4172-9c20-9c416e401d4e:begin +completed+ {
+<!-- answer-1b3977ef-d4eb-43d5-96f1-ec6142e7a733:begin +completed+ {
 	output: epoque/1200.txt,
 	prefix: {
 		context: agent/epoque.md,
@@ -20,11 +18,11 @@ Tell me something that happened recently.
 	with_agent_names,
 	with_invitation
 }  -->
-<!-- answer-787d14ab-9e1e-4172-9c20-9c416e401d4e:end  {}  -->
+<!-- answer-1b3977ef-d4eb-43d5-96f1-ec6142e7a733:end  {}  -->
 
 Tell me something that happened recently.
 
-<!-- answer-42af3564-28e8-4e2e-8557-b5059a92857d:begin +completed+ {
+<!-- answer-2d9ec591-c96c-4299-a37f-2f5b7ccfa10e:begin +completed+ {
 	output: epoque/1980.txt,
 	prefix: {
 		context: agent/epoque.md,
@@ -34,13 +32,13 @@ Tell me something that happened recently.
 	with_agent_names,
 	with_invitation
 }  -->
-<!-- answer-42af3564-28e8-4e2e-8557-b5059a92857d:end  {}  -->
+<!-- answer-2d9ec591-c96c-4299-a37f-2f5b7ccfa10e:end  {}  -->
 
-<!-- inline-e703aadd-7888-4ed5-9c00-4f6e511072fa:begin +completed+ {
+<!-- inline-35f83205-ef51-4db5-bc9a-0a9856f29860:begin +completed+ {
 	provider: 'gemini -y -m gemini-2.5-flash',
 	with_agent_names,
 	with_invitation
 } epilogue.txt -->
 And they lived happily for the rest of their lives...
-<!-- inline-e703aadd-7888-4ed5-9c00-4f6e511072fa:end  {}  -->
+<!-- inline-35f83205-ef51-4db5-bc9a-0a9856f29860:end  {}  -->
 

@@ -11,7 +11,6 @@ use super::execute::Collector;
 use super::execute::Worker;
 
 use super::tag_answer::AnswerPolicy;
-use super::tag_comment::CommentPolicy;
 use super::tag_done::DonePolicy;
 use super::tag_forget::ForgetPolicy;
 use super::tag_include::IncludePolicy;
@@ -768,7 +767,6 @@ impl TagBehaviorDispatch {
             CommandKind::Inline => Ok(Box::new(DynamicTagBehavior(InlinePolicy))),
             CommandKind::Set => Ok(Box::new(StaticTagBehavior(SetPolicy))),
             CommandKind::Forget => Ok(Box::new(StaticTagBehavior(ForgetPolicy))),
-            CommandKind::Comment => Ok(Box::new(StaticTagBehavior(CommentPolicy))),
             CommandKind::Task => Ok(Box::new(DynamicTagBehavior(TaskPolicy))),
             CommandKind::Done => Ok(Box::new(StaticTagBehavior(DonePolicy))),
             _ => Err(ExecuteError::UnsupportedCommand(command)),

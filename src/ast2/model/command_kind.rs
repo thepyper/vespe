@@ -17,8 +17,6 @@ pub enum CommandKind {
     Set,
     /// Forget previous context
     Forget,
-    /// Allows writing things ignored by LLM
-    Comment,
     /// Used to segment long tasks into steps
     Task,
     /// Used in tandem with task
@@ -35,7 +33,6 @@ impl ToString for CommandKind {
             CommandKind::Repeat => "repeat",
             CommandKind::Set => "set",
             CommandKind::Forget => "forget",
-            CommandKind::Comment => "comment",
             CommandKind::Task => "task",
             CommandKind::Done => "done",
         }

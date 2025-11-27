@@ -67,7 +67,6 @@ mod error;
 mod execute;
 mod names;
 mod tag_answer;
-mod tag_comment;
 mod tag_done;
 mod tag_forget;
 mod tag_include;

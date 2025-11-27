@@ -184,13 +184,21 @@ impl DynamicPolicy for AnswerPolicy {
                         .worker
                         .craft_prompt(agent_hash, residual.parameters, &prompt)?;
                 residual.state.query = prompt.clone();
-                residual.worker.start_task(&a0.uuid, |x| {
-                    /* TODO
-                    let (prompt, response) =
-                        residual
-                            .worker
-                            .call_model(agent_hash, residual.parameters, &prompt)?;
-                        */
+                residual.worker.start_task(&a0.uuid, move |sender| {
+                    let progress_callback = |chunk: &str| {
+                        // Send each chunk through the sender
+                        let _ = sender.send(chunk.to_string());
+                    };
+                    // Call model and handle its result
+                    let call_model_result = residual.worker.call_model(
+                        residual.parameters,
+                        prompt.clone(),
+                        progress_callback,
+                    );
+                    match call_model_result {
+                        Ok(final_response) => Ok(final_response),
+                        Err(e) => Err(e.to_string()),
+                    }
                 });
                 residual.state.status = AnswerStatus::Processing;
                 residual.state.context_hash = residual.input_hash;

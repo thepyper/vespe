@@ -15,6 +15,7 @@ use crate::execute2::tags::TagBehaviorDispatch;
 use crate::utils::file::FileAccessor;
 use crate::utils::path::PathResolver;
 use crate::utils::task::{TaskManager, TaskStatus};
+use std::sync::mpsc;
 
 use handlebars::Handlebars;
 use sha2::{Digest, Sha256};
@@ -838,7 +839,12 @@ impl Worker {
     /// parameters have invalid values.
     /// Returns [`ExecuteError::MissingParameter`] if the `provider` parameter is not found.
     /// Returns [`ExecuteError::ShellError`] if the external shell command fails.
-    pub(crate) fn call_model(&self, parameters: &Parameters, prompt: String) -> Result<String> {
+    pub(crate) fn call_model(
+        &self,
+        parameters: &Parameters,
+        prompt: String,
+        progress_callback: impl Fn(&str) + Send + Sync + 'static,
+    ) -> Result<String> {
         let provider = match parameters.get("provider") {
             Some(
                 JsonPlusEntity::NudeString(x)
@@ -855,7 +861,7 @@ impl Worker {
                 return Err(ExecuteError::MissingParameter("provider".to_string()));
             }
         };
-        let response = crate::agent::shell::shell_call(&provider, &prompt, |_| {})
+        let response = crate::agent::shell::shell_call(&provider, &prompt, progress_callback)
             .map_err(|e| ExecuteError::ShellError(e.to_string()))?;
         Ok(response)
     }
@@ -1649,9 +1655,10 @@ impl Worker {
     pub fn start_task(
         &self,
         id: &Uuid,
-        task: impl FnOnce() -> std::result::Result<String, String> + Send + 'static,
-    ) {
-        self.task_manager.start_task(id.clone(), move |_| task());
+        task: impl FnOnce(mpsc::Sender<String>) -> std::result::Result<String, String> + Send + 'static,
+    ) 
+    {
+        self.task_manager.start_task(id.clone(), move |sender| task(sender));
     }
 
     pub fn wait_task(&self, id: &Uuid) -> Option<String> {

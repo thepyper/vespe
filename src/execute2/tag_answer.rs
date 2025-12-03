@@ -41,6 +41,8 @@ pub enum AnswerStatus {
     Completed,
     /// The `@answer` tag content has been edited by user, then it must be seen as user conten by llm.
     Edited,
+    /// The `@answer` processing has been interrupted because of some error.
+    Interrupted,
 }
 
 impl ToString for AnswerStatus {
@@ -53,6 +55,7 @@ impl ToString for AnswerStatus {
             AnswerStatus::NeedInjection => "injection".to_string(),
             AnswerStatus::Completed => "completed".to_string(),
             AnswerStatus::Edited => "edited".to_string(),
+            AnswerStatus::Interrupted => "interrupted".to_string(),
         }
     }
 }
@@ -69,6 +72,7 @@ impl FromStr for AnswerStatus {
             "injection" => Ok(AnswerStatus::NeedInjection),
             "completed" => Ok(AnswerStatus::Completed),
             "edited" => Ok(AnswerStatus::Edited),
+            "interrupted" => Ok(AnswerStatus::Interrupted),
             _ => Err(ExecuteError::UnsupportedStatus(s.to_string())),
         }
     }
@@ -217,6 +221,7 @@ impl DynamicPolicy for AnswerPolicy {
                             .map_err(|e| ExecuteError::ShellError(e.to_string()));
                     response.map_err(|x| x.to_string())
                 });
+
                 residual.state.status = AnswerStatus::Processing;
                 residual.state.context_hash = residual.input_hash;
                 result.new_state = Some(residual.state);
@@ -232,13 +237,18 @@ impl DynamicPolicy for AnswerPolicy {
                     let new_output = residual.worker.wait_task(&a0.uuid);
                     match (residual.worker.task_status(&a0.uuid), new_output) {
                         (TaskStatus::NonExistent, _) => {
-                            // Task disappeared, restart the task
-                            residual.state.status = AnswerStatus::NeedProcessing;
+                            // Task disappeared, stop the task
+                            tracing::warn!("Task {} disappeared!", a0.uuid);
+                            residual.state.status = AnswerStatus::Interrupted;
                             result.new_state = Some(residual.state);
                             result.do_next_pass = true;
                         }
                         (TaskStatus::Panicked, _) => {
-                            return Err(ExecuteError::TaskPanicked(a0.uuid.to_string()))
+                            tracing::warn!("Task {} panicked!", a0.uuid);
+                            residual.state.status = AnswerStatus::Interrupted;
+                            result.new_state = Some(residual.state);
+                            result.do_next_pass = true;
+                            //return Err(ExecuteError::TaskPanicked(a0.uuid.to_string()))
                         }
                         (TaskStatus::Busy, Some(new_output)) => {
                             residual.state.raw_reply.push_str(&new_output);
@@ -260,7 +270,11 @@ impl DynamicPolicy for AnswerPolicy {
                             result.do_next_pass = true;
                         }
                         (TaskStatus::Error(error), _) => {
-                            return Err(ExecuteError::TaskError(error))
+                            tracing::warn!("Task {} got error {:?}!", a0.uuid, error);
+                            residual.state.status = AnswerStatus::Interrupted;
+                            result.new_state = Some(residual.state);
+                            result.do_next_pass = true;
+                            //return Err(ExecuteError::TaskError(error))
                         }
                     }
                 }
@@ -343,6 +357,9 @@ impl DynamicPolicy for AnswerPolicy {
                 result.do_next_pass = true;
             }
             (Container::BeginAnchor(_, _), AnswerStatus::Edited) => {
+                // Nothing to do
+            }
+            (Container::BeginAnchor(_, _), AnswerStatus::Interrupted) => {
                 // Nothing to do
             }
             _ => {}

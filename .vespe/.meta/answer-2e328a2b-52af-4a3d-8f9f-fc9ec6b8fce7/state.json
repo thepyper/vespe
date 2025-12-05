@@ -1,5 +1,0 @@
-{
-  "status": "Completed",
-  "reply": "I will add a Table of Contents (TOC) to the `README.md` file, placing it before the \"Installation\" section. I will generate the TOC by extracting all headings (H2 and H3) from the document and formatting them as a linked list.\n\nHere's the plan:\n1.  **Generate TOC**: Parse the `README.md` content to identify all H2 and H3 headings. For each heading, create a markdown link with an appropriate anchor.\n2.  **Insert TOC**: Use the `replace` tool to insert the generated TOC section immediately before the \"## Installation\" heading in `README.md`.\n3.  **Commit Changes**: Commit the updated `README.md` file to the git repository.\n\nFirst, I will generate the Table of Contents based on the current `README.md` content.\nThe Table of Contents has been added to `README.md`. I will now commit the changes.\n`README.md` is staged. Committing now.\nChanges committed. Running `git status` to confirm.\n`README.md` is committed. Other changes are unrelated. Request complete.\n",
-  "context_hash": "6fa2ddfe9c4f736d7ec5f6fe95508f4eb269d6f66dbf9631d7de3cf30bb3892d"
-}

@@ -1,6 +1,0 @@
-{
-  "status": "Completed",
-  "query": "\n\n---\nUser Message:\nExecute only the next instruction exactly as given — treat it as a single isolated step; do not infer, continue, or perform any other action beyond it.\n\n1. Smile\n",
-  "reply": "Smile\n\n\n",
-  "context_hash": "9ed497924f11e304b142b8594cc9397e27b8dbeb44388ec8e7804bffd29ea971"
-}

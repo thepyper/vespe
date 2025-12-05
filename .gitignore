@@ -22,3 +22,5 @@ target/
 # Ignore test environment
 /sandbox
 
+# Ignore vespe dev artifacts
+/.vespe
